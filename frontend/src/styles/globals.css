@@ -1,0 +1,581 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CSS VARIABLES - FitTracker Pro Design System
+   ============================================ */
+
+:root {
+    /* Border Radius */
+    --radius: 0.75rem;
+
+    /* Primary Color Scale (Blue) */
+    --primary: 217 91% 60%;
+    --primary-50: 213 100% 96%;
+    --primary-100: 214 100% 92%;
+    --primary-200: 214 100% 85%;
+    --primary-300: 213 100% 75%;
+    --primary-400: 217 91% 60%;
+    --primary-500: 221 83% 53%;
+    --primary-600: 224 76% 48%;
+    --primary-700: 226 71% 40%;
+    --primary-800: 224 64% 33%;
+    --primary-900: 226 55% 27%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Success Color */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning Color */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Danger Color */
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+
+    /* Neutral Color */
+    --neutral: 215 16% 47%;
+    --neutral-foreground: 0 0% 100%;
+
+    /* Base Colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 217 91% 60%;
+}
+
+/* ============================================
+   DARK MODE VARIABLES
+   ============================================ */
+.dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+}
+
+/* ============================================
+   TELEGRAM THEME INTEGRATION
+   ============================================ */
+
+/* Telegram automatically injects these variables */
+:root {
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-text-color: #000000;
+    --tg-theme-hint-color: #999999;
+    --tg-theme-link-color: #2481cc;
+    --tg-theme-button-color: #2481cc;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #f0f0f0;
+    --tg-theme-header-bg-color: #2481cc;
+    --tg-theme-accent-text-color: #2481cc;
+    --tg-theme-destructive-text-color: #ef4444;
+}
+
+/* Dark theme for Telegram */
+.telegram-dark {
+    --tg-theme-bg-color: #1a1a1a;
+    --tg-theme-text-color: #ffffff;
+    --tg-theme-hint-color: #888888;
+    --tg-theme-link-color: #5cace2;
+    --tg-theme-button-color: #5cace2;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #2d2d2d;
+    --tg-theme-header-bg-color: #2d2d2d;
+    --tg-theme-accent-text-color: #5cace2;
+    --tg-theme-destructive-text-color: #ff6b6b;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    html {
+        @apply antialiased;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        @apply bg-telegram-bg text-telegram-text;
+        font-feature-settings: "rlig" 1, "calt" 1;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Mobile viewport fix */
+    @supports (height: 100dvh) {
+        .min-h-screen {
+            min-height: 100dvh;
+        }
+    }
+}
+
+/* ============================================
+   COMPONENT CLASSES
+   ============================================ */
+
+@layer components {
+    /* ---------- BUTTONS ---------- */
+
+    /* Primary Button */
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium text-sm px-4 py-2.5 rounded-xl shadow-primary transition-all duration-200 hover:bg-primary-600 hover:shadow-lg active:scale-95 active:shadow-sm disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    /* Secondary Button */
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 bg-telegram-secondary-bg text-telegram-text font-medium text-sm px-4 py-2.5 rounded-xl transition-all duration-200 hover:bg-neutral-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    /* Success Button */
+    .btn-success {
+        @apply inline-flex items-center justify-center gap-2 bg-success text-success-foreground font-medium text-sm px-4 py-2.5 rounded-xl shadow-success transition-all duration-200 hover:bg-success-600 hover:shadow-lg active:scale-95 active:shadow-sm disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    /* Danger Button */
+    .btn-danger {
+        @apply inline-flex items-center justify-center gap-2 bg-danger text-danger-foreground font-medium text-sm px-4 py-2.5 rounded-xl shadow-danger transition-all duration-200 hover:bg-danger-600 hover:shadow-lg active:scale-95 active:shadow-sm disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    /* Ghost Button */
+    .btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 bg-transparent text-telegram-text font-medium text-sm px-4 py-2.5 rounded-xl transition-all duration-200 hover:bg-telegram-secondary-bg active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    /* Telegram Style Button */
+    .btn-telegram {
+        @apply inline-flex items-center justify-center gap-2 bg-telegram-button text-telegram-button-text font-semibold text-base px-6 py-3.5 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    /* Icon Button */
+    .btn-icon {
+        @apply inline-flex items-center justify-center w-10 h-10 rounded-full bg-telegram-secondary-bg text-telegram-text transition-all duration-200 hover:bg-neutral-200 active:scale-90;
+    }
+
+    /* ---------- CARDS ---------- */
+
+    /* Workout Card */
+    .card-workout {
+        @apply bg-telegram-secondary-bg rounded-2xl p-4 transition-all duration-200 hover:shadow-md;
+    }
+
+    /* Exercise Card */
+    .card-exercise {
+        @apply bg-telegram-bg border border-border rounded-xl p-3 transition-all duration-200 hover:border-primary-300;
+    }
+
+    /* Metric Card */
+    .card-metric {
+        @apply bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-2xl p-5 shadow-primary;
+    }
+
+    /* Glucose Card */
+    .card-glucose {
+        @apply bg-telegram-secondary-bg rounded-2xl p-4 border-l-4 border-glucose-normal;
+    }
+
+    .card-glucose-high {
+        @apply bg-telegram-secondary-bg rounded-2xl p-4 border-l-4 border-glucose-high;
+    }
+
+    .card-glucose-low {
+        @apply bg-telegram-secondary-bg rounded-2xl p-4 border-l-4 border-glucose-low;
+    }
+
+    .card-glucose-critical {
+        @apply bg-telegram-secondary-bg rounded-2xl p-4 border-l-4 border-glucose-critical;
+    }
+
+    /* Stats Card */
+    .card-stats {
+        @apply bg-telegram-bg border border-border rounded-xl p-4 flex flex-col gap-1;
+    }
+
+    /* ---------- INPUTS ---------- */
+
+    /* Text Input */
+    .input-field {
+        @apply w-full bg-telegram-secondary-bg border border-transparent rounded-xl px-4 py-3 text-telegram-text placeholder:text-telegram-hint transition-all duration-200 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    /* Number Input */
+    .input-number {
+        @apply w-full bg-telegram-secondary-bg border border-transparent rounded-xl px-4 py-3 text-center font-mono text-lg text-telegram-text placeholder:text-telegram-hint transition-all duration-200 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    /* Search Input */
+    .input-search {
+        @apply w-full bg-telegram-secondary-bg border border-transparent rounded-full pl-10 pr-4 py-2.5 text-telegram-text placeholder:text-telegram-hint transition-all duration-200 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20;
+    }
+
+    /* ---------- BADGES ---------- */
+
+    .badge {
+        @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    }
+
+    .badge-primary {
+        @apply badge bg-primary-100 text-primary-700;
+    }
+
+    .badge-success {
+        @apply badge bg-success-100 text-success-700;
+    }
+
+    .badge-warning {
+        @apply badge bg-warning-100 text-warning-700;
+    }
+
+    .badge-danger {
+        @apply badge bg-danger-100 text-danger-700;
+    }
+
+    .badge-neutral {
+        @apply badge bg-neutral-100 text-neutral-700;
+    }
+
+    /* ---------- LIST ITEMS ---------- */
+
+    .list-item {
+        @apply flex items-center gap-3 bg-telegram-bg border-b border-border px-4 py-3 transition-colors duration-200 hover:bg-telegram-secondary-bg active:bg-neutral-200;
+    }
+
+    .list-item:last-child {
+        @apply border-b-0;
+    }
+
+    /* ---------- TIMER STYLES ---------- */
+
+    .timer-display {
+        @apply font-mono text-timer text-telegram-text tabular-nums tracking-tight;
+    }
+
+    .timer-controls {
+        @apply flex items-center justify-center gap-4;
+    }
+
+    /* ---------- NAVIGATION ---------- */
+
+    .nav-item {
+        @apply flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-telegram-hint transition-all duration-200 hover:text-telegram-text active:scale-95;
+    }
+
+    .nav-item-active {
+        @apply nav-item text-primary bg-primary-50;
+    }
+
+    /* ---------- DIVIDERS ---------- */
+
+    .divider {
+        @apply w-full h-px bg-border my-4;
+    }
+
+    .divider-vertical {
+        @apply w-px h-full bg-border mx-4;
+    }
+
+    /* ---------- SKELETON ---------- */
+
+    .skeleton {
+        @apply bg-neutral-200 rounded animate-pulse;
+    }
+
+    .dark .skeleton {
+        @apply bg-neutral-800;
+    }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+@layer utilities {
+
+    /* Safe area for mobile devices */
+    .safe-area-top {
+        padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    .safe-area-left {
+        padding-left: env(safe-area-inset-left, 0px);
+    }
+
+    .safe-area-right {
+        padding-right: env(safe-area-inset-right, 0px);
+    }
+
+    .safe-area-x {
+        @apply safe-area-left safe-area-right;
+    }
+
+    /* Hide scrollbar but keep functionality */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* Touch action utilities */
+    .touch-manipulation {
+        touch-action: manipulation;
+    }
+
+    .touch-none {
+        touch-action: none;
+    }
+
+    /* Text utilities */
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    /* Gradient text */
+    .text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-700;
+    }
+
+    /* Glass effect */
+    .glass {
+        @apply bg-white/80 backdrop-blur-lg;
+    }
+
+    .dark .glass {
+        @apply bg-black/50;
+    }
+
+    /* Sticky positioning with safe area */
+    .sticky-top {
+        @apply sticky top-0 safe-area-top;
+    }
+
+    .sticky-bottom {
+        @apply sticky bottom-0 safe-area-bottom;
+    }
+}
+
+/* ============================================
+   PAGE TRANSITIONS
+   ============================================ */
+
+.page-transition-enter {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+.page-transition-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+.page-transition-exit {
+    opacity: 1;
+}
+
+.page-transition-exit-active {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+
+/* ============================================
+   ACHIEVEMENT ANIMATIONS
+   ============================================ */
+
+/* Achievement unlock pop animation */
+@keyframes achievement-pop {
+    0% {
+        transform: scale(0) rotate(-180deg);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.2) rotate(10deg);
+    }
+
+    70% {
+        transform: scale(0.95) rotate(-5deg);
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.animate-achievement-pop {
+    animation: achievement-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Confetti animation */
+@keyframes confetti {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+.animate-confetti {
+    animation: confetti 3s ease-out forwards;
+}
+
+/* Achievement badge shine effect */
+@keyframes badge-shine {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.achievement-badge-shine {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.3) 50%,
+            transparent 100%);
+    background-size: 200% 100%;
+    animation: badge-shine 2s infinite;
+}
+
+/* Progress bar pulse for in-progress achievements */
+@keyframes progress-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.animate-progress-pulse {
+    animation: progress-pulse 2s ease-in-out infinite;
+}
+
+/* Locked achievement hover effect */
+.achievement-locked {
+    filter: grayscale(100%);
+    transition: filter 0.3s ease;
+}
+
+.achievement-locked:hover {
+    filter: grayscale(50%);
+}
+
+/* Achievement unlock glow */
+@keyframes unlock-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(34, 197, 94, 0.8), 0 0 60px rgba(34, 197, 94, 0.4);
+    }
+}
+
+.animate-unlock-glow {
+    animation: unlock-glow 1.5s ease-in-out infinite;
+}
+
+/* Rare badge sparkle */
+@keyframes sparkle {
+
+    0%,
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2) rotate(180deg);
+        opacity: 0.8;
+    }
+}
+
+.animate-sparkle {
+    animation: sparkle 2s ease-in-out infinite;
+}
+
+/* ============================================
+   TELEGRAM MINI APP SPECIFIC
+   ============================================ */
+
+/* Telegram Main Button styling */
+.telegram-main-button {
+    @apply fixed bottom-0 left-0 right-0 bg-telegram-button text-telegram-button-text font-semibold text-base py-4 px-6 transition-all duration-200 active:opacity-90 safe-area-bottom;
+}
+
+/* Telegram Back Button */
+.telegram-back-button {
+    @apply absolute top-0 left-0 p-4 safe-area-top text-telegram-link transition-opacity duration-200 active:opacity-60;
+}
+
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+
+/* Mobile-first responsive padding */
+@media (max-width: 640px) {
+    .container-mobile {
+        @apply px-4;
+    }
+}
+
+@media (min-width: 641px) {
+    .container-mobile {
+        @apply px-6 max-w-lg mx-auto;
+    }
+}

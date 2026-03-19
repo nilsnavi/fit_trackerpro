@@ -1,0 +1,155 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  REGISTRY: ghcr.io
+  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add host to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -e
+            
+            # Navigate to project directory
+            cd ~/fittracker-pro || exit 1
+            
+            # Pull latest changes
+            git fetch origin
+            git checkout ${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
+            
+            # Create .env file from secrets
+            cat > .env << EOL
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBAPP_URL=${{ secrets.TELEGRAM_WEBAPP_URL }}
+          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+          VITE_API_URL=${{ secrets.VITE_API_URL }}
+          VITE_TELEGRAM_BOT_USERNAME=${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
+          GITHUB_REPOSITORY=${{ github.repository }}
+          EOL
+            
+            # Backup database before migration
+            echo "Creating database backup..."
+            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > backups/backup_$(date +%Y%m%d_%H%M%S).sql || true
+            
+            # Pull latest images
+            echo "Pulling latest images..."
+            docker-compose -f docker-compose.prod.yml pull
+            
+            # Run database migrations
+            echo "Running database migrations..."
+            docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head || true
+            
+            # Deploy services
+            echo "Deploying services..."
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            # Cleanup old images
+            echo "Cleaning up..."
+            docker image prune -f
+            
+            # Health check
+            echo "Running health checks..."
+            sleep 10
+            
+            # Check backend health
+            if curl -f http://localhost:8000/api/v1/health; then
+              echo "Backend is healthy"
+            else
+              echo "Backend health check failed"
+              exit 1
+            fi
+            
+            echo "Deployment completed successfully!"
+          EOF
+
+      - name: Notify on success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "FitTracker Pro deployed successfully to production!"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "FitTracker Pro deployment failed!"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Rollback deployment
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -e
+            cd ~/fittracker-pro
+            
+            echo "Rolling back to previous version..."
+            docker-compose -f docker-compose.prod.yml down
+            
+            # Restore from backup if available
+            LATEST_BACKUP=$(ls -t backups/*.sql 2>/dev/null | head -1)
+            if [ -n "$LATEST_BACKUP" ]; then
+              echo "Restoring from backup: $LATEST_BACKUP"
+              docker exec -i fittracker-postgres psql -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} < "$LATEST_BACKUP" || true
+            fi
+            
+            # Restart with previous images
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            echo "Rollback completed"
+          EOF

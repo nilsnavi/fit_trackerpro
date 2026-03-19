@@ -1,0 +1,123 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Migration command"
+        required: true
+        default: "upgrade"
+        type: choice
+        options:
+          - upgrade
+          - downgrade
+          - revision
+          - status
+      revision:
+        description: "Revision (for upgrade/downgrade/revision)"
+        required: false
+        default: "head"
+        type: string
+      message:
+        description: "Migration message (for revision only)"
+        required: false
+        type: string
+
+env:
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  DATABASE_URL_SYNC: ${{ secrets.DATABASE_URL_SYNC }}
+
+jobs:
+  migrate:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sqlalchemy alembic asyncpg psycopg2-binary
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add host to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create backup before migration
+        if: github.event.inputs.command == 'upgrade' || github.event.inputs.command == 'downgrade'
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -e
+            cd ~/fittracker-pro
+            mkdir -p backups
+            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > backups/pre_migration_$(date +%Y%m%d_%H%M%S).sql
+            echo "Backup created successfully"
+          EOF
+
+      - name: Run migration
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << EOF
+            set -e
+            cd ~/fittracker-pro
+            
+            case "${{ github.event.inputs.command }}" in
+              upgrade)
+                echo "Running upgrade to ${{ github.event.inputs.revision }}"
+                docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade ${{ github.event.inputs.revision }}
+                ;;
+              downgrade)
+                echo "Running downgrade to ${{ github.event.inputs.revision }}"
+                docker-compose -f docker-compose.prod.yml exec -T backend alembic downgrade ${{ github.event.inputs.revision }}
+                ;;
+              revision)
+                echo "Creating new revision: ${{ github.event.inputs.message }}"
+                docker-compose -f docker-compose.prod.yml exec -T backend alembic revision --autogenerate -m "${{ github.event.inputs.message }}"
+                ;;
+              status)
+                echo "Checking migration status"
+                docker-compose -f docker-compose.prod.yml exec -T backend alembic current
+                docker-compose -f docker-compose.prod.yml exec -T backend alembic history
+                ;;
+            esac
+            
+            echo "Migration completed successfully"
+          EOF
+
+      - name: Verify migration
+        if: github.event.inputs.command == 'upgrade'
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -e
+            cd ~/fittracker-pro
+            
+            # Check if backend is still healthy
+            if docker-compose -f docker-compose.prod.yml ps | grep -q "healthy"; then
+              echo "Services are healthy after migration"
+            else
+              echo "Warning: Some services may not be healthy"
+              docker-compose -f docker-compose.prod.yml ps
+            fi
+          EOF
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "Database migration failed! Check the workflow logs."
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

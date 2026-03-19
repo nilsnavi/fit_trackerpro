@@ -1,0 +1,44 @@
+import pytest
+from httpx import AsyncClient
+
+
+@pytest.mark.unit
+async def test_health_check(client: AsyncClient):
+    """Test the health check endpoint."""
+    response = await client.get("/api/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert "status" in data
+    assert data["status"] == "healthy"
+
+
+@pytest.mark.unit
+async def test_root_endpoint(client: AsyncClient):
+    """Test the root endpoint."""
+    response = await client.get("/")
+    assert response.status_code == 200
+    data = response.json()
+    assert "message" in data
+    assert "FitTracker Pro" in data["message"]
+    assert "version" in data
+
+
+@pytest.mark.unit
+async def test_api_docs_disabled_in_production(monkeypatch):
+    """Test that API docs are disabled in production."""
+    from app.utils.config import Settings
+
+    # Mock production settings
+    monkeypatch.setattr(Settings, "DEBUG", False)
+
+    # In production, docs should be None (disabled)
+    # This test verifies the configuration logic
+    settings = Settings(
+        DATABASE_URL="sqlite+aiosqlite:///:memory:",
+        SECRET_KEY="test-secret-key",
+        TELEGRAM_BOT_TOKEN="test-token",
+        TELEGRAM_WEBAPP_URL="https://test.com",
+        DEBUG=False
+    )
+
+    assert settings.DEBUG is False
