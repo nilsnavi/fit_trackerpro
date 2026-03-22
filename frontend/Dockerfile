@@ -2,6 +2,15 @@
 # Stage 1: Build
 FROM node:20-alpine AS builder
 
+# Proxy arguments
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+ENV HTTP_PROXY=$HTTP_PROXY \
+    HTTPS_PROXY=$HTTPS_PROXY \
+    NO_PROXY=$NO_PROXY
+
 # Set working directory
 WORKDIR /app
 

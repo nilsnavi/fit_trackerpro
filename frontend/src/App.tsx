@@ -9,27 +9,43 @@ import { Catalog } from '@pages/Catalog'
 import { AddExercise } from '@pages/AddExercise'
 import Analytics from '@pages/Analytics'
 import { Navigation } from '@components/common/Navigation'
+import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
+import { useTheme } from '@hooks/useTheme'
 
 /**
- * Инициализация темы при загрузке приложения
+ * Initialize Telegram WebApp and sync theme
  */
-function initializeTheme() {
-    const stored = localStorage.getItem('fittracker-theme') as 'light' | 'dark' | 'system' | null
-    const theme = stored || 'system'
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    const resolved = theme === 'system' ? systemTheme : theme
+function AppContent() {
+    const tg = useTelegramWebApp()
+    const { setTheme } = useTheme()
 
-    if (resolved === 'dark') {
-        document.documentElement.classList.add('dark')
-        document.documentElement.classList.add('telegram-dark')
-    }
-}
-
-function App() {
-    // Инициализация темы при монтировании
+    // Initialize Telegram WebApp on mount
     useEffect(() => {
-        initializeTheme()
-    }, [])
+        if (tg.isTelegram) {
+            // Initialize the WebApp
+            tg.init()
+
+            // Expand to full height
+            tg.expand()
+
+            // Set header and background colors
+            tg.setHeaderColor('bg_color')
+            tg.setBackgroundColor('bg_color')
+
+            // Enable closing confirmation to prevent accidental closes
+            tg.enableClosingConfirmation()
+        }
+    }, [tg])
+
+    // Sync Telegram theme with app theme
+    useEffect(() => {
+        if (tg.isTelegram && tg.colorScheme) {
+            // Set app theme based on Telegram color scheme
+            setTheme(tg.colorScheme)
+        }
+    }, [tg.isTelegram, tg.colorScheme, setTheme])
+
+    // Theme change is already handled in useTelegramWebApp hook
 
     return (
         <BrowserRouter>
@@ -50,6 +66,10 @@ function App() {
             </div>
         </BrowserRouter>
     )
+}
+
+function App() {
+    return <AppContent />
 }
 
 export default App

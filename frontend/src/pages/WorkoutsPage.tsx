@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Dumbbell, Clock, Flame, ChevronRight } from 'lucide-react'
+import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
 
 type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other'
 
@@ -20,25 +22,57 @@ const mockWorkouts = [
 
 export function WorkoutsPage() {
     const [selectedType, setSelectedType] = useState<WorkoutType | 'all'>('all')
+    const tg = useTelegramWebApp()
+    const navigate = useNavigate()
 
     const filteredWorkouts = selectedType === 'all'
         ? mockWorkouts
         : mockWorkouts.filter(w => w.type === selectedType)
+
+    // Set up Telegram back button
+    useEffect(() => {
+        if (tg.isTelegram) {
+            tg.setHeaderColor('bg_color')
+            tg.setBackgroundColor('bg_color')
+        }
+    }, [tg])
+
+    // Handle filter change with haptic feedback
+    const handleFilterChange = (type: WorkoutType | 'all') => {
+        tg.hapticFeedback({ type: 'selection' })
+        setSelectedType(type)
+    }
+
+    // Handle add new workout
+    const handleAddWorkout = () => {
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
+        navigate('/workouts/builder')
+    }
+
+    // Handle workout click
+    const handleWorkoutClick = (workoutId: number) => {
+        tg.hapticFeedback({ type: 'impact', style: 'light' })
+        // Navigate to workout details
+        console.log('Workout clicked:', workoutId)
+    }
 
     return (
         <div className="p-4 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Тренировки</h1>
-                <button className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center">
+                <button
+                    className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center active:scale-95 transition-transform"
+                    onClick={handleAddWorkout}
+                >
                     <Plus className="w-5 h-5" />
                 </button>
             </div>
 
             {/* Filter */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <button
-                    onClick={() => setSelectedType('all')}
+                    onClick={() => handleFilterChange('all')}
                     className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedType === 'all'
                         ? 'bg-primary text-white'
                         : 'bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-white'
@@ -49,7 +83,7 @@ export function WorkoutsPage() {
                 {workoutTypes.map(({ type, label }) => (
                     <button
                         key={type}
-                        onClick={() => setSelectedType(type)}
+                        onClick={() => handleFilterChange(type)}
                         className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedType === type
                             ? 'bg-primary text-white'
                             : 'bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-white'
@@ -85,7 +119,11 @@ export function WorkoutsPage() {
                 {filteredWorkouts.map((workout) => {
                     const typeInfo = workoutTypes.find(t => t.type === workout.type)
                     return (
-                        <div key={workout.id} className="bg-gray-50 dark:bg-neutral-800 flex items-center gap-4 p-4 rounded-xl transition-colors">
+                        <div
+                            key={workout.id}
+                            className="bg-gray-50 dark:bg-neutral-800 flex items-center gap-4 p-4 rounded-xl transition-colors cursor-pointer active:scale-[0.98]"
+                            onClick={() => handleWorkoutClick(workout.id)}
+                        >
                             <div className={`w-12 h-12 rounded-xl ${typeInfo?.color || 'bg-gray-500'} flex items-center justify-center text-white`}>
                                 <Dumbbell className="w-6 h-6" />
                             </div>

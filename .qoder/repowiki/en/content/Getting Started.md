@@ -18,6 +18,12 @@
 - [TELEGRAM_SETUP.md](file://TELEGRAM_SETUP.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated backend dependency requirements section to reflect current requirements.txt
+- Enhanced local development installation instructions with accurate dependency versions
+- Added specific version requirements for all backend dependencies
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Prerequisites and System Requirements](#prerequisites-and-system-requirements)
@@ -111,13 +117,31 @@ BE --> |"Cache"| RD
 ### Option B: Local Development (Python + Node.js)
 This method runs the backend and frontend natively on your machine.
 
-Backend (Python):
+Backend (Python) - Updated with current dependency requirements:
 - cd backend
 - python -m venv venv
 - source venv/bin/activate  # Windows: venv\Scripts\activate
 - pip install -r requirements.txt
 - cp .env.example .env
 - uvicorn app.main:app --reload
+
+Current backend dependencies (requirements.txt):
+- FastAPI >=0.109.2
+- Uvicorn >=0.27.1
+- SQLAlchemy >=2.0.27
+- Alembic >=1.13.1
+- AsyncPG >=0.30.0
+- Pydantic >=2.6.1
+- Pydantic Settings >=2.1.0
+- Python-Jose >=3.3.0
+- Passlib >=1.7.4
+- Python-Telegram-Bot >=20.8
+- HTTPX >=0.26.0
+- AIOHTTP >=3.9.3
+- Celery >=5.3.6
+- Redis >=5.0.1
+- Structlog >=24.1.0
+- Sentry SDK >=1.40.4
 
 Frontend (Node.js):
 - cd frontend
@@ -130,7 +154,7 @@ Access:
 
 **Section sources**
 - [README.md:71-88](file://README.md#L71-L88)
-- [backend/requirements.txt:1-42](file://backend/requirements.txt#L1-L42)
+- [backend/requirements.txt:1-43](file://backend/requirements.txt#L1-L43)
 - [frontend/package.json:6-15](file://frontend/package.json#L6-L15)
 
 ## Environment Variables

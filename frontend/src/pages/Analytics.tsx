@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
     LineChart,
     Line,
@@ -41,6 +41,7 @@ import { Card } from '@/components/ui/Card';
 import { Chip, ChipGroup } from '@/components/ui/Chip';
 import { Modal } from '@/components/ui/Modal';
 import { OneRMCalculator } from '@/components/analytics';
+import { useTelegramWebApp, UseTelegramWebAppReturn } from '@/hooks/useTelegramWebApp';
 
 // ============================================
 // Types
@@ -527,7 +528,8 @@ const PointDetailsModal: React.FC<{
 const ExportMenu: React.FC<{
     data: ChartDataPoint[];
     selectedExercises: Exercise[];
-}> = ({ data, selectedExercises }) => {
+    tg: UseTelegramWebAppReturn;
+}> = ({ data, selectedExercises, tg }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     const exportCSV = () => {
@@ -546,17 +548,24 @@ const ExportMenu: React.FC<{
     const sendToTelegram = async () => {
         const csv = generateCSV(data, selectedExercises);
 
-        if (typeof window !== 'undefined' && 'Telegram' in window) {
-            const tg = (window as any).Telegram?.WebApp;
-            if (tg) {
-                tg.sendData(JSON.stringify({
-                    type: 'analytics_export',
-                    data: csv,
-                }));
+        // Use Telegram WebApp API
+        if (tg.isTelegram) {
+            tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
+            tg.sendData(JSON.stringify({
+                type: 'analytics_export',
+                data: csv,
+            }))
+        } else {
+            // Fallback: copy to clipboard
+            try {
+                await navigator.clipboard.writeText(csv)
+                alert('Данные скопированы в буфер обмена')
+            } catch (err) {
+                console.error('Failed to copy:', err)
             }
         }
 
-        setIsOpen(false);
+        setIsOpen(false)
     };
 
     return (
@@ -646,6 +655,16 @@ const Analytics: React.FC = () => {
     const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<ViewTab>('chart');
+
+    const tg = useTelegramWebApp();
+
+    // Initialize Telegram UI
+    useEffect(() => {
+        if (tg.isTelegram) {
+            tg.setHeaderColor('bg_color')
+            tg.setBackgroundColor('bg_color')
+        }
+    }, [tg])
 
     // Определяем цвета для графика в зависимости от темы
     const isDark = document.documentElement.classList.contains('dark');
@@ -786,7 +805,7 @@ const Analytics: React.FC = () => {
                     <div className="flex items-center justify-between mb-3">
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Аналитика</h1>
                         {activeTab === 'chart' && (
-                            <ExportMenu data={chartData} selectedExercises={selectedExercises} />
+                            <ExportMenu data={chartData} selectedExercises={selectedExercises} tg={tg} />
                         )}
                     </div>
                     {/* Tab Switcher */}
@@ -794,13 +813,19 @@ const Analytics: React.FC = () => {
                         <Chip
                             label="Прогресс"
                             active={activeTab === 'chart'}
-                            onClick={() => setActiveTab('chart')}
+                            onClick={() => {
+                                tg.hapticFeedback({ type: 'selection' })
+                                setActiveTab('chart')
+                            }}
                             icon={<TrendingUp className="w-4 h-4" />}
                         />
                         <Chip
                             label="1ПМ Калькулятор"
                             active={activeTab === 'calculator'}
-                            onClick={() => setActiveTab('calculator')}
+                            onClick={() => {
+                                tg.hapticFeedback({ type: 'selection' })
+                                setActiveTab('calculator')
+                            }}
                             icon={<Calculator className="w-4 h-4" />}
                         />
                     </ChipGroup>

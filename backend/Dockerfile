@@ -1,8 +1,15 @@
 # Python Backend Dockerfile for FastAPI
-FROM python:3.11-slim
+FROM python:3.11-alpine3.22
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
+# Proxy arguments
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+ENV HTTP_PROXY=$HTTP_PROXY \
+    HTTPS_PROXY=$HTTPS_PROXY \
+    NO_PROXY=$NO_PROXY \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -11,20 +18,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN export http_proxy=$HTTP_PROXY && \
+    export https_proxy=$HTTPS_PROXY && \
+    sed -i 's|https://dl-cdn.alpinelinux.org|http://dl-cdn.alpinelinux.org|g' /etc/apk/repositories && \
+    apk add --no-cache \
+    python3-dev \
     gcc \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    postgresql-dev \
+    libffi-dev \
+    curl
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create non-root user (Alpine style)
+RUN addgroup -S appuser && adduser -S appuser -G appuser
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --proxy=$HTTPS_PROXY -r requirements.txt
 
 # Copy application code
 COPY . .

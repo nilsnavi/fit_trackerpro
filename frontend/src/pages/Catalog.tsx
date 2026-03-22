@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/utils/cn';
 import { api } from '@/services/api';
+import { useTelegramWebApp } from '@/hooks/useTelegramWebApp';
 
 // ============================================
 // Types
@@ -834,6 +835,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
 export const Catalog: React.FC = () => {
     const navigate = useNavigate();
+    const tg = useTelegramWebApp();
 
     // State
     const [exercises, setExercises] = useState<Exercise[]>(MOCK_EXERCISES);
@@ -870,6 +872,18 @@ export const Catalog: React.FC = () => {
 
         loadExercises();
     }, []);
+
+    // Setup Telegram back button
+    useEffect(() => {
+        if (tg.isTelegram) {
+            tg.showBackButton(() => {
+                navigate(-1)
+            })
+        }
+        return () => {
+            tg.hideBackButton()
+        }
+    }, [tg, navigate])
 
     // Filter logic
     const filteredExercises = useMemo(() => {
@@ -926,6 +940,7 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleCategoryToggle = useCallback((categoryId: ExerciseCategory) => {
+        tg.hapticFeedback({ type: 'selection' })
         setFilters(prev => {
             if (categoryId === 'all') {
                 return { ...prev, categories: ['all'] };
@@ -943,6 +958,7 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleEquipmentToggle = useCallback((equipment: EquipmentType) => {
+        tg.hapticFeedback({ type: 'selection' })
         setFilters(prev => ({
             ...prev,
             equipment: prev.equipment.includes(equipment)
@@ -952,6 +968,7 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleRiskToggle = useCallback((risk: RiskType) => {
+        tg.hapticFeedback({ type: 'selection' })
         setFilters(prev => ({
             ...prev,
             risks: prev.risks.includes(risk)
@@ -961,6 +978,7 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleDifficultyToggle = useCallback((difficulty: DifficultyLevel) => {
+        tg.hapticFeedback({ type: 'selection' })
         setFilters(prev => ({
             ...prev,
             difficulty: prev.difficulty.includes(difficulty)
@@ -985,9 +1003,10 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleViewExercise = useCallback((exercise: Exercise) => {
+        tg.hapticFeedback({ type: 'impact', style: 'light' })
         setSelectedExercise(exercise);
         setIsDetailOpen(true);
-    }, []);
+    }, [tg]);
 
     const handleCloseDetail = useCallback(() => {
         setIsDetailOpen(false);
@@ -997,12 +1016,14 @@ export const Catalog: React.FC = () => {
     const handleAddToWorkout = useCallback((exercise: Exercise) => {
         // TODO: Implement adding to workout
         console.log('Add to workout:', exercise);
+        tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
         handleCloseDetail();
-    }, [handleCloseDetail]);
+    }, [handleCloseDetail, tg]);
 
     const handleAddExercise = useCallback(() => {
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
         navigate('/exercises/add');
-    }, [navigate]);
+    }, [navigate, tg]);
 
     const activeFiltersCount =
         filters.equipment.length +

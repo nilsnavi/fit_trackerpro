@@ -16,6 +16,13 @@
 - [users.py](file://backend/app/api/users.py)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced useTelegram hook documentation to reflect comprehensive mock implementations for standalone browser usage
+- Updated haptic feedback capabilities and main button management features
+- Added detailed coverage of fallback mechanisms and Telegram Mini App compatibility
+- Expanded usage patterns and integration examples
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -32,7 +39,7 @@
 This document explains the custom hooks system used across the frontend of the Fit Tracker Pro application. It focuses on five key hooks:
 - useProfile: Manages user profile, statistics, settings, coach access, and data export.
 - useAchievements: Handles achievement retrieval, progress checks, unlocking, and real-time notifications.
-- useTelegram: Provides a mock Telegram integration for standalone environments.
+- useTelegram: Provides a comprehensive mock Telegram integration for standalone environments while maintaining Telegram Mini App compatibility.
 - useTelegramWebApp: Integrates with the Telegram WebApp SDK for rich UI controls, haptic feedback, and cloud storage.
 - useTimer: Implements a high-precision timer optimized for workout rest periods with requestAnimationFrame and background operation support.
 
@@ -102,11 +109,11 @@ TST --> UTI
   - Key return values: achievements, userStats, isLoading, error, plus fetch and claim methods.
   - Side effects: Polling for new unlocks; haptic feedback; event subscriptions.
   - Usage patterns: Initial load, periodic polling, manual progress checks, and unlock callbacks.
-- useTelegram
-  - Purpose: Standalone mock for Telegram integration when not running in Telegram Mini App.
-  - Key return values: Stubbed SDK, initData, user, hapticFeedback, and main button controls.
-  - Side effects: No-op outside Telegram; logs to console for main button actions.
-  - Usage patterns: Fallback for local development and testing.
+- useTelegram **Updated**
+  - Purpose: Comprehensive mock Telegram integration for standalone environments while maintaining Telegram Mini App compatibility.
+  - Key return values: sdk (null), initData (null), user (null), hapticFeedback (with six feedback types), showMainButton, hideMainButton, ready (always true).
+  - Side effects: Uses Telegram WebApp API when available; falls back to console logging for main button actions; no-op for haptic feedback outside Telegram.
+  - Usage patterns: Primary fallback for local development and testing; maintains compatibility with Telegram Mini App environment.
 - useTelegramWebApp
   - Purpose: Full Telegram WebApp SDK integration including theme, haptics, UI controls, and cloud storage.
   - Key return values: webApp, isReady, user, theme, colorScheme, and numerous control methods.
@@ -250,21 +257,55 @@ HA-->>C : "unlock data and updated stats"
 **Section sources**
 - [useAchievements.ts:67-274](file://frontend/src/hooks/useAchievements.ts#L67-L274)
 
-### useTelegram Hook
-- Purpose: Provide a mock Telegram integration for standalone environments.
+### useTelegram Hook **Updated**
+- Purpose: Comprehensive mock Telegram integration for standalone environments while maintaining Telegram Mini App compatibility.
 - Parameters: None.
 - Return values:
-  - sdk: null
-  - initData: null
-  - user: null
-  - hapticFeedback: light, medium, heavy, success, error, selectionChanged
-  - showMainButton, hideMainButton
-  - ready: boolean
+  - sdk: null (always null for mock implementation)
+  - initData: null (always null for mock implementation)
+  - user: null (always null for mock implementation)
+  - hapticFeedback: Object with six feedback types (light, medium, heavy, success, error, selectionChanged)
+  - showMainButton: Function to show main button with text and click handler
+  - hideMainButton: Function to hide main button
+  - ready: boolean (always true for mock implementation)
 - Side effects:
-  - Attempts to call Telegram WebApp APIs if available; otherwise no-op or console logging.
+  - Attempts to call Telegram WebApp APIs if available; otherwise falls back to console logging.
+  - Uses try-catch blocks to prevent errors in non-Telegram environments.
+  - Provides haptic feedback simulation using Telegram WebApp HapticFeedback API when available.
+  - Manages main button state with proper Telegram API integration.
 - Usage patterns:
-  - Fallback for local development and testing.
-  - Ensures components do not crash outside Telegram.
+  - Primary fallback for local development and testing environments.
+  - Maintains compatibility with Telegram Mini App by checking for window.Telegram.WebApp availability.
+  - Ensures components do not crash outside Telegram Mini App environment.
+  - Provides consistent API surface regardless of execution environment.
+
+**Updated** Enhanced with comprehensive haptic feedback simulation and main button management for both Telegram and standalone environments.
+
+```mermaid
+flowchart TD
+Start(["useTelegram Hook"]) --> CheckEnv{"Telegram Environment?"}
+CheckEnv --> |Yes| UseRealAPI["Use Real Telegram WebApp API"]
+CheckEnv --> |No| UseMockAPI["Use Mock Implementation"]
+UseRealAPI --> HapticReal["Haptic Feedback via Telegram API"]
+UseRealAPI --> MainBtnReal["Main Button via Telegram API"]
+UseMockAPI --> HapticMock["Haptic Feedback Simulation"]
+HapticMock --> Light["light() - Console log"]
+HapticMock --> Medium["medium() - Console log"]
+HapticMock --> Heavy["heavy() - Console log"]
+HapticMock --> Success["success() - Console log"]
+HapticMock --> Error["error() - Console log"]
+HapticMock --> Selection["selectionChanged() - Console log"]
+UseMockAPI --> MainBtnMock["Main Button Mock"]
+MainBtnMock --> ShowBtn["showMainButton() - Console log"]
+MainBtnMock --> HideBtn["hideMainButton() - No-op"]
+HapticReal --> Ready["ready: true"]
+MainBtnReal --> Ready
+HapticMock --> Ready
+MainBtnMock --> Ready
+```
+
+**Diagram sources**
+- [useTelegram.ts:36-116](file://frontend/src/hooks/useTelegram.ts#L36-L116)
 
 **Section sources**
 - [useTelegram.ts:36-116](file://frontend/src/hooks/useTelegram.ts#L36-L116)
@@ -399,6 +440,10 @@ API --> BEU["users.py"]
 - useProfile and useAchievements
   - Batch concurrent fetches during refresh to minimize load time.
   - Debounce or throttle frequent operations; use caching where appropriate.
+- useTelegram **Updated**
+  - Mock implementation uses useCallback for all methods to prevent unnecessary re-renders.
+  - Try-catch blocks prevent performance issues from API calls in non-Telegram environments.
+  - Console logging provides minimal overhead for fallback scenarios.
 - Telegram WebApp
   - Initialize once and reuse instances; avoid repeated DOM queries.
   - Use haptic feedback sparingly to prevent user fatigue.
@@ -406,15 +451,14 @@ API --> BEU["users.py"]
   - Centralized interceptors reduce duplication and improve error handling.
   - Consider adding retry logic and exponential backoff for transient failures.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 - Authentication errors
   - Ensure localStorage contains a valid auth token; api.ts adds Authorization header automatically.
   - Verify backend routes for /auth/me and /users/stats are implemented.
-- Telegram WebApp not available
-  - Outside Telegram Mini App, useTelegram provides a mock; useTelegramWebApp returns null webApp.
+- Telegram WebApp not available **Updated**
+  - Outside Telegram Mini App, useTelegram provides comprehensive mock implementations; useTelegramWebApp returns null webApp.
   - Components should guard against null webApp before invoking methods.
+  - useTelegram always returns ready: true and provides fallback haptic feedback and main button functionality.
 - Timer not updating
   - Confirm autoStart is enabled or start() is called.
   - Check visibility change handling; ensure RAF is scheduled after coming back from background.
@@ -430,15 +474,14 @@ API --> BEU["users.py"]
 - [useAchievements.ts:248-259](file://frontend/src/hooks/useAchievements.ts#L248-L259)
 
 ## Conclusion
-The custom hooks system provides a cohesive, composable foundation for user profile management, gamification, Telegram integration, and precise timing. By encapsulating state, side effects, and external integrations, the hooks simplify component logic and promote reusability. Following the documented patterns ensures consistent behavior, robust error handling, and optimal performance across environments.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The custom hooks system provides a cohesive, composable foundation for user profile management, gamification, Telegram integration, and precise timing. The enhanced useTelegram hook now offers comprehensive mock implementations that maintain full compatibility with Telegram Mini App while providing robust fallback functionality for standalone browser usage. By encapsulating state, side effects, and external integrations, the hooks simplify component logic and promote reusability. Following the documented patterns ensures consistent behavior, robust error handling, and optimal performance across environments.
 
 ## Appendices
 
 ### Hook Composition Patterns
 - useProfile and useAchievements both depend on useTelegramWebApp for haptic feedback, demonstrating shared integration patterns.
 - RestTimer composes useTimer and useTelegramWebApp to deliver rich workout experiences with sound and haptic cues.
+- useTelegram provides fallback functionality for components that need Telegram integration but may run outside Telegram environment.
 
 **Section sources**
 - [useProfile.ts:128-129](file://frontend/src/hooks/useProfile.ts#L128-L129)
@@ -449,6 +492,10 @@ The custom hooks system provides a cohesive, composable foundation for user prof
 - useTimer
   - Use fake timers to simulate time progression and assert state transitions.
   - Test start, pause, reset, skip, and onComplete callbacks.
+- useTelegram **Updated**
+  - Test fallback behavior by mocking window.Telegram as undefined.
+  - Verify haptic feedback methods don't throw errors in non-Telegram environments.
+  - Test main button show/hide functionality with console logging verification.
 - General patterns
   - Mock external dependencies (Telegram SDK, API) using Jest.
   - Test side effects (HTTP calls, haptic feedback) via spies and assertions.
@@ -475,3 +522,25 @@ The custom hooks system provides a cohesive, composable foundation for user prof
 - [users.py:47-54](file://backend/app/api/users.py#L47-L54)
 - [achievements.py:25-88](file://backend/app/api/achievements.py#L25-L88)
 - [achievements.py:91-171](file://backend/app/api/achievements.py#L91-L171)
+
+### Enhanced useTelegram Usage Examples
+- Basic haptic feedback in components:
+  ```typescript
+  const { hapticFeedback } = useTelegram()
+  hapticFeedback.medium() // Works in both Telegram and standalone modes
+  ```
+- Main button management:
+  ```typescript
+  const { showMainButton, hideMainButton } = useTelegram()
+  useEffect(() => {
+    if (hasData) {
+      showMainButton('Save Data', () => saveData())
+    } else {
+      hideMainButton()
+    }
+  }, [hasData])
+  ```
+
+**Section sources**
+- [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
+- [WorkoutCardio.tsx:560](file://frontend/src/pages/WorkoutCardio.tsx#L560)

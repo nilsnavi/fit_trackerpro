@@ -1,5 +1,6 @@
 import { Settings, Bell, Shield, HelpCircle, ChevronRight, LogOut } from 'lucide-react'
 import { ThemeToggle } from '@components/ui/ThemeToggle'
+import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
 
 const menuItems = [
     { icon: Settings, label: 'Настройки', path: '/settings' },
@@ -9,18 +10,51 @@ const menuItems = [
 ]
 
 export function ProfilePage() {
+    const tg = useTelegramWebApp()
+
+    // Get user data from Telegram
+    const userName = tg.user?.first_name || tg.user?.username || 'Атлет'
+    const userPhoto = tg.user?.photo_url
+    const username = tg.user?.username ? `@${tg.user.username}` : 'Пользователь'
+
+    const handleMenuClick = (path: string) => {
+        tg.hapticFeedback({ type: 'selection' })
+        // Navigate to path (would use router in real implementation)
+        console.log('Navigate to:', path)
+    }
+
+    const handleLogout = () => {
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
+        // Show confirmation dialog
+        if (tg.isTelegram) {
+            tg.showConfirm('Вы уверены, что хотите выйти?').then((confirmed) => {
+                if (confirmed) {
+                    tg.close()
+                }
+            })
+        }
+    }
+
     return (
         <div className="p-4 space-y-6">
             {/* Profile Header */}
             <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl font-bold">
-                    U
-                </div>
+                {userPhoto ? (
+                    <img
+                        src={userPhoto}
+                        alt={userName}
+                        className="w-20 h-20 rounded-full object-cover"
+                    />
+                ) : (
+                    <div className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl font-bold">
+                        {userName.charAt(0).toUpperCase()}
+                    </div>
+                )}
                 <div className="flex-1">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                        Имя пользователя
+                        {userName}
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400">@username</p>
+                    <p className="text-gray-500 dark:text-gray-400">{username}</p>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xs rounded-full font-medium">
                             Pro Member
@@ -68,6 +102,7 @@ export function ProfilePage() {
                     {menuItems.map(({ icon: Icon, label, path }) => (
                         <button
                             key={path}
+                            onClick={() => handleMenuClick(path)}
                             className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-neutral-800 rounded-xl hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
                         >
                             <div className="flex items-center gap-3">
@@ -82,6 +117,7 @@ export function ProfilePage() {
 
             {/* Logout */}
             <button
+                onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-xl font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
             >
                 <LogOut className="w-5 h-5" />

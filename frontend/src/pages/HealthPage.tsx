@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Minus, Plus, ChevronRight } from 'lucide-react'
+import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
 
 type MetricType = 'weight' | 'steps' | 'heart_rate' | 'sleep' | 'water' | 'calories'
 
@@ -23,11 +24,36 @@ const mockData: Record<MetricType, { current: number; previous: number; target: 
 
 export function HealthPage() {
     const [selectedMetric, setSelectedMetric] = useState<MetricType>('weight')
+    const tg = useTelegramWebApp()
+
+    // Set up Telegram UI
+    useEffect(() => {
+        if (tg.isTelegram) {
+            tg.setHeaderColor('bg_color')
+            tg.setBackgroundColor('bg_color')
+        }
+    }, [tg])
 
     const getTrend = (current: number, previous: number) => {
         if (current > previous) return { icon: TrendingUp, color: 'text-green-500', sign: '+' }
         if (current < previous) return { icon: TrendingDown, color: 'text-red-500', sign: '' }
         return { icon: Minus, color: 'text-gray-500', sign: '' }
+    }
+
+    // Handle metric selection with haptic feedback
+    const handleMetricSelect = (type: MetricType) => {
+        tg.hapticFeedback({ type: 'selection' })
+        setSelectedMetric(type)
+    }
+
+    // Handle quick log
+    const handleQuickLog = (type: 'weight' | 'water') => {
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
+
+        // Show input dialog using Telegram API
+        if (tg.isTelegram) {
+            tg.showAlert(`Введите ${type === 'weight' ? 'вес' : 'количество воды'}`)
+        }
     }
 
     return (
@@ -49,8 +75,8 @@ export function HealthPage() {
                     return (
                         <button
                             key={type}
-                            onClick={() => setSelectedMetric(type)}
-                            className={`bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl text-left transition-all ${selectedMetric === type ? 'ring-2 ring-primary' : ''
+                            onClick={() => handleMetricSelect(type)}
+                            className={`bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl text-left transition-all active:scale-[0.98] ${selectedMetric === type ? 'ring-2 ring-primary' : ''
                                 }`}
                         >
                             <div className="flex items-center justify-between mb-2">
@@ -76,7 +102,10 @@ export function HealthPage() {
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                         История: {metrics.find(m => m.type === selectedMetric)?.label}
                     </h2>
-                    <button className="text-primary text-sm flex items-center gap-1">
+                    <button
+                        className="text-primary text-sm flex items-center gap-1"
+                        onClick={() => tg.hapticFeedback({ type: 'impact', style: 'light' })}
+                    >
                         Все
                         <ChevronRight className="w-4 h-4" />
                     </button>
@@ -108,11 +137,17 @@ export function HealthPage() {
             <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Быстрый ввод</h2>
                 <div className="flex gap-3">
-                    <button className="flex-1 bg-primary text-white flex items-center justify-center gap-2 py-3 rounded-xl font-medium">
+                    <button
+                        className="flex-1 bg-primary text-white flex items-center justify-center gap-2 py-3 rounded-xl font-medium active:scale-[0.98] transition-transform"
+                        onClick={() => handleQuickLog('weight')}
+                    >
                         <Plus className="w-5 h-5" />
                         Вес
                     </button>
-                    <button className="flex-1 bg-gray-100 dark:bg-neutral-700 text-gray-900 dark:text-white flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-colors">
+                    <button
+                        className="flex-1 bg-gray-100 dark:bg-neutral-700 text-gray-900 dark:text-white flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-colors active:scale-[0.98]"
+                        onClick={() => handleQuickLog('water')}
+                    >
                         <Plus className="w-5 h-5" />
                         Вода
                     </button>

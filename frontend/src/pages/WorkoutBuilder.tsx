@@ -40,6 +40,7 @@ import { Input } from '@components/ui/Input';
 import { Chip, ChipGroup } from '@components/ui/Chip';
 import { Modal } from '@components/ui/Modal';
 import { api } from '@/services/api';
+import { useTelegramWebApp } from '@hooks/useTelegramWebApp';
 
 type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other';
 
@@ -265,6 +266,9 @@ const SortableItem: React.FC<SortableItemProps> = ({
 // ============================================
 
 export const WorkoutBuilder: React.FC = () => {
+    // Telegram WebApp
+    const tg = useTelegramWebApp()
+
     // State
     const [workoutName, setWorkoutName] = useState('');
     const [selectedTypes, setSelectedTypes] = useState<WorkoutType[]>([]);
@@ -297,6 +301,18 @@ export const WorkoutBuilder: React.FC = () => {
     // Refs
     const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const draftKey = 'workout_builder_draft';
+
+    // Setup Telegram back button
+    useEffect(() => {
+        if (tg.isTelegram) {
+            tg.showBackButton(() => {
+                window.history.back()
+            })
+        }
+        return () => {
+            tg.hideBackButton()
+        }
+    }, [tg])
 
     // Sensors for DnD
     const sensors = useSensors(
@@ -368,6 +384,7 @@ export const WorkoutBuilder: React.FC = () => {
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
+            tg.hapticFeedback({ type: 'selection' })
             setBlocks((items) => {
                 const oldIndex = items.findIndex((item) => item.id === active.id);
                 const newIndex = items.findIndex((item) => item.id === over.id);
@@ -380,6 +397,7 @@ export const WorkoutBuilder: React.FC = () => {
     };
 
     const handleAddBlock = (type: WorkoutBlock['type']) => {
+        tg.hapticFeedback({ type: 'impact', style: 'light' })
         setCurrentBlockType(type);
         setSelectedExercise(null);
         setSearchQuery('');
@@ -395,6 +413,7 @@ export const WorkoutBuilder: React.FC = () => {
     };
 
     const handleExerciseSelect = (exercise: Exercise) => {
+        tg.hapticFeedback({ type: 'selection' })
         setSelectedExercise(exercise);
         setConfig({
             sets: 3,
@@ -408,6 +427,8 @@ export const WorkoutBuilder: React.FC = () => {
 
     const handleConfigSave = () => {
         if (!currentBlockType) return;
+
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
 
         const newBlock: WorkoutBlock = {
             id: editingBlock ? editingBlock.id : `block-${Date.now()}`,
@@ -440,6 +461,7 @@ export const WorkoutBuilder: React.FC = () => {
     };
 
     const handleDeleteBlock = (id: string) => {
+        tg.hapticFeedback({ type: 'impact', style: 'heavy' })
         setBlocks((prev) => prev.filter((b) => b.id !== id));
     };
 
@@ -470,6 +492,7 @@ export const WorkoutBuilder: React.FC = () => {
 
         setIsSaving(false);
         setShowSaveSuccess(true);
+        tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
         setTimeout(() => setShowSaveSuccess(false), 2000);
     };
 
@@ -478,11 +501,13 @@ export const WorkoutBuilder: React.FC = () => {
 
         if (!templateName.trim()) {
             setSaveError('Template name is required');
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
             return;
         }
 
         if (blocks.length === 0) {
             setSaveError('Add at least one exercise');
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
             return;
         }
 
@@ -497,6 +522,8 @@ export const WorkoutBuilder: React.FC = () => {
         try {
             await api.post('/workouts/templates', template);
 
+            tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
+
             // Clear draft
             localStorage.removeItem(draftKey);
             setWorkoutName('');
@@ -508,10 +535,12 @@ export const WorkoutBuilder: React.FC = () => {
             setIsSaveTemplateOpen(false);
         } catch (error) {
             setSaveError('Failed to save template. Please try again.');
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
         }
     };
 
     const toggleWorkoutType = (type: WorkoutType) => {
+        tg.hapticFeedback({ type: 'selection' })
         setSelectedTypes((prev) =>
             prev.includes(type)
                 ? prev.filter((t) => t !== type)
