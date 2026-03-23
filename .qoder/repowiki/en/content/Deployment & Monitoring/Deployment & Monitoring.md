@@ -22,6 +22,14 @@
 - [frontend/nginx.conf](file://frontend/nginx.conf)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced Docker configuration documentation with Alpine Linux benefits and security improvements
+- Added comprehensive proxy configuration documentation for enterprise environments
+- Updated enterprise deployment considerations including resource limits and security hardening
+- Expanded monitoring stack documentation with advanced configuration options
+- Improved CI/CD pipeline documentation with enhanced security scanning
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -97,8 +105,8 @@ MIG --> PROD
 - [docker-compose.yml:1-99](file://docker-compose.yml#L1-L99)
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
 - [monitoring/docker-compose.monitoring.yml:1-124](file://monitoring/docker-compose.monitoring.yml#L1-L124)
-- [backend/Dockerfile:1-48](file://backend/Dockerfile#L1-L48)
-- [frontend/Dockerfile:1-56](file://frontend/Dockerfile#L1-L56)
+- [backend/Dockerfile:1-60](file://backend/Dockerfile#L1-L60)
+- [frontend/Dockerfile:1-65](file://frontend/Dockerfile#L1-L65)
 - [monitoring/prometheus.yml:1-49](file://monitoring/prometheus.yml#L1-L49)
 - [monitoring/grafana/provisioning/datasources/datasources.yml:1-16](file://monitoring/grafana/provisioning/datasources/datasources.yml#L1-L16)
 - [docs/ENVIRONMENT_SETUP.md:1-141](file://docs/ENVIRONMENT_SETUP.md#L1-L141)
@@ -125,8 +133,8 @@ MIG --> PROD
 - CI/CD: GitHub Actions workflows for testing, building/pushing images, and deploying to production with rollback.
 
 **Section sources**
-- [backend/Dockerfile:42-47](file://backend/Dockerfile#L42-L47)
-- [frontend/Dockerfile:50-55](file://frontend/Dockerfile#L50-L55)
+- [backend/Dockerfile:58-60](file://backend/Dockerfile#L58-L60)
+- [frontend/Dockerfile:63-65](file://frontend/Dockerfile#L63-L65)
 - [nginx/nginx.conf:56-142](file://nginx/nginx.conf#L56-L142)
 - [docker-compose.prod.yml:54-124](file://docker-compose.prod.yml#L54-L124)
 - [monitoring/docker-compose.monitoring.yml:3-124](file://monitoring/docker-compose.monitoring.yml#L3-L124)
@@ -199,6 +207,38 @@ Server->>Server : Health check endpoints
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
 - [README-DEPLOYMENT.md:100-114](file://README-DEPLOYMENT.md#L100-L114)
 - [docs/PRODUCTION_CHECKLIST.md:34-64](file://docs/PRODUCTION_CHECKLIST.md#L34-L64)
+
+### Enhanced Docker Configuration with Alpine Linux Benefits
+
+**Updated** Enhanced Docker configuration now utilizes Alpine Linux for improved security and reduced attack surface.
+
+#### Backend Docker Configuration
+The backend service now uses Python 3.11-alpine3.22 with comprehensive proxy support and security hardening:
+
+- **Alpine Linux Benefits**: Minimal attack surface, faster startup times, reduced memory footprint
+- **Proxy Configuration**: Full HTTP_PROXY, HTTPS_PROXY, and NO_PROXY support for enterprise environments
+- **Security Hardening**: Non-root user execution, read-only filesystem recommendations, minimal package installation
+- **Performance Optimization**: Optimized build stages with dependency caching and system-level optimizations
+
+#### Frontend Docker Configuration  
+The frontend uses multi-stage Alpine-based build with optimized production image:
+
+- **Multi-stage Build**: Builder stage with Node.js 20-alpine, production stage with nginx:alpine
+- **Proxy Support**: Same proxy configuration as backend for enterprise environments
+- **Security**: Non-root user execution (nextjs:nodejs) with proper file permissions
+- **Optimization**: Minimal production image size with essential runtime dependencies
+
+#### Database Services
+Both PostgreSQL and Redis utilize Alpine variants for enhanced security:
+
+- **PostgreSQL 15-alpine**: Reduced attack surface with official Alpine package
+- **Redis 7-alpine**: Optimized memory usage and security posture
+- **Resource Limits**: Explicit CPU and memory constraints for predictable performance
+
+**Section sources**
+- [backend/Dockerfile:1-60](file://backend/Dockerfile#L1-L60)
+- [frontend/Dockerfile:1-65](file://frontend/Dockerfile#L1-L65)
+- [docker-compose.prod.yml:5-132](file://docker-compose.prod.yml#L5-L132)
 
 ### CI/CD Pipeline with GitHub Actions
 - test.yml: Runs frontend lint/type-check/tests and backend lint/type-check/tests with a local Postgres/Redis service; uploads coverage; performs Trivy vulnerability scan.
@@ -292,6 +332,35 @@ Secrets --> End(["Deploy"])
 - [backend/app/utils/config.py:38-47](file://backend/app/utils/config.py#L38-L47)
 - [docs/SECURITY_CHECKLIST.md:112-135](file://docs/SECURITY_CHECKLIST.md#L112-L135)
 
+### Enterprise Deployment Considerations
+
+**Updated** Enhanced enterprise deployment capabilities with advanced configuration options.
+
+#### Proxy Configuration for Enterprise Environments
+Both backend and frontend Dockerfiles now support comprehensive proxy configuration:
+
+- **HTTP_PROXY, HTTPS_PROXY, NO_PROXY**: Full environment variable support for corporate proxy environments
+- **Alpine Package Management**: Proxy-aware package installation with sed replacement for faster mirrors
+- **Python Dependencies**: Proxy configuration passed to pip installer for dependency downloads
+- **Build Optimization**: Cached dependency installation with proxy awareness
+
+#### Resource Management and Scalability
+- **Explicit Resource Limits**: CPU and memory constraints defined per service for predictable performance
+- **Horizontal Scaling**: Multiple replica support for stateless backend and frontend services
+- **Connection Pooling**: Optimized database and Redis connection management
+- **Health Checks**: Comprehensive health monitoring with startup delays and retry mechanisms
+
+#### Advanced Security Features
+- **Non-Root Execution**: All services run as non-root users with proper permission management
+- **Read-Only Filesystems**: Recommended security posture for production deployments
+- **Minimal Attack Surface**: Alpine Linux base with only essential packages installed
+- **Certificate Management**: Automated SSL certificate handling with renewal support
+
+**Section sources**
+- [backend/Dockerfile:4-15](file://backend/Dockerfile#L4-L15)
+- [frontend/Dockerfile:5-12](file://frontend/Dockerfile#L5-L12)
+- [docker-compose.prod.yml:25-52](file://docker-compose.prod.yml#L25-L52)
+
 ### Backup Strategies and Rollback Procedures
 - Backups: Automated database dump before migration and deployment; backups stored under ./backups.
 - Restore: Rollback workflow stops services, restores from latest backup, and restarts.
@@ -380,8 +449,6 @@ CA["cAdvisor"] --> Host
 - Optimize database queries and consider read replicas for scale.
 - Use CDN for static assets and enable browser caching headers.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 - Database connection failed: Check service status, logs, and credentials.
 - Frontend not loading: Review Nginx logs and rebuild frontend.
@@ -394,9 +461,7 @@ CA["cAdvisor"] --> Host
 - [docs/ENVIRONMENT_SETUP.md:122-141](file://docs/ENVIRONMENT_SETUP.md#L122-L141)
 
 ## Conclusion
-FitTracker Pro’s deployment and monitoring stack leverages Docker Compose for orchestration, GitHub Actions for CI/CD, and a robust monitoring toolkit for observability. By following the documented environment setup, security hardening, backup, and rollback procedures, teams can operate FitTracker Pro reliably in production while maintaining performance and resilience.
-
-[No sources needed since this section summarizes without analyzing specific files]
+FitTracker Pro's deployment and monitoring stack leverages Docker Compose for orchestration, GitHub Actions for CI/CD, and a robust monitoring toolkit for observability. The enhanced Docker configuration with Alpine Linux provides improved security and performance, while comprehensive proxy support enables seamless enterprise deployment. By following the documented environment setup, security hardening, backup, and rollback procedures, teams can operate FitTracker Pro reliably in production while maintaining performance and resilience.
 
 ## Appendices
 
@@ -416,6 +481,21 @@ FitTracker Pro’s deployment and monitoring stack leverages Docker Compose for 
 - Nginx: GET /health
 
 **Section sources**
-- [backend/Dockerfile:42-44](file://backend/Dockerfile#L42-L44)
-- [frontend/Dockerfile:50-52](file://frontend/Dockerfile#L50-L52)
+- [backend/Dockerfile:54-56](file://backend/Dockerfile#L54-L56)
+- [frontend/Dockerfile:59-61](file://frontend/Dockerfile#L59-L61)
 - [nginx/nginx.conf:122-127](file://nginx/nginx.conf#L122-L127)
+
+### Enterprise Deployment Checklist
+- [ ] Configure proxy environment variables (HTTP_PROXY, HTTPS_PROXY, NO_PROXY)
+- [ ] Set resource limits for production deployment
+- [ ] Implement non-root user execution for all services
+- [ ] Configure SSL certificate automation
+- [ ] Set up comprehensive monitoring and alerting
+- [ ] Implement backup and disaster recovery procedures
+- [ ] Configure rate limiting and security headers
+- [ ] Test horizontal scaling capabilities
+
+**Section sources**
+- [backend/Dockerfile:4-15](file://backend/Dockerfile#L4-L15)
+- [frontend/Dockerfile:5-12](file://frontend/Dockerfile#L5-L12)
+- [docker-compose.prod.yml:25-52](file://docker-compose.prod.yml#L25-L52)

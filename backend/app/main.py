@@ -2,10 +2,11 @@
 FitTracker Pro - FastAPI Backend Application
 """
 import logging
+import asyncio
 import sentry_sdk
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
@@ -24,9 +25,13 @@ from app.api import (
 )
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.utils.config import settings
+from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Bot task reference
+_bot_task = None
 
 # Initialize Sentry if DSN is configured
 if settings.SENTRY_DSN:
@@ -46,10 +51,38 @@ if settings.SENTRY_DSN:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler"""
+    global _bot_task
     logger.info("Starting up FitTracker Pro API...")
-    # Startup logic here (database connections, etc.)
+
+    # Start Telegram bot
+    if settings.TELEGRAM_BOT_TOKEN:
+        try:
+            bot_app = setup_bot()
+            if bot_app:
+                if settings.ENVIRONMENT == "production":
+                    # Use webhook mode in production
+                    await start_bot_webhook(bot_app)
+                    logger.info("Telegram bot started in webhook mode")
+                else:
+                    # Use polling mode in development
+                    _bot_task = asyncio.create_task(start_bot(bot_app))
+                    logger.info("Telegram bot started in polling mode")
+        except Exception as e:
+            logger.error(f"Failed to start Telegram bot: {e}")
+    else:
+        logger.warning("TELEGRAM_BOT_TOKEN not set, bot not started")
+
     yield
-    # Shutdown logic here
+
+    # Shutdown bot
+    if _bot_task:
+        try:
+            await stop_bot()
+            _bot_task.cancel()
+            logger.info("Telegram bot stopped")
+        except Exception as e:
+            logger.error(f"Error stopping bot: {e}")
+
     logger.info("Shutting down FitTracker Pro API...")
 
 
@@ -113,6 +146,23 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs"
     }
+
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    """
+    Handle incoming Telegram webhook updates
+
+    This endpoint receives updates from Telegram when using webhook mode.
+    Only used in production environment.
+    """
+    try:
+        update_data = await request.json()
+        await process_webhook_update(update_data)
+        return Response(status_code=200)
+    except Exception as e:
+        logger.error(f"Error processing webhook update: {e}")
+        return Response(status_code=500)
 
 
 if __name__ == "__main__":

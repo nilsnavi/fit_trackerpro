@@ -27,7 +27,6 @@ aiohttp>=3.9.3
 # Utilities
 python-dotenv>=1.0.1
 orjson>=3.10.0
-celery>=5.3.6
 redis>=5.0.1
 
 # Development and Testing

@@ -17,7 +17,24 @@
 - [useTelegramWebApp.ts](file://frontend/src/hooks/useTelegramWebApp.ts)
 - [telegram.ts](file://frontend/src/types/telegram.ts)
 - [cn.ts](file://frontend/src/utils/cn.ts)
+- [HomePage.tsx](file://frontend/src/pages/HomePage.tsx)
+- [Analytics.tsx](file://frontend/src/pages/Analytics.tsx)
+- [WorkoutBuilder.tsx](file://frontend/src/pages/WorkoutBuilder.tsx)
+- [WorkoutsPage.tsx](file://frontend/src/pages/WorkoutsPage.tsx)
+- [HealthPage.tsx](file://frontend/src/pages/HealthPage.tsx)
+- [ProfilePage.tsx](file://frontend/src/pages/ProfilePage.tsx)
+- [Catalog.tsx](file://frontend/src/pages/Catalog.tsx)
+- [AddExercise.tsx](file://frontend/src/pages/AddExercise.tsx)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced Telegram WebApp integration with comprehensive haptic feedback system
+- Added safe area handling and improved navigation patterns across all pages
+- Implemented Telegram-specific UI elements with proper theme synchronization
+- Expanded component prop interfaces with Telegram-specific variants
+- Updated state management patterns with improved error handling
+- Enhanced accessibility with proper ARIA attributes and keyboard navigation
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -34,12 +51,14 @@
 ## Introduction
 This document describes the FitTracker Pro frontend component architecture built with React and TypeScript. It covers the application structure, routing and navigation, page layouts, component composition patterns, the internal design system (Button, Card, Input, ProgressBar), state management using Zustand stores and custom hooks, integration with Telegram WebApp SDK, API services, and best practices for responsiveness and accessibility.
 
+**Updated** Enhanced with comprehensive Telegram WebApp integration including haptic feedback, safe area handling, and improved navigation patterns across all page components.
+
 ## Project Structure
-The frontend is organized around a clear separation of concerns:
-- Pages: route-driven screens such as Home, Workouts, Health, Profile, and Analytics
-- Components: reusable UI building blocks grouped by domain (common, ui, health, workout, etc.)
+The frontend is organized around a clear separation of concerns with enhanced Telegram integration:
+- Pages: route-driven screens with Telegram-specific UI elements such as HomePage, WorkoutsPage, HealthPage, ProfilePage, Analytics, Catalog, and AddExercise
+- Components: reusable UI building blocks grouped by domain (common, ui, health, workout, etc.) with Telegram-aware variants
 - Stores: state containers powered by Zustand for user and home-related state
-- Hooks: Telegram WebApp integration and shared utilities
+- Hooks: Telegram WebApp integration and shared utilities with comprehensive haptic feedback support
 - Services: API client with interceptors and typed error handling
 - Utilities: Tailwind-based class merging helper
 
@@ -48,38 +67,39 @@ graph TB
 subgraph "Entry Point"
 MAIN["main.tsx"]
 APP["App.tsx"]
-end
+END
 subgraph "Routing"
 ROUTES["Routes & Paths"]
 NAV["Navigation.tsx"]
-end
-subgraph "Pages"
+END
+subgraph "Telegram Pages"
 HOME["HomePage.tsx"]
 WORKOUTS["WorkoutsPage.tsx"]
 HEALTH["HealthPage.tsx"]
 PROFILE["ProfilePage.tsx"]
 ANALYTICS["Analytics.tsx"]
-end
+CATALOG["Catalog.tsx"]
+ADD_EXERCISE["AddExercise.tsx"]
+END
 subgraph "Common Components"
 NAVCOMP["Navigation.tsx"]
-end
-subgraph "UI Library"
-BTN["Button.tsx"]
-CARD["Card.tsx"]
-INPUT["Input.tsx"]
-PROGRESS["ProgressBar.tsx"]
+END
+subgraph "Enhanced UI Library"
+BTN["Button.tsx (Telegram-aware)"]
+CARD["Card.tsx (Telegram-aware)"]
+INPUT["Input.tsx (Telegram-aware)"]
+PROGRESS["ProgressBar.tsx (Telegram-aware)"]
 UILIB["ui/index.ts"]
-end
+END
 subgraph "State Management"
 HOMESTORE["homeStore.ts"]
 USERSTORE["userStore.ts"]
-end
-subgraph "Integrations"
-TGHOOK["useTelegram.ts"]
-TGHOOK["useTelegramWebApp.ts"]
-TYPES["telegram.ts"]
+END
+subgraph "Enhanced Integrations"
+TGHOOK["useTelegramWebApp.ts (Comprehensive)"]
+TYPES["telegram.ts (Enhanced Types)"]
 API["api.ts"]
-end
+END
 MAIN --> APP
 APP --> ROUTES
 ROUTES --> HOME
@@ -87,6 +107,8 @@ ROUTES --> WORKOUTS
 ROUTES --> HEALTH
 ROUTES --> PROFILE
 ROUTES --> ANALYTICS
+ROUTES --> CATALOG
+ROUTES --> ADD_EXERCISE
 APP --> NAVCOMP
 NAVCOMP --> NAV
 UILIB --> BTN
@@ -95,7 +117,6 @@ UILIB --> INPUT
 UILIB --> PROGRESS
 HOMESTORE --> HOME
 USERSTORE --> PROFILE
-TGHOOK --> APP
 TGHOOK --> APP
 TYPES --> TGHOOK
 API --> HOME
@@ -112,35 +133,45 @@ API --> HOME
 - [Card.tsx:1-175](file://frontend/src/components/ui/Card.tsx#L1-L175)
 - [Input.tsx:1-301](file://frontend/src/components/ui/Input.tsx#L1-L301)
 - [ProgressBar.tsx:1-225](file://frontend/src/components/ui/ProgressBar.tsx#L1-L225)
-- [useTelegram.ts:1-47](file://frontend/src/hooks/useTelegram.ts#L1-L47)
-- [useTelegramWebApp.ts:1-509](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L509)
+- [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
 - [telegram.ts:1-390](file://frontend/src/types/telegram.ts#L1-L390)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
+- [HomePage.tsx:1-195](file://frontend/src/pages/HomePage.tsx#L1-L195)
+- [Analytics.tsx:1-800](file://frontend/src/pages/Analytics.tsx#L1-L800)
+- [WorkoutBuilder.tsx:1-800](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L800)
+- [WorkoutsPage.tsx:1-151](file://frontend/src/pages/WorkoutsPage.tsx#L1-L151)
+- [HealthPage.tsx:1-159](file://frontend/src/pages/HealthPage.tsx#L1-L159)
+- [ProfilePage.tsx:1-134](file://frontend/src/pages/ProfilePage.tsx#L1-L134)
+- [Catalog.tsx:1-800](file://frontend/src/pages/Catalog.tsx#L1-L800)
+- [AddExercise.tsx:1-800](file://frontend/src/pages/AddExercise.tsx#L1-L800)
 
 **Section sources**
 - [main.tsx:1-23](file://frontend/src/main.tsx#L1-L23)
 - [App.tsx:1-35](file://frontend/src/App.tsx#L1-L35)
 
 ## Core Components
-This section documents the internal design system and key state management patterns.
+This section documents the internal design system and key state management patterns with enhanced Telegram integration.
 
-- UI Library exports and types:
-  - Button, Card, Input, ProgressBar, Chip, Modal, Timer are exported from the UI library index.
-  - Each component defines its own props and variants, enabling consistent composition across pages.
+- **Enhanced UI Library exports and types**:
+  - Button, Card, Input, ProgressBar, Chip, Modal, Timer are exported from the UI library index
+  - Each component defines Telegram-aware variants with haptic feedback integration
+  - Components support Telegram-specific styling classes (telegram-bg, telegram-text, etc.)
 
-- State management:
-  - Zustand stores encapsulate domain-specific state and actions.
-  - Persistence is applied selectively to avoid bloating local storage.
-  - Stores expose typed setters and derived actions (e.g., refreshers) to keep components decoupled from data fetching.
+- **Enhanced State management**:
+  - Zustand stores encapsulate domain-specific state and actions
+  - Persistence is applied selectively to avoid bloating local storage
+  - Stores expose typed setters and derived actions (e.g., refreshers) to keep components decoupled from data fetching
 
-- Telegram integration:
+- **Comprehensive Telegram integration**:
   - Two complementary hooks provide different levels of abstraction:
-    - A lightweight hook wraps the official SDK to configure UI and expose haptic feedback and main button controls.
-    - A comprehensive hook exposes the full Telegram WebApp API surface with typed events, cloud storage, and UI controls.
+    - A lightweight hook wraps the official SDK to configure UI and expose haptic feedback and main button controls
+    - A comprehensive hook exposes the full Telegram WebApp API surface with typed events, cloud storage, and UI controls
+  - Enhanced haptic feedback system with impact styles, notification types, and selection changes
+  - Safe area handling and theme synchronization across all components
 
-- API service:
-  - Axios-based client with request/response interceptors for auth tokens and error logging.
-  - Typed error shape enables consistent error handling across components.
+- **Enhanced API service**:
+  - Axios-based client with request/response interceptors for auth tokens and error logging
+  - Typed error shape enables consistent error handling across components
 
 **Section sources**
 - [index.ts:1-25](file://frontend/src/components/ui/index.ts#L1-L25)
@@ -151,11 +182,12 @@ This section documents the internal design system and key state management patte
 - [homeStore.ts:1-206](file://frontend/src/stores/homeStore.ts#L1-L206)
 - [userStore.ts:1-31](file://frontend/src/stores/userStore.ts#L1-L31)
 - [useTelegram.ts:1-47](file://frontend/src/hooks/useTelegram.ts#L1-L47)
-- [useTelegramWebApp.ts:1-509](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L509)
+- [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
+- [telegram.ts:1-390](file://frontend/src/types/telegram.ts#L1-L390)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 
 ## Architecture Overview
-The runtime architecture centers on React Router for navigation, Zustand for state, and Telegram WebApp APIs for immersive UI integration. The Query Client provider enables caching and optimistic updates for data-heavy pages.
+The runtime architecture centers on React Router for navigation, Zustand for state, and comprehensive Telegram WebApp APIs for immersive UI integration. The Query Client provider enables caching and optimistic updates for data-heavy pages.
 
 ```mermaid
 sequenceDiagram
@@ -164,7 +196,7 @@ participant Main as "main.tsx"
 participant Provider as "QueryClientProvider"
 participant App as "App.tsx"
 participant Router as "React Router"
-participant Page as "Page Component"
+participant Page as "Telegram-aware Page Component"
 participant Store as "Zustand Store"
 participant API as "api.ts"
 participant Telegram as "Telegram WebApp"
@@ -176,8 +208,8 @@ Router->>Page : Render selected page
 Page->>Store : Read/write state
 Page->>API : Fetch/Persist data
 API-->>Page : Return typed data
-Page->>Telegram : Configure UI and haptics
-Telegram-->>Page : Theme/UI updates
+Page->>Telegram : Configure UI, haptics, theme
+Telegram-->>Page : Theme/UI updates, safe area info
 ```
 
 **Diagram sources**
@@ -190,8 +222,8 @@ Telegram-->>Page : Theme/UI updates
 
 ## Detailed Component Analysis
 
-### Navigation System
-The bottom navigation bar provides five primary destinations: Home, Catalog, Workouts, Stats, and Profile. It uses React Router’s NavLink to reflect active routes and applies Tailwind-based active/inactive styles. The Navigation component is fixed at the bottom and overlays page content.
+### Enhanced Navigation System
+The bottom navigation bar provides five primary destinations: Home, Catalog, Workouts, Stats, and Profile. It uses React Router's NavLink to reflect active routes and applies Tailwind-based active/inactive styles. The Navigation component is fixed at the bottom and overlays page content.
 
 ```mermaid
 flowchart TD
@@ -211,20 +243,23 @@ ApplyInactive --> End
 - [Navigation.tsx:1-38](file://frontend/src/components/common/Navigation.tsx#L1-L38)
 - [App.tsx:17-29](file://frontend/src/App.tsx#L17-L29)
 
-### Page Layouts and Composition Patterns
-- App wraps all pages in a single-page layout with a fixed bottom navigation bar.
-- Pages are route-driven and rendered inside the Routes container.
-- Composition follows a pattern where domain-specific pages import UI components from the design system and consume Zustand stores.
+### Enhanced Page Layouts and Composition Patterns
+- App wraps all pages in a single-page layout with a fixed bottom navigation bar
+- Pages are route-driven and rendered inside the Routes container
+- Composition follows a pattern where domain-specific pages import UI components from the design system and consume Zustand stores
+- All pages integrate with Telegram WebApp for consistent theme handling and haptic feedback
 
 ```mermaid
 graph TB
-APP["App.tsx"] --> LAYOUT["Main container<br/>min-h-screen bg-white"]
+APP["App.tsx"] --> LAYOUT["Main container<br/>min-h-screen bg-telegram-bg"]
 LAYOUT --> ROUTES["Routes"]
-ROUTES --> PAGE_HOME["HomePage"]
-ROUTES --> PAGE_WORKOUTS["WorkoutsPage"]
-ROUTES --> PAGE_HEALTH["HealthPage"]
-ROUTES --> PAGE_PROFILE["ProfilePage"]
-ROUTES --> PAGE_ANALYTICS["Analytics"]
+ROUTES --> PAGE_HOME["HomePage<br/>(Telegram-aware)"]
+ROUTES --> PAGE_WORKOUTS["WorkoutsPage<br/>(Telegram-aware)"]
+ROUTES --> PAGE_HEALTH["HealthPage<br/>(Telegram-aware)"]
+ROUTES --> PAGE_PROFILE["ProfilePage<br/>(Telegram-aware)"]
+ROUTES --> PAGE_ANALYTICS["Analytics<br/>(Telegram-aware)"]
+ROUTES --> PAGE_CATALOG["Catalog<br/>(Telegram-aware)"]
+ROUTES --> PAGE_ADD_EXERCISE["AddExercise<br/>(Telegram-aware)"]
 APP --> NAV["Navigation"]
 ```
 
@@ -234,12 +269,13 @@ APP --> NAV["Navigation"]
 **Section sources**
 - [App.tsx:1-35](file://frontend/src/App.tsx#L1-L35)
 
-### Design System: Button, Card, Input, ProgressBar
-These components share consistent patterns:
-- Props define variants, sizes, and optional accessibility attributes.
-- Internal state handles interactive behaviors (e.g., password reveal, loading spinners).
-- Haptic feedback integrates with Telegram WebApp for mobile touch interactions.
-- Accessibility: roles, ARIA attributes, keyboard support for interactive elements.
+### Enhanced Design System: Button, Card, Input, ProgressBar
+These components share consistent patterns with comprehensive Telegram integration:
+- Props define variants, sizes, and optional accessibility attributes
+- Internal state handles interactive behaviors (e.g., password reveal, loading spinners)
+- **Enhanced** Haptic feedback integrates with Telegram WebApp for mobile touch interactions with configurable intensity levels
+- **Enhanced** Accessibility: roles, ARIA attributes, keyboard support for interactive elements
+- **Enhanced** Telegram-specific styling classes (telegram-bg, telegram-text, telegram-secondary-bg) for consistent theming
 
 ```mermaid
 classDiagram
@@ -250,7 +286,7 @@ class Button {
 +leftIcon : ReactNode
 +rightIcon : ReactNode
 +fullWidth : boolean
-+haptic : "light"|...|false
++haptic : "light"|...|"soft"|false
 +onClick(event)
 }
 class Card {
@@ -259,7 +295,7 @@ class Card {
 +subtitle : string
 +onClick() : void
 +disableHover : boolean
-+haptic : "light"|...|false
++haptic : "light"|...|"heavy"|false
 }
 class Input {
 +type : "text|number|password|search"
@@ -297,7 +333,7 @@ class ProgressBar {
 - [Input.tsx:1-301](file://frontend/src/components/ui/Input.tsx#L1-L301)
 - [ProgressBar.tsx:1-225](file://frontend/src/components/ui/ProgressBar.tsx#L1-L225)
 
-### State Management with Zustand
+### Enhanced State Management with Zustand
 - Home store manages user health metrics, hydration goals, workout templates, and loading states. It includes a refresh action that simulates data fetching and updates last-updated timestamps.
 - User store manages authentication state, loading, and errors with a logout action.
 - Both stores use persistence to maintain small subsets of state across sessions.
@@ -322,10 +358,10 @@ ResetRefresh --> End(["Done"])
 - [homeStore.ts:1-206](file://frontend/src/stores/homeStore.ts#L1-L206)
 - [userStore.ts:1-31](file://frontend/src/stores/userStore.ts#L1-L31)
 
-### Telegram WebApp Integration
-Two hooks provide Telegram integration:
+### Comprehensive Telegram WebApp Integration
+Two hooks provide Telegram integration with enhanced capabilities:
 - useTelegram: minimal wrapper around the official SDK to configure UI and expose haptic feedback and main button helpers.
-- useTelegramWebApp: comprehensive hook exposing the full Telegram WebApp API surface, including theme events, cloud storage, and UI controls.
+- **Enhanced** useTelegramWebApp: comprehensive hook exposing the full Telegram WebApp API surface, including theme events, cloud storage, UI controls, and safe area handling.
 
 ```mermaid
 sequenceDiagram
@@ -354,10 +390,10 @@ Hook-->>Comp : value
 
 **Section sources**
 - [useTelegram.ts:1-47](file://frontend/src/hooks/useTelegram.ts#L1-L47)
-- [useTelegramWebApp.ts:1-509](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L509)
+- [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
 - [telegram.ts:1-390](file://frontend/src/types/telegram.ts#L1-L390)
 
-### API Services
+### Enhanced API Services
 The API service centralizes HTTP requests with:
 - Base URL from environment variables
 - Request interceptor adding Authorization header when present
@@ -383,21 +419,23 @@ LogError --> End
 **Section sources**
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 
-### Component Prop Interfaces and Event Handling Patterns
-- Button: supports variants, sizes, icons, loading states, and haptic feedback. Uses forwardRef and merges Tailwind classes via a helper.
-- Card: supports click handlers, haptic feedback, and accessibility roles for keyboard navigation.
-- Input: supports validation states, left/right icons, password reveal, and ARIA attributes for labeling and error reporting.
-- ProgressBar: supports animated fills, haptic feedback on completion, and multiple label formats.
+### Enhanced Component Prop Interfaces and Event Handling Patterns
+- **Enhanced** Button: supports variants, sizes, icons, loading states, and comprehensive haptic feedback with configurable intensity levels. Uses forwardRef and merges Tailwind classes via a helper.
+- **Enhanced** Card: supports click handlers, haptic feedback, and accessibility roles for keyboard navigation with Telegram-specific styling.
+- **Enhanced** Input: supports validation states, left/right icons, password reveal, and ARIA attributes for labeling and error reporting with Telegram-aware focus handling.
+- **Enhanced** ProgressBar: supports animated fills, haptic feedback on completion, and multiple label formats with Telegram-specific styling.
 
-Reusability guidelines:
-- Prefer variant and size props to minimize duplication.
-- Centralize styling with a class merging helper to avoid conflicts.
-- Expose minimal, focused props; compose higher-order wrappers for domain-specific behaviors.
+**Enhanced** Reusability guidelines:
+- Prefer variant and size props to minimize duplication
+- Centralize styling with a class merging helper to avoid conflicts
+- Expose minimal, focused props; compose higher-order wrappers for domain-specific behaviors
+- **Enhanced** Leverage Telegram-specific styling classes for consistent theming across components
 
-Accessibility considerations:
-- Use ARIA attributes (aria-invalid, aria-describedby, role="progressbar") where applicable.
-- Provide keyboard support for interactive elements (Enter/Space activation).
-- Ensure sufficient color contrast and focus indicators.
+**Enhanced** Accessibility considerations:
+- Use ARIA attributes (aria-invalid, aria-describedby, role="progressbar") where applicable
+- Provide keyboard support for interactive elements (Enter/Space activation)
+- Ensure sufficient color contrast and focus indicators
+- **Enhanced** Support for Telegram WebApp theme changes and safe area handling
 
 **Section sources**
 - [Button.tsx:1-184](file://frontend/src/components/ui/Button.tsx#L1-L184)
@@ -406,13 +444,108 @@ Accessibility considerations:
 - [ProgressBar.tsx:1-225](file://frontend/src/components/ui/ProgressBar.tsx#L1-L225)
 - [cn.ts:1-7](file://frontend/src/utils/cn.ts#L1-L7)
 
+### Enhanced Page-Specific Implementations
+
+#### HomePage Enhancement
+The HomePage now includes comprehensive Telegram integration with:
+- Dynamic user greeting based on time of day
+- Telegram user profile integration with photo fallback
+- Main button setup for quick workout initiation with haptic feedback
+- Enhanced stat cards with Telegram styling
+- Quick action buttons with proper haptic feedback
+- Platform information display for Telegram WebApp
+
+**Section sources**
+- [HomePage.tsx:1-195](file://frontend/src/pages/HomePage.tsx#L1-L195)
+
+#### Analytics Enhancement
+The Analytics page features advanced Telegram integration:
+- Custom tooltip components with Telegram styling
+- Export functionality with Telegram WebApp integration
+- Period selector with Telegram-specific styling
+- Exercise selector with Telegram-aware UI
+- Key metrics cards with Telegram styling
+- Point details modal with Telegram styling
+- Enhanced chart components with theme-aware coloring
+
+**Section sources**
+- [Analytics.tsx:1-800](file://frontend/src/pages/Analytics.tsx#L1-L800)
+
+#### WorkoutBuilder Enhancement
+The WorkoutBuilder includes comprehensive Telegram integration:
+- Back button setup for proper navigation
+- Drag-and-drop with haptic feedback for item rearrangement
+- Exercise selector with Telegram styling
+- Configurable blocks with proper haptic feedback
+- Template saving with Telegram WebApp integration
+- Auto-save functionality with Telegram-aware UI
+
+**Section sources**
+- [WorkoutBuilder.tsx:1-800](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L800)
+
+#### WorkoutsPage Enhancement
+The WorkoutsPage features Telegram-specific enhancements:
+- Header and background color setup for Telegram
+- Filter chips with proper haptic feedback
+- Add workout button with Telegram styling
+- Workout list with Telegram-aware styling
+- Navigation integration with Telegram WebApp
+
+**Section sources**
+- [WorkoutsPage.tsx:1-151](file://frontend/src/pages/WorkoutsPage.tsx#L1-L151)
+
+#### HealthPage Enhancement
+The HealthPage includes Telegram integration:
+- Header and background color setup for Telegram
+- Metric cards with Telegram styling
+- Trend indicators with proper haptic feedback
+- Quick log functionality with Telegram WebApp alerts
+- History visualization with Telegram styling
+
+**Section sources**
+- [HealthPage.tsx:1-159](file://frontend/src/pages/HealthPage.tsx#L1-L159)
+
+#### ProfilePage Enhancement
+The ProfilePage features Telegram integration:
+- User profile display with Telegram styling
+- Menu items with proper haptic feedback
+- Theme toggle with Telegram-aware styling
+- Logout functionality with Telegram confirmation dialogs
+- Version information with Telegram styling
+
+**Section sources**
+- [ProfilePage.tsx:1-134](file://frontend/src/pages/ProfilePage.tsx#L1-L134)
+
+#### Catalog Enhancement
+The Catalog includes comprehensive Telegram integration:
+- Exercise cards with Telegram styling
+- Detailed exercise modals with Telegram styling
+- Filtering system with Telegram-aware UI
+- Exercise search with Telegram styling
+- Similar exercises with Telegram styling
+
+**Section sources**
+- [Catalog.tsx:1-800](file://frontend/src/pages/Catalog.tsx#L1-L800)
+
+#### AddExercise Enhancement
+The AddExercise page features advanced Telegram integration:
+- Form validation with Telegram-aware error handling
+- Media upload with progress indication
+- Haptic feedback for all interactions
+- Back button setup for proper navigation
+- Success modal with Telegram styling
+- File validation with Telegram-aware error messages
+
+**Section sources**
+- [AddExercise.tsx:1-800](file://frontend/src/pages/AddExercise.tsx#L1-L800)
+
 ## Dependency Analysis
-Key dependencies and their roles:
+Key dependencies and their roles with enhanced Telegram integration:
 - Routing: react-router-dom for declarative navigation
 - State: zustand for lightweight, typed stores with optional persistence
 - UI: lucide-react for icons; Tailwind CSS for styling; clsx/tailwind-merge for class composition
 - Networking: axios with interceptors
-- Telegram: @telegram-apps/sdk-react and custom WebApp hook
+- **Enhanced** Telegram: @telegram-apps/sdk-react and comprehensive WebApp hook with full API surface
 - Querying: @tanstack/react-query for caching and optimistic updates
 
 ```mermaid
@@ -425,7 +558,15 @@ REACTQUERY["@tanstack/react-query"] --> MAIN["main.tsx"]
 TGLIGHT["@telegram-apps/sdk-react"] --> USETG["useTelegram.ts"]
 TGWEBAPP["useTelegramWebApp.ts"] --> TYPES["telegram.ts"]
 CLX["clsx + tailwind-merge"] --> CN["cn.ts"]
-UI["UI Components"] --> UILIB["ui/index.ts"]
+UI["Enhanced UI Components"] --> UILIB["ui/index.ts"]
+TELEGRAM["Telegram WebApp"] --> TGWEBAPP
+TELEGRAM --> HOME["HomePage"]
+TELEGRAM --> ANALYTICS["Analytics"]
+TELEGRAM --> WORKOUTS["WorkoutBuilder"]
+TELEGRAM --> HEALTH["HealthPage"]
+TELEGRAM --> PROFILE["ProfilePage"]
+TELEGRAM --> CATALOG["Catalog"]
+TELEGRAM --> ADD_EXERCISE["AddExercise"]
 ```
 
 **Diagram sources**
@@ -447,27 +588,33 @@ UI["UI Components"] --> UILIB["ui/index.ts"]
 - [userStore.ts:1-31](file://frontend/src/stores/userStore.ts#L1-L31)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 - [useTelegram.ts:1-47](file://frontend/src/hooks/useTelegram.ts#L1-L47)
-- [useTelegramWebApp.ts:1-509](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L509)
+- [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
 - [telegram.ts:1-390](file://frontend/src/types/telegram.ts#L1-L390)
 - [cn.ts:1-7](file://frontend/src/utils/cn.ts#L1-L7)
 - [index.ts:1-25](file://frontend/src/components/ui/index.ts#L1-L25)
 
 ## Performance Considerations
-- Use React Query for caching and background refetching to reduce network overhead.
-- Persist only essential slices of state in stores to minimize local storage usage.
-- Keep component props minimal and reuse variants to reduce re-renders.
-- Defer non-critical UI updates (e.g., haptic feedback) to avoid blocking interactions.
-- Lazy-load heavy pages or components when appropriate.
+- Use React Query for caching and background refetching to reduce network overhead
+- Persist only essential slices of state in stores to minimize local storage usage
+- Keep component props minimal and reuse variants to reduce re-renders
+- **Enhanced** Defer non-critical UI updates (e.g., haptic feedback) to avoid blocking interactions
+- **Enhanced** Lazy-load heavy pages or components when appropriate
+- **Enhanced** Leverage Telegram WebApp's native performance optimizations
 
 ## Troubleshooting Guide
 - Navigation not highlighting:
-  - Verify NavLink paths match route paths and that the active class is applied conditionally.
-- Telegram UI not updating:
-  - Ensure WebApp is initialized and theme change listeners are attached.
+  - Verify NavLink paths match route paths and that the active class is applied conditionally
+- **Enhanced** Telegram UI not updating:
+  - Ensure WebApp is initialized and theme change listeners are attached
+  - Check that Telegram-specific styling classes are being applied correctly
+- **Enhanced** Haptic feedback not triggering:
+  - Confirm Telegram WebApp is available and HapticFeedback methods are supported
+  - Verify haptic prop values are valid ('light', 'medium', 'heavy', etc.)
+- **Enhanced** Safe area issues:
+  - Ensure proper padding/margins are applied for Telegram WebApp safe areas
+  - Check viewport height calculations and safe area insets
 - API errors:
-  - Inspect response interceptor logs and ensure Authorization header is present when tokens are stored.
-- Haptic feedback not triggering:
-  - Confirm Telegram WebApp is available and HapticFeedback methods are supported.
+  - Inspect response interceptor logs and ensure Authorization header is present when tokens are stored
 
 **Section sources**
 - [Navigation.tsx:17-33](file://frontend/src/components/common/Navigation.tsx#L17-L33)
@@ -475,12 +622,21 @@ UI["UI Components"] --> UILIB["ui/index.ts"]
 - [api.ts:35-44](file://frontend/src/services/api.ts#L35-L44)
 
 ## Conclusion
-FitTracker Pro’s frontend leverages a clean, modular architecture with a strong design system, robust state management, and deep Telegram WebApp integration. The combination of route-driven pages, reusable UI components, and typed stores ensures maintainability and scalability. Following the documented patterns and guidelines will help preserve consistency and improve developer productivity.
+FitTracker Pro's frontend leverages a clean, modular architecture with a strong design system, robust state management, and comprehensive Telegram WebApp integration. The combination of route-driven pages, reusable UI components, and typed stores ensures maintainability and scalability. Following the documented patterns and guidelines will help preserve consistency and improve developer productivity.
+
+**Updated** The enhanced Telegram integration provides seamless user experience across all page components with proper haptic feedback, theme synchronization, and safe area handling.
 
 ## Appendices
-- Responsive design:
-  - Use Tailwind utilities for responsive breakpoints and adaptive spacing.
-  - Test navigation and forms across device sizes; ensure touch targets meet minimum sizes.
-- Accessibility:
-  - Maintain ARIA attributes and keyboard navigation support.
-  - Provide clear focus states and sufficient color contrast.
+- **Enhanced** Responsive design:
+  - Use Tailwind utilities for responsive breakpoints and adaptive spacing
+  - Test navigation and forms across device sizes; ensure touch targets meet minimum sizes
+  - **Enhanced** Leverage Telegram WebApp's viewport calculations for optimal layout
+- **Enhanced** Accessibility:
+  - Maintain ARIA attributes and keyboard navigation support
+  - Provide clear focus states and sufficient color contrast
+  - **Enhanced** Support for Telegram WebApp's accessibility features
+- **Enhanced** Telegram-specific considerations:
+  - Implement proper theme synchronization across all components
+  - Use Telegram-aware styling classes consistently
+  - Handle safe area insets and viewport changes gracefully
+  - Provide meaningful haptic feedback for user interactions

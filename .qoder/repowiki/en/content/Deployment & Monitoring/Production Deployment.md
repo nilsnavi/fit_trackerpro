@@ -178,7 +178,7 @@ The backend Dockerfile:
 Runtime configuration:
 - Async database connectivity via DATABASE_URL
 - Synchronous database connectivity via DATABASE_URL_SYNC
-- Redis URL for caching and Celery
+- Redis URL for distributed API rate limiting (see `RateLimitMiddleware`)
 - Sentry SDK initialization when DSN is present
 
 **Section sources**

@@ -351,7 +351,7 @@ async def export_data(
 
     export_id = f"exp_{uuid.uuid4().hex[:12]}"
 
-    # TODO: Trigger async export task (Celery)
+    # TODO: Trigger async export (background job / queue when introduced)
     # For now, return pending status
 
     return DataExportResponse(

@@ -91,7 +91,7 @@ API -. optional metrics .-> MON
 FitTracker Pro follows a modern microservice-like architecture within containers:
 - Frontend served by Nginx in production; development uses Vite’s dev server.
 - Backend API exposes REST endpoints under /api/v1 with JWT-based authentication and rate limiting.
-- PostgreSQL persists relational data; Redis caches and Celery supports async tasks.
+- PostgreSQL persists relational data; Redis supports distributed API rate limiting (no separate task-queue worker in the default compose stack).
 - Monitoring collects metrics and logs for observability.
 
 ```mermaid
@@ -238,7 +238,7 @@ N-->>C : 200/4xx/5xx
 - [monitoring/prometheus.yml:15-49](file://monitoring/prometheus.yml#L15-L49)
 
 ## Dependency Analysis
-- Backend dependencies pinned in requirements.txt include FastAPI, Uvicorn, SQLAlchemy, Alembic, asyncpg, Pydantic, Sentry SDK, structlog, Celery, Redis, and testing libraries.
+- Backend dependencies pinned in requirements.txt include FastAPI, Uvicorn, SQLAlchemy, Alembic, asyncpg, Pydantic, Sentry SDK, structlog, Redis, and testing libraries.
 - Frontend dependencies include React, React Router, TanStack React Query, Tailwind, Vite, Jest, and Telegram SDKs.
 - Runtime dependencies are managed via Docker images and multi-stage builds, ensuring minimal production footprints.
 
@@ -251,7 +251,6 @@ ALEMBIC["Alembic"]
 ASYNCPG["asyncpg"]
 PYD["Pydantic"]
 SENTRY["Sentry SDK"]
-CELERY["Celery"]
 REDIS["Redis"]
 LOG["structlog"]
 end
@@ -320,7 +319,7 @@ REACT --- AXIOS
 
 ## Maintenance and Upgrade Paths
 - Version Requirements
-  - Backend: Python 3.11; FastAPI, Uvicorn, SQLAlchemy, Alembic, asyncpg, Pydantic, Sentry SDK, structlog, Celery, Redis pinned per requirements.txt.
+  - Backend: Python 3.11; FastAPI, Uvicorn, SQLAlchemy, Alembic, asyncpg, Pydantic, Sentry SDK, structlog, Redis pinned per requirements.txt.
   - Frontend: Node 20; React 18, TypeScript 5.x, Vite 5.x, Tailwind 3.x, Jest 29.x per package.json.
   - Infrastructure: PostgreSQL 15-alpine, Redis 7-alpine; Nginx alpine; Prometheus/Grafana latest official images.
 - Dependency Management

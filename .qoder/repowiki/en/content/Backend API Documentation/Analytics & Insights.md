@@ -410,7 +410,7 @@ The analytics module provides robust endpoints for workout progress, calendar in
 
 ### Data Freshness and Background Jobs
 - Current analytics endpoints return computed results synchronously
-- Export endpoints return pending status; implement Celery/RQ/Redis-backed jobs to generate files asynchronously and update status
+- Export endpoints return pending status; future work: background workers or a task queue (e.g. RQ, Dramatiq, managed cloud jobs) to generate files asynchronously and update status
 
 **Section sources**
 - [analytics.py:354-365](file://backend/app/api/analytics.py#L354-L365)

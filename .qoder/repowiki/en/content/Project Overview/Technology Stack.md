@@ -38,7 +38,7 @@ This document presents the comprehensive technology stack for FitTracker Pro, de
 ## Project Structure
 FitTracker Pro follows a modular monorepo layout with clear separation between frontend, backend, database migrations, monitoring, and deployment assets:
 - Frontend: React 18 with TypeScript, Vite, Tailwind CSS, and Telegram WebApp SDK
-- Backend: FastAPI with Python, asynchronous PostgreSQL via SQLAlchemy, Redis caching, Celery task queue, Alembic migrations
+- Backend: FastAPI with Python, asynchronous PostgreSQL via SQLAlchemy, Redis for distributed rate limiting (with in-memory fallback), Alembic migrations
 - Database: PostgreSQL with JSONB/GIN indexing and trigger-based audit fields
 - DevOps: Docker Compose for local development and production orchestration, GitHub Actions for CI/CD, optional Prometheus/Grafana for observability
 - Monitoring: Prometheus scraping backend metrics, optional Loki/Promtail for logs, Grafana dashboards
@@ -115,7 +115,7 @@ MON_DOCK --> BE_MAIN
 
 ## Core Components
 - Frontend: React 18 with TypeScript, Vite build, Tailwind CSS for styling, TanStack React Query for data fetching, Zustand for state management, Telegram WebApp SDK for Mini App integration
-- Backend: FastAPI application with CORS, rate-limiting middleware, Sentry for error tracking, SQLAlchemy ORM with asyncpg, Alembic for migrations, Redis for caching, Celery for background tasks
+- Backend: FastAPI application with CORS, rate-limiting middleware, Sentry for error tracking, SQLAlchemy ORM with asyncpg, Alembic for migrations, Redis for rate limiting
 - Database: PostgreSQL with JSONB/GIN indexes, trigger-based updated_at, initial schema covering users, exercises, workout templates/logs, glucose logs, wellness, achievements, challenges, and emergency contacts
 - DevOps: Dockerized services orchestrated by Docker Compose, GitHub Actions for building/pushing images and vulnerability scanning, optional Nginx reverse proxy in production
 - Monitoring: Prometheus scraping backend metrics, optional Grafana dashboards, Loki/Promtail for logs, Node Exporter and cAdvisor for system/container metrics
@@ -149,8 +149,7 @@ Client["Browser / Telegram WebApp"] --> Nginx["Nginx Reverse Proxy"]
 Nginx --> FE["Frontend (React/Vite/Nginx)"]
 Nginx --> BE["Backend (FastAPI/Uvicorn/Gunicorn)"]
 BE --> DB["PostgreSQL (JSONB/GIN, triggers)"]
-BE --> Redis["Redis (Cache/Rate Limit)"]
-BE --> Celery["Celery (Background Tasks)"]
+BE --> Redis["Redis (Rate limit / optional cache)"]
 subgraph "CI/CD"
 GH["GitHub Actions"]
 GH --> GHCR["GHCR Images"]
@@ -237,8 +236,7 @@ ReactApp --> ZustandStore : "consumes"
 - FastAPI: Modern, fast web framework with automatic OpenAPI docs and dependency injection
 - SQLAlchemy 2.x: Asynchronous ORM with asyncpg adapter and Pydantic models
 - Alembic: Database migration tool integrated with SQLAlchemy models
-- Redis: In-memory cache and rate limiting
-- Celery: Distributed task queue for background jobs
+- Redis: Distributed rate limiting for the API (falls back to in-memory storage if Redis is unavailable)
 - Sentry: Error tracking and performance monitoring
 - Pydantic Settings: Type-safe configuration loading from environment variables
 
@@ -488,7 +486,7 @@ Aggregation --> Dashboards
 
 ## Dependency Analysis
 - Frontend dependencies include React 18, TanStack Query, Tailwind CSS, Zustand, and Telegram SDKs
-- Backend dependencies include FastAPI, SQLAlchemy 2.x, Alembic, asyncpg, Redis, Celery, Sentry, and Pydantic settings
+- Backend dependencies include FastAPI, SQLAlchemy 2.x, Alembic, asyncpg, Redis, Sentry, and Pydantic settings
 - Dockerfiles define multi-stage builds for optimal production images and health checks
 - Environment-driven configuration via Pydantic Settings ensures secure and flexible runtime configuration
 
@@ -496,8 +494,7 @@ Aggregation --> Dashboards
 graph LR
 FE["Frontend (React 18)"] --> |HTTP| BE["Backend (FastAPI)"]
 BE --> |SQLAlchemy| DB["PostgreSQL"]
-BE --> |Redis| Cache["Redis"]
-BE --> |Celery| Queue["Celery Workers"]
+BE --> |Redis| Cache["Redis (rate limits)"]
 BE --> |Sentry| Mon["Sentry"]
 CI["GitHub Actions"] --> |Build/Push| Reg["GHCR"]
 Reg --> |Images| Prod["docker-compose.prod.yml"]

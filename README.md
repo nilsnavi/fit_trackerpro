@@ -203,11 +203,13 @@ docker-compose -f docker-compose.prod.yml exec backend alembic upgrade head
 
 ## CI/CD
 
-Пайплайны GitHub Actions:
-- **test.yml** - Тесты на push/PR
-- **build.yml** - Сборка Docker образов
-- **deploy.yml** - Деплой на production
-- **migrate.yml** - Управление миграциями
+CI настроен через **GitHub Actions** (каталог `.github/workflows/`). Отдельного GitLab CI в репозитории нет.
+
+Пайплайны:
+- **test.yml** — тесты на push/PR
+- **build.yml** — сборка Docker-образов
+- **deploy.yml** — деплой на production
+- **migrate.yml** — управление миграциями
 
 ## Мониторинг
 

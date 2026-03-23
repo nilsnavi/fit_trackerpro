@@ -27,13 +27,13 @@ describe('Button Component', () => {
 
     it('applies variant classes correctly', () => {
         const { rerender } = render(<Button variant="primary">Primary</Button>);
-        expect(screen.getByRole('button')).toHaveClass('bg-blue-600');
+        expect(screen.getByRole('button')).toHaveClass('bg-primary');
 
         rerender(<Button variant="secondary">Secondary</Button>);
-        expect(screen.getByRole('button')).toHaveClass('bg-gray-200');
+        expect(screen.getByRole('button')).toHaveClass('bg-telegram-secondary-bg');
 
-        rerender(<Button variant="danger">Danger</Button>);
-        expect(screen.getByRole('button')).toHaveClass('bg-red-600');
+        rerender(<Button variant="emergency">Emergency</Button>);
+        expect(screen.getByRole('button')).toHaveClass('bg-danger');
     });
 
     it('is disabled when disabled prop is true', () => {

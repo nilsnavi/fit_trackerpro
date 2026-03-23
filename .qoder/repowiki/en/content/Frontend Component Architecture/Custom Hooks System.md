@@ -11,6 +11,9 @@
 - [telegram.ts](file://frontend/src/types/telegram.ts)
 - [index.ts](file://frontend/src/hooks/index.ts)
 - [RestTimer.tsx](file://frontend/src/components/workout/RestTimer.tsx)
+- [EmergencyButton.tsx](file://frontend/src/components/home/EmergencyButton.tsx)
+- [Home.tsx](file://frontend/src/pages/Home.tsx)
+- [WorkoutCardio.tsx](file://frontend/src/pages/WorkoutCardio.tsx)
 - [useTimer.test.ts](file://frontend/src/__tests__/hooks/useTimer.test.ts)
 - [achievements.py](file://backend/app/api/achievements.py)
 - [users.py](file://backend/app/api/users.py)
@@ -19,9 +22,10 @@
 ## Update Summary
 **Changes Made**
 - Enhanced useTelegram hook documentation to reflect comprehensive mock implementations for standalone browser usage
-- Updated haptic feedback capabilities and main button management features
-- Added detailed coverage of fallback mechanisms and Telegram Mini App compatibility
-- Expanded usage patterns and integration examples
+- Updated haptic feedback capabilities with six distinct feedback types (light, medium, heavy, success, error, selectionChanged)
+- Added detailed coverage of main button management with show/hide functionality
+- Expanded fallback mechanisms and Telegram Mini App compatibility features
+- Updated usage patterns and integration examples across multiple components
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -49,7 +53,8 @@ The documentation covers purpose, parameters, return values, side effects, usage
 The hooks are located under frontend/src/hooks and integrate with:
 - Services: frontend/src/services/api.ts for HTTP requests.
 - Types: frontend/src/types/telegram.ts for Telegram WebApp typings.
-- Components: frontend/src/components for usage examples (e.g., RestTimer.tsx).
+- Components: frontend/src/components for usage examples (e.g., RestTimer.tsx, EmergencyButton.tsx).
+- Pages: frontend/src/pages for higher-level component usage (e.g., Home.tsx, WorkoutCardio.tsx).
 - Tests: frontend/src/__tests__/hooks for unit tests (e.g., useTimer.test.ts).
 
 ```mermaid
@@ -69,6 +74,11 @@ TEL["telegram.ts"]
 end
 subgraph "Components"
 RT["RestTimer.tsx"]
+EB["EmergencyButton.tsx"]
+end
+subgraph "Pages"
+HOME["Home.tsx"]
+WCARDIO["WorkoutCardio.tsx"]
 end
 subgraph "Tests"
 TST["useTimer.test.ts"]
@@ -81,6 +91,9 @@ UT --> TEL
 UTA --> TEL
 RT --> UTI
 RT --> UTA
+EB --> UT
+HOME --> UT
+WCARDIO --> UT
 TST --> UTI
 ```
 
@@ -93,10 +106,13 @@ TST --> UTI
 - [api.ts:6-68](file://frontend/src/services/api.ts#L6-L68)
 - [telegram.ts:251-328](file://frontend/src/types/telegram.ts#L251-L328)
 - [RestTimer.tsx:115-189](file://frontend/src/components/workout/RestTimer.tsx#L115-L189)
+- [EmergencyButton.tsx:1-109](file://frontend/src/components/home/EmergencyButton.tsx#L1-L109)
+- [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
+- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
 - [useTimer.test.ts:1-114](file://frontend/src/__tests__/hooks/useTimer.test.ts#L1-L114)
 
 **Section sources**
-- [index.ts:1-13](file://frontend/src/hooks/index.ts#L1-L13)
+- [index.ts:1-15](file://frontend/src/hooks/index.ts#L1-L15)
 
 ## Core Components
 - useProfile
@@ -112,8 +128,8 @@ TST --> UTI
 - useTelegram **Updated**
   - Purpose: Comprehensive mock Telegram integration for standalone environments while maintaining Telegram Mini App compatibility.
   - Key return values: sdk (null), initData (null), user (null), hapticFeedback (with six feedback types), showMainButton, hideMainButton, ready (always true).
-  - Side effects: Uses Telegram WebApp API when available; falls back to console logging for main button actions; no-op for haptic feedback outside Telegram.
-  - Usage patterns: Primary fallback for local development and testing; maintains compatibility with Telegram Mini App environment.
+  - Side effects: Uses Telegram WebApp API when available; falls back to console logging for main button actions; no-op for haptic feedback outside Telegram; provides six distinct haptic feedback types (light, medium, heavy, success, error, selectionChanged).
+  - Usage patterns: Primary fallback for local development and testing; maintains compatibility with Telegram Mini App environment; enables main button management in both environments.
 - useTelegramWebApp
   - Purpose: Full Telegram WebApp SDK integration including theme, haptics, UI controls, and cloud storage.
   - Key return values: webApp, isReady, user, theme, colorScheme, and numerous control methods.
@@ -134,27 +150,33 @@ TST --> UTI
 
 ## Architecture Overview
 The hooks follow a layered architecture:
-- UI Layer: Components consume hooks (e.g., RestTimer uses useTimer and useTelegramWebApp).
+- UI Layer: Components consume hooks (e.g., RestTimer uses useTimer and useTelegramWebApp; EmergencyButton uses useTelegram).
 - Hook Layer: Business logic encapsulated in custom hooks; each hook manages its own state and side effects.
 - Service Layer: api.ts centralizes HTTP requests with interceptors for auth tokens and error handling.
 - External SDK Layer: Telegram WebApp SDK integration via useTelegramWebApp; fallback via useTelegram.
 
 ```mermaid
 graph TB
-UI["Components<br/>RestTimer.tsx"] --> H1["useTimer.ts"]
+UI["Components<br/>RestTimer.tsx, EmergencyButton.tsx"] --> H1["useTimer.ts"]
 UI --> H2["useTelegramWebApp.ts"]
+UI --> H3["useTelegram.ts"]
 H1 --> S["api.ts"]
 H2 --> S
-H3["useProfile.ts"] --> S
-H4["useAchievements.ts"] --> S
-H3 --> H2
+H3 --> TEL["telegram.ts"]
+H3 --> TEL
+H2 --> TEL
+H4["useProfile.ts"] --> S
+H5["useAchievements.ts"] --> S
 H4 --> H2
+H5 --> H2
 S --> BE["Backend API<br/>achievements.py, users.py"]
 ```
 
 **Diagram sources**
 - [RestTimer.tsx:115-189](file://frontend/src/components/workout/RestTimer.tsx#L115-L189)
+- [EmergencyButton.tsx:1-109](file://frontend/src/components/home/EmergencyButton.tsx#L1-L109)
 - [useTimer.ts:57-290](file://frontend/src/hooks/useTimer.ts#L57-L290)
+- [useTelegram.ts:36-116](file://frontend/src/hooks/useTelegram.ts#L36-L116)
 - [useTelegramWebApp.ts:119-504](file://frontend/src/hooks/useTelegramWebApp.ts#L119-L504)
 - [useProfile.ts:128-324](file://frontend/src/hooks/useProfile.ts#L128-L324)
 - [useAchievements.ts:67-274](file://frontend/src/hooks/useAchievements.ts#L67-L274)
@@ -273,13 +295,15 @@ HA-->>C : "unlock data and updated stats"
   - Uses try-catch blocks to prevent errors in non-Telegram environments.
   - Provides haptic feedback simulation using Telegram WebApp HapticFeedback API when available.
   - Manages main button state with proper Telegram API integration.
+  - Six distinct haptic feedback types: light (impactOccurred 'light'), medium (impactOccurred 'medium'), heavy (impactOccurred 'heavy'), success (notificationOccurred 'success'), error (notificationOccurred 'error'), selectionChanged (selectionChanged).
 - Usage patterns:
   - Primary fallback for local development and testing environments.
   - Maintains compatibility with Telegram Mini App by checking for window.Telegram.WebApp availability.
   - Ensures components do not crash outside Telegram Mini App environment.
   - Provides consistent API surface regardless of execution environment.
+  - Supports main button management with show/hide functionality.
 
-**Updated** Enhanced with comprehensive haptic feedback simulation and main button management for both Telegram and standalone environments.
+**Updated** Enhanced with comprehensive haptic feedback simulation (six types), main button management, and improved fallback mechanisms for both Telegram and standalone environments.
 
 ```mermaid
 flowchart TD
@@ -289,15 +313,15 @@ CheckEnv --> |No| UseMockAPI["Use Mock Implementation"]
 UseRealAPI --> HapticReal["Haptic Feedback via Telegram API"]
 UseRealAPI --> MainBtnReal["Main Button via Telegram API"]
 UseMockAPI --> HapticMock["Haptic Feedback Simulation"]
-HapticMock --> Light["light() - Console log"]
-HapticMock --> Medium["medium() - Console log"]
-HapticMock --> Heavy["heavy() - Console log"]
-HapticMock --> Success["success() - Console log"]
-HapticMock --> Error["error() - Console log"]
-HapticMock --> Selection["selectionChanged() - Console log"]
+HapticMock --> Light["light() - impactOccurred('light')"]
+HapticMock --> Medium["medium() - impactOccurred('medium')"]
+HapticMock --> Heavy["heavy() - impactOccurred('heavy')"]
+HapticMock --> Success["success() - notificationOccurred('success')"]
+HapticMock --> Error["error() - notificationOccurred('error')"]
+HapticMock --> Selection["selectionChanged() - selectionChanged()"]
 UseMockAPI --> MainBtnMock["Main Button Mock"]
-MainBtnMock --> ShowBtn["showMainButton() - Console log"]
-MainBtnMock --> HideBtn["hideMainButton() - No-op"]
+MainBtnMock --> ShowBtn["showMainButton() - console.log"]
+MainBtnMock --> HideBtn["hideMainButton() - no-op"]
 HapticReal --> Ready["ready: true"]
 MainBtnReal --> Ready
 HapticMock --> Ready
@@ -412,6 +436,9 @@ UTA --> TEL
 UTI["useTimer.ts"]
 RT["RestTimer.tsx"] --> UTI
 RT --> UTA
+EB["EmergencyButton.tsx"] --> UT
+HOME["Home.tsx"] --> UT
+WCARDIO["WorkoutCardio.tsx"] --> UT
 API --> BEA["achievements.py"]
 API --> BEU["users.py"]
 ```
@@ -423,6 +450,9 @@ API --> BEU["users.py"]
 - [useTelegramWebApp.ts:119-504](file://frontend/src/hooks/useTelegramWebApp.ts#L119-L504)
 - [useTimer.ts:57-290](file://frontend/src/hooks/useTimer.ts#L57-L290)
 - [RestTimer.tsx:115-189](file://frontend/src/components/workout/RestTimer.tsx#L115-L189)
+- [EmergencyButton.tsx:1-109](file://frontend/src/components/home/EmergencyButton.tsx#L1-L109)
+- [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
+- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
 - [api.ts:6-68](file://frontend/src/services/api.ts#L6-L68)
 - [achievements.py:25-88](file://backend/app/api/achievements.py#L25-L88)
 - [users.py:47-54](file://backend/app/api/users.py#L47-L54)
@@ -444,6 +474,8 @@ API --> BEU["users.py"]
   - Mock implementation uses useCallback for all methods to prevent unnecessary re-renders.
   - Try-catch blocks prevent performance issues from API calls in non-Telegram environments.
   - Console logging provides minimal overhead for fallback scenarios.
+  - Six haptic feedback types are implemented with useCallback for optimal performance.
+  - Main button management uses useCallback to prevent unnecessary re-renders.
 - Telegram WebApp
   - Initialize once and reuse instances; avoid repeated DOM queries.
   - Use haptic feedback sparingly to prevent user fatigue.
@@ -456,15 +488,20 @@ API --> BEU["users.py"]
   - Ensure localStorage contains a valid auth token; api.ts adds Authorization header automatically.
   - Verify backend routes for /auth/me and /users/stats are implemented.
 - Telegram WebApp not available **Updated**
-  - Outside Telegram Mini App, useTelegram provides comprehensive mock implementations; useTelegramWebApp returns null webApp.
+  - Outside Telegram Mini App, useTelegram provides comprehensive mock implementations with six haptic feedback types; useTelegramWebApp returns null webApp.
   - Components should guard against null webApp before invoking methods.
   - useTelegram always returns ready: true and provides fallback haptic feedback and main button functionality.
+  - Haptic feedback methods (light, medium, heavy, success, error, selectionChanged) work in both environments.
 - Timer not updating
   - Confirm autoStart is enabled or start() is called.
   - Check visibility change handling; ensure RAF is scheduled after coming back from background.
 - Achievement unlock notifications not firing
   - Verify periodic polling interval is active and checkForNewAchievements is invoked.
   - Ensure onAchievementUnlocked subscribers are registered before unlock events.
+- Main button not appearing **Updated**
+  - In Telegram Mini App, ensure showMainButton is called with proper text and click handler.
+  - In standalone mode, main button functionality is simulated with console logging.
+  - Verify that hideMainButton is called appropriately to clean up button state.
 
 **Section sources**
 - [api.ts:21-44](file://frontend/src/services/api.ts#L21-L44)
@@ -474,19 +511,23 @@ API --> BEU["users.py"]
 - [useAchievements.ts:248-259](file://frontend/src/hooks/useAchievements.ts#L248-L259)
 
 ## Conclusion
-The custom hooks system provides a cohesive, composable foundation for user profile management, gamification, Telegram integration, and precise timing. The enhanced useTelegram hook now offers comprehensive mock implementations that maintain full compatibility with Telegram Mini App while providing robust fallback functionality for standalone browser usage. By encapsulating state, side effects, and external integrations, the hooks simplify component logic and promote reusability. Following the documented patterns ensures consistent behavior, robust error handling, and optimal performance across environments.
+The custom hooks system provides a cohesive, composable foundation for user profile management, gamification, Telegram integration, and precise timing. The enhanced useTelegram hook now offers comprehensive mock implementations that maintain full compatibility with Telegram Mini App while providing robust fallback functionality for standalone browser usage. The addition of six distinct haptic feedback types (light, medium, heavy, success, error, selectionChanged) and main button management capabilities significantly improves the user experience across different deployment environments. By encapsulating state, side effects, and external integrations, the hooks simplify component logic and promote reusability. Following the documented patterns ensures consistent behavior, robust error handling, and optimal performance across environments.
 
 ## Appendices
 
 ### Hook Composition Patterns
 - useProfile and useAchievements both depend on useTelegramWebApp for haptic feedback, demonstrating shared integration patterns.
 - RestTimer composes useTimer and useTelegramWebApp to deliver rich workout experiences with sound and haptic cues.
+- EmergencyButton and Home page components demonstrate useTelegram usage for basic haptic feedback and main button management.
 - useTelegram provides fallback functionality for components that need Telegram integration but may run outside Telegram environment.
 
 **Section sources**
 - [useProfile.ts:128-129](file://frontend/src/hooks/useProfile.ts#L128-L129)
 - [useAchievements.ts:67-68](file://frontend/src/hooks/useAchievements.ts#L67-L68)
 - [RestTimer.tsx:115-189](file://frontend/src/components/workout/RestTimer.tsx#L115-L189)
+- [EmergencyButton.tsx:1-109](file://frontend/src/components/home/EmergencyButton.tsx#L1-L109)
+- [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
+- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
 
 ### Testing Strategies
 - useTimer
@@ -494,8 +535,9 @@ The custom hooks system provides a cohesive, composable foundation for user prof
   - Test start, pause, reset, skip, and onComplete callbacks.
 - useTelegram **Updated**
   - Test fallback behavior by mocking window.Telegram as undefined.
-  - Verify haptic feedback methods don't throw errors in non-Telegram environments.
+  - Verify haptic feedback methods (light, medium, heavy, success, error, selectionChanged) don't throw errors in non-Telegram environments.
   - Test main button show/hide functionality with console logging verification.
+  - Test that all six haptic feedback types are properly exposed.
 - General patterns
   - Mock external dependencies (Telegram SDK, API) using Jest.
   - Test side effects (HTTP calls, haptic feedback) via spies and assertions.
@@ -528,6 +570,11 @@ The custom hooks system provides a cohesive, composable foundation for user prof
   ```typescript
   const { hapticFeedback } = useTelegram()
   hapticFeedback.medium() // Works in both Telegram and standalone modes
+  hapticFeedback.success() // Success feedback type
+  hapticFeedback.error() // Error feedback type
+  hapticFeedback.light() // Light impact feedback
+  hapticFeedback.heavy() // Heavy impact feedback
+  hapticFeedback.selectionChanged() // Selection change feedback
   ```
 - Main button management:
   ```typescript
@@ -540,7 +587,28 @@ The custom hooks system provides a cohesive, composable foundation for user prof
     }
   }, [hasData])
   ```
+- Combined usage in workout components:
+  ```typescript
+  const { hapticFeedback, showMainButton, hideMainButton } = useTelegram()
+  
+  // Show main button when workout starts
+  useEffect(() => {
+    if (elapsedSeconds > 0) {
+      showMainButton('Finish Workout', () => finishWorkout())
+    } else {
+      hideMainButton()
+    }
+  }, [elapsedSeconds])
+  
+  // Provide haptic feedback for user actions
+  const handleStart = () => {
+    hapticFeedback?.medium()
+    startWorkout()
+  }
+  ```
 
 **Section sources**
-- [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
-- [WorkoutCardio.tsx:560](file://frontend/src/pages/WorkoutCardio.tsx#L560)
+- [EmergencyButton.tsx:11-25](file://frontend/src/components/home/EmergencyButton.tsx#L11-L25)
+- [Home.tsx:85-114](file://frontend/src/pages/Home.tsx#L85-L114)
+- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
+- [WorkoutCardio.tsx:715-726](file://frontend/src/pages/WorkoutCardio.tsx#L715-L726)
