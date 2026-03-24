@@ -11,6 +11,7 @@ from sqlalchemy import select, desc, func, and_
 
 from app.middleware.auth import get_current_user
 from app.models import get_async_db, User, WorkoutTemplate, WorkoutLog
+from app.utils.cache import invalidate_user_analytics_cache
 from app.schemas.workouts import (
     WorkoutTemplateCreate,
     WorkoutTemplateResponse,
@@ -400,6 +401,7 @@ async def start_workout(
     db.add(workout)
     await db.commit()
     await db.refresh(workout)
+    await invalidate_user_analytics_cache(current_user.id)
 
     return WorkoutStartResponse(
         id=workout.id,
@@ -476,6 +478,7 @@ async def complete_workout(
 
     await db.commit()
     await db.refresh(workout)
+    await invalidate_user_analytics_cache(current_user.id)
 
     return WorkoutCompleteResponse(
         id=workout.id,

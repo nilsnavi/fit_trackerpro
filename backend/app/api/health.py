@@ -11,6 +11,7 @@ from sqlalchemy import select, desc, func, and_, between
 
 from app.middleware.auth import get_current_user
 from app.models import get_async_db, User, GlucoseLog, DailyWellness, WorkoutLog
+from app.utils.cache import invalidate_user_analytics_cache
 from app.schemas.health import (
     GlucoseLogCreate,
     GlucoseLogResponse,
@@ -315,6 +316,7 @@ async def create_wellness_entry(
 
         await db.commit()
         await db.refresh(existing)
+        await invalidate_user_analytics_cache(current_user.id)
         return existing
     else:
         # Create new entry
@@ -333,6 +335,7 @@ async def create_wellness_entry(
         db.add(wellness)
         await db.commit()
         await db.refresh(wellness)
+        await invalidate_user_analytics_cache(current_user.id)
         return wellness
 
 

@@ -12,6 +12,8 @@ from sqlalchemy import select, func, and_, cast, Integer, literal, true, or_, te
 
 from app.middleware.auth import get_current_user
 from app.models import get_async_db, User, WorkoutLog, DailyWellness
+from app.utils.config import settings
+from app.utils.cache import get_cache_json, set_cache_json
 from app.schemas.analytics import (
     ExerciseProgressResponse,
     ExerciseProgressData,
@@ -24,10 +26,27 @@ from app.schemas.analytics import (
 router = APIRouter()
 
 
+def _build_analytics_cache_key(endpoint: str, user_id: int, **kwargs: Any) -> str:
+    parts = [f"analytics:{endpoint}:u:{user_id}"]
+    for k in sorted(kwargs.keys()):
+        parts.append(f"{k}:{kwargs[k]}")
+    return "|".join(parts)
+
+
 @router.get("/progress", response_model=List[ExerciseProgressResponse])
 async def get_exercise_progress(
     exercise_id: Optional[int] = Query(None),
     period: str = Query("30d", pattern="^(7d|30d|90d|1y|all)$"),
+    max_exercises: int = Query(
+        settings.ANALYTICS_DEFAULT_MAX_EXERCISES,
+        ge=1,
+        le=settings.ANALYTICS_MAX_EXERCISES_HARD_LIMIT
+    ),
+    max_data_points: int = Query(
+        settings.ANALYTICS_DEFAULT_MAX_DATA_POINTS,
+        ge=1,
+        le=settings.ANALYTICS_MAX_DATA_POINTS_HARD_LIMIT
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
@@ -79,6 +98,18 @@ async def get_exercise_progress(
     days = days_map.get(period, 30)
     date_from = date.today() - timedelta(days=days)
 
+    cache_key = _build_analytics_cache_key(
+        "progress",
+        current_user.id,
+        exercise_id=exercise_id or "all",
+        period=period,
+        max_exercises=max_exercises,
+        max_data_points=max_data_points,
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
     parsed_sets_cte = """
         WITH parsed_sets AS (
             SELECT
@@ -96,6 +127,18 @@ async def get_exercise_progress(
               AND wl.date >= :date_from
               AND exercise_item.item ? 'exercise_id'
               AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
+        ),
+        limited_exercises AS (
+            SELECT exercise_id
+            FROM parsed_sets
+            GROUP BY exercise_id
+            ORDER BY MAX(workout_date) DESC, exercise_id
+            LIMIT :max_exercises
+        ),
+        filtered_sets AS (
+            SELECT ps.*
+            FROM parsed_sets ps
+            JOIN limited_exercises le ON le.exercise_id = ps.exercise_id
         )
     """
 
@@ -103,6 +146,8 @@ async def get_exercise_progress(
         "user_id": current_user.id,
         "date_from": date_from,
         "exercise_id": exercise_id,
+        "max_exercises": max_exercises,
+        "max_data_points": max_data_points,
     }
 
     summary_result = await db.execute(
@@ -117,9 +162,9 @@ async def get_exercise_progress(
                 AVG(weight) AS avg_weight,
                 MIN(workout_date) AS first_date,
                 MAX(workout_date) AS last_date
-            FROM parsed_sets
+            FROM filtered_sets
             GROUP BY exercise_id
-            ORDER BY exercise_id
+            ORDER BY MAX(workout_date) DESC, exercise_id
             """
         ),
         params
@@ -142,11 +187,24 @@ async def get_exercise_progress(
                         PARTITION BY exercise_id, workout_date
                         ORDER BY weight DESC NULLS LAST, reps DESC NULLS LAST
                     ) AS rn
-                FROM parsed_sets
+                FROM filtered_sets
+            ),
+            ranked_by_exercise AS (
+                SELECT
+                    exercise_id,
+                    workout_date,
+                    weight,
+                    reps,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY exercise_id
+                        ORDER BY workout_date DESC
+                    ) AS ex_rn
+                FROM ranked_sets
+                WHERE rn = 1
             )
             SELECT exercise_id, workout_date, weight AS max_weight, reps
-            FROM ranked_sets
-            WHERE rn = 1
+            FROM ranked_by_exercise
+            WHERE ex_rn <= :max_data_points
             ORDER BY exercise_id, workout_date
             """
         ),
@@ -167,7 +225,7 @@ async def get_exercise_progress(
                         PARTITION BY exercise_id
                         ORDER BY weight DESC NULLS LAST, workout_date ASC
                     ) AS rn
-                FROM parsed_sets
+                FROM filtered_sets
                 WHERE weight IS NOT NULL
             )
             SELECT exercise_id, workout_date, weight, reps
@@ -232,7 +290,13 @@ async def get_exercise_progress(
             )
         )
 
-    return responses
+    response_payload = [item.model_dump(mode="json") for item in responses]
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
 
 
 @router.get("/calendar", response_model=WorkoutCalendarResponse)
@@ -282,6 +346,16 @@ async def get_workout_calendar(
     # Calculate date range for the month
     first_day = date(year, month, 1)
     last_day = date(year, month, calendar.monthrange(year, month)[1])
+
+    cache_key = _build_analytics_cache_key(
+        "calendar",
+        current_user.id,
+        year=year,
+        month=month,
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
 
     # Aggregate workouts per day in SQL
     base_filters = and_(
@@ -366,7 +440,7 @@ async def get_workout_calendar(
     total_duration = sum(d.total_duration for d in days)
     active_days = sum(1 for d in days if d.has_workout)
 
-    return WorkoutCalendarResponse(
+    response_payload = WorkoutCalendarResponse(
         year=year,
         month=month,
         days=days,
@@ -377,6 +451,13 @@ async def get_workout_calendar(
             "rest_days": len(days) - active_days
         }
     )
+    response_json = response_payload.model_dump(mode="json")
+    await set_cache_json(
+        cache_key,
+        response_json,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_json
 
 
 @router.post("/export", response_model=DataExportResponse)
@@ -491,6 +572,15 @@ async def get_analytics_summary(
     days = days_map.get(period, 30)
     date_from = date.today() - timedelta(days=days)
 
+    cache_key = _build_analytics_cache_key(
+        "summary",
+        current_user.id,
+        period=period,
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
     base_filters = and_(
         WorkoutLog.user_id == current_user.id,
         WorkoutLog.date >= date_from
@@ -506,7 +596,7 @@ async def get_analytics_summary(
     total_workouts = int(summary_row.total_workouts or 0)
 
     if total_workouts == 0:
-        return {
+        empty_payload = {
             "total_workouts": 0,
             "total_duration": 0,
             "total_exercises": 0,
@@ -517,6 +607,12 @@ async def get_analytics_summary(
             "weekly_average": 0.0,
             "monthly_average": 0.0
         }
+        await set_cache_json(
+            cache_key,
+            empty_payload,
+            ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+        )
+        return empty_payload
 
     total_duration = int(summary_row.total_duration or 0)
 
@@ -607,7 +703,7 @@ async def get_analytics_summary(
     weeks = max(1, days / 7)
     months = max(1, days / 30)
 
-    return {
+    response_payload = {
         "total_workouts": total_workouts,
         "total_duration": total_duration,
         "total_exercises": total_exercises,
@@ -618,3 +714,9 @@ async def get_analytics_summary(
         "weekly_average": round(total_workouts / weeks, 1),
         "monthly_average": round(total_workouts / months, 1)
     }
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
