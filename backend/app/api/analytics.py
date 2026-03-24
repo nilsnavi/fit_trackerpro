@@ -8,10 +8,10 @@ import calendar
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, desc, extract
+from sqlalchemy import select, func, and_, cast, Integer, literal, true, or_, text
 
 from app.middleware.auth import get_current_user
-from app.models import get_async_db, User, WorkoutLog, Exercise
+from app.models import get_async_db, User, WorkoutLog, DailyWellness
 from app.schemas.analytics import (
     ExerciseProgressResponse,
     ExerciseProgressData,
@@ -79,120 +79,158 @@ async def get_exercise_progress(
     days = days_map.get(period, 30)
     date_from = date.today() - timedelta(days=days)
 
-    # Get workout logs in period
-    query = select(WorkoutLog).where(
-        and_(
-            WorkoutLog.user_id == current_user.id,
-            WorkoutLog.date >= date_from
+    parsed_sets_cte = """
+        WITH parsed_sets AS (
+            SELECT
+                wl.date AS workout_date,
+                (exercise_item.item->>'exercise_id')::int AS exercise_id,
+                COALESCE(NULLIF(exercise_item.item->>'name', ''), 'Unknown') AS exercise_name,
+                NULLIF(set_item.item->>'weight', '')::double precision AS weight,
+                NULLIF(set_item.item->>'reps', '')::int AS reps
+            FROM workout_logs wl
+            CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+            CROSS JOIN LATERAL jsonb_array_elements(
+                COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
+            ) AS set_item(item)
+            WHERE wl.user_id = :user_id
+              AND wl.date >= :date_from
+              AND exercise_item.item ? 'exercise_id'
+              AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
         )
-    ).order_by(WorkoutLog.date)
+    """
 
-    result = await db.execute(query)
-    workouts = result.scalars().all()
+    params = {
+        "user_id": current_user.id,
+        "date_from": date_from,
+        "exercise_id": exercise_id,
+    }
 
-    # Process exercise data
-    exercise_data: Dict[int, Dict[str, Any]] = {}
+    summary_result = await db.execute(
+        text(
+            parsed_sets_cte + """
+            SELECT
+                exercise_id,
+                MAX(exercise_name) AS exercise_name,
+                COUNT(*) AS total_sets,
+                COALESCE(SUM(reps), 0) AS total_reps,
+                MAX(weight) AS max_weight,
+                AVG(weight) AS avg_weight,
+                MIN(workout_date) AS first_date,
+                MAX(workout_date) AS last_date
+            FROM parsed_sets
+            GROUP BY exercise_id
+            ORDER BY exercise_id
+            """
+        ),
+        params
+    )
+    summary_rows = summary_result.mappings().all()
 
-    for workout in workouts:
-        for ex in workout.exercises:
-            ex_id = ex.get("exercise_id")
-            if not ex_id:
-                continue
+    if not summary_rows:
+        return []
 
-            # Filter by exercise_id if specified
-            if exercise_id and ex_id != exercise_id:
-                continue
+    data_points_result = await db.execute(
+        text(
+            parsed_sets_cte + """
+            , ranked_sets AS (
+                SELECT
+                    exercise_id,
+                    workout_date,
+                    weight,
+                    reps,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY exercise_id, workout_date
+                        ORDER BY weight DESC NULLS LAST, reps DESC NULLS LAST
+                    ) AS rn
+                FROM parsed_sets
+            )
+            SELECT exercise_id, workout_date, weight AS max_weight, reps
+            FROM ranked_sets
+            WHERE rn = 1
+            ORDER BY exercise_id, workout_date
+            """
+        ),
+        params
+    )
+    data_points_rows = data_points_result.mappings().all()
 
-            if ex_id not in exercise_data:
-                exercise_data[ex_id] = {
-                    "name": ex.get("name", "Unknown"),
-                    "sets": [],
-                    "dates": []
-                }
+    best_perf_result = await db.execute(
+        text(
+            parsed_sets_cte + """
+            , ranked_best AS (
+                SELECT
+                    exercise_id,
+                    workout_date,
+                    weight,
+                    reps,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY exercise_id
+                        ORDER BY weight DESC NULLS LAST, workout_date ASC
+                    ) AS rn
+                FROM parsed_sets
+                WHERE weight IS NOT NULL
+            )
+            SELECT exercise_id, workout_date, weight, reps
+            FROM ranked_best
+            WHERE rn = 1
+            """
+        ),
+        params
+    )
+    best_perf_rows = best_perf_result.mappings().all()
 
-            # Process sets
-            for set_data in ex.get("sets_completed", []):
-                exercise_data[ex_id]["sets"].append({
-                    "date": workout.date,
-                    "weight": set_data.get("weight"),
-                    "reps": set_data.get("reps"),
-                    "completed": set_data.get("completed", True)
-                })
+    data_points_by_ex: Dict[int, List[Dict[str, Any]]] = {}
+    for row in data_points_rows:
+        ex_id = int(row["exercise_id"])
+        point = {
+            "date": row["workout_date"].isoformat(),
+            "max_weight": float(row["max_weight"]) if row["max_weight"] is not None else None,
+            "reps": int(row["reps"]) if row["reps"] is not None else None,
+        }
+        data_points_by_ex.setdefault(ex_id, []).append(point)
 
-            exercise_data[ex_id]["dates"].append(workout.date)
+    best_perf_by_ex: Dict[int, Dict[str, Any]] = {}
+    for row in best_perf_rows:
+        best_perf_by_ex[int(row["exercise_id"])] = {
+            "date": row["workout_date"].isoformat(),
+            "weight": float(row["weight"]) if row["weight"] is not None else None,
+            "reps": int(row["reps"]) if row["reps"] is not None else None,
+        }
 
-    # Build response
-    responses = []
-    for ex_id, data in exercise_data.items():
-        if not data["sets"]:
-            continue
+    responses: List[ExerciseProgressResponse] = []
+    for row in summary_rows:
+        ex_id = int(row["exercise_id"])
+        data_points = data_points_by_ex.get(ex_id, [])
 
-        sets = data["sets"]
-        dates = sorted(set(data["dates"]))
-
-        # Calculate statistics
-        weights = [s["weight"] for s in sets if s["weight"]]
-        reps = [s["reps"] for s in sets if s["reps"]]
-
-        max_weight = max(weights) if weights else None
-        avg_weight = sum(weights) / len(weights) if weights else None
-        total_reps = sum(reps) if reps else 0
-
-        # Calculate progress percentage
+        # Preserve old behavior: progress based on first/last non-null weight in timeline.
+        weights = [p["max_weight"] for p in data_points if p["max_weight"] is not None]
         progress_pct = None
-        if len(weights) >= 2:
-            first_weight = weights[0]
-            last_weight = weights[-1]
-            if first_weight > 0:
-                progress_pct = round(
-                    ((last_weight - first_weight) / first_weight) * 100, 1)
+        if len(weights) >= 2 and weights[0] > 0:
+            progress_pct = round(((weights[-1] - weights[0]) / weights[0]) * 100, 1)
 
-        # Build data points for chart
-        data_points = []
-        date_weights = {}
-        for s in sets:
-            d = s["date"]
-            if d not in date_weights or (s["weight"] and s["weight"] > date_weights[d].get("weight", 0)):
-                date_weights[d] = s
-
-        for d, s in sorted(date_weights.items()):
-            data_points.append({
-                "date": d.isoformat(),
-                "max_weight": s.get("weight"),
-                "reps": s.get("reps")
-            })
-
+        avg_weight_val = float(row["avg_weight"]) if row["avg_weight"] is not None else None
         summary = ExerciseProgressData(
             exercise_id=ex_id,
-            exercise_name=data["name"],
-            total_sets=len(sets),
-            total_reps=total_reps,
-            max_weight=max_weight,
-            avg_weight=round(avg_weight, 1) if avg_weight else None,
-            first_date=dates[0],
-            last_date=dates[-1],
+            exercise_name=row["exercise_name"],
+            total_sets=int(row["total_sets"]),
+            total_reps=int(row["total_reps"] or 0),
+            max_weight=float(row["max_weight"]) if row["max_weight"] is not None else None,
+            avg_weight=round(avg_weight_val, 1) if avg_weight_val else None,
+            first_date=row["first_date"],
+            last_date=row["last_date"],
             progress_percentage=progress_pct
         )
 
-        best_perf = None
-        if weights:
-            max_w = max(weights)
-            best_set = next((s for s in sets if s["weight"] == max_w), None)
-            if best_set:
-                best_perf = {
-                    "date": best_set["date"].isoformat(),
-                    "weight": best_set["weight"],
-                    "reps": best_set["reps"]
-                }
-
-        responses.append(ExerciseProgressResponse(
-            exercise_id=ex_id,
-            exercise_name=data["name"],
-            period=period,
-            data_points=data_points,
-            summary=summary,
-            best_performance=best_perf
-        ))
+        responses.append(
+            ExerciseProgressResponse(
+                exercise_id=ex_id,
+                exercise_name=row["exercise_name"],
+                period=period,
+                data_points=data_points,
+                summary=summary,
+                best_performance=best_perf_by_ex.get(ex_id)
+            )
+        )
 
     return responses
 
@@ -245,46 +283,80 @@ async def get_workout_calendar(
     first_day = date(year, month, 1)
     last_day = date(year, month, calendar.monthrange(year, month)[1])
 
-    # Get all workouts for the month
-    result = await db.execute(
-        select(WorkoutLog).where(
+    # Aggregate workouts per day in SQL
+    base_filters = and_(
+        WorkoutLog.user_id == current_user.id,
+        WorkoutLog.date >= first_day,
+        WorkoutLog.date <= last_day
+    )
+
+    day_stats_result = await db.execute(
+        select(
+            WorkoutLog.date.label("workout_date"),
+            func.count(WorkoutLog.id).label("workout_count"),
+            func.coalesce(func.sum(WorkoutLog.duration), 0).label("total_duration"),
+            func.bool_or(
+                or_(
+                    WorkoutLog.glucose_before.isnot(None),
+                    WorkoutLog.glucose_after.isnot(None)
+                )
+            ).label("glucose_logged")
+        ).where(base_filters).group_by(WorkoutLog.date)
+    )
+
+    tag_elements = func.jsonb_array_elements_text(
+        WorkoutLog.tags
+    ).table_valued("tag").alias("tag_elements")
+
+    day_tags_result = await db.execute(
+        select(
+            WorkoutLog.date.label("workout_date"),
+            func.array_remove(
+                func.array_agg(func.distinct(tag_elements.c.tag)),
+                None
+            ).label("workout_types")
+        ).select_from(WorkoutLog).join(
+            tag_elements,
+            true(),
+            isouter=True
+        ).where(base_filters).group_by(WorkoutLog.date)
+    )
+
+    wellness_result = await db.execute(
+        select(DailyWellness.date).where(
             and_(
-                WorkoutLog.user_id == current_user.id,
-                WorkoutLog.date >= first_day,
-                WorkoutLog.date <= last_day
+                DailyWellness.user_id == current_user.id,
+                DailyWellness.date >= first_day,
+                DailyWellness.date <= last_day
             )
         )
     )
-    workouts = result.scalars().all()
 
-    # Group workouts by date
-    workouts_by_date: Dict[date, List[WorkoutLog]] = {}
-    for w in workouts:
-        if w.date not in workouts_by_date:
-            workouts_by_date[w.date] = []
-        workouts_by_date[w.date].append(w)
+    day_stats_map = {
+        row.workout_date: row for row in day_stats_result.all()
+    }
+    day_tags_map = {
+        row.workout_date: (row.workout_types or []) for row in day_tags_result.all()
+    }
+    wellness_dates = {row[0] for row in wellness_result.all()}
 
     # Build calendar days
     days = []
     current = first_day
     while current <= last_day:
-        day_workouts = workouts_by_date.get(current, [])
-
-        workout_types = []
-        for w in day_workouts:
-            if w.tags:
-                workout_types.extend(w.tags)
-        workout_types = list(set(workout_types))
+        day_stats = day_stats_map.get(current)
+        workout_count = int(day_stats.workout_count) if day_stats else 0
+        total_duration = int(day_stats.total_duration) if day_stats else 0
+        glucose_logged = bool(day_stats.glucose_logged) if day_stats else False
 
         days.append(CalendarDayEntry(
             date=current,
-            has_workout=len(day_workouts) > 0,
-            workout_count=len(day_workouts),
-            total_duration=sum(w.duration or 0 for w in day_workouts),
-            workout_types=workout_types,
-            glucose_logged=any(
-                w.glucose_before or w.glucose_after for w in day_workouts),
-            wellness_logged=False  # TODO: Check wellness entries
+            has_workout=workout_count > 0,
+            workout_count=workout_count,
+            total_duration=total_duration,
+            workout_types=day_tags_map.get(current, []),
+            glucose_logged=glucose_logged,
+            wellness_logged=current in wellness_dates
         ))
 
         current += timedelta(days=1)
@@ -419,18 +491,21 @@ async def get_analytics_summary(
     days = days_map.get(period, 30)
     date_from = date.today() - timedelta(days=days)
 
-    # Get workouts
-    result = await db.execute(
-        select(WorkoutLog).where(
-            and_(
-                WorkoutLog.user_id == current_user.id,
-                WorkoutLog.date >= date_from
-            )
-        ).order_by(WorkoutLog.date)
+    base_filters = and_(
+        WorkoutLog.user_id == current_user.id,
+        WorkoutLog.date >= date_from
     )
-    workouts = result.scalars().all()
 
-    if not workouts:
+    summary_result = await db.execute(
+        select(
+            func.count(WorkoutLog.id).label("total_workouts"),
+            func.coalesce(func.sum(WorkoutLog.duration), 0).label("total_duration")
+        ).where(base_filters)
+    )
+    summary_row = summary_result.one()
+    total_workouts = int(summary_row.total_workouts or 0)
+
+    if total_workouts == 0:
         return {
             "total_workouts": 0,
             "total_duration": 0,
@@ -443,18 +518,37 @@ async def get_analytics_summary(
             "monthly_average": 0.0
         }
 
-    # Calculate statistics
-    total_duration = sum(w.duration or 0 for w in workouts)
+    total_duration = int(summary_row.total_duration or 0)
 
-    # Count unique exercises
-    exercise_ids = set()
-    for w in workouts:
-        for ex in w.exercises:
-            if ex.get("exercise_id"):
-                exercise_ids.add(ex["exercise_id"])
+    exercise_elements = func.jsonb_array_elements(
+        WorkoutLog.exercises
+    ).table_valued("item").alias("exercise_elements")
+    exercise_id_expr = cast(
+        exercise_elements.c.item.op("->>")("exercise_id"),
+        Integer
+    )
+    exercise_name_expr = func.coalesce(
+        func.nullif(exercise_elements.c.item.op("->>")("name"), ""),
+        literal("Unknown")
+    )
+
+    unique_exercises_result = await db.execute(
+        select(
+            func.count(func.distinct(exercise_id_expr)).label("total_exercises")
+        ).select_from(WorkoutLog).join(
+            exercise_elements,
+            true()
+        ).where(base_filters).where(
+            exercise_elements.c.item.op("?")("exercise_id")
+        )
+    )
+    total_exercises = int(unique_exercises_result.scalar() or 0)
 
     # Calculate streaks
-    workout_dates = sorted(set(w.date for w in workouts))
+    workout_dates_result = await db.execute(
+        select(WorkoutLog.date).where(base_filters).group_by(WorkoutLog.date).order_by(WorkoutLog.date)
+    )
+    workout_dates = [row[0] for row in workout_dates_result.all()]
     current_streak = 0
     longest_streak = 0
     temp_streak = 0
@@ -483,35 +577,44 @@ async def get_analytics_summary(
             temp_streak = 1
     longest_streak = max(longest_streak, temp_streak)
 
-    # Get favorite exercises
-    exercise_counts = {}
-    for w in workouts:
-        for ex in w.exercises:
-            ex_id = ex.get("exercise_id")
-            ex_name = ex.get("name", "Unknown")
-            if ex_id:
-                if ex_id not in exercise_counts:
-                    exercise_counts[ex_id] = {"name": ex_name, "count": 0}
-                exercise_counts[ex_id]["count"] += 1
-
-    favorite_exercises = sorted(
-        [{"exercise_id": k, **v} for k, v in exercise_counts.items()],
-        key=lambda x: x["count"],
-        reverse=True
-    )[:5]
+    favorite_exercises_result = await db.execute(
+        select(
+            exercise_id_expr.label("exercise_id"),
+            exercise_name_expr.label("name"),
+            func.count().label("count")
+        ).select_from(WorkoutLog).join(
+            exercise_elements,
+            true()
+        ).where(base_filters).where(
+            exercise_elements.c.item.op("?")("exercise_id")
+        ).group_by(
+            exercise_id_expr,
+            exercise_name_expr
+        ).order_by(
+            func.count().desc()
+        ).limit(5)
+    )
+    favorite_exercises = [
+        {
+            "exercise_id": int(row.exercise_id),
+            "name": row.name,
+            "count": int(row.count)
+        }
+        for row in favorite_exercises_result.all()
+    ]
 
     # Calculate averages
     weeks = max(1, days / 7)
     months = max(1, days / 30)
 
     return {
-        "total_workouts": len(workouts),
+        "total_workouts": total_workouts,
         "total_duration": total_duration,
-        "total_exercises": len(exercise_ids),
+        "total_exercises": total_exercises,
         "current_streak": current_streak,
         "longest_streak": longest_streak,
         "personal_records": [],  # TODO: Implement PR tracking
         "favorite_exercises": favorite_exercises,
-        "weekly_average": round(len(workouts) / weeks, 1),
-        "monthly_average": round(len(workouts) / months, 1)
+        "weekly_average": round(total_workouts / weeks, 1),
+        "monthly_average": round(total_workouts / months, 1)
     }
