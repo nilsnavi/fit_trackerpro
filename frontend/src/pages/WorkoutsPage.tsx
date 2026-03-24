@@ -152,8 +152,7 @@ export function WorkoutsPage() {
     // Handle workout click
     const handleWorkoutClick = (workoutId: number) => {
         tg.hapticFeedback({ type: 'impact', style: 'light' })
-        // Navigate to workout details
-        console.log('Workout clicked:', workoutId)
+        navigate(`/workouts/${workoutId}`)
     }
 
     return (

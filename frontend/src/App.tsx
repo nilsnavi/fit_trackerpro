@@ -5,6 +5,7 @@ import { WorkoutsPage } from '@pages/WorkoutsPage'
 import { HealthPage } from '@pages/HealthPage'
 import { ProfilePage } from '@pages/ProfilePage'
 import { WorkoutBuilder } from '@pages/WorkoutBuilder'
+import { WorkoutDetailPage } from '@pages/WorkoutDetailPage'
 import { Catalog } from '@pages/Catalog'
 import { AddExercise } from '@pages/AddExercise'
 import Analytics from '@pages/Analytics'
@@ -55,6 +56,7 @@ function AppContent() {
                         <Route path="/" element={<HomePage />} />
                         <Route path="/workouts" element={<WorkoutsPage />} />
                         <Route path="/workouts/builder" element={<WorkoutBuilder />} />
+                        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
                         <Route path="/exercises" element={<Catalog />} />
                         <Route path="/exercises/add" element={<AddExercise />} />
                         <Route path="/health" element={<HealthPage />} />

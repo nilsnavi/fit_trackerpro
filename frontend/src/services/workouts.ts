@@ -4,6 +4,7 @@ import type {
     WorkoutStartRequest,
     WorkoutStartResponse,
     WorkoutCompleteRequest,
+    WorkoutHistoryItem,
     WorkoutHistoryResponse,
 } from '@/types/workouts'
 
@@ -15,6 +16,10 @@ export const workoutsApi = {
         date_to?: string
     }): Promise<WorkoutHistoryResponse> {
         return api.get<WorkoutHistoryResponse>('/workouts/history', params)
+    },
+
+    getHistoryItem(workoutId: number): Promise<WorkoutHistoryItem> {
+        return api.get<WorkoutHistoryItem>(`/workouts/history/${workoutId}`)
     },
 
     createTemplate(payload: WorkoutTemplateCreateRequest) {
