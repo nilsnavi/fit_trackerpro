@@ -15,6 +15,20 @@ const formatDate = (value: string): string => {
     })
 }
 
+const formatDurationMinutes = (duration?: number): string => {
+    if (typeof duration !== 'number' || duration <= 0) {
+        return '—'
+    }
+    return `${duration} мин`
+}
+
+const formatSetValue = (value?: number, unit?: string): string => {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+        return '—'
+    }
+    return unit ? `${value} ${unit}` : `${value}`
+}
+
 export function WorkoutDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -73,6 +87,13 @@ export function WorkoutDetailPage() {
         [workout]
     )
 
+    const completedSetCount = useMemo(() => {
+        if (!workout) return 0
+        return workout.exercises.reduce((acc, exercise) => (
+            acc + exercise.sets_completed.filter((set) => set.completed).length
+        ), 0)
+    }, [workout])
+
     return (
         <div className="p-4 space-y-4">
             <div className="flex items-center gap-2">
@@ -95,18 +116,36 @@ export function WorkoutDetailPage() {
 
             {!isLoading && !error && workout && (
                 <>
-                    <div className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 space-y-3">
+                    <div className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 space-y-4">
                         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                             <CalendarDays className="w-4 h-4" />
                             <span>{formatDate(workout.date)}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                            <Clock3 className="w-4 h-4" />
-                            <span>{workout.duration ?? 0} мин</span>
+
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2">
+                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                    <Clock3 className="w-3.5 h-3.5" />
+                                    <span>Длительность</span>
+                                </div>
+                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                    {formatDurationMinutes(workout.duration)}
+                                </div>
+                            </div>
+                            <div className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">Упражнения</div>
+                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                    {exerciseCount}
+                                </div>
+                            </div>
+                            <div className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">Подходы</div>
+                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                    {completedSetCount}
+                                </div>
+                            </div>
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Упражнений: {exerciseCount}
-                        </div>
+
                         {workout.comments && (
                             <div className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                                 <MessageSquare className="w-4 h-4 mt-0.5" />
@@ -127,13 +166,41 @@ export function WorkoutDetailPage() {
                                 key={`${exercise.exercise_id}-${exercise.name}`}
                                 className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4"
                             >
-                                <h2 className="font-semibold text-gray-900 dark:text-white">{exercise.name}</h2>
-                                <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                                <div className="flex items-start justify-between gap-2">
+                                    <h2 className="font-semibold text-gray-900 dark:text-white">{exercise.name}</h2>
+                                    <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                        #{exercise.exercise_id}
+                                    </span>
+                                </div>
+
+                                <div className="mt-2 space-y-2">
                                     {exercise.sets_completed.map((set) => (
-                                        <div key={set.set_number}>
-                                            Подход {set.set_number}: {set.reps ?? '-'} повторений, {set.weight ?? '-'} кг
-                                            {typeof set.duration === 'number' ? `, ${set.duration} сек` : ''}
-                                            {set.completed ? ' (выполнен)' : ' (не выполнен)'}
+                                        <div
+                                            key={set.set_number}
+                                            className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2 text-sm text-gray-700 dark:text-gray-300"
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="font-medium">Подход {set.set_number}</span>
+                                                <span
+                                                    className={`px-2 py-0.5 rounded-full text-xs ${set.completed
+                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                                        : 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    {set.completed ? 'Выполнен' : 'Не выполнен'}
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    Повторы: {formatSetValue(set.reps, 'повт')}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    Вес: {formatSetValue(set.weight, 'кг')}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    Время: {formatSetValue(set.duration, 'сек')}
+                                                </span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
