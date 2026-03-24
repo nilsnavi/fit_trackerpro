@@ -39,8 +39,9 @@ import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Chip, ChipGroup } from '@components/ui/Chip';
 import { Modal } from '@components/ui/Modal';
-import { api } from '@/services/api';
+import { workoutsApi } from '@/services/workouts';
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp';
+import type { BackendWorkoutType, ExerciseInTemplate, WorkoutTemplateCreateRequest } from '@/types/workouts';
 
 type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other';
 
@@ -74,14 +75,40 @@ interface BlockConfig {
     speed?: number;
 }
 
-interface WorkoutTemplate {
-    id?: string;
-    name: string;
-    type: WorkoutType[];
-    blocks: WorkoutBlock[];
-    isPublic: boolean;
-    tags?: string[];
-}
+const mapWorkoutTypeToBackend = (types: WorkoutType[]): BackendWorkoutType => {
+    const normalized = types.filter((type) => type === 'cardio' || type === 'strength' || type === 'flexibility');
+    if (normalized.length !== 1) {
+        return 'mixed';
+    }
+    return normalized[0];
+};
+
+const toExerciseId = (id: string, fallbackIndex: number): number => {
+    const parsed = Number.parseInt(id, 10);
+    return Number.isNaN(parsed) ? fallbackIndex + 1 : parsed;
+};
+
+const buildTemplateExercises = (blocks: WorkoutBlock[]): ExerciseInTemplate[] => (
+    blocks
+        .filter((block): block is WorkoutBlock & { exercise: Exercise } =>
+            (block.type === 'strength' || block.type === 'cardio') && Boolean(block.exercise)
+        )
+        .map((block, index) => {
+            const isCardio = block.type === 'cardio';
+            return {
+                exercise_id: toExerciseId(block.exercise.id, index),
+                name: block.exercise.name,
+                sets: Math.max(1, block.config?.sets ?? 3),
+                reps: isCardio ? undefined : Math.max(1, block.config?.reps ?? 10),
+                duration: isCardio && block.config?.duration
+                    ? Math.max(1, block.config.duration * 60)
+                    : undefined,
+                rest_seconds: Math.max(0, block.config?.restSeconds ?? 60),
+                weight: block.config?.weight && block.config.weight > 0 ? block.config.weight : undefined,
+                notes: block.config?.note?.trim() || undefined,
+            };
+        })
+);
 
 // ============================================
 // Mock Data
@@ -511,16 +538,23 @@ export const WorkoutBuilder: React.FC = () => {
             return;
         }
 
-        const template: WorkoutTemplate = {
+        const exercises = buildTemplateExercises(blocks);
+
+        if (exercises.length === 0) {
+            setSaveError('Add at least one strength or cardio exercise');
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
+            return;
+        }
+
+        const template: WorkoutTemplateCreateRequest = {
             name: templateName.trim(),
-            type: selectedTypes.length > 0 ? selectedTypes : ['other'],
-            blocks,
-            isPublic,
-            tags: templateTags.split(',').map((t) => t.trim()).filter(Boolean),
+            type: mapWorkoutTypeToBackend(selectedTypes),
+            exercises,
+            is_public: isPublic,
         };
 
         try {
-            await api.post('/workouts/templates', template);
+            await workoutsApi.createTemplate(template);
 
             tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
 

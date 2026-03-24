@@ -16,7 +16,8 @@ import { Button } from '@components/ui/Button'
 import { Input } from '@components/ui/Input'
 import { Modal } from '@components/ui/Modal'
 import { ProgressBar } from '@components/ui/ProgressBar'
-import { api } from '@services/api'
+import { workoutsApi } from '@services/workouts'
+import type { WorkoutCompleteRequest } from '@/types/workouts'
 
 // Типы
 interface ExerciseSet {
@@ -485,6 +486,7 @@ function ExerciseCard({
 export function WorkoutStrength() {
     const { hapticFeedback, showMainButton, hideMainButton } = useTelegram()
     const [workout, setWorkout] = useState<WorkoutSession>(mockWorkout)
+    const [backendWorkoutId, setBackendWorkoutId] = useState<number | null>(null)
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
     const [expandedExercises, setExpandedExercises] = useState<Set<string>>(new Set(['1']))
     const [isRestTimerOpen, setIsRestTimerOpen] = useState(false)
@@ -493,7 +495,6 @@ export function WorkoutStrength() {
     const [isOffline, setIsOffline] = useState(!navigator.onLine)
     const [pendingSync, setPendingSync] = useState(false)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
-    const saveQueueRef = useRef<Promise<unknown>[]>([])
 
     // Расчет прогресса
     const totalExercises = workout.exercises.length
@@ -513,6 +514,31 @@ export function WorkoutStrength() {
             }
         }
     }, [])
+
+    // Создаем сессию на backend для корректного complete-контракта
+    useEffect(() => {
+        let isCancelled = false
+
+        const createSession = async () => {
+            try {
+                const response = await workoutsApi.startWorkout({
+                    name: workout.name,
+                    type: 'strength',
+                })
+                if (!isCancelled) {
+                    setBackendWorkoutId(response.id)
+                }
+            } catch (error) {
+                console.error('Failed to start workout session:', error)
+            }
+        }
+
+        createSession()
+
+        return () => {
+            isCancelled = true
+        }
+    }, [workout.name])
 
     // Форматирование прошедшего времени
     const formatElapsedTime = (seconds: number): string => {
@@ -643,56 +669,56 @@ export function WorkoutStrength() {
             timestamp: new Date().toISOString()
         }
 
-        // Всегда сохранять в localStorage
+        // Прогресс сохраняется локально до завершения тренировки.
         localStorage.setItem(`workout_progress_${workout.id}`, JSON.stringify(saveData))
-
-        if (isOffline) {
-            setPendingSync(true)
-            return
-        }
-
-        // Сохранить в API
-        try {
-            const savePromise = api.post('/workouts/progress', saveData)
-            saveQueueRef.current.push(savePromise)
-            await savePromise
-        } catch (error) {
-            console.error('Failed to save progress:', error)
-            setPendingSync(true)
-        }
-    }, [workout, elapsedTime, isOffline])
+    }, [workout, elapsedTime])
 
     const syncWorkoutProgress = async () => {
         if (!pendingSync) return
 
-        const savedData = localStorage.getItem(`workout_progress_${workout.id}`)
-        if (!savedData) return
-
-        try {
-            await api.post('/workouts/progress', JSON.parse(savedData))
-            setPendingSync(false)
-        } catch (error) {
-            console.error('Failed to sync progress:', error)
-        }
+        // Backend currently syncs on complete only.
+        setPendingSync(false)
     }
 
     const handleFinishWorkout = async () => {
         hapticFeedback?.success()
 
+        const durationMinutes = Math.max(1, Math.round(elapsedTime / 60))
+        const exercisesPayload = workout.exercises
+            .filter((exercise) => !exercise.skipped)
+            .map((exercise, index) => ({
+                exercise_id: Number.parseInt(exercise.id, 10) || index + 1,
+                name: exercise.name,
+                sets_completed: exercise.sets.map((set) => ({
+                    set_number: set.setNumber,
+                    reps: set.actualReps ?? set.targetReps,
+                    weight: set.actualWeight ?? set.targetWeight,
+                    completed: set.completed,
+                })),
+                notes: exercise.skipped ? 'Skipped' : undefined,
+            }))
+
         const finishData = {
             workoutId: workout.id,
             exercises: workout.exercises,
             elapsedTime,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
+        }
+
+        const completionPayload: WorkoutCompleteRequest = {
+            duration: durationMinutes,
+            exercises: exercisesPayload,
+            comments: `Completed in ${durationMinutes} min`,
+            tags: ['strength'],
         }
 
         // Save to localStorage
         localStorage.setItem(`workout_completed_${workout.id}`, JSON.stringify(finishData))
         localStorage.removeItem(`workout_progress_${workout.id}`)
 
-        if (!isOffline) {
+        if (!isOffline && backendWorkoutId && completionPayload.exercises.length > 0) {
             try {
-                await api.post('/workouts/complete', finishData)
+                await workoutsApi.completeWorkout(backendWorkoutId, completionPayload)
             } catch (error) {
                 console.error('Failed to complete workout:', error)
             }

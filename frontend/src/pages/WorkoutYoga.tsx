@@ -23,6 +23,8 @@ import { useTelegram } from '@hooks/useTelegram'
 import { Button } from '@components/ui/Button'
 import { Input } from '@components/ui/Input'
 import { cn } from '@/utils/cn'
+import { workoutsApi } from '@/services/workouts'
+import type { WorkoutCompleteRequest } from '@/types/workouts'
 
 // Yoga modes
 type YogaMode = 'asana' | 'session' | 'breathing'
@@ -200,7 +202,9 @@ class SoundGenerator {
         this.oscillators.forEach(osc => {
             try {
                 osc.stop()
-            } catch { }
+            } catch {
+                // Ignore already stopped sources.
+            }
         })
         this.oscillators = []
         this.gainNodes = []
@@ -553,10 +557,11 @@ export function WorkoutYoga() {
 
     // State
     const [mode, setMode] = useState<YogaMode>('asana')
+    const [backendWorkoutId, setBackendWorkoutId] = useState<number | null>(null)
     const [duration, setDuration] = useState(180) // 3 minutes default
     const [timeLeft, setTimeLeft] = useState(180)
     const [isRunning, setIsRunning] = useState(false)
-    const [isPaused, setIsPaused] = useState(false)
+    const [, setIsPaused] = useState(false)
     const [currentRep, setCurrentRep] = useState(1)
     const [repetitions, setRepetitions] = useState(1)
     const [completionSound, setCompletionSound] = useState('bowl')
@@ -614,6 +619,15 @@ export function WorkoutYoga() {
     // Start timer
     const startTimer = useCallback(() => {
         if (!isRunning) {
+            if (!backendWorkoutId) {
+                void workoutsApi.startWorkout({
+                    name: `Yoga - ${mode}`,
+                    type: 'flexibility',
+                })
+                    .then((response) => setBackendWorkoutId(response.id))
+                    .catch((error) => console.error('Failed to start yoga session on backend:', error))
+            }
+
             setIsRunning(true)
             setIsPaused(false)
             if (!sessionStartTime) {
@@ -638,7 +652,7 @@ export function WorkoutYoga() {
                 }
             }
         }
-    }, [isRunning, sessionStartTime, hapticFeedback, requestWakeLock, backgroundSound, soundGenerator])
+    }, [isRunning, sessionStartTime, hapticFeedback, requestWakeLock, backgroundSound, soundGenerator, backendWorkoutId, mode])
 
     // Pause timer
     const pauseTimer = useCallback(() => {
@@ -679,6 +693,36 @@ export function WorkoutYoga() {
         sessions.push(sessionData)
         localStorage.setItem('yoga_sessions', JSON.stringify(sessions))
 
+        const elapsedSeconds = sessionStartTime
+            ? Math.max(1, Math.floor((Date.now() - sessionStartTime.getTime()) / 1000))
+            : Math.max(1, duration * repetitions - timeLeft)
+        const durationMinutes = Math.max(1, Math.round(elapsedSeconds / 60))
+        const completionPayload: WorkoutCompleteRequest = {
+            duration: durationMinutes,
+            exercises: [
+                {
+                    exercise_id: 1,
+                    name: `Yoga ${mode}`,
+                    sets_completed: [
+                        {
+                            set_number: currentRep,
+                            duration: elapsedSeconds,
+                            completed: true,
+                        },
+                    ],
+                    notes: comment || undefined,
+                },
+            ],
+            comments: comment || `Yoga mode: ${mode}`,
+            tags: ['flexibility', 'yoga', mode],
+        }
+
+        if (backendWorkoutId) {
+            void workoutsApi.completeWorkout(backendWorkoutId, completionPayload).catch((error) => {
+                console.error('Failed to complete yoga workout on backend:', error)
+            })
+        }
+
         hapticFeedback?.success()
         soundGenerator.playCompletionSound(completionSound)
         releaseWakeLock()
@@ -686,7 +730,7 @@ export function WorkoutYoga() {
 
         // Navigate back
         window.history.back()
-    }, [mode, sessionStartTime, duration, repetitions, timeLeft, currentRep, comment, hapticFeedback, soundGenerator, releaseWakeLock, completionSound])
+    }, [mode, sessionStartTime, duration, repetitions, timeLeft, currentRep, comment, hapticFeedback, soundGenerator, releaseWakeLock, completionSound, backendWorkoutId])
 
     // Timer effect
     useEffect(() => {

@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
+import { workoutsApi } from '@/services/workouts'
+import type { WorkoutCompleteRequest } from '@/types/workouts'
 
 // Types
 export type IntervalPhase = 'work' | 'rest' | 'prepare'
@@ -117,6 +119,7 @@ const DEFAULT_EXERCISES: IntervalExercise[] = [
 export const WorkoutFunctional: React.FC = () => {
     const { hapticFeedback, isTelegram } = useTelegramWebApp()
     const soundGenerator = useRef(new IntervalSoundGenerator()).current
+    const completionSyncedRef = useRef(false)
 
     // Settings
     const [settings, setSettings] = useState<WorkoutSettings>({
@@ -129,7 +132,8 @@ export const WorkoutFunctional: React.FC = () => {
     })
 
     // Workout state
-    const [exercises, setExercises] = useState<IntervalExercise[]>(DEFAULT_EXERCISES)
+    const [exercises] = useState<IntervalExercise[]>(DEFAULT_EXERCISES)
+    const [backendWorkoutId, setBackendWorkoutId] = useState<number | null>(null)
     const [currentRound, setCurrentRound] = useState(1)
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
     const [phase, setPhase] = useState<IntervalPhase>('prepare')
@@ -140,8 +144,7 @@ export const WorkoutFunctional: React.FC = () => {
 
     // Stats
     const [elapsedSeconds, setElapsedSeconds] = useState(0)
-    const [totalCalories, setTotalCalories] = useState(0)
-    const [heartRate, setHeartRate] = useState<number | null>(null)
+    const [heartRate] = useState<number | null>(null)
 
     // Refs for timer
     const animationFrameRef = useRef<number | null>(null)
@@ -170,6 +173,38 @@ export const WorkoutFunctional: React.FC = () => {
 
     // Calculate calories (rough estimate: 0.15 cal per second of work)
     const estimatedCalories = Math.floor(elapsedSeconds * 0.12)
+
+    const buildCompletionPayload = useCallback((): WorkoutCompleteRequest => {
+        const durationMinutes = Math.max(1, Math.round(elapsedSeconds / 60))
+        return {
+            duration: durationMinutes,
+            exercises: exercises.map((exercise, index) => ({
+                exercise_id: index + 1,
+                name: exercise.name,
+                sets_completed: [
+                    {
+                        set_number: currentRound,
+                        duration: exercise.workSeconds,
+                        completed: true,
+                    },
+                ],
+                notes: exercise.description,
+            })),
+            comments: `Functional workout, rounds: ${currentRound}/${settings.rounds}`,
+            tags: ['mixed', 'functional', 'hiit'],
+        }
+    }, [elapsedSeconds, exercises, currentRound, settings.rounds])
+
+    const syncCompletionToBackend = useCallback(async () => {
+        if (completionSyncedRef.current || !backendWorkoutId) return
+        completionSyncedRef.current = true
+        try {
+            await workoutsApi.completeWorkout(backendWorkoutId, buildCompletionPayload())
+        } catch (error) {
+            completionSyncedRef.current = false
+            console.error('Failed to complete functional workout on backend:', error)
+        }
+    }, [backendWorkoutId, buildCompletionPayload])
 
     // Wake Lock API
     const requestWakeLock = useCallback(async () => {
@@ -236,6 +271,7 @@ export const WorkoutFunctional: React.FC = () => {
                 playSound('complete')
                 triggerHaptic('success')
                 releaseWakeLock()
+                    void syncCompletionToBackend()
                 return
             }
 
@@ -253,7 +289,7 @@ export const WorkoutFunctional: React.FC = () => {
         setTimeLeft(currentExercise.workSeconds)
         playSound('work')
         triggerHaptic('medium')
-    }, [currentExerciseIndex, currentRound, exercises.length, settings.rounds, currentExercise, playSound, triggerHaptic, releaseWakeLock])
+    }, [currentExerciseIndex, currentRound, exercises.length, settings.rounds, currentExercise, playSound, triggerHaptic, releaseWakeLock, syncCompletionToBackend])
 
     // Handle phase completion
     const handlePhaseComplete = useCallback(() => {
@@ -264,8 +300,6 @@ export const WorkoutFunctional: React.FC = () => {
             playSound('rest')
             triggerHaptic('light')
 
-            // Add calories for completed work interval
-            setTotalCalories((prev: number) => prev + Math.floor(currentExercise.workSeconds * 0.15))
         } else if (phase === 'rest') {
             // Rest done, move to next
             if (settings.autoAdvance) {
@@ -319,6 +353,15 @@ export const WorkoutFunctional: React.FC = () => {
 
     // Start timer
     const startWorkout = useCallback(() => {
+        if (!backendWorkoutId) {
+            void workoutsApi.startWorkout({
+                name: 'Functional HIIT',
+                type: 'mixed',
+            })
+                .then((response) => setBackendWorkoutId(response.id))
+                .catch((error) => console.error('Failed to start functional session on backend:', error))
+        }
+
         if (phase === 'prepare') {
             setPhase('work')
             setTimeLeft(settings.workSeconds)
@@ -330,7 +373,7 @@ export const WorkoutFunctional: React.FC = () => {
         triggerHaptic('medium')
         requestWakeLock()
         animationFrameRef.current = requestAnimationFrame(tick)
-    }, [phase, settings.workSeconds, tick, triggerHaptic, requestWakeLock])
+    }, [phase, settings.workSeconds, tick, triggerHaptic, requestWakeLock, backendWorkoutId])
 
     // Pause timer
     const pauseWorkout = useCallback(() => {
@@ -364,6 +407,7 @@ export const WorkoutFunctional: React.FC = () => {
         triggerHaptic('success')
         playSound('complete')
         releaseWakeLock()
+        void syncCompletionToBackend()
 
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current)
@@ -375,7 +419,7 @@ export const WorkoutFunctional: React.FC = () => {
         setCurrentExerciseIndex(0)
         setTimeLeft(10)
         setElapsedSeconds(0)
-    }, [triggerHaptic, playSound, releaseWakeLock])
+    }, [triggerHaptic, playSound, releaseWakeLock, syncCompletionToBackend])
 
     // Cleanup on unmount
     useEffect(() => {
@@ -399,9 +443,6 @@ export const WorkoutFunctional: React.FC = () => {
     }, [isRunning, isPaused, requestWakeLock])
 
     // Progress calculations
-    const roundProgress = (currentExerciseIndex / exercises.length) * 100
-    const totalProgress = (completedIntervals / totalIntervals) * 100
-
     // Phase colors
     const phaseColors = {
         work: 'text-danger bg-danger',

@@ -32,6 +32,8 @@ import { useTelegram } from '@hooks/useTelegram'
 import { Button } from '@components/ui/Button'
 import { Input } from '@components/ui/Input'
 import { cn } from '@/utils/cn'
+import { workoutsApi } from '@/services/workouts'
+import type { WorkoutCompleteRequest } from '@/types/workouts'
 
 // Types
 interface Equipment {
@@ -558,6 +560,7 @@ function formatTime(totalSeconds: number): string {
 // Main Component
 export function WorkoutCardio() {
     const { hapticFeedback, showMainButton, hideMainButton } = useTelegram()
+    const [backendWorkoutId, setBackendWorkoutId] = useState<number | null>(null)
 
     // Session state
     const [session, setSession] = useState<CardioSession>({
@@ -584,8 +587,24 @@ export function WorkoutCardio() {
     // Get current equipment
     const currentEquipment = EQUIPMENT_OPTIONS.find(e => e.id === session.equipmentId) || EQUIPMENT_OPTIONS[0]
 
+    const ensureBackendSession = useCallback(async () => {
+        if (backendWorkoutId) return backendWorkoutId
+        try {
+            const response = await workoutsApi.startWorkout({
+                name: `Cardio - ${currentEquipment.name}`,
+                type: 'cardio',
+            })
+            setBackendWorkoutId(response.id)
+            return response.id
+        } catch (error) {
+            console.error('Failed to start cardio session on backend:', error)
+            return null
+        }
+    }, [backendWorkoutId, currentEquipment.name])
+
     // Start timer
     const handleStart = useCallback(() => {
+        void ensureBackendSession()
         setSession(prev => ({ ...prev, isActive: true }))
         hapticFeedback?.medium()
 
@@ -610,7 +629,7 @@ export function WorkoutCardio() {
                 }
             })
         }, 1000)
-    }, [hapticFeedback])
+    }, [hapticFeedback, ensureBackendSession])
 
     // Pause timer
     const handlePause = useCallback(() => {
@@ -699,9 +718,36 @@ export function WorkoutCardio() {
 
         localStorage.setItem(`cardio_session_${session.id}`, JSON.stringify(sessionData))
 
+        const durationMinutes = Math.max(1, Math.round(session.elapsedSeconds / 60))
+        const completionPayload: WorkoutCompleteRequest = {
+            duration: durationMinutes,
+            exercises: [
+                {
+                    exercise_id: 1,
+                    name: currentEquipment.name,
+                    sets_completed: [
+                        {
+                            set_number: 1,
+                            duration: session.elapsedSeconds,
+                            completed: true,
+                        },
+                    ],
+                    notes: session.notes.map((note) => `${formatTime(note.elapsedSeconds)} ${note.text}`).join(' | ') || undefined,
+                },
+            ],
+            comments: `Avg speed ${stats.avgSpeed.toFixed(1)} km/h, HR ${session.heartRate || 'n/a'}`,
+            tags: ['cardio', session.equipmentId],
+        }
+
+        if (backendWorkoutId) {
+            void workoutsApi.completeWorkout(backendWorkoutId, completionPayload).catch((error) => {
+                console.error('Failed to complete cardio workout on backend:', error)
+            })
+        }
+
         // Navigate back
         window.history.back()
-    }, [session, hapticFeedback])
+    }, [session, hapticFeedback, currentEquipment.name, stats.avgSpeed, backendWorkoutId])
 
     // Cleanup timer on unmount
     useEffect(() => {

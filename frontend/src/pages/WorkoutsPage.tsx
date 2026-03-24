@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Dumbbell, Clock, Flame, ChevronRight } from 'lucide-react'
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
+import { workoutsApi } from '@/services/workouts'
+import type { WorkoutHistoryItem } from '@/types/workouts'
 
 type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other'
 
@@ -13,21 +15,87 @@ const workoutTypes: { type: WorkoutType; label: string; color: string }[] = [
     { type: 'other', label: 'Другое', color: 'bg-gray-500' },
 ]
 
-const mockWorkouts = [
-    { id: 1, title: 'Утренняя пробежка', type: 'cardio' as WorkoutType, duration: 30, calories: 320, date: '2024-03-18' },
-    { id: 2, title: 'Верхняя часть тела', type: 'strength' as WorkoutType, duration: 45, calories: 280, date: '2024-03-17' },
-    { id: 3, title: 'Йога флоу', type: 'flexibility' as WorkoutType, duration: 60, calories: 180, date: '2024-03-16' },
-    { id: 4, title: 'Баскетбол', type: 'sports' as WorkoutType, duration: 90, calories: 650, date: '2024-03-15' },
-]
+interface WorkoutListItem {
+    id: number
+    title: string
+    type: WorkoutType
+    duration: number
+    calories: number
+    date: string
+}
+
+const estimateCalories = (durationMinutes: number): number => Math.round(durationMinutes * 6.5)
+
+const detectWorkoutType = (item: WorkoutHistoryItem): WorkoutType => {
+    const tags = item.tags.map((tag) => tag.toLowerCase())
+
+    if (tags.includes('sports') || tags.includes('sport')) return 'sports'
+    if (tags.includes('cardio')) return 'cardio'
+    if (tags.includes('strength')) return 'strength'
+    if (tags.includes('flexibility') || tags.includes('yoga')) return 'flexibility'
+
+    const hasReps = item.exercises.some((exercise) =>
+        exercise.sets_completed.some((set) => typeof set.reps === 'number' && set.reps > 0)
+    )
+    const hasDurationOnly = item.exercises.some((exercise) =>
+        exercise.sets_completed.some((set) => typeof set.duration === 'number' && !set.reps)
+    )
+
+    if (hasDurationOnly && !hasReps) return 'cardio'
+    if (hasReps) return 'strength'
+
+    return 'other'
+}
+
+const toWorkoutListItem = (item: WorkoutHistoryItem): WorkoutListItem => {
+    const duration = item.duration ?? 0
+    const firstExerciseName = item.exercises[0]?.name
+    const title = item.comments?.trim() || firstExerciseName || `Тренировка #${item.id}`
+
+    return {
+        id: item.id,
+        title,
+        type: detectWorkoutType(item),
+        duration,
+        calories: estimateCalories(duration),
+        date: item.date,
+    }
+}
 
 export function WorkoutsPage() {
     const [selectedType, setSelectedType] = useState<WorkoutType | 'all'>('all')
+    const [workouts, setWorkouts] = useState<WorkoutListItem[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const tg = useTelegramWebApp()
     const navigate = useNavigate()
 
-    const filteredWorkouts = selectedType === 'all'
-        ? mockWorkouts
-        : mockWorkouts.filter(w => w.type === selectedType)
+    const filteredWorkouts = useMemo(
+        () => (selectedType === 'all'
+            ? workouts
+            : workouts.filter(w => w.type === selectedType)),
+        [selectedType, workouts]
+    )
+
+    const weeklySummary = useMemo(() => {
+        const now = new Date()
+        const weekAgo = new Date(now)
+        weekAgo.setDate(now.getDate() - 7)
+
+        const weekWorkouts = workouts.filter((workout) => {
+            const workoutDate = new Date(workout.date)
+            return workoutDate >= weekAgo && workoutDate <= now
+        })
+
+        const totalMinutes = weekWorkouts.reduce((acc, workout) => acc + workout.duration, 0)
+        const totalCalories = weekWorkouts.reduce((acc, workout) => acc + workout.calories, 0)
+
+        return {
+            count: weekWorkouts.length,
+            totalMinutes,
+            totalCalories,
+        }
+    }, [workouts])
 
     // Set up Telegram back button
     useEffect(() => {
@@ -36,6 +104,38 @@ export function WorkoutsPage() {
             tg.setBackgroundColor('bg_color')
         }
     }, [tg])
+
+    useEffect(() => {
+        let isCancelled = false
+
+        const loadWorkouts = async () => {
+            setIsLoading(true)
+            setError(null)
+
+            try {
+                const response = await workoutsApi.getHistory({ page: 1, page_size: 50 })
+                if (!isCancelled) {
+                    setWorkouts(response.items.map(toWorkoutListItem))
+                }
+            } catch (loadError) {
+                console.error('Failed to load workouts:', loadError)
+                if (!isCancelled) {
+                    setError('Не удалось загрузить тренировки')
+                    setWorkouts([])
+                }
+            } finally {
+                if (!isCancelled) {
+                    setIsLoading(false)
+                }
+            }
+        }
+
+        loadWorkouts()
+
+        return () => {
+            isCancelled = true
+        }
+    }, [])
 
     // Handle filter change with haptic feedback
     const handleFilterChange = (type: WorkoutType | 'all') => {
@@ -99,15 +199,15 @@ export function WorkoutsPage() {
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">На этой неделе</h2>
                 <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">5</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{weeklySummary.count}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Тренировок</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">285</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{weeklySummary.totalMinutes}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Минут</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">2.4k</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{weeklySummary.totalCalories}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Ккал</div>
                     </div>
                 </div>
@@ -116,7 +216,22 @@ export function WorkoutsPage() {
             {/* Workouts List */}
             <div className="space-y-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Недавние</h2>
-                {filteredWorkouts.map((workout) => {
+                {isLoading && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Загрузка тренировок...
+                    </div>
+                )}
+                {!isLoading && error && (
+                    <div className="text-sm text-red-500 dark:text-red-400">
+                        {error}
+                    </div>
+                )}
+                {!isLoading && !error && filteredWorkouts.length === 0 && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Тренировок пока нет
+                    </div>
+                )}
+                {!isLoading && !error && filteredWorkouts.map((workout) => {
                     const typeInfo = workoutTypes.find(t => t.type === workout.type)
                     return (
                         <div

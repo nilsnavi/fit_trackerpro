@@ -1,0 +1,81 @@
+export type BackendWorkoutType = 'cardio' | 'strength' | 'flexibility' | 'mixed'
+export type WorkoutStartType = BackendWorkoutType | 'custom'
+
+export interface ExerciseInTemplate {
+    exercise_id: number
+    name: string
+    sets: number
+    reps?: number
+    duration?: number
+    rest_seconds: number
+    weight?: number
+    notes?: string
+}
+
+export interface WorkoutTemplateCreateRequest {
+    name: string
+    type: BackendWorkoutType
+    exercises: ExerciseInTemplate[]
+    is_public: boolean
+}
+
+export interface CompletedSet {
+    set_number: number
+    reps?: number
+    weight?: number
+    duration?: number
+    completed: boolean
+}
+
+export interface CompletedExercise {
+    exercise_id: number
+    name: string
+    sets_completed: CompletedSet[]
+    notes?: string
+}
+
+export interface WorkoutStartRequest {
+    template_id?: number
+    name?: string
+    type?: WorkoutStartType
+}
+
+export interface WorkoutStartResponse {
+    id: number
+    user_id: number
+    template_id?: number
+    date: string
+    start_time: string
+    status: string
+    message: string
+}
+
+export interface WorkoutCompleteRequest {
+    duration: number
+    exercises: CompletedExercise[]
+    comments?: string
+    tags: string[]
+    glucose_before?: number
+    glucose_after?: number
+}
+
+export interface WorkoutHistoryItem {
+    id: number
+    date: string
+    duration?: number
+    exercises: CompletedExercise[]
+    comments?: string
+    tags: string[]
+    glucose_before?: number
+    glucose_after?: number
+    created_at: string
+}
+
+export interface WorkoutHistoryResponse {
+    items: WorkoutHistoryItem[]
+    total: number
+    page: number
+    page_size: number
+    date_from?: string
+    date_to?: string
+}
