@@ -218,7 +218,7 @@ The SQLAlchemy declarative base is the foundation for all ORM models.
 - [backend/app/models/base.py:1-7](file://backend/app/models/base.py#L1-L7)
 
 ## Dependency Analysis
-- Backend dependencies are declared in requirements.txt and include FastAPI, SQLAlchemy, Alembic, Pydantic, security libraries, Redis, and testing/logging packages.
+- Backend dependencies are declared in requirements.txt and include FastAPI, SQLAlchemy, Alembic, Pydantic, security libraries, Celery/Redis, and testing/logging packages.
 - Frontend dependencies include React, TanStack Query, Tailwind, and testing frameworks.
 - CI/CD workflows orchestrate tests, builds, migrations, and deployments.
 
