@@ -198,6 +198,12 @@ export function WorkoutDetailPage() {
                                                     Вес: {formatSetValue(set.weight, 'кг')}
                                                 </span>
                                                 <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    RPE: {formatSetValue(set.rpe)}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    RIR: {formatSetValue(set.rir)}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
                                                     Время: {formatSetValue(set.duration, 'сек')}
                                                 </span>
                                             </div>

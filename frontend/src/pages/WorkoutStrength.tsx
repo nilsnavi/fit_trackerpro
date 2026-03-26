@@ -26,6 +26,8 @@ interface ExerciseSet {
     targetReps: number
     actualWeight?: number
     actualReps?: number
+    actualRpe?: number
+    actualRir?: number
     completed: boolean
 }
 
@@ -48,6 +50,8 @@ interface WorkoutSession {
 interface SetInput {
     weight: string
     reps: string
+    rpe: string
+    rir: string
 }
 
 // Тестовые данные тренировки
@@ -267,7 +271,7 @@ interface ExerciseCardProps {
     currentSetIndex: number
     onToggleExpand: () => void
     onSkip: () => void
-    onLogSet: (setIndex: number, weight: number, reps: number) => void
+    onLogSet: (setIndex: number, weight: number, reps: number, rpe?: number, rir?: number) => void
     onStartRest: () => void
     expanded: boolean
 }
@@ -295,14 +299,18 @@ function ExerciseCard({
 
         const weight = parseFloat(input.weight)
         const reps = parseInt(input.reps)
+        const parsedRpe = input.rpe ? parseFloat(input.rpe) : undefined
+        const parsedRir = input.rir ? parseFloat(input.rir) : undefined
 
         if (isNaN(weight) || isNaN(reps)) return
+        if (parsedRpe !== undefined && (isNaN(parsedRpe) || parsedRpe < 0 || parsedRpe > 10)) return
+        if (parsedRir !== undefined && (isNaN(parsedRir) || parsedRir < 0 || parsedRir > 10)) return
 
-        onLogSet(setIndex, weight, reps)
+        onLogSet(setIndex, weight, reps, parsedRpe, parsedRir)
         hapticFeedback?.medium()
 
         // Очистка ввода после записи
-        setSetInputs(prev => ({ ...prev, [setIndex]: { weight: '', reps: '' } }))
+        setSetInputs(prev => ({ ...prev, [setIndex]: { weight: '', reps: '', rpe: '', rir: '' } }))
 
         // Запуск отдыха, если не последний подход
         if (setIndex < exercise.sets.length - 1) {
@@ -395,7 +403,7 @@ function ExerciseCard({
                     <div className="space-y-2">
                         {exercise.sets.map((set, index) => {
                             const isCurrentSet = isActive && index === currentSetIndex && !set.completed
-                            const input = setInputs[index] || { weight: '', reps: '' }
+                            const input = setInputs[index] || { weight: '', reps: '', rpe: '', rir: '' }
 
                             return (
                                 <div
@@ -424,28 +432,34 @@ function ExerciseCard({
 
                                     {/* Actual or Input */}
                                     {set.completed ? (
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <span className="text-telegram-text font-medium">
+                                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                                            <span className="text-telegram-text font-medium whitespace-nowrap">
                                                 Done: {set.actualWeight}kg × {set.actualReps}
                                             </span>
+                                            {typeof set.actualRpe === 'number' && (
+                                                <span className="text-telegram-hint">RPE {set.actualRpe}</span>
+                                            )}
+                                            {typeof set.actualRir === 'number' && (
+                                                <span className="text-telegram-hint">RIR {set.actualRir}</span>
+                                            )}
                                         </div>
                                     ) : isCurrentSet ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex-1">
-                                                <Input
-                                                    type="number"
-                                                    placeholder={`${set.targetWeight}`}
-                                                    value={input.weight}
-                                                    onChange={(e) => setSetInputs(prev => ({
-                                                        ...prev,
-                                                        [index]: { ...input, weight: e.target.value }
-                                                    }))}
-                                                    className="text-center"
-                                                />
-                                                <span className="text-xs text-telegram-hint text-center block mt-1">kg</span>
-                                            </div>
-                                            <span className="text-telegram-hint">×</span>
-                                            <div className="flex-1">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1">
+                                                    <Input
+                                                        type="number"
+                                                        placeholder={`${set.targetWeight}`}
+                                                        value={input.weight}
+                                                        onChange={(e) => setSetInputs(prev => ({
+                                                            ...prev,
+                                                            [index]: { ...input, weight: e.target.value }
+                                                        }))}
+                                                        className="text-center"
+                                                    />
+                                                    <span className="text-xs text-telegram-hint text-center block mt-1">kg</span>
+                                                </div>
+                                                <span className="text-telegram-hint">×</span>
                                                 <Input
                                                     type="number"
                                                     placeholder={`${set.targetReps}`}
@@ -458,6 +472,34 @@ function ExerciseCard({
                                                 />
                                                 <span className="text-xs text-telegram-hint text-center block mt-1">reps</span>
                                             </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    max="10"
+                                                    placeholder="RPE"
+                                                    value={input.rpe}
+                                                    onChange={(e) => setSetInputs(prev => ({
+                                                        ...prev,
+                                                        [index]: { ...input, rpe: e.target.value }
+                                                    }))}
+                                                    className="text-center"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    max="10"
+                                                    placeholder="RIR"
+                                                    value={input.rir}
+                                                    onChange={(e) => setSetInputs(prev => ({
+                                                        ...prev,
+                                                        [index]: { ...input, rir: e.target.value }
+                                                    }))}
+                                                    className="text-center"
+                                                />
+                                            </div>
                                             <Button
                                                 variant="primary"
                                                 size="sm"
@@ -466,6 +508,9 @@ function ExerciseCard({
                                             >
                                                 Log
                                             </Button>
+                                            <div className="text-[11px] text-telegram-hint">
+                                                RPE/RIR optional, range 0-10
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="text-sm text-telegram-hint">
@@ -618,7 +663,7 @@ export function WorkoutStrength() {
         saveProgress()
     }
 
-    const handleLogSet = (exerciseIndex: number, setIndex: number, weight: number, reps: number) => {
+    const handleLogSet = (exerciseIndex: number, setIndex: number, weight: number, reps: number, rpe?: number, rir?: number) => {
         setWorkout(prev => {
             const newExercises = [...prev.exercises]
             const exercise = newExercises[exerciseIndex]
@@ -627,6 +672,8 @@ export function WorkoutStrength() {
                 ...newSets[setIndex],
                 actualWeight: weight,
                 actualReps: reps,
+                actualRpe: rpe,
+                actualRir: rir,
                 completed: true
             }
             newExercises[exerciseIndex] = { ...exercise, sets: newSets }
@@ -695,6 +742,8 @@ export function WorkoutStrength() {
                     set_number: set.setNumber,
                     reps: set.actualReps ?? set.targetReps,
                     weight: set.actualWeight ?? set.targetWeight,
+                    rpe: set.actualRpe,
+                    rir: set.actualRir,
                     completed: set.completed,
                 })),
                 notes: exercise.skipped ? 'Skipped' : undefined,
@@ -790,7 +839,7 @@ export function WorkoutStrength() {
                         expanded={expandedExercises.has(exercise.id)}
                         onToggleExpand={() => toggleExerciseExpand(exercise.id)}
                         onSkip={() => handleSkipExercise(index)}
-                        onLogSet={(setIndex, weight, reps) => handleLogSet(index, setIndex, weight, reps)}
+                        onLogSet={(setIndex, weight, reps, rpe, rir) => handleLogSet(index, setIndex, weight, reps, rpe, rir)}
                         onStartRest={() => handleStartRest()}
                     />
                 ))}
