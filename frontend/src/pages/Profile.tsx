@@ -18,8 +18,6 @@ import {
     LogOut,
     Download,
     User as UserIcon,
-    Dumbbell,
-    AlertCircle,
     Bell,
     Ruler,
     Share2,
@@ -183,7 +181,7 @@ interface EditableFieldProps {
     suffix?: string;
 }
 
-const EditableField: React.FC<EditableFieldProps> = ({ label, value, onSave, type = 'text', suffix }) => {
+const EditableField: React.FC<EditableFieldProps> = ({ value, onSave, type = 'text', suffix }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(String(value));
 
@@ -282,8 +280,8 @@ export const Profile: React.FC = () => {
     const [stats, setStats] = useState<UserStats | null>(null);
     const [coachAccesses, setCoachAccesses] = useState<CoachAccess[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [showAllAchievements, setShowAllAchievements] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
+    const [, setShowAllAchievements] = useState(false);
+    const [, setShowSettings] = useState(false);
     const [showCoachModal, setShowCoachModal] = useState(false);
     const [accessCode, setAccessCode] = useState('');
     const [isGeneratingCode, setIsGeneratingCode] = useState(false);

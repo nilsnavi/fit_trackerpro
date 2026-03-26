@@ -47,6 +47,7 @@ class IntervalSoundGenerator {
 
     constructor() {
         if (typeof window !== 'undefined') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
             if (AudioContextClass) {
                 this.audioContext = new AudioContextClass()
@@ -210,6 +211,7 @@ export const WorkoutFunctional: React.FC = () => {
     const requestWakeLock = useCallback(async () => {
         if ('wakeLock' in navigator) {
             try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
             } catch (err) {
                 console.warn('Wake Lock request failed:', err)
@@ -256,7 +258,7 @@ export const WorkoutFunctional: React.FC = () => {
                 soundGenerator.playRoundComplete()
                 break
         }
-    }, [settings.soundEnabled])
+    }, [settings.soundEnabled, soundGenerator])
 
     // Move to next interval
     const moveToNextInterval = useCallback(() => {

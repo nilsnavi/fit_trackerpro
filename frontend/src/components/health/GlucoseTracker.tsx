@@ -10,14 +10,11 @@ import {
     TrendingDown,
     AlertCircle,
     Activity,
-    Calendar,
     ChevronRight,
     Info,
     Utensils,
     Zap,
-    Clock,
     Dumbbell,
-    X
 } from 'lucide-react';
 
 // ============================================
@@ -186,8 +183,6 @@ const VisualScale: React.FC<VisualScaleProps> = ({ value, unit, min = 3, max = 1
     }, [value, min, max]);
 
     const status = getGlucoseStatus(value, unit);
-    const statusColor = getStatusColor(status).replace('text-', '').replace('-500', '');
-
     return (
         <div className="relative w-full h-3 bg-telegram-secondary-bg rounded-full overflow-hidden">
             {/* Background gradient zones */}
@@ -277,8 +272,6 @@ const QuickStats: React.FC<QuickStatsProps> = ({ stats, recentReadings }) => {
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                         {recentReadings.slice(0, 5).map((reading) => {
                             const status = getGlucoseStatus(reading.value, reading.unit);
-                            const StatusIcon = GLUCOSE_RANGES_MMOL[status].icon;
-
                             return (
                                 <div
                                     key={reading.id}
@@ -526,13 +519,12 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [stats, setStats] = useState<GlucoseStats | null>(null);
     const [recentReadings, setRecentReadings] = useState<GlucoseReading[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [lastReading, setLastReading] = useState<GlucoseReading | null>(null);
+    const [defaultMeasurementType, setDefaultMeasurementType] = useState<MeasurementType>('random');
 
     // Fetch stats and recent readings
     const fetchData = useCallback(async () => {
         try {
-            setIsLoading(true);
             // Fetch weekly stats
             const statsData = await api.get<GlucoseStats>('/health/glucose/stats?period=7d');
             setStats(statsData);
@@ -547,7 +539,7 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
         } catch (error) {
             console.error('Failed to fetch glucose data:', error);
         } finally {
-            setIsLoading(false);
+            // no-op
         }
     }, []);
 
@@ -577,6 +569,7 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
     };
 
     const openModal = (type: MeasurementType = 'random') => {
+        setDefaultMeasurementType(type);
         setIsModalOpen(true);
         hapticFeedback?.light();
     };
@@ -589,7 +582,7 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
             {/* Trigger Button / Current Status Card */}
             {showTrigger && (
                 <button
-                    onClick={() => openModal('random')}
+                    onClick={() => openModal()}
                     className={cn(
                         'w-full p-4 rounded-2xl border-l-4 transition-all active:scale-[0.98]',
                         'bg-telegram-secondary-bg text-left',
@@ -686,6 +679,7 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
                 onClose={() => setIsModalOpen(false)}
                 onSave={handleSaveReading}
                 workoutId={workoutId}
+                defaultType={defaultMeasurementType}
             />
         </div>
     );
