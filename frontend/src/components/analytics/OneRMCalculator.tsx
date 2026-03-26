@@ -481,6 +481,7 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
 
         // Haptic feedback
         if (typeof window !== 'undefined' && 'Telegram' in window) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const tg = (window as any).Telegram?.WebApp;
             if (tg?.HapticFeedback) {
                 tg.HapticFeedback.notificationOccurred('success');
@@ -711,19 +712,3 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
 };
 
 export default OneRMCalculator;
-
-// Export types for external use
-export type {
-    OneRMResult,
-    WeightZone,
-    SavedRecord,
-    Exercise as OneRMExercise,
-};
-
-// Export utility functions for external use
-export {
-    calculateEpley,
-    calculateBrzycki,
-    calculateOneRM,
-    generateWeightZones,
-};

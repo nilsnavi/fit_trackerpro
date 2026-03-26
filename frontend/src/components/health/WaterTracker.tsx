@@ -15,11 +15,7 @@ import {
     Trophy,
     ChevronRight,
     Droplets,
-    Clock,
-    Calendar,
-    TrendingUp,
     CheckCircle2,
-    X
 } from 'lucide-react';
 
 // ============================================
@@ -91,12 +87,6 @@ const DEFAULT_REMINDER_INTERVAL = 2;
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
-
-const formatTime = (timeStr: string): string => {
-    if (!timeStr) return '--:--';
-    const [hours, minutes] = timeStr.split(':');
-    return `${hours}:${minutes || '00'}`;
-};
 
 const getTodayDate = (): string => {
     return new Date().toISOString().split('T')[0];
@@ -667,7 +657,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, stats }) =
                 <div className="space-y-3">
                     <div className="text-sm font-medium text-telegram-text">Дни недели</div>
                     <div className="grid grid-cols-7 gap-2">
-                        {stats.days.map((day, index) => {
+                        {stats.days.map((day) => {
                             const dayName = daysOfWeek[new Date(day.date).getDay() - 1] || daysOfWeek[6];
                             return (
                                 <div

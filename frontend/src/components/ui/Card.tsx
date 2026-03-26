@@ -1,4 +1,4 @@
-import React, { forwardRef, ReactNode, HTMLAttributes } from 'react';
+import { forwardRef, ReactNode, HTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
 
 export type CardVariant = 'workout' | 'exercise' | 'stats' | 'info';
@@ -86,6 +86,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         const handleClick = () => {
             // Haptic feedback для мобильных устройств
             if (haptic && onClick && typeof window !== 'undefined' && 'Telegram' in window) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const tg = (window as any).Telegram?.WebApp;
                 if (tg?.HapticFeedback) {
                     tg.HapticFeedback.impactOccurred(haptic);

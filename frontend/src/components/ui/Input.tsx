@@ -101,7 +101,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         },
         ref
     ) => {
-        const [isFocused, setIsFocused] = useState(false);
         const [showPassword, setShowPassword] = useState(false);
 
         const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
@@ -116,17 +115,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
             // Haptic feedback при фокусе
             if (haptic && typeof window !== 'undefined' && 'Telegram' in window) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const tg = (window as any).Telegram?.WebApp;
                 if (tg?.HapticFeedback) {
                     tg.HapticFeedback.selectionChanged();
                 }
             }
-            setIsFocused(true);
             onFocus?.(e);
         };
 
         const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-            setIsFocused(false);
             onBlur?.(e);
         };
 

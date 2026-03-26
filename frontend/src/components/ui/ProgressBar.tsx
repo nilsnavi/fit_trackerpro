@@ -1,4 +1,4 @@
-import React, { forwardRef, HTMLAttributes, useEffect, useState } from 'react';
+import { forwardRef, HTMLAttributes, useEffect, useState } from 'react';
 import { cn } from '@/utils/cn';
 
 export type ProgressColor = 'primary' | 'success' | 'warning' | 'danger' | 'gradient';
@@ -128,7 +128,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(
             };
 
             requestAnimationFrame(animate);
-        }, [value, animated]);
+        }, [value, animated, displayValue]);
 
         // Haptic feedback при достижении 100%
         useEffect(() => {
@@ -139,6 +139,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(
                 typeof window !== 'undefined' &&
                 'Telegram' in window
             ) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const tg = (window as any).Telegram?.WebApp;
                 if (tg?.HapticFeedback) {
                     tg.HapticFeedback.notificationOccurred('success');
