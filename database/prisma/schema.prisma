@@ -1,0 +1,840 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  PAUSED
+  BANNED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNDISCLOSED
+}
+
+enum ExerciseSource {
+  SYSTEM
+  USER
+  IMPORTED
+}
+
+enum ExerciseCategory {
+  STRENGTH
+  CARDIO
+  MOBILITY
+  BODYWEIGHT
+  REHAB
+  SPORTS
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  CORE
+  GLUTES
+  QUADS
+  HAMSTRINGS
+  CALVES
+  FULL_BODY
+}
+
+enum BlockType {
+  SINGLE
+  SUPERSET
+  CIRCUIT
+  GIANT_SET
+  EMOM
+  AMRAP
+}
+
+enum WorkoutSessionStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SetType {
+  WARMUP
+  WORKING
+  DROP_SET
+  FAILURE
+  BACKOFF
+  AMRAP
+}
+
+enum RestTimerEventType {
+  STARTED
+  PAUSED
+  RESUMED
+  COMPLETED
+  SKIPPED
+  AUTO_ENDED
+}
+
+enum PersonalRecordMetric {
+  MAX_WEIGHT
+  MAX_REPS_AT_WEIGHT
+  ESTIMATED_1RM
+  MAX_VOLUME_SET
+  MAX_VOLUME_SESSION
+}
+
+enum ProgramGoal {
+  HYPERTROPHY
+  STRENGTH
+  ENDURANCE
+  FAT_LOSS
+  GENERAL_FITNESS
+  REHAB
+}
+
+enum ProgramDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum RecommendationType {
+  LOAD
+  REPS
+  REST
+  DELOAD
+  VOLUME
+  EXERCISE_SWAP
+}
+
+enum RecommendationStatus {
+  PENDING
+  APPLIED
+  DISMISSED
+  EXPIRED
+}
+
+enum AiInsightType {
+  SESSION_SUMMARY
+  FATIGUE_WARNING
+  PROGRESSION_HINT
+  TECHNIQUE_HINT
+  PLATEAU_ALERT
+  RECOVERY_ADVICE
+}
+
+enum AiMessageRole {
+  SYSTEM
+  ASSISTANT
+  USER
+}
+
+enum AchievementCategory {
+  CONSISTENCY
+  STRENGTH
+  VOLUME
+  SOCIAL
+  MILESTONE
+}
+
+enum AchievementTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum StreakType {
+  WORKOUT_DAYS
+  WEEKLY_GOAL
+  STEPS
+  HYDRATION
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum PostVisibility {
+  PRIVATE
+  FRIENDS
+  PUBLIC
+}
+
+enum ReactionType {
+  LIKE
+  FIRE
+  CLAP
+  STRONG
+  TROPHY
+}
+
+enum ChallengeType {
+  WORKOUT_COUNT
+  TOTAL_VOLUME
+  CONSISTENCY_DAYS
+  TOTAL_REPS
+  DISTANCE
+}
+
+enum ChallengeStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ChallengeParticipantStatus {
+  JOINED
+  COMPLETED
+  DROPPED
+}
+
+enum SyncOperation {
+  UPSERT
+  DELETE
+}
+
+enum SyncDirection {
+  CLIENT_TO_SERVER
+  SERVER_TO_CLIENT
+}
+
+enum SyncStatus {
+  PENDING
+  APPLIED
+  CONFLICT
+  FAILED
+  DISCARDED
+}
+
+model User {
+  id String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  telegramUserId String     @unique @db.VarChar(32) @map("telegram_user_id")
+  telegramUsername String?    @db.VarChar(64) @map("telegram_username")
+  role String     @default("user") @db.VarChar(32)
+  status UserStatus @default(ACTIVE)
+  locale String?    @db.VarChar(10)
+  timezone String?    @db.VarChar(64)
+  isOnboarded Boolean    @default(false) @map("is_onboarded")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  profile                 UserProfile?
+  ownedExercises          Exercise[]               @relation("ExerciseOwner")
+  workoutTemplates        WorkoutTemplate[]        @relation("TemplateOwner")
+  workoutSessions         WorkoutSession[]         @relation("SessionOwner")
+  personalRecords         ExercisePersonalRecord[] @relation("UserToPersonalRecords")
+  authoredPrograms        TrainingProgram[]        @relation("ProgramAuthor")
+  adaptiveRecommendations AdaptiveRecommendation[] @relation("UserToRecommendations")
+  aiInsights              AiInsight[]              @relation("UserToAiInsights")
+  aiCoachMessages         AiCoachMessage[]         @relation("UserToAiCoachMessages")
+  userAchievements        UserAchievement[]        @relation("UserToAchievements")
+  userStreaks             UserStreak[]             @relation("UserToStreaks")
+  requestedFriendships    Friendship[]             @relation("FriendshipRequester")
+  receivedFriendships     Friendship[]             @relation("FriendshipAddressee")
+  socialPosts             SocialWorkoutPost[]      @relation("UserToSocialPosts")
+  socialReactions         SocialReaction[]         @relation("UserToSocialReactions")
+  createdChallenges       Challenge[]              @relation("ChallengeCreator")
+  challengeParticipations ChallengeParticipant[]   @relation("UserToChallengeParticipants")
+  syncEvents              SyncEvent[]              @relation("UserToSyncEvents")
+
+  @@index([status, createdAt])
+  @@map("users")
+}
+
+model UserProfile {
+  id String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String    @unique @db.Uuid @map("user_id")
+  firstName String?   @db.VarChar(80) @map("first_name")
+  lastName String?   @db.VarChar(80) @map("last_name")
+  displayName String?   @db.VarChar(120) @map("display_name")
+  birthDate DateTime? @map("birth_date")
+  gender Gender?
+  heightCm Decimal?  @db.Decimal(5, 2) @map("height_cm")
+  weightKg Decimal?  @db.Decimal(6, 3) @map("weight_kg")
+  bodyFatPercent Decimal?  @db.Decimal(5, 2) @map("body_fat_percent")
+  goals Json?
+  preferences Json?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User @relation("UserToProfile", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model Exercise {
+  id String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId String?          @db.Uuid @map("owner_id")
+  source ExerciseSource   @default(SYSTEM)
+  category ExerciseCategory @default(STRENGTH)
+  name String           @db.VarChar(160)
+  slug String           @db.VarChar(180)
+  description String?
+  primaryMuscle MuscleGroup? @map("primary_muscle")
+  secondaryMuscles MuscleGroup[] @map("secondary_muscles")
+  equipment String?          @db.VarChar(80)
+  isUnilateral Boolean          @default(false) @map("is_unilateral")
+  isPublic Boolean          @default(true) @map("is_public")
+  isArchived Boolean          @default(false) @map("is_archived")
+  metadata Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  owner                   User?                    @relation("ExerciseOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  aliases                 ExerciseAlias[]          @relation("ExerciseToAliases")
+  templateItems           WorkoutTemplateItem[]    @relation("ExerciseToTemplateItems")
+  sessionExercises        WorkoutSessionExercise[] @relation("ExerciseToSessionExercises")
+  personalRecords         ExercisePersonalRecord[] @relation("ExerciseToPersonalRecords")
+  adaptiveRecommendations AdaptiveRecommendation[] @relation("ExerciseToRecommendations")
+
+  @@unique([ownerId, slug])
+  @@index([source, isPublic, isArchived])
+  @@index([name])
+  @@map("exercises")
+}
+
+model ExerciseAlias {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exerciseId String   @db.Uuid @map("exercise_id")
+  alias String   @db.VarChar(160)
+  normalizedAlias String   @db.VarChar(160) @map("normalized_alias")
+  locale String?  @db.VarChar(10)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  exercise Exercise @relation("ExerciseToAliases", fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([normalizedAlias, locale])
+  @@index([exerciseId])
+  @@map("exercise_aliases")
+}
+
+model WorkoutTemplate {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String   @db.Uuid @map("user_id")
+  name String   @db.VarChar(160)
+  description String?
+  category String?  @db.VarChar(60)
+  estimatedMinSec Int? @map("estimated_min_sec")
+  isPublic Boolean  @default(false) @map("is_public")
+  isArchived Boolean  @default(false) @map("is_archived")
+  version Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user            User                     @relation("TemplateOwner", fields: [userId], references: [id], onDelete: Cascade)
+  items           WorkoutTemplateItem[]    @relation("TemplateToItems")
+  sessions        WorkoutSession[]         @relation("TemplateToSessions")
+  programWorkouts TrainingProgramWorkout[] @relation("TemplateToProgramWorkouts")
+
+  @@index([userId, isArchived, createdAt])
+  @@map("workout_templates")
+}
+
+model WorkoutTemplateItem {
+  id String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId String    @db.Uuid @map("template_id")
+  exerciseId String    @db.Uuid @map("exercise_id")
+  orderIndex Int @map("order_index")
+  blockType BlockType @default(SINGLE) @map("block_type")
+  blockKey String?   @db.VarChar(64) @map("block_key")
+  targetSets Int? @map("target_sets")
+  targetRepsMin Int? @map("target_reps_min")
+  targetRepsMax Int? @map("target_reps_max")
+  targetWeightKg Decimal?  @db.Decimal(8, 3) @map("target_weight_kg")
+  targetRpe Decimal?  @db.Decimal(3, 1) @map("target_rpe")
+  restSeconds Int? @map("rest_seconds")
+  tempo String?   @db.VarChar(32)
+  notes String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  template         WorkoutTemplate          @relation("TemplateToItems", fields: [templateId], references: [id], onDelete: Cascade)
+  exercise         Exercise                 @relation("ExerciseToTemplateItems", fields: [exerciseId], references: [id], onDelete: Restrict)
+  sessionExercises WorkoutSessionExercise[] @relation("TemplateItemToSessionExercises")
+
+  @@unique([templateId, orderIndex])
+  @@index([templateId, blockKey])
+  @@index([exerciseId])
+  @@map("workout_template_items")
+}
+
+model WorkoutSession {
+  id String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String              @db.Uuid @map("user_id")
+  templateId String?             @db.Uuid @map("template_id")
+  trainingProgramWorkoutId String?             @db.Uuid @map("training_program_workout_id")
+  status WorkoutSessionStatus @default(DRAFT)
+  title String?             @db.VarChar(160)
+  notes String?
+  startedAt DateTime @map("started_at")
+  endedAt DateTime? @map("ended_at")
+  totalVolumeKg Decimal             @default(0) @db.Decimal(12, 3) @map("total_volume_kg")
+  peakEstimated1RmKg Decimal?            @db.Decimal(10, 3) @map("peak_estimated1_rm_kg")
+  sessionFatigueScore Decimal?            @db.Decimal(6, 2) @map("session_fatigue_score")
+  totalSets Int                 @default(0) @map("total_sets")
+  totalReps Int                 @default(0) @map("total_reps")
+  durationSeconds Int? @map("duration_seconds")
+  sourceDeviceId String?             @db.VarChar(64) @map("source_device_id")
+  syncVersion Int                 @default(1) @map("sync_version")
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user                   User                     @relation("SessionOwner", fields: [userId], references: [id], onDelete: Cascade)
+  template               WorkoutTemplate?         @relation("TemplateToSessions", fields: [templateId], references: [id], onDelete: SetNull)
+  trainingProgramWorkout TrainingProgramWorkout?  @relation("ProgramWorkoutToSessions", fields: [trainingProgramWorkoutId], references: [id], onDelete: SetNull)
+  sessionExercises       WorkoutSessionExercise[] @relation("SessionToExercises")
+  restTimerEvents        RestTimerEvent[]         @relation("SessionToRestEvents")
+  aiInsights             AiInsight[]              @relation("SessionToAiInsights")
+  aiCoachMessages        AiCoachMessage[]         @relation("SessionToAiCoachMessages")
+  personalRecords        ExercisePersonalRecord[] @relation("SessionToPersonalRecords")
+  socialPosts            SocialWorkoutPost[]      @relation("SessionToPosts")
+
+  @@index([userId, startedAt])
+  @@index([status, startedAt])
+  @@index([templateId])
+  @@index([trainingProgramWorkoutId])
+  @@map("workout_sessions")
+}
+
+model WorkoutSessionExercise {
+  id String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String    @db.Uuid @map("session_id")
+  exerciseId String    @db.Uuid @map("exercise_id")
+  templateItemId String?   @db.Uuid @map("template_item_id")
+  orderIndex Int @map("order_index")
+  blockType BlockType @default(SINGLE) @map("block_type")
+  blockKey String?   @db.VarChar(64) @map("block_key")
+  notes String?
+  performedSets Int       @default(0) @map("performed_sets")
+  volumeKg Decimal   @default(0) @db.Decimal(12, 3) @map("volume_kg")
+  bestEstimated1Rm Decimal?  @db.Decimal(10, 3) @map("best_estimated1_rm")
+  avgRpe Decimal?  @db.Decimal(4, 2) @map("avg_rpe")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  session                 WorkoutSession           @relation("SessionToExercises", fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise                Exercise                 @relation("ExerciseToSessionExercises", fields: [exerciseId], references: [id], onDelete: Restrict)
+  templateItem            WorkoutTemplateItem?     @relation("TemplateItemToSessionExercises", fields: [templateItemId], references: [id], onDelete: SetNull)
+  sets                    WorkoutSet[]             @relation("SessionExerciseToSets")
+  restTimerEvents         RestTimerEvent[]         @relation("SessionExerciseToRestEvents")
+  adaptiveRecommendations AdaptiveRecommendation[] @relation("SessionExerciseToRecommendations")
+
+  @@unique([sessionId, orderIndex])
+  @@index([sessionId, blockKey])
+  @@index([exerciseId, createdAt])
+  @@map("workout_session_exercises")
+}
+
+model WorkoutSet {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionExerciseId String   @db.Uuid @map("session_exercise_id")
+  setOrder Int @map("set_order")
+  setType SetType  @default(WORKING) @map("set_type")
+  reps Int?
+  weightKg Decimal? @db.Decimal(8, 3) @map("weight_kg")
+  rpe Decimal? @db.Decimal(3, 1)
+  estimated1RmKg Decimal? @db.Decimal(10, 3) @map("estimated1_rm_kg")
+  fatigueScore Decimal? @db.Decimal(5, 2) @map("fatigue_score")
+  actualRestSec Int? @map("actual_rest_sec")
+  suggestedRestSec Int? @map("suggested_rest_sec")
+  distanceMeters Decimal? @db.Decimal(9, 2) @map("distance_meters")
+  durationSec Int? @map("duration_sec")
+  isCompleted Boolean  @default(true) @map("is_completed")
+  notes String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sessionExercise WorkoutSessionExercise   @relation("SessionExerciseToSets", fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+  restTimerEvents RestTimerEvent[]         @relation("SetToRestEvents")
+  sourceRecords   ExercisePersonalRecord[] @relation("SetToPersonalRecords")
+
+  @@unique([sessionExerciseId, setOrder])
+  @@index([sessionExerciseId, createdAt])
+  @@index([createdAt])
+  @@map("workout_sets")
+}
+
+model RestTimerEvent {
+  id String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String?            @db.Uuid @map("session_id")
+  sessionExerciseId String?            @db.Uuid @map("session_exercise_id")
+  workoutSetId String?            @db.Uuid @map("workout_set_id")
+  eventType RestTimerEventType @map("event_type")
+  plannedRestSec Int? @map("planned_rest_sec")
+  actualRestSec Int? @map("actual_rest_sec")
+  triggeredAt DateTime           @default(now()) @map("triggered_at")
+  metadata Json?
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  session         WorkoutSession?         @relation("SessionToRestEvents", fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionExercise WorkoutSessionExercise? @relation("SessionExerciseToRestEvents", fields: [sessionExerciseId], references: [id], onDelete: SetNull)
+  workoutSet      WorkoutSet?             @relation("SetToRestEvents", fields: [workoutSetId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, triggeredAt])
+  @@index([workoutSetId])
+  @@map("rest_timer_events")
+}
+
+model ExercisePersonalRecord {
+  id String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String               @db.Uuid @map("user_id")
+  exerciseId String               @db.Uuid @map("exercise_id")
+  metric PersonalRecordMetric
+  value Decimal              @db.Decimal(12, 3)
+  unit String               @db.VarChar(16)
+  achievedAt DateTime @map("achieved_at")
+  sourceWorkoutSetId String?             @db.Uuid @map("source_workout_set_id")
+  sourceSessionId String?              @db.Uuid @map("source_session_id")
+  context Json?
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  user          User            @relation("UserToPersonalRecords", fields: [userId], references: [id], onDelete: Cascade)
+  exercise      Exercise        @relation("ExerciseToPersonalRecords", fields: [exerciseId], references: [id], onDelete: Restrict)
+  sourceSet     WorkoutSet?     @relation("SetToPersonalRecords", fields: [sourceWorkoutSetId], references: [id], onDelete: SetNull)
+  sourceSession WorkoutSession? @relation("SessionToPersonalRecords", fields: [sourceSessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, metric, achievedAt])
+  @@index([exerciseId, metric, achievedAt])
+  @@unique([userId, exerciseId, metric, unit])
+  @@map("exercise_personal_records")
+}
+
+model TrainingProgram {
+  id String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authorId String?           @db.Uuid @map("author_id")
+  name String            @db.VarChar(180)
+  description String?
+  goal ProgramGoal?
+  difficulty ProgramDifficulty @default(BEGINNER)
+  isPublic Boolean           @default(false) @map("is_public")
+  isMarketplaceListed Boolean           @default(false) @map("is_marketplace_listed")
+  priceCents Int? @map("price_cents")
+  currencyCode String?           @db.Char(3) @map("currency_code")
+  version Int               @default(1)
+  isArchived Boolean           @default(false) @map("is_archived")
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  author User? @relation("ProgramAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  weeks  TrainingProgramWeek[] @relation("ProgramToWeeks")
+
+  @@index([authorId, isPublic])
+  @@index([isMarketplaceListed, isPublic])
+  @@map("training_programs")
+}
+
+model TrainingProgramWeek {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  programId String   @db.Uuid @map("program_id")
+  weekNumber Int @map("week_number")
+  name String?  @db.VarChar(120)
+  description String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  program  TrainingProgram         @relation("ProgramToWeeks", fields: [programId], references: [id], onDelete: Cascade)
+  workouts TrainingProgramWorkout[] @relation("WeekToProgramWorkouts")
+
+  @@unique([programId, weekNumber])
+  @@map("training_program_weeks")
+}
+
+model TrainingProgramWorkout {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  weekId String   @db.Uuid @map("week_id")
+  templateId String?  @db.Uuid @map("template_id")
+  name String   @db.VarChar(160)
+  dayOfWeek Int? @map("day_of_week")
+  orderIndex Int @map("order_index")
+  notes String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  week     TrainingProgramWeek @relation("WeekToProgramWorkouts", fields: [weekId], references: [id], onDelete: Cascade)
+  template WorkoutTemplate?    @relation("TemplateToProgramWorkouts", fields: [templateId], references: [id], onDelete: SetNull)
+  sessions WorkoutSession[]    @relation("ProgramWorkoutToSessions")
+
+  @@unique([weekId, orderIndex])
+  @@index([templateId])
+  @@map("training_program_workouts")
+}
+
+model AdaptiveRecommendation {
+  id String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String               @db.Uuid @map("user_id")
+  exerciseId String?              @db.Uuid @map("exercise_id")
+  sessionExerciseId String?              @db.Uuid @map("session_exercise_id")
+  recommendationType RecommendationType @map("recommendation_type")
+  status RecommendationStatus @default(PENDING)
+  reasonCode String?              @db.VarChar(80) @map("reason_code")
+  currentValue Decimal?             @db.Decimal(10, 3) @map("current_value")
+  suggestedValue Decimal?             @db.Decimal(10, 3) @map("suggested_value")
+  confidence Decimal?             @db.Decimal(5, 2)
+  modelVersion String?              @db.VarChar(60) @map("model_version")
+  inputSnapshot Json? @map("input_snapshot")
+  validUntil DateTime? @map("valid_until")
+  appliedAt DateTime? @map("applied_at")
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  user            User                    @relation("UserToRecommendations", fields: [userId], references: [id], onDelete: Cascade)
+  exercise        Exercise?               @relation("ExerciseToRecommendations", fields: [exerciseId], references: [id], onDelete: SetNull)
+  sessionExercise WorkoutSessionExercise? @relation("SessionExerciseToRecommendations", fields: [sessionExerciseId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, createdAt])
+  @@index([exerciseId, createdAt])
+  @@index([sessionExerciseId])
+  @@map("adaptive_recommendations")
+}
+
+model AiInsight {
+  id String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String        @db.Uuid @map("user_id")
+  sessionId String?       @db.Uuid @map("session_id")
+  insightType AiInsightType @map("insight_type")
+  title String        @db.VarChar(180)
+  content String
+  confidence Decimal?      @db.Decimal(5, 2)
+  modelVersion String?       @db.VarChar(60) @map("model_version")
+  tokensUsed Int? @map("tokens_used")
+  metadata Json?
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  user          User            @relation("UserToAiInsights", fields: [userId], references: [id], onDelete: Cascade)
+  session       WorkoutSession? @relation("SessionToAiInsights", fields: [sessionId], references: [id], onDelete: SetNull)
+  coachMessages AiCoachMessage[] @relation("InsightToCoachMessages")
+
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@map("ai_insights")
+}
+
+model AiCoachMessage {
+  id String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String        @db.Uuid @map("user_id")
+  insightId String?       @db.Uuid @map("insight_id")
+  sessionId String?       @db.Uuid @map("session_id")
+  role AiMessageRole
+  conversationKey String?       @db.VarChar(64) @map("conversation_key")
+  modelName String?       @db.VarChar(80) @map("model_name")
+  message String
+  promptTokens Int? @map("prompt_tokens")
+  completionTokens Int? @map("completion_tokens")
+  metadata Json?
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  user    User           @relation("UserToAiCoachMessages", fields: [userId], references: [id], onDelete: Cascade)
+  insight AiInsight?     @relation("InsightToCoachMessages", fields: [insightId], references: [id], onDelete: SetNull)
+  session WorkoutSession? @relation("SessionToAiCoachMessages", fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, conversationKey, createdAt])
+  @@index([sessionId, createdAt])
+  @@map("ai_coach_messages")
+}
+
+model AchievementDefinition {
+  id String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code String              @unique @db.VarChar(80)
+  name String              @db.VarChar(140)
+  description String?
+  category AchievementCategory
+  tier AchievementTier
+  criteria Json
+  points Int                 @default(0)
+  isRepeatable Boolean             @default(false) @map("is_repeatable")
+  isActive Boolean             @default(true) @map("is_active")
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  userAchievements UserAchievement[] @relation("DefinitionToUserAchievements")
+
+  @@index([category, isActive])
+  @@map("achievement_definitions")
+}
+
+model UserAchievement {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String   @db.Uuid @map("user_id")
+  achievementDefinitionId String   @db.Uuid @map("achievement_definition_id")
+  progress Decimal? @db.Decimal(6, 2)
+  awardedAt DateTime @default(now()) @map("awarded_at")
+  context Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user       User                  @relation("UserToAchievements", fields: [userId], references: [id], onDelete: Cascade)
+  definition AchievementDefinition @relation("DefinitionToUserAchievements", fields: [achievementDefinitionId], references: [id], onDelete: Restrict)
+
+  @@index([userId, awardedAt])
+  @@index([achievementDefinitionId, awardedAt])
+  @@map("user_achievements")
+}
+
+model UserStreak {
+  id String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String     @db.Uuid @map("user_id")
+  streakType StreakType @map("streak_type")
+  currentCount Int        @default(0) @map("current_count")
+  longestCount Int        @default(0) @map("longest_count")
+  streakStartDate DateTime? @map("streak_start_date")
+  lastEventDate DateTime? @map("last_event_date")
+  isActive Boolean    @default(true) @map("is_active")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  user User @relation("UserToStreaks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, streakType])
+  @@index([userId, isActive])
+  @@map("user_streaks")
+}
+
+model Friendship {
+  id String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requesterId String           @db.Uuid @map("requester_id")
+  addresseeId String           @db.Uuid @map("addressee_id")
+  status FriendshipStatus @default(PENDING)
+  requestedAt DateTime         @default(now()) @map("requested_at")
+  respondedAt DateTime? @map("responded_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+  @@map("friendships")
+}
+
+model SocialWorkoutPost {
+  id String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String         @db.Uuid @map("user_id")
+  sessionId String?        @db.Uuid @map("session_id")
+  caption String?
+  visibility PostVisibility @default(FRIENDS)
+  media Json?
+  isDeleted Boolean        @default(false) @map("is_deleted")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user      User             @relation("UserToSocialPosts", fields: [userId], references: [id], onDelete: Cascade)
+  session   WorkoutSession?  @relation("SessionToPosts", fields: [sessionId], references: [id], onDelete: SetNull)
+  reactions SocialReaction[] @relation("PostToReactions")
+
+  @@index([userId, createdAt])
+  @@index([visibility, createdAt])
+  @@index([sessionId])
+  @@map("social_workout_posts")
+}
+
+model SocialReaction {
+  id String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId String       @db.Uuid @map("post_id")
+  userId String       @db.Uuid @map("user_id")
+  reactionType ReactionType @map("reaction_type")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  post SocialWorkoutPost @relation("PostToReactions", fields: [postId], references: [id], onDelete: Cascade)
+  user User              @relation("UserToSocialReactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId, reactionType])
+  @@index([userId, createdAt])
+  @@map("social_reactions")
+}
+
+model Challenge {
+  id String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId String?         @db.Uuid @map("creator_id")
+  title String          @db.VarChar(180)
+  description String?
+  challengeType ChallengeType @map("challenge_type")
+  status ChallengeStatus @default(DRAFT)
+  startDate DateTime @map("start_date")
+  endDate DateTime @map("end_date")
+  targetValue Decimal?        @db.Decimal(12, 3) @map("target_value")
+  unit String?         @db.VarChar(24)
+  rules Json?
+  isPublic Boolean         @default(true) @map("is_public")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  creator      User?                  @relation("ChallengeCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  participants ChallengeParticipant[] @relation("ChallengeToParticipants")
+
+  @@index([status, startDate, endDate])
+  @@index([creatorId, createdAt])
+  @@map("challenges")
+}
+
+model ChallengeParticipant {
+  id String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  challengeId String                     @db.Uuid @map("challenge_id")
+  userId String                     @db.Uuid @map("user_id")
+  status ChallengeParticipantStatus @default(JOINED)
+  progressValue Decimal?                   @db.Decimal(12, 3) @map("progress_value")
+  rank Int?
+  joinedAt DateTime                   @default(now()) @map("joined_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt DateTime                   @default(now()) @map("created_at")
+  updatedAt DateTime                   @updatedAt @map("updated_at")
+
+  challenge Challenge @relation("ChallengeToParticipants", fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation("UserToChallengeParticipants", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([userId, status])
+  @@index([challengeId, progressValue])
+  @@map("challenge_participants")
+}
+
+model SyncEvent {
+  id String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String        @db.Uuid @map("user_id")
+  deviceId String        @db.VarChar(64) @map("device_id")
+  clientEventId String        @db.VarChar(128) @map("client_event_id")
+  entityType String        @db.VarChar(64) @map("entity_type")
+  entityId String?       @db.Uuid @map("entity_id")
+  operation SyncOperation
+  direction SyncDirection
+  eventStatus SyncStatus    @default(PENDING) @map("event_status")
+  payload Json
+  checksum String?       @db.VarChar(128)
+  occurredAt DateTime @map("occurred_at")
+  processedAt DateTime? @map("processed_at")
+  conflictData Json? @map("conflict_data")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  user User @relation("UserToSyncEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientEventId])
+  @@index([userId, eventStatus, occurredAt])
+  @@index([entityType, entityId, occurredAt])
+  @@index([deviceId, occurredAt])
+  @@map("sync_events")
+}

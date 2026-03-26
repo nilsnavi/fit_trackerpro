@@ -42,6 +42,11 @@ fittracker-pro/
 - Sentry (error tracking)
 - Nginx (reverse proxy)
 
+## Database Architecture Notes
+
+- Snake-case migration and zero-downtime runbook: `database/postgresql/migrations/README_zero_downtime_snake_case.md`
+- Partitioning policy (deferred until growth stage): `database/postgresql/PARTITIONING_POLICY.md`
+
 ## Быстрый старт
 
 ### Docker (рекомендуется)
