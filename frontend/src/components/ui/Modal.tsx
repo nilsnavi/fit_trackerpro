@@ -78,6 +78,7 @@ export const Modal: React.FC<ModalProps> = ({
     // Haptic feedback при открытии
     useEffect(() => {
         if (isOpen && haptic && typeof window !== 'undefined' && 'Telegram' in window) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const tg = (window as any).Telegram?.WebApp;
             if (tg?.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('light');
@@ -101,21 +102,6 @@ export const Modal: React.FC<ModalProps> = ({
         };
     }, [isOpen]);
 
-    // Обработка Escape
-    const handleEscape = useCallback(
-        (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && closeOnEscape && isOpen) {
-                handleClose();
-            }
-        },
-        [closeOnEscape, isOpen]
-    );
-
-    useEffect(() => {
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
-    }, [handleEscape]);
-
     // Плавное закрытие
     const handleClose = useCallback(() => {
         setIsClosing(true);
@@ -124,6 +110,21 @@ export const Modal: React.FC<ModalProps> = ({
             setIsMounted(false);
         }, 300);
     }, [onClose]);
+
+    // Обработка Escape
+    const handleEscape = useCallback(
+        (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && closeOnEscape && isOpen) {
+                handleClose();
+            }
+        },
+        [closeOnEscape, isOpen, handleClose]
+    );
+
+    useEffect(() => {
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [handleEscape]);
 
     // Клик по оверлею
     const handleOverlayClick = (e: React.MouseEvent) => {

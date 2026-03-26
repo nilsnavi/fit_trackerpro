@@ -719,6 +719,9 @@ export function WorkoutCardio() {
         localStorage.setItem(`cardio_session_${session.id}`, JSON.stringify(sessionData))
 
         const durationMinutes = Math.max(1, Math.round(session.elapsedSeconds / 60))
+        const avgSpeed = session.speedHistory.length > 0
+            ? session.speedHistory.reduce((a, b) => a + b.speed, 0) / session.speedHistory.length
+            : session.speed
         const completionPayload: WorkoutCompleteRequest = {
             duration: durationMinutes,
             exercises: [
@@ -735,7 +738,7 @@ export function WorkoutCardio() {
                     notes: session.notes.map((note) => `${formatTime(note.elapsedSeconds)} ${note.text}`).join(' | ') || undefined,
                 },
             ],
-            comments: `Avg speed ${stats.avgSpeed.toFixed(1)} km/h, HR ${session.heartRate || 'n/a'}`,
+            comments: `Avg speed ${avgSpeed.toFixed(1)} km/h, HR ${session.heartRate || 'n/a'}`,
             tags: ['cardio', session.equipmentId],
         }
 
@@ -747,7 +750,7 @@ export function WorkoutCardio() {
 
         // Navigate back
         window.history.back()
-    }, [session, hapticFeedback, currentEquipment.name, stats.avgSpeed, backendWorkoutId])
+    }, [session, hapticFeedback, currentEquipment.name, backendWorkoutId])
 
     // Cleanup timer on unmount
     useEffect(() => {

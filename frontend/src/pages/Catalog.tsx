@@ -6,7 +6,6 @@ import { Chip } from '@/components/ui/Chip';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/utils/cn';
-import { api } from '@/services/api';
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp';
 
 // ============================================
@@ -871,7 +870,7 @@ export const Catalog: React.FC = () => {
         };
 
         loadExercises();
-    }, []);
+    }, [tg]);
 
     // Setup Telegram back button
     useEffect(() => {
@@ -955,7 +954,7 @@ export const Catalog: React.FC = () => {
                 categories: newCategories.length === 0 ? ['all'] : newCategories,
             };
         });
-    }, []);
+    }, [tg]);
 
     const handleEquipmentToggle = useCallback((equipment: EquipmentType) => {
         tg.hapticFeedback({ type: 'selection' })
@@ -965,7 +964,7 @@ export const Catalog: React.FC = () => {
                 ? prev.equipment.filter(e => e !== equipment)
                 : [...prev.equipment, equipment],
         }));
-    }, []);
+    }, [tg]);
 
     const handleRiskToggle = useCallback((risk: RiskType) => {
         tg.hapticFeedback({ type: 'selection' })
@@ -975,7 +974,7 @@ export const Catalog: React.FC = () => {
                 ? prev.risks.filter(r => r !== risk)
                 : [...prev.risks, risk],
         }));
-    }, []);
+    }, [tg]);
 
     const handleDifficultyToggle = useCallback((difficulty: DifficultyLevel) => {
         tg.hapticFeedback({ type: 'selection' })
@@ -985,7 +984,7 @@ export const Catalog: React.FC = () => {
                 ? prev.difficulty.filter(d => d !== difficulty)
                 : [...prev.difficulty, difficulty],
         }));
-    }, []);
+    }, [tg]);
 
     const handleApplyFilters = useCallback(() => {
         setIsFilterOpen(false);

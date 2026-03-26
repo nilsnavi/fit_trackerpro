@@ -650,6 +650,8 @@ export const Achievements: React.FC<AchievementsProps> = ({
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
     const [unlockedAchievement, setUnlockedAchievement] = useState<Achievement | undefined>();
     const [unlockedPoints, setUnlockedPoints] = useState(0);
+    void setUnlockedAchievement;
+    void setUnlockedPoints;
 
     // Fetch achievements
     const fetchAchievements = useCallback(async () => {
@@ -684,30 +686,6 @@ export const Achievements: React.FC<AchievementsProps> = ({
         });
     }, [fetchAchievements, fetchUserStats]);
 
-    // Check for newly unlocked achievements
-    const checkNewAchievements = useCallback(async () => {
-        try {
-            const response = await api.get<UserAchievementStats>('/achievements/user');
-            setUserStats(response);
-
-            // Find newly completed achievements
-            const newUnlocks = response.items.filter(
-                ua => ua.is_completed && !userStats?.items.find(
-                    old => old.achievement_id === ua.achievement_id && old.is_completed
-                )
-            );
-
-            if (newUnlocks.length > 0) {
-                const latest = newUnlocks[0];
-                setUnlockedAchievement(latest.achievement);
-                setUnlockedPoints(latest.achievement.points);
-                setUnlockModalOpen(true);
-            }
-        } catch (err) {
-            console.error('Failed to check achievements:', err);
-        }
-    }, [userStats]);
-
     // Group achievements by category
     const groupedAchievements = useMemo(() => {
         const groups: Record<string, Achievement[]> = {};
@@ -733,6 +711,7 @@ export const Achievements: React.FC<AchievementsProps> = ({
     // Handle share
     const handleShare = useCallback(() => {
         if (unlockedAchievement && typeof window !== 'undefined' && 'Telegram' in window) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const tg = (window as any).Telegram?.WebApp;
             if (tg) {
                 const text = `🏆 Я получил достижение "${unlockedAchievement.name}" в FitTracker Pro!\n\n${unlockedAchievement.description}\n\n+${unlockedPoints} очков`;

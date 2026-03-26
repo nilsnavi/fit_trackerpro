@@ -146,7 +146,7 @@ const mockFetchData = async (): Promise<Partial<HomeState>> => {
 
 export const useHomeStore = create<HomeState>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             userName: '',
             avatarUrl: undefined,
             glucose: null,
