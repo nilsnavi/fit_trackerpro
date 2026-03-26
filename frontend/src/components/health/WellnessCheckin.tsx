@@ -1139,6 +1139,7 @@ export const WellnessCheckin: React.FC<WellnessCheckinProps> = ({
 // HOOK FOR WORKOUT FILTERING
 // ============================================
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWellnessForWorkout = () => {
     const [recommendation, setRecommendation] = useState<WorkoutRecommendation | null>(null);
     const [todayEntry, setTodayEntry] = useState<WellnessEntry | null>(null);

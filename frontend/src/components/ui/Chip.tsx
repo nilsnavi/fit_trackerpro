@@ -81,6 +81,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
         const handleClick = () => {
             // Haptic feedback
             if (haptic && typeof window !== 'undefined' && 'Telegram' in window) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const tg = (window as any).Telegram?.WebApp;
                 if (tg?.HapticFeedback) {
                     tg.HapticFeedback.selectionChanged();

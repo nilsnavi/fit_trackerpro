@@ -91,6 +91,7 @@ export const Timer: React.FC<TimerProps> = ({
     const triggerHaptic = useCallback((type: 'light' | 'medium' | 'success' = 'light') => {
         if (!haptic || typeof window === 'undefined' || !('Telegram' in window)) return;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tg = (window as any).Telegram?.WebApp;
         if (!tg?.HapticFeedback) return;
 

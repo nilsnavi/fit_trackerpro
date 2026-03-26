@@ -151,14 +151,16 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     // Start timer
     const start = useCallback(() => {
         if (state === 'completed') {
-            reset()
+            hasCompletedRef.current = false
+            hasWarnedRef.current = false
+            setTimeLeft(duration)
         }
 
         setState('running')
         lastTimeRef.current = 0
         accumulatedTimeRef.current = 0
         animationFrameRef.current = requestAnimationFrame(tick)
-    }, [state, tick])
+    }, [state, tick, duration])
 
     // Pause timer
     const pause = useCallback(() => {

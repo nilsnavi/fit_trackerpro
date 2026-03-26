@@ -758,7 +758,7 @@ const Analytics: React.FC = () => {
     }, [filteredWorkouts]);
 
     // Handle chart click
-    const handleChartClick = useCallback((data: any) => {
+    const handleChartClick = useCallback((data: { activeLabel?: string; activePayload?: unknown[] } | undefined) => {
         if (!data || !data.activeLabel || !data.activePayload) return;
 
         const date = data.activeLabel;

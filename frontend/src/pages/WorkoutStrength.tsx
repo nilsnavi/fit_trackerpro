@@ -570,7 +570,7 @@ export function WorkoutStrength() {
         if (!isOffline && pendingSync) {
             syncWorkoutProgress()
         }
-    }, [isOffline, pendingSync])
+    }, [isOffline, pendingSync, syncWorkoutProgress])
 
     // Главная кнопка Telegram
     useEffect(() => {
@@ -583,7 +583,7 @@ export function WorkoutStrength() {
         return () => {
             hideMainButton()
         }
-    }, [completedExercises])
+    }, [completedExercises, handleFinishWorkout, hideMainButton, showMainButton])
 
     // Автоматическое раскрытие текущего упражнения
     useEffect(() => {
@@ -673,14 +673,16 @@ export function WorkoutStrength() {
         localStorage.setItem(`workout_progress_${workout.id}`, JSON.stringify(saveData))
     }, [workout, elapsedTime])
 
-    const syncWorkoutProgress = async () => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    async function syncWorkoutProgress() {
         if (!pendingSync) return
 
         // Backend currently syncs on complete only.
         setPendingSync(false)
     }
 
-    const handleFinishWorkout = async () => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    async function handleFinishWorkout() {
         hapticFeedback?.success()
 
         const durationMinutes = Math.max(1, Math.round(elapsedTime / 60))

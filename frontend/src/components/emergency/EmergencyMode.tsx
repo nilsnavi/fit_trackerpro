@@ -153,7 +153,6 @@ function EmergencyButton({ onClick }: EmergencyButtonProps) {
 // ============================================
 
 interface CloseButtonProps {
-    onClose: () => void
     isHolding: boolean
     holdProgress: number
     onMouseDown: () => void
@@ -163,7 +162,6 @@ interface CloseButtonProps {
 }
 
 function CloseButton({
-    onClose,
     isHolding,
     holdProgress,
     onMouseDown,
@@ -320,7 +318,6 @@ function HypoglycemiaProtocol({ onCallHelp, onTimerComplete, onBetter }: Hypogly
     const { hapticFeedback } = useTelegram()
 
     const {
-        timeLeft,
         state: timerState,
         start,
         pause,
@@ -608,7 +605,7 @@ function EmergencyContactDisplay({
     isSending,
     onSkip,
 }: EmergencyContactDisplayProps) {
-    const [includeLocation, setIncludeLocation] = useState(false)
+    const [includeLocation] = useState(false)
     const [sent, setSent] = useState(false)
     const { hapticFeedback } = useTelegram()
 
@@ -839,7 +836,6 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
     const [contact, setContact] = useState<EmergencyContact | null>(null)
     const [isLoadingContact, setIsLoadingContact] = useState(false)
     const [isSending, setIsSending] = useState(false)
-    const [logs, setLogs] = useState<EmergencyLog[]>([])
 
     // Состояние удержания для закрытия
     const [isHolding, setIsHolding] = useState(false)
@@ -888,7 +884,6 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
             contactNotified: false,
             ...event,
         }
-        setLogs(prev => [...prev, log])
 
         // Отправка лога в API
         api.post('/emergency/log', log).catch(console.error)
@@ -948,6 +943,15 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
         onClose()
     }
 
+    const stopHold = useCallback(() => {
+        setIsHolding(false)
+        if (holdIntervalRef.current) {
+            clearInterval(holdIntervalRef.current)
+            holdIntervalRef.current = null
+        }
+        setHoldProgress(0)
+    }, [])
+
     // Обработчики удержания для закрытия
     const startHold = useCallback(() => {
         setIsHolding(true)
@@ -965,16 +969,7 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
                 onClose()
             }
         }, 50)
-    }, [hapticFeedback, onClose])
-
-    const stopHold = useCallback(() => {
-        setIsHolding(false)
-        if (holdIntervalRef.current) {
-            clearInterval(holdIntervalRef.current)
-            holdIntervalRef.current = null
-        }
-        setHoldProgress(0)
-    }, [])
+    }, [hapticFeedback, onClose, stopHold])
 
     useEffect(() => {
         return () => {
@@ -1002,7 +997,6 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
                         </span>
                     </div>
                     <CloseButton
-                        onClose={onClose}
                         isHolding={isHolding}
                         holdProgress={holdProgress}
                         onMouseDown={startHold}

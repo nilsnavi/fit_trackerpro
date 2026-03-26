@@ -41,6 +41,7 @@ class SoundGenerator {
 
     constructor() {
         if (typeof window !== 'undefined') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
             if (AudioContextClass) {
                 this.audioContext = new AudioContextClass()
@@ -93,7 +94,6 @@ class SoundGenerator {
     playComplete(): void {
         if (!this.audioContext) return
 
-        const now = this.audioContext.currentTime
         this.playBeep(1200, 0.3, 'sine')
 
         setTimeout(() => {
@@ -162,11 +162,8 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                 }, 200)
             }
 
-            // Release wake lock
-            releaseWakeLock()
-
             onComplete?.()
-        }, [enableSound, enableHaptic, isTelegram, hapticFeedback, onComplete]),
+        }, [enableSound, enableHaptic, isTelegram, hapticFeedback, onComplete, soundGenerator]),
 
         onTick: useCallback((remaining: number) => {
             // Play tick every 10 seconds (at 50, 40, 30, 20, 10)
@@ -174,7 +171,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                 soundGenerator.playTick()
                 lastTickSecond.current = remaining
             }
-        }, [enableSound]),
+        }, [enableSound, soundGenerator]),
 
         onWarning: useCallback(() => {
             // Warning at 10 seconds
@@ -185,13 +182,14 @@ export const RestTimer: React.FC<RestTimerProps> = ({
             if (enableHaptic && isTelegram) {
                 hapticFeedback({ type: 'notification', notificationType: 'warning' })
             }
-        }, [enableSound, enableHaptic, isTelegram, hapticFeedback]),
+        }, [enableSound, enableHaptic, isTelegram, hapticFeedback, soundGenerator]),
     })
 
     // Wake Lock API for keeping screen on
     const requestWakeLock = useCallback(async () => {
         if ('wakeLock' in navigator) {
             try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const lock = await (navigator as any).wakeLock.request('screen')
                 setWakeLock(lock)
             } catch (err) {

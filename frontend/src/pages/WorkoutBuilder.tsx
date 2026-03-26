@@ -382,7 +382,14 @@ export const WorkoutBuilder: React.FC = () => {
     // Auto-save every 30 seconds
     useEffect(() => {
         autoSaveRef.current = setInterval(() => {
-            saveDraft();
+            const draft = {
+                name: workoutName,
+                types: selectedTypes,
+                blocks,
+                savedAt: new Date().toISOString(),
+            };
+            localStorage.setItem(draftKey, JSON.stringify(draft));
+            setLastSaved(new Date());
         }, 30000);
 
         return () => {
@@ -390,7 +397,7 @@ export const WorkoutBuilder: React.FC = () => {
                 clearInterval(autoSaveRef.current);
             }
         };
-    }, [workoutName, selectedTypes, blocks]);
+    }, [workoutName, selectedTypes, blocks, draftKey]);
 
     // ============================================
     // Handlers
