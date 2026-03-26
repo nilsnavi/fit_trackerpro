@@ -104,6 +104,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
             // Haptic feedback для мобильных устройств
             if (haptic && typeof window !== 'undefined' && 'Telegram' in window) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const tg = (window as any).Telegram?.WebApp;
                 if (tg?.HapticFeedback) {
                     tg.HapticFeedback.impactOccurred(haptic);

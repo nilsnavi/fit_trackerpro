@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { api } from '@/services/api';
-import { Workout, WorkoutType } from '@/types';
+import { WorkoutType } from '@/types';
 
 // Types
 interface CalendarWorkout {
@@ -229,18 +229,6 @@ const CalendarGrid: React.FC<{
             {/* Calendar days */}
             <div className="grid grid-cols-7 gap-1">
                 {days.map((day, index) => {
-                    const hasCompleted = day.workouts.some(w => w.status === 'completed');
-                    const hasPartial = day.workouts.some(w => w.status === 'partial');
-                    const hasMissed = day.workouts.some(w => w.status === 'missed');
-                    const hasPlanned = day.workouts.some(w => w.status === 'planned');
-
-                    // Determine dominant status color
-                    let statusColor = '';
-                    if (hasCompleted) statusColor = 'bg-success';
-                    else if (hasPartial) statusColor = 'bg-warning';
-                    else if (hasMissed) statusColor = 'bg-danger';
-                    else if (hasPlanned) statusColor = 'bg-neutral-300';
-
                     return (
                         <button
                             key={index}
@@ -487,9 +475,10 @@ export const Calendar: React.FC = () => {
     const calculateStreak = (workouts: CalendarWorkout[]): number => {
         const today = new Date();
         let streak = 0;
-        let checkDate = new Date(today);
+        const checkDate = new Date(today);
+        let shouldContinue = true;
 
-        while (true) {
+        while (shouldContinue) {
             const hasWorkout = workouts.some(w =>
                 w.status === 'completed' &&
                 isSameDay(new Date(w.scheduled_at), checkDate)
@@ -498,7 +487,7 @@ export const Calendar: React.FC = () => {
                 streak++;
                 checkDate.setDate(checkDate.getDate() - 1);
             } else {
-                break;
+                shouldContinue = false;
             }
         }
 
