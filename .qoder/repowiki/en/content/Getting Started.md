@@ -138,6 +138,7 @@ Current backend dependencies (requirements.txt):
 - Python-Telegram-Bot >=20.8
 - HTTPX >=0.26.0
 - AIOHTTP >=3.9.3
+- Celery >=5.3.6
 - Redis >=5.0.1
 - Structlog >=24.1.0
 - Sentry SDK >=1.40.4
@@ -153,7 +154,7 @@ Access:
 
 **Section sources**
 - [README.md:71-88](file://README.md#L71-L88)
-- [backend/requirements.txt:1-42](file://backend/requirements.txt#L1-L42)
+- [backend/requirements.txt:1-43](file://backend/requirements.txt#L1-L43)
 - [frontend/package.json:6-15](file://frontend/package.json#L6-L15)
 
 ## Environment Variables
