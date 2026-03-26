@@ -50,3 +50,8 @@ secrets/
 
 # Misc
 .cache/
+
+# Accidental root Node/Prisma artifacts
+/node_modules/
+/package.json
+/package-lock.json

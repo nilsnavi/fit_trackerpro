@@ -23,6 +23,8 @@ export interface CompletedSet {
     set_number: number
     reps?: number
     weight?: number
+    rpe?: number
+    rir?: number
     duration?: number
     completed: boolean
 }

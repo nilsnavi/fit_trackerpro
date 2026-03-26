@@ -222,7 +222,7 @@ enum SyncStatus {
 
 model User {
   id String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  telegramUserId String     @unique @db.VarChar(32) @map("telegram_user_id")
+  telegramUserId BigInt     @unique @db.BigInt @map("telegram_user_id")
   telegramUsername String?    @db.VarChar(64) @map("telegram_username")
   role String     @default("user") @db.VarChar(32)
   status UserStatus @default(ACTIVE)
@@ -233,7 +233,7 @@ model User {
   updatedAt DateTime   @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  profile                 UserProfile?
+  profile                 UserProfile?             @relation("UserToProfile")
   ownedExercises          Exercise[]               @relation("ExerciseOwner")
   workoutTemplates        WorkoutTemplate[]        @relation("TemplateOwner")
   workoutSessions         WorkoutSession[]         @relation("SessionOwner")
@@ -450,6 +450,7 @@ model WorkoutSet {
   reps Int?
   weightKg Decimal? @db.Decimal(8, 3) @map("weight_kg")
   rpe Decimal? @db.Decimal(3, 1)
+  rir Decimal? @db.Decimal(3, 1)
   estimated1RmKg Decimal? @db.Decimal(10, 3) @map("estimated1_rm_kg")
   fatigueScore Decimal? @db.Decimal(5, 2) @map("fatigue_score")
   actualRestSec Int? @map("actual_rest_sec")
