@@ -7,9 +7,9 @@ services:
     container_name: fittracker-postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
@@ -19,7 +19,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - fittracker-network
+      - backend-internal
     deploy:
       resources:
         limits:
@@ -40,7 +40,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - fittracker-network
+      - backend-internal
     deploy:
       resources:
         limits:
@@ -53,11 +53,11 @@ services:
     container_name: fittracker-backend
     restart: always
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL}
       - ENVIRONMENT=production
       - DEBUG=false
@@ -69,6 +69,7 @@ services:
       redis:
         condition: service_healthy
     networks:
+      - backend-internal
       - fittracker-network
     deploy:
       resources:
@@ -125,3 +126,6 @@ volumes:
 networks:
   fittracker-network:
     driver: bridge
+  backend-internal:
+    driver: bridge
+    internal: true
