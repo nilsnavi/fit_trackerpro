@@ -120,6 +120,29 @@ jobs:
             echo "Deployment completed successfully!"
           EOF
 
+      - name: Post-deploy health check
+        env:
+          API_BASE_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          set -Eeuo pipefail
+          HEALTHCHECK_URL="${API_BASE_URL%/}/system/health"
+          VERSION_URL="${API_BASE_URL%/}/system/version"
+          echo "Running post-deploy health check: $HEALTHCHECK_URL"
+          # Allow services to fully warm up after restart and fail if no 2xx response is received.
+          curl --fail --show-error --silent \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "$HEALTHCHECK_URL" > /dev/null
+          echo "Post-deploy health check passed"
+          echo "Running post-deploy version smoke check: $VERSION_URL"
+          curl --fail --show-error --silent \
+            --retry 6 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "$VERSION_URL" > /dev/null
+          echo "Post-deploy version smoke check passed"
+
       - name: Notify on success
         if: success()
         uses: 8398a7/action-slack@v3
