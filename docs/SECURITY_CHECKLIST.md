@@ -1,192 +1,69 @@
 # Security Checklist
 
-Comprehensive security checklist for FitTracker Pro production deployment.
+Security review checklist for current FitTracker Pro deployment.
 
-## Network Security
+## Transport and perimeter
 
-### HTTPS Configuration
-- [ ] SSL/TLS certificate installed (Let's Encrypt or commercial)
-- [ ] HTTPS enforced (redirect HTTP to HTTPS)
-- [ ] TLS 1.2 or higher required
-- [ ] Strong cipher suites configured
-- [ ] HSTS header enabled
+- [ ] HTTPS is enforced (HTTP -> HTTPS redirect)
+- [ ] TLS 1.2+ only, modern ciphers
+- [ ] HSTS enabled
+- [ ] Firewall exposes only required ports (22/80/443)
+- [ ] Internal ports (PostgreSQL/Redis) are not public
 
-### Firewall & Network
-- [ ] UFW/iptables configured (only 22, 80, 443 open)
-- [ ] SSH key authentication only (disable password auth)
-- [ ] SSH on non-standard port (optional)
-- [ ] Fail2ban installed and configured
-- [ ] Internal services not exposed (DB, Redis on localhost only)
+## Auth and session security
 
-## Application Security
+- [ ] Telegram `init_data` hash validation enabled in backend
+- [ ] Access/refresh JWT flow works with expiration checks
+- [ ] `SECRET_KEY` is strong and rotated when needed
+- [ ] Auth endpoints rate-limited (`RATE_LIMIT_PER_MINUTE` + proxy limits)
 
-### Authentication & Authorization
-- [ ] JWT tokens with secure signing key
-- [ ] Token expiration configured (30 min access, 7 days refresh)
-- [ ] Telegram auth data validation implemented
-- [ ] Rate limiting on auth endpoints (5 req/min)
-- [ ] Brute force protection
+## Application hardening
 
-### Input Validation
-- [ ] Pydantic schemas for all inputs
-- [ ] SQL injection prevention (SQLAlchemy ORM used)
-- [ ] XSS protection (React escaping, CSP headers)
-- [ ] File upload restrictions (type, size)
-- [ ] CORS properly configured (specific origins, not `*`)
+- [ ] CORS is restricted (`ALLOWED_ORIGINS`, no wildcard in production)
+- [ ] Input validation done with Pydantic schemas
+- [ ] ORM/parameterized SQL used for DB operations
+- [ ] No debug mode in production (`DEBUG=false`)
+- [ ] Error responses do not leak stack traces/secrets
 
-### Data Protection
-- [ ] Passwords hashed with bcrypt
-- [ ] Sensitive data encrypted at rest
-- [ ] Database credentials in environment variables
-- [ ] No secrets in code repository
-- [ ] `.env` files in `.gitignore`
+## Secrets and configuration
 
-## Infrastructure Security
+- [ ] No secrets in git history
+- [ ] `.env` files are ignored by git
+- [ ] GitHub Actions secrets are used for deployment
+- [ ] File permissions for env/secrets are restricted
 
-### Docker Security
-- [ ] Non-root users in containers
-- [ ] Read-only filesystems where possible
-- [ ] No unnecessary capabilities
-- [ ] Image scanning (Trivy in CI/CD)
-- [ ] Base images from trusted sources
+## Containers and dependencies
 
-### Secrets Management
-- [ ] Production secrets in GitHub Secrets
-- [ ] Different secrets for staging/production
-- [ ] Secret rotation policy
-- [ ] No secrets in logs
-- [ ] Environment files have restricted permissions (600)
+- [ ] Docker images are pulled from trusted sources
+- [ ] CI Trivy scan passes (or accepted risks documented)
+- [ ] Python and npm dependencies updated regularly
+- [ ] High/critical dependency issues are fixed or mitigated
 
-## Monitoring & Logging
+## Observability and response
 
-### Error Tracking
-- [ ] Sentry configured for error tracking
-- [ ] PII excluded from error reports
-- [ ] Alerts for critical errors
+- [ ] Sentry DSN configured (if used)
+- [ ] Authentication and critical actions are logged
+- [ ] Alerting exists for service downtime and repeated 5xx
+- [ ] Backup + restore procedure is tested
 
-### Audit Logging
-- [ ] Authentication events logged
-- [ ] Critical actions logged (user updates, deletes)
-- [ ] Log retention policy (90 days)
-- [ ] Logs protected from tampering
+## Telegram Mini App specifics
 
-## Dependency Security
+- [ ] BotFather Mini App URL matches production domain
+- [ ] Production domain is HTTPS
+- [ ] Bot token is server-side only
+- [ ] Frontend never trusts Telegram user payload without backend verification
 
-### Dependency Management
-- [ ] `requirements.txt` and `package-lock.json` committed
-- [ ] Regular dependency updates (Dependabot)
-- [ ] Vulnerability scanning in CI/CD
-- [ ] No known high/critical vulnerabilities
-
-### Supply Chain
-- [ ] Docker images from official repositories
-- [ ] npm packages from verified publishers
-- [ ] PyPI packages with good reputation
-
-## Telegram Mini App Security
-
-### WebApp Configuration
-- [ ] HTTPS required (Telegram enforces this)
-- [ ] Domain validated with BotFather
-- [ ] WebApp URL matches configured domain
-- [ ] Telegram auth hash validation
-
-### Data Handling
-- [ ] User data from Telegram validated
-- [ ] No sensitive data in WebApp URL
-- [ ] LocalStorage/SessionStorage encrypted (if used)
-
-## Security Headers Checklist
-
-Verify these headers are present in responses:
-
-```
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-X-Frame-Options: SAMEORIGIN
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 1; mode=block
-Referrer-Policy: strict-origin-when-cross-origin
-Content-Security-Policy: default-src 'self'; ...
-```
-
-## Pre-Deployment Security Verification
-
-Run these checks before production:
+## Quick verification commands
 
 ```bash
-# 1. Check for secrets in code
-git log --all --full-history -- .env
-
-# 2. Scan for vulnerabilities
+curl -I https://your-domain.com
+curl -f https://your-domain.com/api/v1/health
 npm audit
 pip-audit
-
-# 3. Test SSL configuration
-nmap --script ssl-enum-ciphers -p 443 yourdomain.com
-
-# 4. Check headers
-curl -I https://yourdomain.com
-
-# 5. Test rate limiting
-for i in {1..20}; do curl https://yourdomain.com/api/v1/health; done
-
-# 6. Verify CORS
-curl -H "Origin: https://evil.com" https://yourdomain.com/api/v1/health
 ```
 
-## Incident Response Plan
+## Review cadence
 
-### Preparation
-- [ ] Contact list for security incidents
-- [ ] Rollback procedure documented
-- [ ] Database backup verified
-- [ ] Monitoring alerts configured
-
-### Detection
-- [ ] Automated vulnerability scanning
-- [ ] Log analysis for anomalies
-- [ ] Uptime monitoring
-- [ ] Error rate monitoring
-
-### Response
-- [ ] Immediate isolation procedure
-- [ ] Communication plan
-- [ ] Forensic data preservation
-- [ ] Post-incident review process
-
-## Compliance Considerations
-
-### GDPR (if applicable)
-- [ ] Privacy policy in place
-- [ ] User data export capability
-- [ ] User data deletion capability
-- [ ] Consent management
-- [ ] Data processing records
-
-### Data Retention
-- [ ] Retention policy defined
-- [ ] Automatic data purging configured
-- [ ] User notification on data changes
-
-## Security Update Schedule
-
-| Task | Frequency |
-|------|-----------|
-| Dependency updates | Weekly |
-| Security patch review | Daily |
-| Vulnerability scan | On every build |
-| Penetration testing | Quarterly |
-| Security audit | Annually |
-| Access review | Quarterly |
-| Backup testing | Monthly |
-
-## Security Contacts
-
-- **Security Lead**: [Name] <email>
-- **DevOps**: [Name] <email>
-- **On-call**: [Phone/Slack]
-
----
-
-**Last Updated**: [Date]
-**Next Review**: [Date + 3 months]
+- [ ] Monthly dependency/security review
+- [ ] Quarterly rollback and backup-restore drill
+- [ ] Quarterly secrets rotation review

@@ -53,8 +53,8 @@ fit_trackerpro/
 
 ```bash
 # Клонирование репозитория
-git clone https://github.com/yourusername/fittracker-pro.git
-cd fittracker-pro
+git clone https://github.com/nilsnavi/fit_trackerpro.git
+cd fit_trackerpro
 
 # Настройка окружения
 cp backend/.env.example backend/.env
@@ -152,6 +152,10 @@ Backend приведен к слоистой структуре:
 
 ### Authentication
 - `POST /api/v1/auth/telegram` - Telegram WebApp auth
+- `GET /api/v1/auth/me` - Текущий профиль
+- `PUT /api/v1/auth/me` - Обновление профиля
+- `POST /api/v1/auth/refresh` - Обновление access-токена
+- `POST /api/v1/auth/logout` - Выход
 
 ### Users
 - `GET /api/v1/users/*` - в разработке (часть endpoint-ов пока заглушки)
@@ -233,6 +237,7 @@ Backend приведен к слоистой структуре:
 ## Деплой
 
 См. подробную документацию:
+- [Индекс документации](docs/DOCS_INDEX.md)
 - [Руководство по деплою](docs/DEPLOYMENT.md)
 - [Настройка окружения](docs/ENVIRONMENT_SETUP.md)
 - [Чеклист безопасности](docs/SECURITY_CHECKLIST.md)
@@ -242,12 +247,11 @@ Backend приведен к слоистой структуре:
 
 ```bash
 # На сервере
-git clone https://github.com/yourusername/fittracker-pro.git
-cd fittracker-pro
+git clone https://github.com/nilsnavi/fit_trackerpro.git
+cd fit_trackerpro
 
-# Настройка окружения
-cp .env.example .env
-# Отредактируйте .env
+# Настройка окружения (создайте root .env вручную, см. docs/ENVIRONMENT_SETUP.md)
+nano .env
 
 # Запуск production
 docker-compose -f docker-compose.prod.yml up -d
