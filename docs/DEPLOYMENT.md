@@ -22,13 +22,11 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 newgrp docker
-sudo apt install -y git nginx certbot python3-certbot-nginx
+sudo apt install -y nginx certbot python3-certbot-nginx
 ```
 
 ```bash
-mkdir -p ~/fit_trackerpro/backups
-cd ~/fit_trackerpro
-git clone https://github.com/nilsnavi/fit_trackerpro.git .
+mkdir -p ~/fit_trackerpro/backups ~/fit_trackerpro/nginx ~/fit_trackerpro/nginx/ssl ~/fit_trackerpro/nginx/logs
 ```
 
 ## Root `.env` for production compose
@@ -48,6 +46,7 @@ VITE_API_URL=https://fit.example.com/api/v1
 VITE_TELEGRAM_BOT_USERNAME=fit_tracker_bot
 
 GITHUB_REPOSITORY=nilsnavi/fit_trackerpro
+IMAGE_TAG=latest
 ```
 
 ## GitHub Secrets (required by workflows)
@@ -87,8 +86,11 @@ sudo chown -R $USER:$USER ~/fit_trackerpro/nginx/ssl
 ## Manual Deploy
 
 ```bash
+mkdir -p ~/fit_trackerpro/nginx
+scp docker-compose.prod.yml <user>@<host>:~/fit_trackerpro/docker-compose.prod.yml
+scp nginx/nginx.conf <user>@<host>:~/fit_trackerpro/nginx/nginx.conf
+ssh <user>@<host>
 cd ~/fit_trackerpro
-git pull
 docker-compose -f docker-compose.prod.yml pull
 docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
 docker-compose -f docker-compose.prod.yml up -d
@@ -99,12 +101,13 @@ docker-compose -f docker-compose.prod.yml up -d
 The current `deploy.yml` workflow:
 
 1. Connects via SSH
-2. Updates code on server
+2. Syncs infra files (`docker-compose.prod.yml`, `nginx/nginx.conf`) to server
 3. Regenerates root `.env` from GitHub secrets
-4. Creates DB backup
-5. Pulls images and applies migrations
-6. Restarts stack
-7. Runs backend health checks (`/api/v1/system/health`, `/api/v1/system/version`)
+4. Sets deploy image tag (`release tag` or manual `image_tag`)
+5. Creates DB backup
+6. Pulls images and applies migrations
+7. Restarts stack
+8. Runs backend health checks (`/api/v1/system/health`, `/api/v1/system/version`)
 
 ## Verification
 

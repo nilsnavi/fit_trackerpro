@@ -5,16 +5,16 @@
 ## Production Source of Truth
 
 - Runtime артефакты: GHCR images
-  - `ghcr.io/<repo>/backend:latest`
-  - `ghcr.io/<repo>/frontend:latest`
+  - `ghcr.io/<repo>/backend:<tag>`
+  - `ghcr.io/<repo>/frontend:<tag>`
 - Оркестрация: `docker-compose.prod.yml`
 - Automation: `.github/workflows/deploy.yml`
 
-Приложение в production разворачивается по image-based модели (не из локальной сборки на сервере).
+Приложение в production разворачивается по image-based модели (без `docker build`, `git pull` и `git checkout` на production-сервере).
 
 ## Production Deploy Flow
 
-1. Обновить infra-файлы на сервере (`git pull --ff-only origin main`)
+1. Синхронизировать infra-файлы на сервер (`docker-compose.prod.yml`, `nginx/nginx.conf`)
 2. Пересоздать `.env` из GitHub Secrets
 3. Сделать backup БД (best-effort)
 4. `docker-compose -f docker-compose.prod.yml pull`
@@ -85,3 +85,4 @@ Infrastructure:
 - `POSTGRES_PASSWORD`
 - `POSTGRES_DB`
 - `GITHUB_REPOSITORY`
+- `IMAGE_TAG` (optional, default `latest`)
