@@ -770,20 +770,20 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
             setIsLoading(true);
 
             // Fetch goal settings
-            const goalData = await api.get<WaterGoal>('/health/water/goal');
+            const goalData = await api.get<WaterGoal>('/health-metrics/water/goal');
             setGoal(goalData);
 
             // Fetch reminder settings
-            const reminderData = await api.get<WaterReminder>('/health/water/reminder');
+            const reminderData = await api.get<WaterReminder>('/health-metrics/water/reminder');
             setReminder(reminderData);
 
             // Fetch today's entries
-            const todayData = await api.get<WaterEntry[]>('/health/water/today');
+            const todayData = await api.get<WaterEntry[]>('/health-metrics/water/today');
             setTodayEntries(todayData);
             setCurrentAmount(todayData.reduce((sum, entry) => sum + entry.amount, 0));
 
             // Fetch weekly stats
-            const statsData = await api.get<WaterWeeklyStats>('/health/water/stats?period=7d');
+            const statsData = await api.get<WaterWeeklyStats>('/health-metrics/water/stats?period=7d');
             setWeeklyStats(statsData);
         } catch (error) {
             console.error('Failed to fetch water data:', error);
@@ -800,7 +800,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
     const handleAddWater = async (amount: number) => {
         try {
             setIsLoading(true);
-            const response = await api.post<WaterEntry>('/health/water', {
+            const response = await api.post<WaterEntry>('/health-metrics/water', {
                 amount,
                 recorded_at: new Date().toISOString()
             });
@@ -834,7 +834,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
     // Update goal
     const handleUpdateGoal = async (goalData: Partial<WaterGoal>) => {
         try {
-            const response = await api.put<WaterGoal>('/health/water/goal', goalData);
+            const response = await api.put<WaterGoal>('/health-metrics/water/goal', goalData);
             setGoal(response);
             hapticFeedback?.success();
         } catch (error) {
@@ -846,7 +846,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
     // Update reminder
     const handleUpdateReminder = async (reminderData: Partial<WaterReminder>) => {
         try {
-            const response = await api.put<WaterReminder>('/health/water/reminder', reminderData);
+            const response = await api.put<WaterReminder>('/health-metrics/water/reminder', reminderData);
             setReminder(response);
             hapticFeedback?.success();
         } catch (error) {
@@ -1087,8 +1087,8 @@ export const WaterCompactWidget: React.FC<WaterCompactWidgetProps> = ({ onClick,
     useEffect(() => {
         // Fetch initial data
         Promise.all([
-            api.get<WaterGoal>('/health/water/goal'),
-            api.get<WaterEntry[]>('/health/water/today')
+            api.get<WaterGoal>('/health-metrics/water/goal'),
+            api.get<WaterEntry[]>('/health-metrics/water/today')
         ])
             .then(([goalData, entriesData]) => {
                 setGoal(goalData);

@@ -4,12 +4,22 @@ from httpx import AsyncClient
 
 @pytest.mark.unit
 async def test_health_check(client: AsyncClient):
-    """Test the health check endpoint."""
-    response = await client.get("/api/v1/health")
+    """Test system health endpoint."""
+    response = await client.get("/api/v1/system/health")
     assert response.status_code == 200
     data = response.json()
     assert "status" in data
     assert data["status"] == "healthy"
+
+
+@pytest.mark.unit
+async def test_system_version(client: AsyncClient):
+    """Test system version endpoint."""
+    response = await client.get("/api/v1/system/version")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "FitTracker Pro API"
+    assert data["version"] == "1.0.0"
 
 
 @pytest.mark.unit
@@ -24,12 +34,9 @@ async def test_root_endpoint(client: AsyncClient):
 
 
 @pytest.mark.unit
-async def test_api_docs_disabled_in_production(monkeypatch):
+async def test_api_docs_disabled_in_production():
     """Test that API docs are disabled in production."""
     from app.utils.config import Settings
-
-    # Mock production settings
-    monkeypatch.setattr(Settings, "DEBUG", False)
 
     # In production, docs should be None (disabled)
     # This test verifies the configuration logic

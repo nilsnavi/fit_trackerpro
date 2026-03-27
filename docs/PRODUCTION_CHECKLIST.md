@@ -34,7 +34,8 @@ Checklist for releasing current FitTracker Pro stack.
 
 ## 5) Smoke checks
 
-- [ ] `GET /api/v1/health` returns 200
+- [ ] `GET /api/v1/system/health` returns 200
+- [ ] `GET /api/v1/system/version` returns 200
 - [ ] Telegram login works (`POST /api/v1/auth/telegram`)
 - [ ] `GET /api/v1/auth/me` works with access token
 - [ ] Core user flow works: workouts, health, analytics

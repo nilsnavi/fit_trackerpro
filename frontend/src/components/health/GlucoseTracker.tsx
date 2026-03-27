@@ -526,11 +526,11 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
     const fetchData = useCallback(async () => {
         try {
             // Fetch weekly stats
-            const statsData = await api.get<GlucoseStats>('/health/glucose/stats?period=7d');
+            const statsData = await api.get<GlucoseStats>('/health-metrics/glucose/stats?period=7d');
             setStats(statsData);
 
             // Fetch recent readings
-            const readingsData = await api.get<GlucoseReading[]>('/health/glucose?limit=10');
+            const readingsData = await api.get<GlucoseReading[]>('/health-metrics/glucose?limit=10');
             setRecentReadings(readingsData);
 
             if (readingsData.length > 0) {
@@ -549,7 +549,7 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
 
     const handleSaveReading = async (readingData: Omit<GlucoseReading, 'id' | 'user_id' | 'created_at'>) => {
         try {
-            const response = await api.post<GlucoseReading>('/health/glucose', readingData);
+            const response = await api.post<GlucoseReading>('/health-metrics/glucose', readingData);
 
             // Update local state
             setRecentReadings((prev) => [response, ...prev]);
@@ -698,7 +698,7 @@ export const GlucoseCompactWidget: React.FC<GlucoseCompactWidgetProps> = ({ onCl
     const [lastReading, setLastReading] = useState<GlucoseReading | null>(null);
 
     useEffect(() => {
-        api.get<GlucoseReading[]>('/health/glucose?limit=1')
+        api.get<GlucoseReading[]>('/health-metrics/glucose?limit=1')
             .then((data) => {
                 if (data.length > 0) setLastReading(data[0]);
             })

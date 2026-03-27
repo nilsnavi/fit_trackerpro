@@ -1,7 +1,6 @@
 """
 Application configuration using Pydantic Settings
 """
-import os
 from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
@@ -15,8 +14,8 @@ BACKEND_DIR = Path(__file__).parent.parent.parent
 class Settings(BaseSettings):
     # Application
     APP_NAME: str = "FitTracker Pro"
+    ENVIRONMENT: str = "development"
     DEBUG: bool = False
-    ENVIRONMENT: str = "production"
 
     # Database
     DATABASE_URL: str
@@ -53,6 +52,27 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v
+
+    @validator("SECRET_KEY")
+    def validate_secret_key(cls, value, values):
+        environment = values.get("ENVIRONMENT", "production")
+        if environment == "production" and len(value) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters in production")
+        return value
+
+    @validator("ALLOWED_ORIGINS")
+    def validate_allowed_origins(cls, value, values):
+        environment = values.get("ENVIRONMENT", "production")
+        if environment == "production" and value == ["*"]:
+            raise ValueError("ALLOWED_ORIGINS cannot be wildcard in production")
+        return value
+
+    @validator("DEBUG")
+    def validate_debug_in_production(cls, value, values):
+        environment = values.get("ENVIRONMENT", "production")
+        if environment == "production" and value:
+            raise ValueError("DEBUG must be false in production")
+        return value
 
     class Config:
         env_file = str(BACKEND_DIR / ".env")

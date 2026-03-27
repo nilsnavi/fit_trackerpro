@@ -42,15 +42,15 @@ jobs:
       - name: Deploy to server
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -e
+            set -Eeuo pipefail
             
             # Navigate to project directory
             cd ~/fittracker-pro || exit 1
             
-            # Pull latest changes
-            git fetch origin
-            git checkout ${{ github.ref_name }}
-            git pull origin ${{ github.ref_name }}
+            # Keep infra files (compose/nginx) in sync, but deploy application from images.
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
             
             # Create .env file from secrets
             cat > .env << EOL
@@ -67,7 +67,9 @@ jobs:
           GITHUB_REPOSITORY=${{ github.repository }}
           EOL
             
-            # Backup database before migration
+            mkdir -p backups
+
+            # Backup database before migration (best-effort)
             echo "Creating database backup..."
             docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > backups/backup_$(date +%Y%m%d_%H%M%S).sql || true
             
@@ -77,7 +79,7 @@ jobs:
             
             # Run database migrations
             echo "Running database migrations..."
-            docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head || true
+            docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
             
             # Deploy services
             echo "Deploying services..."
@@ -89,13 +91,29 @@ jobs:
             
             # Health check
             echo "Running health checks..."
-            sleep 10
+            sleep 15
             
             # Check backend health
-            if curl -f http://localhost:8000/api/v1/health; then
+            if curl -fsS http://localhost:8000/api/v1/system/health; then
               echo "Backend is healthy"
             else
               echo "Backend health check failed"
+              exit 1
+            fi
+
+            # Check API version endpoint
+            if curl -fsS http://localhost:8000/api/v1/system/version; then
+              echo "Backend version endpoint is healthy"
+            else
+              echo "Backend version endpoint failed"
+              exit 1
+            fi
+
+            # Minimal smoke check through reverse proxy
+            if curl -fsS http://localhost/; then
+              echo "Reverse proxy smoke check passed"
+            else
+              echo "Reverse proxy smoke check failed"
               exit 1
             fi
             
@@ -135,7 +153,7 @@ jobs:
       - name: Rollback deployment
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -e
+            set -Eeuo pipefail
             cd ~/fittracker-pro
             
             echo "Rolling back to previous version..."
@@ -145,10 +163,12 @@ jobs:
             LATEST_BACKUP=$(ls -t backups/*.sql 2>/dev/null | head -1)
             if [ -n "$LATEST_BACKUP" ]; then
               echo "Restoring from backup: $LATEST_BACKUP"
-              docker exec -i fittracker-postgres psql -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} < "$LATEST_BACKUP" || true
+              docker-compose -f docker-compose.prod.yml up -d postgres
+              sleep 8
+              docker exec -i fittracker-postgres psql -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} < "$LATEST_BACKUP"
             fi
             
-            # Restart with previous images
+            # Restart with pulled images pinned in compose
             docker-compose -f docker-compose.prod.yml up -d
             
             echo "Rollback completed"

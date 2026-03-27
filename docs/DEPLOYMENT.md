@@ -104,12 +104,13 @@ The current `deploy.yml` workflow:
 4. Creates DB backup
 5. Pulls images and applies migrations
 6. Restarts stack
-7. Runs backend health check (`/api/v1/health`)
+7. Runs backend health checks (`/api/v1/system/health`, `/api/v1/system/version`)
 
 ## Verification
 
 ```bash
-curl -f https://fit.example.com/api/v1/health
+curl -f https://fit.example.com/api/v1/system/health
+curl -f https://fit.example.com/api/v1/system/version
 docker-compose -f docker-compose.prod.yml ps
 docker-compose -f docker-compose.prod.yml logs -f backend
 ```
