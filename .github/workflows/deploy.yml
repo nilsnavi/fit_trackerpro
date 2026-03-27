@@ -13,11 +13,17 @@ on:
         options:
           - production
           - staging
+      image_tag:
+        description: "Image tag to deploy (for reproducible rollout)"
+        required: false
+        default: "latest"
+        type: string
 
 env:
   REGISTRY: ghcr.io
   DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
   DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+  DEPLOY_DIR: ~/fittracker-pro
 
 jobs:
   deploy:
@@ -39,18 +45,35 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Resolve deploy image tag
+        run: |
+          set -Eeuo pipefail
+          DEPLOY_IMAGE_TAG="latest"
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            DEPLOY_IMAGE_TAG="${{ github.event.release.tag_name }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            DEPLOY_IMAGE_TAG="${{ inputs.image_tag }}"
+          fi
+
+          echo "DEPLOY_IMAGE_TAG=${DEPLOY_IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "Deploying image tag: ${DEPLOY_IMAGE_TAG}"
+
+      - name: Sync infra files to server
+        run: |
+          set -Eeuo pipefail
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/nginx"
+          scp docker-compose.prod.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/docker-compose.prod.yml
+          scp nginx/nginx.conf ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/nginx/nginx.conf
+
       - name: Deploy to server
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
             set -Eeuo pipefail
             
-            # Navigate to project directory
+            # Navigate to deploy directory
             cd ~/fittracker-pro || exit 1
-            
-            # Keep infra files (compose/nginx) in sync, but deploy application from images.
-            git fetch origin main
-            git checkout main
-            git pull --ff-only origin main
+            mkdir -p backups nginx/ssl nginx/logs
             
             # Create .env file from secrets
             cat > .env << EOL
@@ -64,6 +87,7 @@ jobs:
           SENTRY_DSN=${{ secrets.SENTRY_DSN }}
           VITE_API_URL=${{ secrets.VITE_API_URL }}
           VITE_TELEGRAM_BOT_USERNAME=${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
+          IMAGE_TAG=${{ env.DEPLOY_IMAGE_TAG }}
           GITHUB_REPOSITORY=${{ github.repository }}
           EOL
             

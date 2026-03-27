@@ -64,9 +64,9 @@ if [ ! -f .env ]; then
     read -p "Press Enter after editing .env file..."
 fi
 
-# Build and start containers
-echo "🐳 Building and starting containers..."
-docker-compose -f docker-compose.prod.yml build
+# Pull and start containers from registry images
+echo "🐳 Pulling and starting containers from registry..."
+docker-compose -f docker-compose.prod.yml pull
 docker-compose -f docker-compose.prod.yml up -d
 
 # Run database migrations
