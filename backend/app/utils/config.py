@@ -4,7 +4,7 @@ Application configuration using Pydantic Settings
 from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
-from pydantic import validator
+from pydantic import ValidationInfo, field_validator, validator
 
 
 # Get the backend directory path
@@ -64,6 +64,29 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
+
+    @field_validator("DATABASE_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBAPP_URL", "SECRET_KEY", mode="before")
+    @classmethod
+    def validate_required_not_empty(cls, value, info: ValidationInfo):
+        if value is None:
+            raise ValueError(f"{info.field_name} is required")
+        if isinstance(value, str) and not value.strip():
+            raise ValueError(f"{info.field_name} cannot be empty")
+        return value
+
+    @validator("TELEGRAM_BOT_TOKEN")
+    def validate_telegram_bot_token(cls, value):
+        normalized = value.strip()
+        if normalized.lower() in {"your_telegram_bot_token_here", "changeme", "your_token_here"}:
+            raise ValueError("TELEGRAM_BOT_TOKEN contains a placeholder value")
+        return normalized
+
+    @validator("TELEGRAM_WEBAPP_URL")
+    def validate_telegram_webapp_url(cls, value):
+        normalized = value.strip()
+        if "your-domain.com" in normalized.lower():
+            raise ValueError("TELEGRAM_WEBAPP_URL contains a placeholder value")
+        return normalized
 
     @validator("ALLOWED_ORIGINS", pre=True)
     def parse_allowed_origins(cls, v):
