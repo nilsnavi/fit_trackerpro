@@ -120,52 +120,58 @@ jobs:
             echo "Deployment completed successfully!"
           EOF
 
-      - name: Post-deploy health check
+  smoke:
+    name: Post-deploy Smoke Validation
+    runs-on: ubuntu-latest
+    needs: deploy
+    environment: production
+
+    steps:
+      - name: Run production smoke checks
         env:
           API_BASE_URL: ${{ secrets.VITE_API_URL }}
         run: |
           set -Eeuo pipefail
-          HEALTHCHECK_URL="${API_BASE_URL%/}/system/health"
-          VERSION_URL="${API_BASE_URL%/}/system/version"
-          echo "Running post-deploy health check: $HEALTHCHECK_URL"
-          # Allow services to fully warm up after restart and fail if no 2xx response is received.
-          curl --fail --show-error --silent \
-            --retry 12 \
-            --retry-delay 5 \
-            --retry-all-errors \
-            "$HEALTHCHECK_URL" > /dev/null
-          echo "Post-deploy health check passed"
-          echo "Running post-deploy version smoke check: $VERSION_URL"
-          curl --fail --show-error --silent \
-            --retry 6 \
-            --retry-delay 5 \
-            --retry-all-errors \
-            "$VERSION_URL" > /dev/null
-          echo "Post-deploy version smoke check passed"
+          API_BASE_TRIMMED="${API_BASE_URL%/}"
+          BACKEND_ROOT_URL="${API_BASE_TRIMMED%/api/v1}"
+          HEALTHCHECK_URL="${API_BASE_TRIMMED}/system/health"
+          DOMAIN_URL="${API_BASE_TRIMMED}/workouts/templates?page=1&page_size=1"
 
-      - name: Notify on success
-        if: success()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: success
-          text: "FitTracker Pro deployed successfully to production!"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          smoke_check() {
+            local name="$1"
+            local url="$2"
+            local expected_codes="$3"
+            local max_attempts=12
+            local status_code=""
 
-      - name: Notify on failure
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          text: "FitTracker Pro deployment failed!"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+            echo "Smoke check: ${name} -> ${url} (expected: ${expected_codes})"
+
+            for attempt in $(seq 1 "$max_attempts"); do
+              status_code="$(curl --silent --show-error --location --output /dev/null --write-out "%{http_code}" "$url" || true)"
+              if [[ " ${expected_codes} " == *" ${status_code} "* ]]; then
+                echo "Smoke check passed: ${name} (status ${status_code})"
+                return 0
+              fi
+
+              echo "Attempt ${attempt}/${max_attempts} failed for ${name}: status ${status_code}"
+              sleep 5
+            done
+
+            echo "Smoke check failed: ${name}. Last status: ${status_code}, expected: ${expected_codes}"
+            return 1
+          }
+
+          # P0 minimal production smoke validation.
+          smoke_check "backend API root" "${BACKEND_ROOT_URL}" "200 301 302"
+          smoke_check "/system/health" "${HEALTHCHECK_URL}" "200"
+          # Domain endpoint can be auth-protected in production, so 401/403 is acceptable.
+          smoke_check "domain endpoint /workouts/templates" "${DOMAIN_URL}" "200 401 403"
 
   rollback:
     name: Rollback on Failure
     runs-on: ubuntu-latest
-    needs: deploy
-    if: failure()
+    needs: [deploy, smoke]
+    if: ${{ always() && (needs.deploy.result == 'failure' || needs.smoke.result == 'failure') }}
 
     steps:
       - name: Setup SSH
@@ -196,3 +202,28 @@ jobs:
             
             echo "Rollback completed"
           EOF
+
+  notify:
+    name: Notify Deployment Result
+    runs-on: ubuntu-latest
+    needs: [deploy, smoke, rollback]
+    if: ${{ always() }}
+
+    steps:
+      - name: Notify on success
+        if: ${{ needs.deploy.result == 'success' && needs.smoke.result == 'success' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "FitTracker Pro deployed successfully to production and smoke checks passed!"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify on failure
+        if: ${{ needs.deploy.result == 'failure' || needs.smoke.result == 'failure' || needs.rollback.result == 'failure' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "FitTracker Pro deployment or smoke validation failed. Rollback status: ${{ needs.rollback.result }}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

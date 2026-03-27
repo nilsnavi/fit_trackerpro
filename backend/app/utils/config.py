@@ -47,6 +47,24 @@ class Settings(BaseSettings):
     # Sentry
     SENTRY_DSN: str | None = None
 
+    # Email
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_TLS: bool = True
+
+    # Uploads
+    UPLOAD_DIR: str = "./uploads"
+    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
+
+    # Rate limiting
+    RATE_LIMIT_PER_MINUTE: int = 60
+
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"
+
     @validator("ALLOWED_ORIGINS", pre=True)
     def parse_allowed_origins(cls, v):
         if isinstance(v, str):
