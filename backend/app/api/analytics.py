@@ -9,11 +9,13 @@ import calendar
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, cast, Integer, literal, true, or_, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.middleware.auth import get_current_user
 from app.models import get_async_db, User, WorkoutLog, DailyWellness
 from app.utils.config import settings
 from app.utils.cache import get_cache_json, set_cache_json
+from app.utils.feature_flags import is_feature_enabled
 from app.schemas.analytics import (
     ExerciseProgressResponse,
     ExerciseProgressData,
@@ -21,6 +23,7 @@ from app.schemas.analytics import (
     CalendarDayEntry,
     DataExportRequest,
     DataExportResponse,
+    AnalyticsSummaryResponse,
 )
 
 router = APIRouter()
@@ -535,7 +538,7 @@ async def get_export_status(
     )
 
 
-@router.get("/summary")
+@router.get("/summary", response_model=AnalyticsSummaryResponse)
 async def get_analytics_summary(
     period: str = Query("30d", pattern="^(7d|30d|90d|1y|all)$"),
     current_user: User = Depends(get_current_user),
@@ -572,10 +575,15 @@ async def get_analytics_summary(
     days = days_map.get(period, 30)
     date_from = date.today() - timedelta(days=days)
 
+    muscle_signals_enabled = await is_feature_enabled(
+        db, "muscle_imbalance_signals", default=False
+    )
+
     cache_key = _build_analytics_cache_key(
         "summary",
         current_user.id,
         period=period,
+        muscle_signals=muscle_signals_enabled,
     )
     cached_response = await get_cache_json(cache_key)
     if cached_response is not None:
@@ -605,7 +613,8 @@ async def get_analytics_summary(
             "personal_records": [],
             "favorite_exercises": [],
             "weekly_average": 0.0,
-            "monthly_average": 0.0
+            "monthly_average": 0.0,
+            "muscle_imbalance_signals": None,
         }
         await set_cache_json(
             cache_key,
@@ -703,6 +712,28 @@ async def get_analytics_summary(
     weeks = max(1, days / 7)
     months = max(1, days / 30)
 
+    muscle_imbalance_signals = None
+    if muscle_signals_enabled:
+        try:
+            signal_row = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT *
+                        FROM muscle_imbalance_signals_by_user
+                        WHERE user_id = :user_id
+                        LIMIT 1
+                        """
+                    ),
+                    {"user_id": str(current_user.id)},
+                )
+            ).mappings().first()
+            if signal_row:
+                muscle_imbalance_signals = dict(signal_row)
+        except SQLAlchemyError:
+            # Keep analytics summary available even if optional AI view is unavailable.
+            muscle_imbalance_signals = None
+
     response_payload = {
         "total_workouts": total_workouts,
         "total_duration": total_duration,
@@ -712,7 +743,65 @@ async def get_analytics_summary(
         "personal_records": [],  # TODO: Implement PR tracking
         "favorite_exercises": favorite_exercises,
         "weekly_average": round(total_workouts / weeks, 1),
-        "monthly_average": round(total_workouts / months, 1)
+        "monthly_average": round(total_workouts / months, 1),
+        "muscle_imbalance_signals": muscle_imbalance_signals,
+    }
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
+
+
+@router.get("/muscle-signals")
+async def get_muscle_imbalance_signals(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get precomputed muscle imbalance signals for AI recommendations.
+    """
+    muscle_signals_enabled = await is_feature_enabled(
+        db, "muscle_imbalance_signals", default=False
+    )
+    if not muscle_signals_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Muscle imbalance signals are disabled",
+        )
+
+    cache_key = _build_analytics_cache_key(
+        "muscle-signals",
+        current_user.id,
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
+    try:
+        signal_row = (
+            await db.execute(
+                text(
+                    """
+                    SELECT *
+                    FROM muscle_imbalance_signals_by_user
+                    WHERE user_id = :user_id
+                    LIMIT 1
+                    """
+                ),
+                {"user_id": str(current_user.id)},
+            )
+        ).mappings().first()
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Muscle imbalance signals are temporarily unavailable",
+        ) from exc
+
+    response_payload = {
+        "available": bool(signal_row),
+        "signals": dict(signal_row) if signal_row else None,
     }
     await set_cache_json(
         cache_key,

@@ -4,6 +4,7 @@ Pydantic models for workout endpoints
 """
 from typing import Optional, List
 from datetime import datetime, date
+from decimal import Decimal
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -26,8 +27,23 @@ class CompletedSet(BaseModel):
     set_number: int = Field(..., ge=1)
     reps: Optional[int] = Field(None, ge=0)
     weight: Optional[float] = Field(None, ge=0)
-    rpe: Optional[float] = Field(None, ge=0, le=10, description="Rate of Perceived Exertion")
-    rir: Optional[float] = Field(None, ge=0, le=10, description="Reps in Reserve")
+    rpe: Optional[Decimal] = Field(
+        None,
+        ge=0,
+        le=10,
+        max_digits=3,
+        decimal_places=1,
+        description="Rate of Perceived Exertion",
+    )
+    # RIR is a complement to RPE and is consumed by AI analytics.
+    rir: Optional[Decimal] = Field(
+        None,
+        ge=0,
+        le=10,
+        max_digits=3,
+        decimal_places=1,
+        description="Reps in Reserve",
+    )
     duration: Optional[int] = Field(
         None, ge=0, description="Duration in seconds")
     completed: bool = Field(default=True)

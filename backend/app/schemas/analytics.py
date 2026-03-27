@@ -108,3 +108,4 @@ class AnalyticsSummaryResponse(BaseModel):
     favorite_exercises: List[Dict[str, Any]]
     weekly_average: float
     monthly_average: float
+    muscle_imbalance_signals: Optional[Dict[str, Any]] = None

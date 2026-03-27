@@ -220,6 +220,27 @@ enum SyncStatus {
   DISCARDED
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum BillingPeriod {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
 model User {
   id String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   telegramUserId BigInt     @unique @db.BigInt @map("telegram_user_id")
@@ -251,6 +272,8 @@ model User {
   createdChallenges       Challenge[]              @relation("ChallengeCreator")
   challengeParticipations ChallengeParticipant[]   @relation("UserToChallengeParticipants")
   syncEvents              SyncEvent[]              @relation("UserToSyncEvents")
+  subscriptions           Subscription[]           @relation("UserToSubscriptions")
+  payments                Payment[]                @relation("UserToPayments")
 
   @@index([status, createdAt])
   @@map("users")
@@ -297,6 +320,7 @@ model Exercise {
 
   owner                   User?                    @relation("ExerciseOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   aliases                 ExerciseAlias[]          @relation("ExerciseToAliases")
+  muscleCoverage          ExerciseMuscle[]         @relation("ExerciseToMuscleCoverage")
   templateItems           WorkoutTemplateItem[]    @relation("ExerciseToTemplateItems")
   sessionExercises        WorkoutSessionExercise[] @relation("ExerciseToSessionExercises")
   personalRecords         ExercisePersonalRecord[] @relation("ExerciseToPersonalRecords")
@@ -306,6 +330,22 @@ model Exercise {
   @@index([source, isPublic, isArchived])
   @@index([name])
   @@map("exercises")
+}
+
+model ExerciseMuscle {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  exerciseId String   @db.Uuid @map("exercise_id")
+  muscleGroup MuscleGroup @map("muscle_group")
+  loadFactor Decimal @db.Decimal(4, 3) @map("load_factor")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  exercise Exercise @relation("ExerciseToMuscleCoverage", fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([exerciseId, muscleGroup])
+  @@index([muscleGroup])
+  @@index([exerciseId, loadFactor])
+  @@map("exercise_muscles")
 }
 
 model ExerciseAlias {
@@ -449,8 +489,8 @@ model WorkoutSet {
   setType SetType  @default(WORKING) @map("set_type")
   reps Int?
   weightKg Decimal? @db.Decimal(8, 3) @map("weight_kg")
-  rpe Decimal? @db.Decimal(3, 1)
-  rir Decimal? @db.Decimal(3, 1)
+  rpe Decimal? @db.Decimal(3,1)
+  rir Decimal? @db.Decimal(3,1)
   estimated1RmKg Decimal? @db.Decimal(10, 3) @map("estimated1_rm_kg")
   fatigueScore Decimal? @db.Decimal(5, 2) @map("fatigue_score")
   actualRestSec Int? @map("actual_rest_sec")
@@ -470,6 +510,26 @@ model WorkoutSet {
   @@index([sessionExerciseId, createdAt])
   @@index([createdAt])
   @@map("workout_sets")
+}
+
+model SetHistory {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workoutSetId String?  @db.Uuid @map("workout_set_id")
+  sessionExerciseId String?  @db.Uuid @map("session_exercise_id")
+  eventType String   @db.VarChar(16) @map("event_type")
+  changedByUserId String?  @db.Uuid @map("changed_by_user_id")
+  sourceDeviceId String?  @db.VarChar(64) @map("source_device_id")
+  beforeState Json? @map("before_state")
+  afterState Json? @map("after_state")
+  changedFields String[] @default([]) @map("changed_fields")
+  changedAt DateTime @default(now()) @map("changed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([workoutSetId, changedAt])
+  @@index([sessionExerciseId, changedAt])
+  @@index([changedByUserId, changedAt])
+  @@index([eventType, changedAt])
+  @@map("set_history")
 }
 
 model RestTimerEvent {
@@ -838,4 +898,66 @@ model SyncEvent {
   @@index([entityType, entityId, occurredAt])
   @@index([deviceId, occurredAt])
   @@map("sync_events")
+}
+
+model Subscription {
+  id String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String             @db.Uuid @map("user_id")
+  status SubscriptionStatus @default(TRIALING)
+  billingPeriod BillingPeriod @default(MONTHLY) @map("billing_period")
+  amount Decimal            @db.Decimal(10, 2)
+  currencyCode String       @db.Char(3) @map("currency_code")
+  startsAt DateTime @map("starts_at")
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd DateTime @map("current_period_end")
+  cancelAtPeriodEnd Boolean   @default(false) @map("cancel_at_period_end")
+  canceledAt DateTime? @map("canceled_at")
+  provider String?           @db.VarChar(40)
+  providerCustomerId String?           @db.VarChar(120) @map("provider_customer_id")
+  providerSubscriptionId String?           @db.VarChar(120) @map("provider_subscription_id")
+  metadata Json?
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  user User      @relation("UserToSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[] @relation("SubscriptionToPayments")
+
+  @@index([userId, status, currentPeriodEnd])
+  @@index([provider, providerSubscriptionId])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String        @db.Uuid @map("user_id")
+  subscriptionId String?       @db.Uuid @map("subscription_id")
+  status PaymentStatus @default(PENDING)
+  amount Decimal       @db.Decimal(10, 2)
+  currencyCode String  @db.Char(3) @map("currency_code")
+  provider String?      @db.VarChar(40)
+  providerPaymentId String?      @db.VarChar(120) @map("provider_payment_id")
+  providerInvoiceId String?      @db.VarChar(120) @map("provider_invoice_id")
+  paidAt DateTime? @map("paid_at")
+  failedAt DateTime? @map("failed_at")
+  failureReason String?      @db.VarChar(255) @map("failure_reason")
+  metadata Json?
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  user         User          @relation("UserToPayments", fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation("SubscriptionToPayments", fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, createdAt])
+  @@index([subscriptionId, createdAt])
+  @@index([provider, providerPaymentId])
+  @@map("payments")
+}
+
+model FeatureFlag {
+  id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key String   @unique @db.VarChar(120)
+  enabled Boolean @default(false)
+
+  @@index([enabled])
+  @@map("feature_flags")
 }
