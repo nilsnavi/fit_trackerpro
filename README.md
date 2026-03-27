@@ -5,7 +5,7 @@ Telegram Mini App для отслеживания фитнеса и здоров
 ## Структура проекта
 
 ```
-fittracker-pro/
+fit_trackerpro/
 ├── frontend/          # React + TypeScript + Vite
 ├── backend/           # Python FastAPI
 ├── database/          # PostgreSQL миграции
@@ -132,7 +132,19 @@ VITE_ENVIRONMENT=development
 VITE_SENTRY_DSN=your_sentry_dsn
 ```
 
-## API Endpoints
+## Backend архитектура
+
+Backend приведен к слоистой структуре:
+
+- `app/api` — только HTTP слой (роутинг, валидация входа, коды ответов)
+- `app/services` — бизнес-логика и orchestration сценариев
+- `app/repositories` — доступ к БД (SQLAlchemy запросы)
+- `app/schemas` — контракты запросов/ответов (Pydantic)
+- `app/models` — ORM модели
+
+Это упрощает поддержку, тестирование и дальнейшие изменения без дублирования логики в роутерах.
+
+## API Endpoints (актуально)
 
 ### Health & System
 - `GET /api/v1/health` - Health check
@@ -142,43 +154,81 @@ VITE_SENTRY_DSN=your_sentry_dsn
 - `POST /api/v1/auth/telegram` - Telegram WebApp auth
 
 ### Users
-- `GET /api/v1/users/me` - Current user profile
-- `PATCH /api/v1/users/me` - Update profile
+- `GET /api/v1/users/*` - в разработке (часть endpoint-ов пока заглушки)
 
 ### Workouts
-- `GET /api/v1/workouts/` - List workouts
-- `POST /api/v1/workouts/` - Create workout
-- `GET /api/v1/workouts/{id}` - Get workout details
-- `PUT /api/v1/workouts/{id}` - Update workout
-- `DELETE /api/v1/workouts/{id}` - Delete workout
+- `GET /api/v1/workouts/templates` - Список шаблонов
+- `POST /api/v1/workouts/templates` - Создать шаблон
+- `GET /api/v1/workouts/templates/{template_id}` - Получить шаблон
+- `PUT /api/v1/workouts/templates/{template_id}` - Обновить шаблон
+- `DELETE /api/v1/workouts/templates/{template_id}` - Удалить шаблон
+- `GET /api/v1/workouts/history` - История тренировок
+- `GET /api/v1/workouts/history/{workout_id}` - Детали тренировки
+- `POST /api/v1/workouts/start` - Начать тренировку
+- `POST /api/v1/workouts/complete` - Завершить тренировку
 
 ### Exercises
 - `GET /api/v1/exercises/` - List exercises
 - `GET /api/v1/exercises/{id}` - Get exercise details
+- `POST /api/v1/exercises/` - Создать упражнение
+- `PUT /api/v1/exercises/{id}` - Обновить упражнение (admin)
+- `DELETE /api/v1/exercises/{id}` - Удалить упражнение (admin)
+- `POST /api/v1/exercises/{id}/approve` - Одобрить упражнение (admin)
 
 ### Health Metrics
-- `GET /api/v1/health/` - List health metrics
-- `POST /api/v1/health/` - Create health metric
-- `GET /api/v1/health/glucose` - Glucose logs
-- `GET /api/v1/health/wellness` - Wellness check-ins
+- `GET /api/v1/health_metrics/*` - в разработке (заглушки)
+
+### Health
+- `POST /api/v1/health/glucose` - Добавить запись глюкозы
+- `GET /api/v1/health/glucose` - История глюкозы
+- `GET /api/v1/health/glucose/{log_id}` - Детали записи глюкозы
+- `DELETE /api/v1/health/glucose/{log_id}` - Удалить запись глюкозы
+- `POST /api/v1/health/wellness` - Создать/обновить wellness
+- `GET /api/v1/health/wellness` - История wellness
+- `GET /api/v1/health/wellness/{entry_id}` - Детали wellness
+- `GET /api/v1/health/stats` - Сводная статистика
 
 ### Analytics
-- `GET /api/v1/analytics/dashboard` - Dashboard stats
-- `GET /api/v1/analytics/progress` - Progress data
-- `GET /api/v1/analytics/onerm` - OneRM calculator
+- `GET /api/v1/analytics/training-load/daily`
+- `GET /api/v1/analytics/training-load/daily/table`
+- `GET /api/v1/analytics/muscle-load`
+- `GET /api/v1/analytics/muscle-load/table`
+- `GET /api/v1/analytics/recovery-state`
+- `POST /api/v1/analytics/recovery-state/recalculate`
+- `GET /api/v1/analytics/progress`
+- `GET /api/v1/analytics/calendar`
+- `GET /api/v1/analytics/summary`
+- `GET /api/v1/analytics/muscle-signals`
+- `POST /api/v1/analytics/export`
+- `GET /api/v1/analytics/export/{export_id}`
 
 ### Achievements
 - `GET /api/v1/achievements/` - List achievements
-- `GET /api/v1/achievements/my` - User achievements
+- `GET /api/v1/achievements/user` - User achievements
+- `GET /api/v1/achievements/user/{achievement_id}` - Achievement details
+- `POST /api/v1/achievements/{achievement_id}/claim` - Claim achievement
+- `GET /api/v1/achievements/leaderboard` - Leaderboard
 
 ### Challenges
 - `GET /api/v1/challenges/` - List challenges
+- `GET /api/v1/challenges/{challenge_id}` - Challenge details
+- `POST /api/v1/challenges/` - Create challenge
 - `POST /api/v1/challenges/{id}/join` - Join challenge
+- `POST /api/v1/challenges/{id}/leave` - Leave challenge
+- `GET /api/v1/challenges/{id}/leaderboard` - Leaderboard
+- `GET /api/v1/challenges/my/active` - Active user challenges
 
 ### Emergency
-- `POST /api/v1/emergency/activate` - Activate emergency mode
-- `POST /api/v1/emergency/deactivate` - Deactivate emergency mode
-- `GET /api/v1/emergency/contacts` - Emergency contacts
+- `GET /api/v1/emergency/contact` - Список контактов
+- `POST /api/v1/emergency/contact` - Создать контакт
+- `GET /api/v1/emergency/contact/{contact_id}` - Детали контакта
+- `PUT /api/v1/emergency/contact/{contact_id}` - Обновить контакт
+- `DELETE /api/v1/emergency/contact/{contact_id}` - Удалить контакт
+- `POST /api/v1/emergency/notify` - Экстренное оповещение
+- `POST /api/v1/emergency/notify/workout-start` - Оповещение о старте тренировки
+- `POST /api/v1/emergency/notify/workout-end` - Оповещение о завершении тренировки
+- `GET /api/v1/emergency/settings` - Настройки emergency
+- `POST /api/v1/emergency/log` - Лог emergency события
 
 ## Деплой
 
