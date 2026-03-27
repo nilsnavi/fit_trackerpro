@@ -109,3 +109,67 @@ class AnalyticsSummaryResponse(BaseModel):
     weekly_average: float
     monthly_average: float
     muscle_imbalance_signals: Optional[Dict[str, Any]] = None
+
+
+class TrainingLoadDailyEntry(BaseModel):
+    """Daily training load aggregate entry"""
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    user_id: int = Field(..., serialization_alias="userId")
+    date: date
+    volume: float
+    fatigue_score: float = Field(..., serialization_alias="fatigueScore")
+    avg_rpe: Optional[float] = Field(None, serialization_alias="avgRpe")
+
+
+class TrainingLoadDailyTableResponse(BaseModel):
+    """Paginated daily training load response for table views"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: List[TrainingLoadDailyEntry]
+    total: int
+    page: int
+    page_size: int = Field(..., serialization_alias="pageSize")
+    date_from: date = Field(..., serialization_alias="dateFrom")
+    date_to: date = Field(..., serialization_alias="dateTo")
+
+
+class MuscleLoadEntry(BaseModel):
+    """Daily muscle load aggregate entry"""
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    user_id: int = Field(..., serialization_alias="userId")
+    muscle_group: str = Field(..., serialization_alias="muscleGroup")
+    date: date
+    load_score: float = Field(..., serialization_alias="loadScore")
+
+
+class MuscleLoadTableResponse(BaseModel):
+    """Paginated muscle load response for table views"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: List[MuscleLoadEntry]
+    total: int
+    page: int
+    page_size: int = Field(..., serialization_alias="pageSize")
+    date_from: date = Field(..., serialization_alias="dateFrom")
+    date_to: date = Field(..., serialization_alias="dateTo")
+
+
+class RecoveryStateResponse(BaseModel):
+    """Current user recovery state"""
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    user_id: int = Field(..., serialization_alias="userId")
+    fatigue_level: int = Field(..., serialization_alias="fatigueLevel")
+    readiness_score: float = Field(..., serialization_alias="readinessScore")
+
+
+class RecoveryStateRecalculateResponse(RecoveryStateResponse):
+    """Recovery state after manual recalculation"""
+    recalculated_for_date: date = Field(..., serialization_alias="recalculatedForDate")
+    date_from: date = Field(..., serialization_alias="dateFrom")
+    date_to: date = Field(..., serialization_alias="dateTo")

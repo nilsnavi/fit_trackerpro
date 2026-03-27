@@ -4,17 +4,30 @@ Endpoints for workout analytics, progress tracking, and data export
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
+from decimal import Decimal
 import calendar
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, cast, Integer, literal, true, or_, text
+from sqlalchemy import select, func, and_, cast, Integer, literal, true, or_, text, desc
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.middleware.auth import get_current_user
-from app.models import get_async_db, User, WorkoutLog, DailyWellness
+from app.models import (
+    get_async_db,
+    User,
+    WorkoutLog,
+    DailyWellness,
+    TrainingLoadDaily,
+    MuscleLoad,
+    RecoveryState,
+)
 from app.utils.config import settings
-from app.utils.cache import get_cache_json, set_cache_json
+from app.utils.cache import (
+    get_cache_json,
+    set_cache_json,
+    invalidate_user_analytics_cache,
+)
 from app.utils.feature_flags import is_feature_enabled
 from app.schemas.analytics import (
     ExerciseProgressResponse,
@@ -24,6 +37,12 @@ from app.schemas.analytics import (
     DataExportRequest,
     DataExportResponse,
     AnalyticsSummaryResponse,
+    TrainingLoadDailyEntry,
+    TrainingLoadDailyTableResponse,
+    MuscleLoadEntry,
+    MuscleLoadTableResponse,
+    RecoveryStateResponse,
+    RecoveryStateRecalculateResponse,
 )
 
 router = APIRouter()
@@ -34,6 +53,433 @@ def _build_analytics_cache_key(endpoint: str, user_id: int, **kwargs: Any) -> st
     for k in sorted(kwargs.keys()):
         parts.append(f"{k}:{kwargs[k]}")
     return "|".join(parts)
+
+
+def _clamp(value: float, lower: float = 0.0, upper: float = 100.0) -> float:
+    return max(lower, min(upper, value))
+
+
+@router.get("/training-load/daily", response_model=List[TrainingLoadDailyEntry])
+async def get_daily_training_load(
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get daily training load aggregates.
+    """
+    effective_date_to = date_to or date.today()
+    effective_date_from = date_from or (effective_date_to - timedelta(days=29))
+
+    if effective_date_from > effective_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="date_from cannot be greater than date_to"
+        )
+
+    cache_key = _build_analytics_cache_key(
+        "training-load-daily",
+        current_user.id,
+        date_from=effective_date_from.isoformat(),
+        date_to=effective_date_to.isoformat(),
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
+    result = await db.execute(
+        select(TrainingLoadDaily).where(
+            and_(
+                TrainingLoadDaily.user_id == current_user.id,
+                TrainingLoadDaily.date >= effective_date_from,
+                TrainingLoadDaily.date <= effective_date_to,
+            )
+        ).order_by(TrainingLoadDaily.date.asc())
+    )
+    rows = result.scalars().all()
+
+    response_payload = [
+        TrainingLoadDailyEntry(
+            id=row.id,
+            user_id=row.user_id,
+            date=row.date,
+            volume=float(row.volume or 0),
+            fatigue_score=float(row.fatigue_score or 0),
+            avg_rpe=float(row.avg_rpe) if row.avg_rpe is not None else None,
+        ).model_dump(mode="json", by_alias=True)
+        for row in rows
+    ]
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
+
+
+@router.get("/training-load/daily/table", response_model=TrainingLoadDailyTableResponse)
+async def get_daily_training_load_table(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=365),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get paginated daily training load aggregates for table views.
+    """
+    effective_date_to = date_to or date.today()
+    effective_date_from = date_from or (effective_date_to - timedelta(days=29))
+
+    if effective_date_from > effective_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="date_from cannot be greater than date_to"
+        )
+
+    cache_key = _build_analytics_cache_key(
+        "training-load-daily-table",
+        current_user.id,
+        page=page,
+        page_size=page_size,
+        date_from=effective_date_from.isoformat(),
+        date_to=effective_date_to.isoformat(),
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
+    base_filters = and_(
+        TrainingLoadDaily.user_id == current_user.id,
+        TrainingLoadDaily.date >= effective_date_from,
+        TrainingLoadDaily.date <= effective_date_to,
+    )
+
+    total_result = await db.execute(
+        select(func.count(TrainingLoadDaily.id)).where(base_filters)
+    )
+    total = int(total_result.scalar() or 0)
+
+    result = await db.execute(
+        select(TrainingLoadDaily).where(base_filters).order_by(
+            desc(TrainingLoadDaily.date)
+        ).offset((page - 1) * page_size).limit(page_size)
+    )
+    rows = result.scalars().all()
+
+    payload_model = TrainingLoadDailyTableResponse(
+        items=[
+            TrainingLoadDailyEntry(
+                id=row.id,
+                user_id=row.user_id,
+                date=row.date,
+                volume=float(row.volume or 0),
+                fatigue_score=float(row.fatigue_score or 0),
+                avg_rpe=float(row.avg_rpe) if row.avg_rpe is not None else None,
+            ) for row in rows
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+        date_from=effective_date_from,
+        date_to=effective_date_to,
+    )
+    response_payload = payload_model.model_dump(mode="json", by_alias=True)
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
+
+
+@router.get("/muscle-load", response_model=List[MuscleLoadEntry])
+async def get_muscle_load(
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get daily muscle load entries.
+    """
+    effective_date_to = date_to or date.today()
+    effective_date_from = date_from or (effective_date_to - timedelta(days=29))
+
+    if effective_date_from > effective_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="date_from cannot be greater than date_to"
+        )
+
+    cache_key = _build_analytics_cache_key(
+        "muscle-load",
+        current_user.id,
+        date_from=effective_date_from.isoformat(),
+        date_to=effective_date_to.isoformat(),
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
+    result = await db.execute(
+        select(MuscleLoad).where(
+            and_(
+                MuscleLoad.user_id == current_user.id,
+                MuscleLoad.date >= effective_date_from,
+                MuscleLoad.date <= effective_date_to,
+            )
+        ).order_by(MuscleLoad.date.asc(), MuscleLoad.muscle_group.asc())
+    )
+    rows = result.scalars().all()
+
+    response_payload = [
+        MuscleLoadEntry(
+            id=row.id,
+            user_id=row.user_id,
+            muscle_group=row.muscle_group,
+            date=row.date,
+            load_score=float(row.load_score or 0),
+        ).model_dump(mode="json", by_alias=True)
+        for row in rows
+    ]
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
+
+
+@router.get("/muscle-load/table", response_model=MuscleLoadTableResponse)
+async def get_muscle_load_table(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=365),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    muscle_group: Optional[str] = Query(None, max_length=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get paginated muscle load entries for table views.
+    """
+    effective_date_to = date_to or date.today()
+    effective_date_from = date_from or (effective_date_to - timedelta(days=29))
+
+    if effective_date_from > effective_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="date_from cannot be greater than date_to"
+        )
+
+    cache_key = _build_analytics_cache_key(
+        "muscle-load-table",
+        current_user.id,
+        page=page,
+        page_size=page_size,
+        date_from=effective_date_from.isoformat(),
+        date_to=effective_date_to.isoformat(),
+        muscle_group=muscle_group or "all",
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
+    base_filters = and_(
+        MuscleLoad.user_id == current_user.id,
+        MuscleLoad.date >= effective_date_from,
+        MuscleLoad.date <= effective_date_to,
+    )
+    if muscle_group:
+        base_filters = and_(
+            base_filters,
+            MuscleLoad.muscle_group == muscle_group,
+        )
+
+    total_result = await db.execute(
+        select(func.count(MuscleLoad.id)).where(base_filters)
+    )
+    total = int(total_result.scalar() or 0)
+
+    result = await db.execute(
+        select(MuscleLoad).where(base_filters).order_by(
+            desc(MuscleLoad.date),
+            MuscleLoad.muscle_group.asc(),
+        ).offset((page - 1) * page_size).limit(page_size)
+    )
+    rows = result.scalars().all()
+
+    payload_model = MuscleLoadTableResponse(
+        items=[
+            MuscleLoadEntry(
+                id=row.id,
+                user_id=row.user_id,
+                muscle_group=row.muscle_group,
+                date=row.date,
+                load_score=float(row.load_score or 0),
+            ) for row in rows
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+        date_from=effective_date_from,
+        date_to=effective_date_to,
+    )
+    response_payload = payload_model.model_dump(mode="json", by_alias=True)
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
+
+
+@router.get("/recovery-state", response_model=RecoveryStateResponse)
+async def get_recovery_state(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get the latest recovery state snapshot for current user.
+    """
+    cache_key = _build_analytics_cache_key(
+        "recovery-state",
+        current_user.id,
+    )
+    cached_response = await get_cache_json(cache_key)
+    if cached_response is not None:
+        return cached_response
+
+    result = await db.execute(
+        select(RecoveryState).where(RecoveryState.user_id == current_user.id)
+    )
+    state = result.scalar_one_or_none()
+    if not state:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recovery state not found"
+        )
+
+    response_payload = RecoveryStateResponse(
+        id=state.id,
+        user_id=state.user_id,
+        fatigue_level=int(state.fatigue_level),
+        readiness_score=float(state.readiness_score or 0),
+    ).model_dump(mode="json", by_alias=True)
+
+    await set_cache_json(
+        cache_key,
+        response_payload,
+        ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS
+    )
+    return response_payload
+
+
+@router.post(
+    "/recovery-state/recalculate",
+    response_model=RecoveryStateRecalculateResponse
+)
+async def recalculate_recovery_state(
+    target_date: Optional[date] = Query(None),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Manually recalculate recovery state for a target day or date range.
+    """
+    if target_date and (date_from or date_to):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use either target_date or date_from/date_to"
+        )
+
+    if target_date:
+        effective_date_from = target_date
+        effective_date_to = target_date
+    else:
+        effective_date_to = date_to or date.today()
+        effective_date_from = date_from or effective_date_to
+
+    if effective_date_from > effective_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="date_from cannot be greater than date_to"
+        )
+
+    recalculated_for_date = effective_date_to
+
+    training_result = await db.execute(
+        select(TrainingLoadDaily).where(
+            and_(
+                TrainingLoadDaily.user_id == current_user.id,
+                TrainingLoadDaily.date == recalculated_for_date,
+            )
+        )
+    )
+    training = training_result.scalar_one_or_none()
+
+    fatigue_score = (
+        float(training.fatigue_score)
+        if training and training.fatigue_score is not None
+        else 0.0
+    )
+    fatigue_level = int(round(_clamp(fatigue_score / 5.0)))
+
+    wellness_result = await db.execute(
+        select(DailyWellness).where(
+            and_(
+                DailyWellness.user_id == current_user.id,
+                DailyWellness.date <= recalculated_for_date,
+            )
+        ).order_by(DailyWellness.date.desc()).limit(1)
+    )
+    latest_wellness = wellness_result.scalar_one_or_none()
+
+    readiness_raw = 100.0 - (fatigue_level * 0.6)
+    if latest_wellness:
+        sleep_score = float(latest_wellness.sleep_score or 0)
+        energy_score = float(latest_wellness.energy_score or 0)
+        stress_level = float(latest_wellness.stress_level or 0)
+        readiness_raw += ((sleep_score - 50) * 0.2)
+        readiness_raw += ((energy_score - 50) * 0.3)
+        readiness_raw -= (stress_level * 2.0)
+
+    readiness_score = round(_clamp(readiness_raw), 2)
+
+    existing_result = await db.execute(
+        select(RecoveryState).where(RecoveryState.user_id == current_user.id)
+    )
+    state = existing_result.scalar_one_or_none()
+    if state:
+        state.fatigue_level = fatigue_level
+        state.readiness_score = Decimal(str(readiness_score))
+    else:
+        state = RecoveryState(
+            user_id=current_user.id,
+            fatigue_level=fatigue_level,
+            readiness_score=Decimal(str(readiness_score)),
+        )
+        db.add(state)
+
+    await db.commit()
+    await db.refresh(state)
+    await invalidate_user_analytics_cache(current_user.id)
+
+    response_payload = RecoveryStateRecalculateResponse(
+        id=state.id,
+        user_id=state.user_id,
+        fatigue_level=int(state.fatigue_level),
+        readiness_score=float(state.readiness_score or 0),
+        recalculated_for_date=recalculated_for_date,
+        date_from=effective_date_from,
+        date_to=effective_date_to,
+    )
+    return response_payload.model_dump(mode="json", by_alias=True)
 
 
 @router.get("/progress", response_model=List[ExerciseProgressResponse])
