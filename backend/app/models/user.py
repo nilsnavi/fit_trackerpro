@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from .workout_log import WorkoutLog
     from .glucose_log import GlucoseLog
     from .daily_wellness import DailyWellness
+    from .training_load_daily import TrainingLoadDaily
+    from .muscle_load import MuscleLoad
+    from .recovery_state import RecoveryState
     from .user_achievement import UserAchievement
     from .challenge import Challenge
     from .emergency_contact import EmergencyContact
@@ -100,6 +103,22 @@ class User(Base):
         "DailyWellness",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    training_load_daily_entries: Mapped[list["TrainingLoadDaily"]] = relationship(
+        "TrainingLoadDaily",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    muscle_load_entries: Mapped[list["MuscleLoad"]] = relationship(
+        "MuscleLoad",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    recovery_state: Mapped[Optional["RecoveryState"]] = relationship(
+        "RecoveryState",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
     achievements: Mapped[list["UserAchievement"]] = relationship(
         "UserAchievement",

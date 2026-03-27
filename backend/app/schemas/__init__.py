@@ -47,6 +47,12 @@ from .analytics import (
     CalendarDayEntry,
     DataExportRequest,
     DataExportResponse,
+    TrainingLoadDailyEntry,
+    TrainingLoadDailyTableResponse,
+    MuscleLoadEntry,
+    MuscleLoadTableResponse,
+    RecoveryStateResponse,
+    RecoveryStateRecalculateResponse,
 )
 
 from .achievements import (
@@ -108,6 +114,12 @@ __all__ = [
     "CalendarDayEntry",
     "DataExportRequest",
     "DataExportResponse",
+    "TrainingLoadDailyEntry",
+    "TrainingLoadDailyTableResponse",
+    "MuscleLoadEntry",
+    "MuscleLoadTableResponse",
+    "RecoveryStateResponse",
+    "RecoveryStateRecalculateResponse",
     # Achievements
     "AchievementResponse",
     "AchievementListResponse",

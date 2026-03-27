@@ -8,6 +8,9 @@ from .workout_log import WorkoutLog
 from .exercise import Exercise
 from .glucose_log import GlucoseLog
 from .daily_wellness import DailyWellness
+from .training_load_daily import TrainingLoadDaily
+from .muscle_load import MuscleLoad
+from .recovery_state import RecoveryState
 from .achievement import Achievement
 from .user_achievement import UserAchievement
 from .challenge import Challenge
@@ -37,6 +40,9 @@ __all__ = [
     "Exercise",
     "GlucoseLog",
     "DailyWellness",
+    "TrainingLoadDaily",
+    "MuscleLoad",
+    "RecoveryState",
     "Achievement",
     "UserAchievement",
     "Challenge",
