@@ -69,9 +69,9 @@ jobs:
             
             mkdir -p backups
 
-            # Backup database before migration (best-effort)
+            # Backup database before migration (required)
             echo "Creating database backup..."
-            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > backups/backup_$(date +%Y%m%d_%H%M%S).sql || true
+            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > backups/backup_$(date +%Y%m%d_%H%M%S).sql
             
             # Pull latest images
             echo "Pulling latest images..."
