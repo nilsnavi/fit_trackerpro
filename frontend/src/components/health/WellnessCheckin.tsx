@@ -799,7 +799,7 @@ export const WellnessCompactWidget: React.FC<WellnessCompactWidgetProps> = ({ on
 
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
-        api.get<WellnessEntry[]>(`/health/wellness?date=${today}`)
+        api.get<WellnessEntry[]>(`/health-metrics/wellness?date=${today}`)
             .then((data) => {
                 if (data.length > 0) setTodayEntry(data[0]);
             })
@@ -886,15 +886,15 @@ export const WellnessCheckin: React.FC<WellnessCheckinProps> = ({
         try {
             // Fetch today's entry
             const today = new Date().toISOString().split('T')[0];
-            const todayData = await api.get<WellnessEntry[]>(`/health/wellness?date=${today}`);
+            const todayData = await api.get<WellnessEntry[]>(`/health-metrics/wellness?date=${today}`);
             setTodayEntry(todayData[0] || null);
 
             // Fetch recent entries
-            const entriesData = await api.get<WellnessEntry[]>('/health/wellness?limit=30');
+            const entriesData = await api.get<WellnessEntry[]>('/health-metrics/wellness?limit=30');
             setEntries(entriesData);
 
             // Fetch stats
-            const statsData = await api.get<WellnessStats>('/health/wellness/stats');
+            const statsData = await api.get<WellnessStats>('/health-metrics/wellness/stats');
             setStats(statsData);
         } catch (error) {
             console.error('Failed to fetch wellness data:', error);
@@ -960,7 +960,7 @@ export const WellnessCheckin: React.FC<WellnessCheckinProps> = ({
                 mood_score: convertRatingToScore(data.wellnessRating),
             };
 
-            const response = await api.post<WellnessEntry>('/health/wellness', wellnessData);
+            const response = await api.post<WellnessEntry>('/health-metrics/wellness', wellnessData);
 
             setTodayEntry(response);
             setEntries((prev) => [response, ...prev]);
@@ -1148,7 +1148,7 @@ export const useWellnessForWorkout = () => {
         const fetchTodayEntry = async () => {
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const data = await api.get<WellnessEntry[]>(`/health/wellness?date=${today}`);
+                const data = await api.get<WellnessEntry[]>(`/health-metrics/wellness?date=${today}`);
                 if (data.length > 0) {
                     setTodayEntry(data[0]);
 

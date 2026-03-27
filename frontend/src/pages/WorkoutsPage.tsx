@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Dumbbell, Clock, Flame, ChevronRight } from 'lucide-react'
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
-import { workoutsApi } from '@/services/workouts'
+import { WORKOUT_TYPE_CONFIGS } from '@/features/workouts/config/workoutTypeConfigs'
+import { WorkoutMode } from '@/features/workouts/types/workoutTypeConfig'
+import { useWorkoutHistoryQuery } from '@/features/workouts/hooks/useWorkoutHistoryQuery'
 import type { WorkoutHistoryItem } from '@/types/workouts'
 
 type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other'
@@ -14,6 +16,8 @@ const workoutTypes: { type: WorkoutType; label: string; color: string }[] = [
     { type: 'sports', label: 'Спорт', color: 'bg-purple-500' },
     { type: 'other', label: 'Другое', color: 'bg-gray-500' },
 ]
+
+const workoutModeCards: WorkoutMode[] = ['strength', 'cardio', 'functional', 'yoga']
 
 interface WorkoutListItem {
     id: number
@@ -64,11 +68,18 @@ const toWorkoutListItem = (item: WorkoutHistoryItem): WorkoutListItem => {
 
 export function WorkoutsPage() {
     const [selectedType, setSelectedType] = useState<WorkoutType | 'all'>('all')
-    const [workouts, setWorkouts] = useState<WorkoutListItem[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const tg = useTelegramWebApp()
     const navigate = useNavigate()
+    const {
+        data: workoutHistory,
+        isLoading,
+        error,
+    } = useWorkoutHistoryQuery()
+
+    const workouts = useMemo(
+        () => (workoutHistory?.items ?? []).map(toWorkoutListItem),
+        [workoutHistory],
+    )
 
     const filteredWorkouts = useMemo(
         () => (selectedType === 'all'
@@ -105,38 +116,6 @@ export function WorkoutsPage() {
         }
     }, [tg])
 
-    useEffect(() => {
-        let isCancelled = false
-
-        const loadWorkouts = async () => {
-            setIsLoading(true)
-            setError(null)
-
-            try {
-                const response = await workoutsApi.getHistory({ page: 1, page_size: 50 })
-                if (!isCancelled) {
-                    setWorkouts(response.items.map(toWorkoutListItem))
-                }
-            } catch (loadError) {
-                console.error('Failed to load workouts:', loadError)
-                if (!isCancelled) {
-                    setError('Не удалось загрузить тренировки')
-                    setWorkouts([])
-                }
-            } finally {
-                if (!isCancelled) {
-                    setIsLoading(false)
-                }
-            }
-        }
-
-        loadWorkouts()
-
-        return () => {
-            isCancelled = true
-        }
-    }, [])
-
     // Handle filter change with haptic feedback
     const handleFilterChange = (type: WorkoutType | 'all') => {
         tg.hapticFeedback({ type: 'selection' })
@@ -147,6 +126,11 @@ export function WorkoutsPage() {
     const handleAddWorkout = () => {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         navigate('/workouts/builder')
+    }
+
+    const handleOpenMode = (mode: WorkoutMode) => {
+        tg.hapticFeedback({ type: 'selection' })
+        navigate(`/workouts/mode/${mode}`)
     }
 
     // Handle workout click
@@ -193,6 +177,27 @@ export function WorkoutsPage() {
                 ))}
             </div>
 
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Режимы тренировки</h2>
+                <div className="grid grid-cols-2 gap-3">
+                    {workoutModeCards.map((mode) => {
+                        const modeConfig = WORKOUT_TYPE_CONFIGS[mode]
+                        const ModeIcon = modeConfig.icon
+                        return (
+                            <button
+                                key={mode}
+                                onClick={() => handleOpenMode(mode)}
+                                className={`rounded-xl bg-gradient-to-br ${modeConfig.themeClass} p-4 text-left text-white active:scale-[0.98] transition-transform`}
+                            >
+                                <ModeIcon className="mb-3 h-5 w-5" />
+                                <div className="font-semibold">{modeConfig.title}</div>
+                                <div className="mt-1 text-xs text-white/85">{modeConfig.subtitle}</div>
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
             {/* Weekly Summary */}
             <div className="bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl transition-colors">
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">На этой неделе</h2>
@@ -222,7 +227,7 @@ export function WorkoutsPage() {
                 )}
                 {!isLoading && error && (
                     <div className="text-sm text-red-500 dark:text-red-400">
-                        {error}
+                        Не удалось загрузить тренировки
                     </div>
                 )}
                 {!isLoading && !error && filteredWorkouts.length === 0 && (

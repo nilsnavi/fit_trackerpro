@@ -150,3 +150,29 @@ async def get_health_stats(
         return await service.get_health_stats(user_id=current_user.id, period=period)
     except Exception as exc:
         raise _map_service_error(exc) from exc
+
+
+@router.get("/glucose/stats", response_model=HealthStatsResponse)
+async def get_glucose_stats(
+    period: str = Query("30d", pattern="^(7d|30d|90d|1y)$"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    try:
+        return await service.get_health_stats(user_id=current_user.id, period=period)
+    except Exception as exc:
+        raise _map_service_error(exc) from exc
+
+
+@router.get("/wellness/stats", response_model=HealthStatsResponse)
+async def get_wellness_stats(
+    period: str = Query("30d", pattern="^(7d|30d|90d|1y)$"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    try:
+        return await service.get_health_stats(user_id=current_user.id, period=period)
+    except Exception as exc:
+        raise _map_service_error(exc) from exc

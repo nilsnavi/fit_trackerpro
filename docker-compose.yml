@@ -51,7 +51,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-fittracker}:${POSTGRES_PASSWORD:-fittracker_password}@postgres:5432/${POSTGRES_DB:-fittracker}
       - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER:-fittracker}:${POSTGRES_PASSWORD:-fittracker_password}@postgres:5432/${POSTGRES_DB:-fittracker}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:-http://localhost:3000}
       - ENVIRONMENT=${ENVIRONMENT:-development}

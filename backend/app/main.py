@@ -12,12 +12,12 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from app.api import (
-    health,
+    system,
     auth,
     users,
     workouts,
     exercises,
-    health as health_router,
+    health,
     analytics,
     achievements,
     challenges,
@@ -120,15 +120,14 @@ app.add_middleware(
 app.add_middleware(RateLimitMiddleware)
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1", tags=["health"])
+app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(
     workouts.router, prefix="/api/v1/workouts", tags=["workouts"])
 app.include_router(
     exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
-app.include_router(health_router.router,
-                   prefix="/api/v1/health", tags=["health"])
+app.include_router(health.router, prefix="/api/v1/health-metrics", tags=["health-metrics"])
 app.include_router(
     analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(achievements.router,

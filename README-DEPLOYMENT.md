@@ -1,100 +1,87 @@
-# FitTracker Pro - Deployment Quick Reference
+# FitTracker Pro - Deployment Reference
 
-This file is a short operational reference for local and production deployment.
+Короткий operational runbook для деплоя и отката.
 
-## Repository Layout
+## Production Source of Truth
 
-```text
-fit_trackerpro/
-├── backend/
-├── frontend/
-├── database/
-├── docs/
-├── monitoring/
-├── nginx/
-├── docker-compose.yml
-└── docker-compose.prod.yml
-```
+- Runtime артефакты: GHCR images
+  - `ghcr.io/<repo>/backend:latest`
+  - `ghcr.io/<repo>/frontend:latest`
+- Оркестрация: `docker-compose.prod.yml`
+- Automation: `.github/workflows/deploy.yml`
 
-## Local Start (Docker)
+Приложение в production разворачивается по image-based модели (не из локальной сборки на сервере).
 
-```bash
-git clone https://github.com/nilsnavi/fit_trackerpro.git
-cd fit_trackerpro
+## Production Deploy Flow
 
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+1. Обновить infra-файлы на сервере (`git pull --ff-only origin main`)
+2. Пересоздать `.env` из GitHub Secrets
+3. Сделать backup БД (best-effort)
+4. `docker-compose -f docker-compose.prod.yml pull`
+5. `docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head`
+6. `docker-compose -f docker-compose.prod.yml up -d`
+7. Post-deploy checks:
+   - `GET http://localhost:8000/api/v1/system/health`
+   - `GET http://localhost:8000/api/v1/system/version`
+   - smoke-check `GET http://localhost/`
 
-docker-compose up -d
-docker-compose exec backend alembic upgrade head
-```
+Если миграция падает, деплой останавливается.
 
-Endpoints:
-- Frontend: `http://localhost`
-- Backend API: `http://localhost:8000/api/v1`
-- Swagger (debug only): `http://localhost:8000/docs`
+## Rollback Strategy
 
-## Local Start (without Docker)
+Rollback workflow:
+- останавливает текущий stack
+- поднимает Postgres
+- восстанавливает последний `backups/*.sql` (если есть)
+- снова поднимает production stack
 
-```bash
-# backend
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-uvicorn app.main:app --reload
-```
+Команда на сервере (ручной эквивалент):
 
 ```bash
-# frontend
-cd frontend
-npm install
-npm run dev
-```
-
-## Current Backend Architecture
-
-- `backend/app/api` - HTTP endpoints only
-- `backend/app/services` - business logic
-- `backend/app/repositories` - database access
-- `backend/app/schemas` - API contracts
-
-## CI/CD (GitHub Actions)
-
-Workflows in `.github/workflows`:
-- `test.yml` - lint, type check, tests, security scan
-- `build.yml` - build and push Docker images to GHCR
-- `deploy.yml` - production deployment
-- `migrate.yml` - manual migration operations
-
-## Most Used Ops Commands
-
-```bash
-# logs
-docker-compose logs -f
-docker-compose -f docker-compose.prod.yml logs -f
-
-# migrate
-docker-compose exec backend alembic upgrade head
-docker-compose -f docker-compose.prod.yml exec backend alembic upgrade head
-
-# restart
-docker-compose restart backend frontend
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d postgres
+docker exec -i fittracker-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < backups/<latest>.sql
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-## Required Environment Variables (minimum)
+## Health Endpoint Strategy
+
+- System health (for platform/deploy/uptime):
+  - `/api/v1/system/health`
+  - `/api/v1/system/version`
+- User health metrics (business data):
+  - `/api/v1/health-metrics/*`
+
+## Environment Strategy
+
+### Development (`docker-compose.yml`)
+- Локальные порты Postgres/Redis открыты для удобства разработки.
+- `SECRET_KEY` обязателен.
+
+### Production (`docker-compose.prod.yml`)
+- Postgres/Redis не публикуются наружу.
+- Backend валидирует env при старте:
+  - `SECRET_KEY` >= 32 в production
+  - `ALLOWED_ORIGINS` не wildcard
+  - `DEBUG=false`
+
+## Required Variables
 
 Backend:
 - `DATABASE_URL`
 - `DATABASE_URL_SYNC`
+- `REDIS_URL`
 - `SECRET_KEY`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_WEBAPP_URL`
+- `ALLOWED_ORIGINS`
 
 Frontend:
 - `VITE_API_URL`
 - `VITE_TELEGRAM_BOT_USERNAME`
 
-For the full list, use `docs/ENVIRONMENT_SETUP.md`.
+Infrastructure:
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `GITHUB_REPOSITORY`
