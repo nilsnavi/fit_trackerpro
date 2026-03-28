@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import DailyWellness, GlucoseLog
+from app.domain import DailyWellness, GlucoseLog
 from app.repositories.health_repository import HealthRepository
 from app.schemas.health import (
     DailyWellnessCreate,

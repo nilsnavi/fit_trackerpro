@@ -8,7 +8,7 @@ from sqlalchemy import Integer, DateTime, JSON, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -59,10 +59,12 @@ class UserAchievement(Base):
         "Achievement", back_populates="user_achievements")
 
     __table_args__ = (
-        Index('ix_user_achievements_user_id', 'user_id'),
-        Index('ix_user_achievements_achievement_id', 'achievement_id'),
-        Index('ix_user_achievements_user_achievement',
-              'user_id', 'achievement_id', unique=True),
+        Index(
+            'ix_user_achievements_user_achievement',
+            'user_id',
+            'achievement_id',
+            unique=True,
+        ),
         Index('ix_user_achievements_earned_at', 'earned_at'),
     )
 

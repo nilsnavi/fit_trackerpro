@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import Integer, and_, cast, desc, func, literal, or_, select, text, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import DailyWellness, MuscleLoad, RecoveryState, TrainingLoadDaily, WorkoutLog
+from app.domain import DailyWellness, MuscleLoad, RecoveryState, TrainingLoadDaily, WorkoutLog
 
 
 class AnalyticsRepository:

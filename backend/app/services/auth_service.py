@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.security import create_access_token, create_refresh_token, verify_token
-from app.models import User
+from app.domain import User
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import (
     AuthResponse,
@@ -83,9 +84,10 @@ class AuthService:
         update_data = profile_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             if field in ["profile", "settings"] and value is not None:
-                current_value = getattr(current_user, field, {}) or {}
+                current_value = dict(getattr(current_user, field, {}) or {})
                 current_value.update(value)
                 setattr(current_user, field, current_value)
+                flag_modified(current_user, field)
             else:
                 setattr(current_user, field, value)
         await self.db.commit()

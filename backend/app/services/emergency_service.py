@@ -5,7 +5,7 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import EmergencyContact
+from app.domain import EmergencyContact
 from app.repositories.emergency_repository import EmergencyRepository
 from app.schemas.emergency import (
     EmergencyContactCreate,

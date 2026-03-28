@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, Boolean, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -102,7 +102,6 @@ class EmergencyContact(Base):
         "User", back_populates="emergency_contacts")
 
     __table_args__ = (
-        Index('ix_emergency_contacts_user_id', 'user_id'),
         Index('ix_emergency_contacts_is_active', 'is_active'),
         Index('ix_emergency_contacts_priority', 'priority'),
     )

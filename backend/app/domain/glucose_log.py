@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, ForeignKey, Index, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -68,9 +68,6 @@ class GlucoseLog(Base):
     )
 
     __table_args__ = (
-        Index('ix_glucose_logs_user_id', 'user_id'),
-        Index('ix_glucose_logs_workout_id', 'workout_id'),
-        Index('ix_glucose_logs_timestamp', 'timestamp'),
         Index('ix_glucose_logs_user_timestamp', 'user_id', 'timestamp'),
         Index('ix_glucose_logs_measurement_type', 'measurement_type'),
     )

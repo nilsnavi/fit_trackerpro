@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, JSON, Boolean, ForeignKey, Ind
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -72,7 +72,6 @@ class WorkoutTemplate(Base):
     )
 
     __table_args__ = (
-        Index('ix_workout_templates_user_id', 'user_id'),
         Index('ix_workout_templates_type', 'type'),
         Index('ix_workout_templates_is_public', 'is_public'),
         Index('ix_workout_templates_created_at', 'created_at'),

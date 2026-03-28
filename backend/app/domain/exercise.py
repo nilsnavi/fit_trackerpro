@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, JSON, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -104,10 +104,7 @@ class Exercise(Base):
         "User", back_populates="authored_exercises")
 
     __table_args__ = (
-        Index('ix_exercises_name', 'name'),
-        Index('ix_exercises_category', 'category'),
         Index('ix_exercises_status', 'status'),
-        Index('ix_exercises_author_user_id', 'author_user_id'),
         Index('ix_exercises_created_at', 'created_at'),
     )
 

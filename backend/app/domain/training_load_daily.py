@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Integer, Date, ForeignKey, Index, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -55,13 +55,11 @@ class TrainingLoadDaily(Base):
     )
 
     __table_args__ = (
-        Index("ix_training_load_daily_user_id", "user_id"),
-        Index("ix_training_load_daily_date", "date"),
         Index(
             "ix_training_load_daily_user_date",
             "user_id",
             "date",
-            unique=True
+            unique=True,
         ),
     )
 

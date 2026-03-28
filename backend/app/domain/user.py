@@ -8,7 +8,7 @@ from sqlalchemy import Integer, BigInteger, String, DateTime, JSON, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .workout_template import WorkoutTemplate
@@ -141,10 +141,7 @@ class User(Base):
         cascade="all, delete-orphan"
     )
 
-    __table_args__ = (
-        Index('ix_users_telegram_id', 'telegram_id'),
-        Index('ix_users_created_at', 'created_at'),
-    )
+    __table_args__ = (Index('ix_users_created_at', 'created_at'),)
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, telegram_id={self.telegram_id}, username={self.username})>"

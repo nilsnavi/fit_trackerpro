@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Exercise
+from app.domain import Exercise
 from app.repositories.exercises_repository import ExercisesRepository
 from app.schemas.exercises import ExerciseCreate, ExerciseListResponse, ExerciseUpdate
 

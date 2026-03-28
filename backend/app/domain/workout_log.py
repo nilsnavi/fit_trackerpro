@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, Date, JSON, ForeignKey, Index,
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -100,12 +100,7 @@ class WorkoutLog(Base):
         cascade="all, delete-orphan"
     )
 
-    __table_args__ = (
-        Index('ix_workout_logs_user_id', 'user_id'),
-        Index('ix_workout_logs_template_id', 'template_id'),
-        Index('ix_workout_logs_date', 'date'),
-        Index('ix_workout_logs_user_date', 'user_id', 'date'),
-    )
+    __table_args__ = (Index('ix_workout_logs_user_date', 'user_id', 'date'),)
 
     def __repr__(self) -> str:
         return f"<WorkoutLog(id={self.id}, user_id={self.user_id}, date={self.date})>"
