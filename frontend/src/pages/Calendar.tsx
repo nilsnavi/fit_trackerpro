@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { api } from '@/services/api';
 import { WorkoutType } from '@/types';
+import { WORKOUT_TYPE_LABELS } from '@/features/workouts/config/workoutTypeConfigs';
 
 // Types
 interface CalendarWorkout {
@@ -39,14 +40,6 @@ const MONTH_NAMES = [
     'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
 ];
-
-const WORKOUT_TYPE_LABELS: Record<WorkoutType, string> = {
-    cardio: 'Кардио',
-    strength: 'Силовая',
-    flexibility: 'Растяжка',
-    sports: 'Спорт',
-    other: 'Другое'
-};
 
 const STATUS_CONFIG = {
     completed: { color: 'bg-success', label: 'Выполнена', icon: '✓' },
