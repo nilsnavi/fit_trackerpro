@@ -7,8 +7,8 @@
 - [RestTimer.tsx](file://frontend/src/components/workout/RestTimer.tsx)
 - [RestTimerDemo.tsx](file://frontend/src/pages/RestTimerDemo.tsx)
 - [useTelegramWebApp.ts](file://frontend/src/hooks/useTelegramWebApp.ts)
-- [WorkoutFunctional.tsx](file://frontend/src/pages/WorkoutFunctional.tsx)
-- [WorkoutYoga.tsx](file://frontend/src/pages/WorkoutYoga.tsx)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [workoutTypeConfigs.ts](file://frontend/src/features/workouts/config/workoutTypeConfigs.ts)
 - [useTimer.test.ts](file://frontend/src/__tests__/hooks/useTimer.test.ts)
 - [telegram.ts](file://frontend/src/types/telegram.ts)
 </cite>
@@ -47,16 +47,13 @@ subgraph "Logic Layer"
 UseTimerHook["useTimer.ts<br/>High-precision timer hook"]
 TelegramHook["useTelegramWebApp.ts<br/>Telegram integration"]
 end
-subgraph "Workout Engine"
-WorkoutFunc["WorkoutFunctional.tsx<br/>Workout flow"]
-Yoga["WorkoutYoga.tsx<br/>Meditation/breathing"]
+subgraph "Workout flow"
+Mode["WorkoutModePage.tsx<br/>Starts session via API (no RestTimer embed)"]
 end
 TimerComp --> UseTimerHook
 RestTimerComp --> UseTimerHook
 RestTimerComp --> TelegramHook
 Demo --> RestTimerComp
-WorkoutFunc --> RestTimerComp
-Yoga --> RestTimerComp
 ```
 
 **Diagram sources**
@@ -65,8 +62,7 @@ Yoga --> RestTimerComp
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
 - [RestTimerDemo.tsx:1-163](file://frontend/src/pages/RestTimerDemo.tsx#L1-L163)
 - [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
-- [WorkoutFunctional.tsx:236-564](file://frontend/src/pages/WorkoutFunctional.tsx#L236-L564)
-- [WorkoutYoga.tsx:620-724](file://frontend/src/pages/WorkoutYoga.tsx#L620-L724)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 **Section sources**
 - [Timer.tsx:1-345](file://frontend/src/components/ui/Timer.tsx#L1-L345)
@@ -74,8 +70,8 @@ Yoga --> RestTimerComp
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
 - [RestTimerDemo.tsx:1-163](file://frontend/src/pages/RestTimerDemo.tsx#L1-L163)
 - [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
-- [WorkoutFunctional.tsx:236-564](file://frontend/src/pages/WorkoutFunctional.tsx#L236-L564)
-- [WorkoutYoga.tsx:620-724](file://frontend/src/pages/WorkoutYoga.tsx#L620-L724)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [workoutTypeConfigs.ts](file://frontend/src/features/workouts/config/workoutTypeConfigs.ts)
 
 ## Core Components
 This section documents the two primary timer implementations and their roles.
@@ -350,8 +346,8 @@ RestTimer["RestTimer.tsx"] --> UseTimer
 RestTimer --> TelegramHook["useTelegramWebApp.ts"]
 RestTimer --> SoundGen["SoundGenerator (internal)"]
 Demo["RestTimerDemo.tsx"] --> RestTimer
-WorkoutFunc["WorkoutFunctional.tsx"] --> RestTimer
-Yoga["WorkoutYoga.tsx"] --> RestTimer
+WorkoutFunc["WorkoutModePage.tsx"] --> RestTimer
+Yoga["WorkoutModePage.tsx"] --> RestTimer
 TelegramHook --> TelegramTypes["telegram.ts"]
 ```
 
@@ -361,8 +357,7 @@ TelegramHook --> TelegramTypes["telegram.ts"]
 - [RestTimer.tsx:6-9](file://frontend/src/components/workout/RestTimer.tsx#L6-L9)
 - [useTelegramWebApp.ts:1-12](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L12)
 - [RestTimerDemo.tsx:5-8](file://frontend/src/pages/RestTimerDemo.tsx#L5-L8)
-- [WorkoutFunctional.tsx:236-564](file://frontend/src/pages/WorkoutFunctional.tsx#L236-L564)
-- [WorkoutYoga.tsx:620-724](file://frontend/src/pages/WorkoutYoga.tsx#L620-L724)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [telegram.ts:1-390](file://frontend/src/types/telegram.ts#L1-L390)
 
 **Section sources**
@@ -371,8 +366,7 @@ TelegramHook --> TelegramTypes["telegram.ts"]
 - [RestTimer.tsx:6-9](file://frontend/src/components/workout/RestTimer.tsx#L6-L9)
 - [useTelegramWebApp.ts:1-12](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L12)
 - [RestTimerDemo.tsx:5-8](file://frontend/src/pages/RestTimerDemo.tsx#L5-L8)
-- [WorkoutFunctional.tsx:236-564](file://frontend/src/pages/WorkoutFunctional.tsx#L236-L564)
-- [WorkoutYoga.tsx:620-724](file://frontend/src/pages/WorkoutYoga.tsx#L620-L724)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [telegram.ts:1-390](file://frontend/src/types/telegram.ts#L1-L390)
 
 ## Performance Considerations

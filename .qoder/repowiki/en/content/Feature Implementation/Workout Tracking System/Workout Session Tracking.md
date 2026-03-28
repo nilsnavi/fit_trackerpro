@@ -11,10 +11,9 @@
 - [useTimer.ts](file://frontend/src/hooks/useTimer.ts)
 - [RestTimer.tsx](file://frontend/src/components/workout/RestTimer.tsx)
 - [WorkoutBuilder.tsx](file://frontend/src/pages/WorkoutBuilder.tsx)
-- [WorkoutCardio.tsx](file://frontend/src/pages/WorkoutCardio.tsx)
-- [WorkoutStrength.tsx](file://frontend/src/pages/WorkoutStrength.tsx)
-- [WorkoutFunctional.tsx](file://frontend/src/pages/WorkoutFunctional.tsx)
-- [WorkoutYoga.tsx](file://frontend/src/pages/WorkoutYoga.tsx)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [WorkoutDetailPage.tsx](file://frontend/src/pages/WorkoutDetailPage.tsx)
+- [workoutTypeConfigs.ts](file://frontend/src/features/workouts/config/workoutTypeConfigs.ts)
 </cite>
 
 ## Table of Contents
@@ -48,7 +47,7 @@ subgraph "Frontend"
 Services["API Service<br/>Axios client"]
 Hooks["Hooks<br/>useTimer"]
 Components["Components<br/>RestTimer"]
-Pages["Pages<br/>WorkoutBuilder, Cardio, Strength, Functional, Yoga"]
+Pages["Pages<br/>WorkoutsPage, WorkoutModePage, WorkoutDetailPage, WorkoutBuilder"]
 end
 Pages --> Services
 Services --> API
@@ -67,10 +66,7 @@ Pages --> Hooks
 - [useTimer.ts:1-293](file://frontend/src/hooks/useTimer.ts#L1-L293)
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
 - [WorkoutBuilder.tsx:1-1048](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L1048)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 **Section sources**
 - [workouts.py:1-522](file://backend/app/api/workouts.py#L1-L522)
@@ -81,10 +77,7 @@ Pages --> Hooks
 - [useTimer.ts:1-293](file://frontend/src/hooks/useTimer.ts#L1-L293)
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
 - [WorkoutBuilder.tsx:1-1048](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L1048)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ## Core Components
 - Backend API router for workout templates, history, and session lifecycle
@@ -92,7 +85,7 @@ Pages --> Hooks
 - Pydantic schemas for request/response validation
 - Frontend API service for authenticated HTTP requests
 - Timer hooks and components for precise rest and interval timing
-- Workout execution pages for different modalities (cardio, strength, HIIT, yoga)
+- Unified **mode** entry (`WorkoutModePage` + `workoutTypeConfigs.ts`) instead of a separate page per modality
 
 Key responsibilities:
 - Session state management: start, progress tracking, and completion
@@ -128,9 +121,8 @@ API->>DB : Insert WorkoutLog (status=in_progress)
 DB-->>API : New session record
 API-->>Frontend : WorkoutStartResponse
 loop During workout
-Frontend->>Frontend : Timer tick (useTimer)
-Frontend->>Frontend : Exercise logging (Strength/HIIT)
-Frontend->>Frontend : Rest period (RestTimer)
+Frontend->>Frontend : Timers / UI (useTimer, RestTimer where used)
+Frontend->>Frontend : Session UX (evolving; detail view in WorkoutDetailPage)
 end
 User->>Frontend : Complete workout
 Frontend->>API : POST /workouts/complete
@@ -144,8 +136,7 @@ API-->>Frontend : WorkoutCompleteResponse
 - [workout_log.py:19-112](file://backend/app/models/workout_log.py#L19-L112)
 - [useTimer.ts:106-149](file://frontend/src/hooks/useTimer.ts#L106-L149)
 - [RestTimer.tsx:145-189](file://frontend/src/components/workout/RestTimer.tsx#L145-L189)
-- [WorkoutStrength.tsx:638-703](file://frontend/src/pages/WorkoutStrength.tsx#L638-L703)
-- [WorkoutFunctional.tsx:280-318](file://frontend/src/pages/WorkoutFunctional.tsx#L280-L318)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ## Detailed Component Analysis
 
@@ -293,66 +284,31 @@ The RestTimer component wraps the timer hook with UI:
 **Section sources**
 - [RestTimer.tsx:115-550](file://frontend/src/components/workout/RestTimer.tsx#L115-L550)
 
-### Strength Workout Execution
-The Strength page manages set logging, rest periods, and progress:
-- Exercise cards with target vs actual sets
-- Local storage for offline progress
-- API posting for progress and completion
-- Quick rest timer integration
+### Mode-based session start (current UI)
+All modalities (strength, cardio, yoga, functional) use the same React page with different config:
+- User picks a mode on `WorkoutsPage` → `WorkoutModePage` loads `WORKOUT_TYPE_CONFIGS[mode]` (copy, presets, backend `type`).
+- Starting a workout calls `POST /workouts/start`, then navigates to `WorkoutDetailPage` for the returned id.
+- Rich per-type live tracking (set logging, HIIT phases, cardio metrics, yoga timers) is not split across separate page files; shared components such as `RestTimer` / `useTimer` remain available for future or demo flows (`RestTimerDemo`).
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
-participant Strength as "WorkoutStrength"
-participant Timer as "RestTimer"
+participant Mode as "WorkoutModePage"
 participant API as "API Service"
-User->>Strength : Log set (weight/reps)
-Strength->>Strength : Update exercise state
-Strength->>Timer : Start rest (restSeconds)
-Timer-->>Strength : onComplete
-Strength->>Strength : Move to next exercise or set
-Strength->>API : POST /workouts/progress (offline/localStorage)
-User->>Strength : Finish workout
-Strength->>API : POST /workouts/complete
+User->>Mode : Choose preset, tap start
+Mode->>API : POST /workouts/start { name, type }
+API-->>Mode : WorkoutStartResponse { id }
+Mode->>User : Navigate to WorkoutDetailPage
 ```
 
 **Diagram sources**
-- [WorkoutStrength.tsx:595-632](file://frontend/src/pages/WorkoutStrength.tsx#L595-L632)
-- [WorkoutStrength.tsx:638-703](file://frontend/src/pages/WorkoutStrength.tsx#L638-L703)
-- [RestTimer.tsx:145-189](file://frontend/src/components/workout/RestTimer.tsx#L145-L189)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [WorkoutDetailPage.tsx](file://frontend/src/pages/WorkoutDetailPage.tsx)
+- [workoutTypeConfigs.ts](file://frontend/src/features/workouts/config/workoutTypeConfigs.ts)
 
 **Section sources**
-- [WorkoutStrength.tsx:484-820](file://frontend/src/pages/WorkoutStrength.tsx#L484-L820)
-
-### HIIT/Functional Workout
-The Functional page orchestrates work/rest intervals with auto-advance:
-- Interval phases: prepare, work, rest
-- Circular progress and live stats
-- Sound and haptic feedback
-- Rounds and total time computation
-
-**Section sources**
-- [WorkoutFunctional.tsx:117-738](file://frontend/src/pages/WorkoutFunctional.tsx#L117-L738)
-
-### Cardio Workout
-The Cardio page tracks equipment, speed, incline, and timeline notes:
-- Session timer with start/pause/stop
-- Parameter steppers for speed/incline/heart rate
-- Timeline notes with timestamps
-- Local storage persistence
-
-**Section sources**
-- [WorkoutCardio.tsx:558-941](file://frontend/src/pages/WorkoutCardio.tsx#L558-L941)
-
-### Yoga Workout
-The Yoga page provides flexible modes (asana, session, breathing) with background sounds:
-- Circular timer with mode-specific status
-- Breathing phases visualization
-- Background ambient sounds and completion tones
-- Wake Lock and haptic feedback
-
-**Section sources**
-- [WorkoutYoga.tsx:548-959](file://frontend/src/pages/WorkoutYoga.tsx#L548-L959)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [WorkoutDetailPage.tsx](file://frontend/src/pages/WorkoutDetailPage.tsx)
 
 ### Workout Builder
 The builder enables creating custom workout plans:
@@ -379,7 +335,7 @@ Frontend dependencies:
 graph LR
 API["workouts.py"] --> Schemas["workouts.py (schemas)"]
 API --> Models["workout_template.py / workout_log.py"]
-Pages["Workout* pages"] --> API
+Pages["Workout pages (WorkoutsPage, WorkoutModePage, …)"] --> API
 Pages --> Hooks["useTimer.ts"]
 Hooks --> Components["RestTimer.tsx"]
 Services["api.ts"] --> API
@@ -393,10 +349,7 @@ Services["api.ts"] --> API
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 - [useTimer.ts:1-293](file://frontend/src/hooks/useTimer.ts#L1-L293)
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 **Section sources**
 - [workouts.py:1-522](file://backend/app/api/workouts.py#L1-L522)
@@ -406,10 +359,7 @@ Services["api.ts"] --> API
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 - [useTimer.ts:1-293](file://frontend/src/hooks/useTimer.ts#L1-L293)
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ## Performance Considerations
 - Timer precision: requestAnimationFrame ensures smooth updates while maintaining accuracy
@@ -430,7 +380,7 @@ Common issues and resolutions:
 - [api.ts:21-45](file://frontend/src/services/api.ts#L21-L45)
 - [useTimer.ts:244-274](file://frontend/src/hooks/useTimer.ts#L244-L274)
 - [RestTimer.tsx:39-110](file://frontend/src/components/workout/RestTimer.tsx#L39-L110)
-- [WorkoutStrength.tsx:665-677](file://frontend/src/pages/WorkoutStrength.tsx#L665-L677)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [workouts.py:373-390](file://backend/app/api/workouts.py#L373-L390)
 
 ## Conclusion

@@ -7,7 +7,7 @@
 - [Timer.tsx](file://frontend/src/components/ui/Timer.tsx)
 - [RestTimerDemo.tsx](file://frontend/src/pages/RestTimerDemo.tsx)
 - [useTelegramWebApp.ts](file://frontend/src/hooks/useTelegramWebApp.ts)
-- [WorkoutStrength.tsx](file://frontend/src/pages/WorkoutStrength.tsx)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [WorkoutBuilder.tsx](file://frontend/src/pages/WorkoutBuilder.tsx)
 - [useTimer.test.ts](file://frontend/src/__tests__/hooks/useTimer.test.ts)
 </cite>
@@ -34,7 +34,7 @@ The timer system is composed of:
 - A specialized rest timer component tailored for workout intervals with sound, haptics, and Wake Lock
 - A demo page showcasing the rest timer’s capabilities
 - A Telegram WebApp integration hook enabling haptic feedback and platform-specific behavior
-- Workout session pages integrating timers into strength and builder experiences
+- `RestTimerDemo` embeds `RestTimer`; main workout flow (`WorkoutModePage`) does not wire `RestTimer` today (timers remain available for demos and future session UI)
 
 ```mermaid
 graph TB
@@ -48,12 +48,9 @@ RT["RestTimer.tsx"]
 end
 subgraph "Pages"
 DEMO["RestTimerDemo.tsx"]
-WS["WorkoutStrength.tsx"]
 WB["WorkoutBuilder.tsx"]
 end
 DEMO --> RT
-WS --> RT
-WB --> RT
 RT --> UT
 RT --> TG
 UI_T --> UT
@@ -65,7 +62,6 @@ UI_T --> UT
 - [Timer.tsx:1-345](file://frontend/src/components/ui/Timer.tsx#L1-L345)
 - [RestTimerDemo.tsx:1-163](file://frontend/src/pages/RestTimerDemo.tsx#L1-L163)
 - [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
-- [WorkoutStrength.tsx:1-200](file://frontend/src/pages/WorkoutStrength.tsx#L1-L200)
 - [WorkoutBuilder.tsx:1-400](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L400)
 
 **Section sources**
@@ -74,7 +70,6 @@ UI_T --> UT
 - [Timer.tsx:1-345](file://frontend/src/components/ui/Timer.tsx#L1-L345)
 - [RestTimerDemo.tsx:1-163](file://frontend/src/pages/RestTimerDemo.tsx#L1-L163)
 - [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
-- [WorkoutStrength.tsx:1-200](file://frontend/src/pages/WorkoutStrength.tsx#L1-L200)
 - [WorkoutBuilder.tsx:1-400](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L400)
 
 ## Core Components
@@ -281,12 +276,14 @@ Demonstrates:
 - [RestTimerDemo.tsx:10-163](file://frontend/src/pages/RestTimerDemo.tsx#L10-L163)
 
 ### Integration in Workout Sessions
-- WorkoutStrength: Implements a modal-based rest timer for strength training with haptic completion feedback.
-- WorkoutBuilder: Supports “timer” blocks in workout templates, allowing rest durations to be configured per block.
+- `RestTimerDemo` is the in-app integration sample for `RestTimer`.
+- `WorkoutBuilder` defines **timer** blocks in templates (Lucide timer icon / block type); it does not import `RestTimer` or `Timer.tsx` today.
+- `WorkoutModePage` starts sessions via API only; it does not embed `RestTimer`.
 
 **Section sources**
-- [WorkoutStrength.tsx:118-200](file://frontend/src/pages/WorkoutStrength.tsx#L118-L200)
+- [RestTimerDemo.tsx:10-163](file://frontend/src/pages/RestTimerDemo.tsx#L10-L163)
 - [WorkoutBuilder.tsx:57-74](file://frontend/src/pages/WorkoutBuilder.tsx#L57-L74)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ## Dependency Analysis
 - RestTimer depends on:
@@ -309,8 +306,7 @@ RT --> TG["useTelegramWebApp.ts"]
 RT --> WA["Web Audio API"]
 RT --> WL["Wake Lock API"]
 UI["Timer.tsx"] --> UT
-WS["WorkoutStrength.tsx"] --> RT
-WB["WorkoutBuilder.tsx"] --> RT
+DEMO["RestTimerDemo.tsx"] --> RT
 ```
 
 **Diagram sources**
@@ -318,16 +314,14 @@ WB["WorkoutBuilder.tsx"] --> RT
 - [useTimer.ts:1-293](file://frontend/src/hooks/useTimer.ts#L1-L293)
 - [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
 - [Timer.tsx:1-345](file://frontend/src/components/ui/Timer.tsx#L1-L345)
-- [WorkoutStrength.tsx:1-200](file://frontend/src/pages/WorkoutStrength.tsx#L1-L200)
-- [WorkoutBuilder.tsx:1-400](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L400)
+- [RestTimerDemo.tsx:1-163](file://frontend/src/pages/RestTimerDemo.tsx#L1-L163)
 
 **Section sources**
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
 - [useTimer.ts:1-293](file://frontend/src/hooks/useTimer.ts#L1-L293)
 - [useTelegramWebApp.ts:1-508](file://frontend/src/hooks/useTelegramWebApp.ts#L1-L508)
 - [Timer.tsx:1-345](file://frontend/src/components/ui/Timer.tsx#L1-L345)
-- [WorkoutStrength.tsx:1-200](file://frontend/src/pages/WorkoutStrength.tsx#L1-L200)
-- [WorkoutBuilder.tsx:1-400](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L400)
+- [RestTimerDemo.tsx:1-163](file://frontend/src/pages/RestTimerDemo.tsx#L1-L163)
 
 ## Performance Considerations
 - useTimer leverages requestAnimationFrame for smooth UI updates while maintaining second-level accuracy via accumulated deltas. This reduces jitter and avoids excessive re-renders compared to setInterval.
@@ -358,7 +352,7 @@ Common issues and resolutions:
 - [useTelegramWebApp.ts:199-215](file://frontend/src/hooks/useTelegramWebApp.ts#L199-L215)
 
 ## Conclusion
-The timer and rest management system combines a high-precision hook with a feature-rich rest timer component. It delivers accurate countdowns, robust background operation, audible and haptic notifications, and Wake Lock support. The UI Timer component offers a simpler, interval-based solution. Integration points in workout pages enable seamless rest scheduling and progress tracking.
+The timer and rest management system combines a high-precision hook with a feature-rich rest timer component. It delivers accurate countdowns, robust background operation, audible and haptic notifications, and Wake Lock support. The UI Timer component offers a simpler, interval-based solution. `RestTimerDemo` exercises `RestTimer` end-to-end; wiring `RestTimer` into the main workout session flow is left for future work.
 
 [No sources needed since this section summarizes without analyzing specific files]
 

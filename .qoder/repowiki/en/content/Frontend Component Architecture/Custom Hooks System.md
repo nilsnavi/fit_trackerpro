@@ -13,7 +13,7 @@
 - [RestTimer.tsx](file://frontend/src/components/workout/RestTimer.tsx)
 - [EmergencyButton.tsx](file://frontend/src/components/home/EmergencyButton.tsx)
 - [Home.tsx](file://frontend/src/pages/Home.tsx)
-- [WorkoutCardio.tsx](file://frontend/src/pages/WorkoutCardio.tsx)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [useTimer.test.ts](file://frontend/src/__tests__/hooks/useTimer.test.ts)
 - [achievements.py](file://backend/app/api/achievements.py)
 - [users.py](file://backend/app/api/users.py)
@@ -54,7 +54,7 @@ The hooks are located under frontend/src/hooks and integrate with:
 - Services: frontend/src/services/api.ts for HTTP requests.
 - Types: frontend/src/types/telegram.ts for Telegram WebApp typings.
 - Components: frontend/src/components for usage examples (e.g., RestTimer.tsx, EmergencyButton.tsx).
-- Pages: frontend/src/pages for higher-level component usage (e.g., Home.tsx, WorkoutCardio.tsx).
+- Pages: frontend/src/pages for higher-level component usage (e.g., Home.tsx, WorkoutModePage.tsx).
 - Tests: frontend/src/__tests__/hooks for unit tests (e.g., useTimer.test.ts).
 
 ```mermaid
@@ -78,7 +78,7 @@ EB["EmergencyButton.tsx"]
 end
 subgraph "Pages"
 HOME["Home.tsx"]
-WCARDIO["WorkoutCardio.tsx"]
+WMODE["WorkoutModePage.tsx"]
 end
 subgraph "Tests"
 TST["useTimer.test.ts"]
@@ -93,7 +93,7 @@ RT --> UTI
 RT --> UTA
 EB --> UT
 HOME --> UT
-WCARDIO --> UT
+WMODE --> UT
 TST --> UTI
 ```
 
@@ -108,7 +108,7 @@ TST --> UTI
 - [RestTimer.tsx:115-189](file://frontend/src/components/workout/RestTimer.tsx#L115-L189)
 - [EmergencyButton.tsx:1-109](file://frontend/src/components/home/EmergencyButton.tsx#L1-L109)
 - [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
-- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [useTimer.test.ts:1-114](file://frontend/src/__tests__/hooks/useTimer.test.ts#L1-L114)
 
 **Section sources**
@@ -438,7 +438,7 @@ RT["RestTimer.tsx"] --> UTI
 RT --> UTA
 EB["EmergencyButton.tsx"] --> UT
 HOME["Home.tsx"] --> UT
-WCARDIO["WorkoutCardio.tsx"] --> UT
+WMODE["WorkoutModePage.tsx"] --> UT
 API --> BEA["achievements.py"]
 API --> BEU["users.py"]
 ```
@@ -452,7 +452,7 @@ API --> BEU["users.py"]
 - [RestTimer.tsx:115-189](file://frontend/src/components/workout/RestTimer.tsx#L115-L189)
 - [EmergencyButton.tsx:1-109](file://frontend/src/components/home/EmergencyButton.tsx#L1-L109)
 - [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
-- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [api.ts:6-68](file://frontend/src/services/api.ts#L6-L68)
 - [achievements.py:25-88](file://backend/app/api/achievements.py#L25-L88)
 - [users.py:47-54](file://backend/app/api/users.py#L47-L54)
@@ -527,7 +527,7 @@ The custom hooks system provides a cohesive, composable foundation for user prof
 - [RestTimer.tsx:115-189](file://frontend/src/components/workout/RestTimer.tsx#L115-L189)
 - [EmergencyButton.tsx:1-109](file://frontend/src/components/home/EmergencyButton.tsx#L1-L109)
 - [Home.tsx:22-23](file://frontend/src/pages/Home.tsx#L22-L23)
-- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ### Testing Strategies
 - useTimer
@@ -610,5 +610,5 @@ The custom hooks system provides a cohesive, composable foundation for user prof
 **Section sources**
 - [EmergencyButton.tsx:11-25](file://frontend/src/components/home/EmergencyButton.tsx#L11-L25)
 - [Home.tsx:85-114](file://frontend/src/pages/Home.tsx#L85-L114)
-- [WorkoutCardio.tsx:559-560](file://frontend/src/pages/WorkoutCardio.tsx#L559-L560)
-- [WorkoutCardio.tsx:715-726](file://frontend/src/pages/WorkoutCardio.tsx#L715-L726)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)

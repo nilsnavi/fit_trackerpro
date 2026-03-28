@@ -8,10 +8,8 @@
 - [workouts.py](file://backend/app/schemas/workouts.py)
 - [workout_log.py](file://backend/app/models/workout_log.py)
 - [WorkoutBuilder.tsx](file://frontend/src/pages/WorkoutBuilder.tsx)
-- [WorkoutStrength.tsx](file://frontend/src/pages/WorkoutStrength.tsx)
-- [WorkoutCardio.tsx](file://frontend/src/pages/WorkoutCardio.tsx)
-- [WorkoutYoga.tsx](file://frontend/src/pages/WorkoutYoga.tsx)
-- [WorkoutFunctional.tsx](file://frontend/src/pages/WorkoutFunctional.tsx)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [workoutTypeConfigs.ts](file://frontend/src/features/workouts/config/workoutTypeConfigs.ts)
 - [api.ts](file://frontend/src/services/api.ts)
 - [package.json](file://frontend/package.json)
 </cite>
@@ -28,12 +26,12 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the workout type specializations implemented in the FitTracker Pro application. It covers backend models and APIs for workout templates and logs, and frontend components designed for four workout categories: strength training, cardio, yoga, and functional movements. It also documents specialized templates, exercise recommendations, protocols, UI patterns, progress tracking, metrics, equipment requirements, and safety considerations for each specialization.
+This document explains workout type behavior in FitTracker Pro. It covers backend models and APIs for workout templates and logs. On the frontend, modes (strength, cardio, yoga, functional) share one route and page (`WorkoutModePage`) with per-mode copy and presets in `workoutTypeConfigs.ts`, instead of separate pages per type. It also documents templates, protocols, UI patterns, progress tracking, metrics, and safety considerations.
 
 ## Project Structure
 The system comprises:
 - Backend: SQLAlchemy models for templates and logs, Pydantic schemas for API requests/responses, and FastAPI endpoints for managing workout templates, history, and session lifecycle.
-- Frontend: TypeScript/React pages for each workout type, with dedicated UI patterns, timers, and progress tracking. Shared API service handles HTTP communication.
+- Frontend: `WorkoutModePage` plus config-driven presets per mode; `WorkoutBuilder` for templates. Shared API service handles HTTP communication.
 
 ```mermaid
 graph TB
@@ -45,10 +43,7 @@ D["Workouts Schemas<br/>Pydantic models"]
 end
 subgraph "Frontend"
 E["WorkoutBuilder<br/>Template builder UI"]
-F["WorkoutStrength<br/>Progressive overload UI"]
-G["WorkoutCardio<br/>Equipment & intensity UI"]
-H["WorkoutYoga<br/>Timer & ambient sounds"]
-I["WorkoutFunctional<br/>HIIT intervals"]
+F["WorkoutModePage + workoutTypeConfigs<br/>Unified mode UI (cardio, strength, yoga, functional)"]
 J["API Service<br/>Axios client"]
 end
 J --> C
@@ -56,9 +51,6 @@ C --> A
 C --> B
 E --> J
 F --> J
-G --> J
-H --> J
-I --> J
 ```
 
 **Diagram sources**
@@ -67,10 +59,7 @@ I --> J
 - [workouts.py:26-522](file://backend/app/api/workouts.py#L26-L522)
 - [workouts.py:42-146](file://backend/app/schemas/workouts.py#L42-L146)
 - [WorkoutBuilder.tsx:1-800](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L800)
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 
 **Section sources**
@@ -79,10 +68,7 @@ I --> J
 - [workouts.py:26-522](file://backend/app/api/workouts.py#L26-L522)
 - [workouts.py:42-146](file://backend/app/schemas/workouts.py#L42-L146)
 - [WorkoutBuilder.tsx:1-800](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L800)
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 
 ## Core Components
@@ -96,7 +82,7 @@ I --> J
   - Start/complete workout session lifecycle.
 - Frontend:
   - Template builder for creating reusable templates with drag-and-drop ordering.
-  - Specialized workout screens with timers, controls, and progress tracking.
+  - Single mode page (`WorkoutModePage`) plus config for cardio/strength/yoga/functional presets; history detail in `WorkoutDetailPage`.
   - Shared API service for HTTP requests.
 
 **Section sources**
@@ -106,14 +92,11 @@ I --> J
 - [workouts.py:26-522](file://backend/app/api/workouts.py#L26-L522)
 - [workouts.py:42-146](file://backend/app/schemas/workouts.py#L42-L146)
 - [WorkoutBuilder.tsx:1-800](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L800)
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 
 ## Architecture Overview
-The backend exposes REST endpoints for templates and workout logs. The frontend consumes these endpoints via a shared API service. Each workout type page encapsulates its own UI patterns and timers while reusing common components and services.
+The backend exposes REST endpoints for templates and workout logs. The frontend consumes these endpoints via a shared API service. Workout **modes** differ by config (titles, presets, backend `type`), not by separate page components.
 
 ```mermaid
 sequenceDiagram
@@ -173,17 +156,16 @@ API-->>UI : {completed_at, message}
   - Templates support sets, reps, rest_seconds, and optional weight for strength exercises.
   - Start/complete endpoints manage session lifecycle and persist completed sets with actual results.
 - Frontend UI patterns
-  - Progressive overload tracking: target weight/reps per set, actual logged values, skip exercise flag.
-  - Rest timer modal with configurable duration and haptic feedback.
-  - Auto-advance to next exercise when all sets are completed.
-  - Offline-first progress saving with local storage and sync on reconnect.
+  - Mode entry: `WorkoutModePage` starts a session with a preset label and maps the mode to a backend workout `type` via config.
+  - Template builder (`WorkoutBuilder`) supports strength/cardio-style blocks, timers-as-blocks (icons), and notes.
+  - Detailed live-session UX (per-set logging, rest modals) may live in future flows; history is visible in `WorkoutDetailPage`.
 - Metrics and safety
   - Metrics: elapsed time, completed sets/exercises, optional glucose tracking.
   - Safety: risk flags embedded in exercise catalog; UI allows skipping exercises.
 
 ```mermaid
 sequenceDiagram
-participant UI as "WorkoutStrength"
+participant UI as "Workout session UI"
 participant API as "API Service"
 participant Router as "Workouts API"
 participant DB as "SQLAlchemy Models"
@@ -209,13 +191,13 @@ API-->>UI : {completed_at}
 ```
 
 **Diagram sources**
-- [WorkoutStrength.tsx:485-800](file://frontend/src/pages/WorkoutStrength.tsx#L485-L800)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [workouts.py:337-493](file://backend/app/api/workouts.py#L337-L493)
 - [workout_log.py:19-112](file://backend/app/models/workout_log.py#L19-L112)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 
 **Section sources**
-- [WorkoutStrength.tsx:1-820](file://frontend/src/pages/WorkoutStrength.tsx#L1-L820)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [workouts.py:337-493](file://backend/app/api/workouts.py#L337-L493)
 - [workout_log.py:19-112](file://backend/app/models/workout_log.py#L19-L112)
 
@@ -245,10 +227,10 @@ Save --> End(["Exit"])
 ```
 
 **Diagram sources**
-- [WorkoutCardio.tsx:559-941](file://frontend/src/pages/WorkoutCardio.tsx#L559-L941)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 **Section sources**
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [workouts.py:260-334](file://backend/app/api/workouts.py#L260-L334)
 
 ### Yoga Practice Specialization
@@ -284,10 +266,10 @@ SoundGenerator <.. YogaModes : "used by"
 ```
 
 **Diagram sources**
-- [WorkoutYoga.tsx:61-261](file://frontend/src/pages/WorkoutYoga.tsx#L61-L261)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 **Section sources**
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ### Functional Movements Specialization
 - Backend protocol
@@ -313,10 +295,10 @@ Rest --> Prepare : "All rounds done"
 ```
 
 **Diagram sources**
-- [WorkoutFunctional.tsx:117-738](file://frontend/src/pages/WorkoutFunctional.tsx#L117-L738)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 **Section sources**
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ### Template Builder and Exercise Catalog
 - Template builder
@@ -393,10 +375,9 @@ Endpoints --> Models["Models: WorkoutTemplate, WorkoutLog, Exercise"]
 
 **Section sources**
 - [api.ts:21-45](file://frontend/src/services/api.ts#L21-L45)
-- [WorkoutStrength.tsx:638-677](file://frontend/src/pages/WorkoutStrength.tsx#L638-L677)
-- [WorkoutFunctional.tsx:380-388](file://frontend/src/pages/WorkoutFunctional.tsx#L380-L388)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 - [workouts.py:42-146](file://backend/app/schemas/workouts.py#L42-L146)
-- [WorkoutCardio.tsx:588-637](file://frontend/src/pages/WorkoutCardio.tsx#L588-L637)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
 
 ## Conclusion
 FitTracker Pro provides a robust foundation for four workout specializations:

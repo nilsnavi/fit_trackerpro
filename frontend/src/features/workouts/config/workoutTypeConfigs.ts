@@ -1,6 +1,9 @@
 import { Activity, Dumbbell, HeartPulse, Wind } from 'lucide-react'
 import { WorkoutMode, WorkoutTypeConfig } from '../types/workoutTypeConfig'
 
+/** Порядок карточек режимов на экране «Тренировки» (единый источник вместо дублирования списка). */
+export const WORKOUT_MODE_ORDER: WorkoutMode[] = ['strength', 'cardio', 'functional', 'yoga']
+
 export const WORKOUT_TYPE_CONFIGS: Record<WorkoutMode, WorkoutTypeConfig> = {
     cardio: {
         mode: 'cardio',

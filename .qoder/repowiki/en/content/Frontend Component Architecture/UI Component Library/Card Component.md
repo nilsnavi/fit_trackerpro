@@ -43,7 +43,7 @@ end
 subgraph "Pages"
 Home["Home.tsx"]
 Analytics["Analytics.tsx"]
-Workout["WorkoutCardio.tsx"]
+WorkoutsPage["WorkoutsPage.tsx"]
 end
 subgraph "Components"
 WorkoutCard["WorkoutCard.tsx"]
@@ -52,7 +52,7 @@ end
 Card --> CN
 Home --> WorkoutCard
 Analytics --> Card
-Workout --> Card
+WorkoutsPage --> Card
 GlucoseWidget --> Card
 ```
 
