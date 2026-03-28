@@ -1,10 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Flag, Play } from 'lucide-react'
+import { Flag, Play, Timer } from 'lucide-react'
 import { Button } from '@components/ui/Button'
 import { workoutsApi } from '@services/workouts'
 import { WORKOUT_TYPE_CONFIGS } from '@/features/workouts/config/workoutTypeConfigs'
-import { WorkoutMode } from '@/features/workouts/types/workoutTypeConfig'
+import type { PrimaryTimerKind, WorkoutMode } from '@/features/workouts/types/workoutTypeConfig'
+
+const PRIMARY_TIMER_HINTS: Record<PrimaryTimerKind, string> = {
+    session_countdown: 'Ориентир по длительности сессии',
+    interval: 'Чередование работы и отдыха',
+    stopwatch: 'Свободная длительность, старт/стоп вручную',
+    none: 'Таймер не обязателен для этого типа',
+}
 
 const isWorkoutMode = (value: string | undefined): value is WorkoutMode =>
     Boolean(value && value in WORKOUT_TYPE_CONFIGS)
@@ -19,6 +26,12 @@ export function WorkoutModePage() {
         if (!isWorkoutMode(mode)) return null
         return WORKOUT_TYPE_CONFIGS[mode]
     }, [mode])
+
+    useEffect(() => {
+        if (config?.presets.length) {
+            setSelectedPresetId(config.presets[0].id)
+        }
+    }, [config])
 
     if (!config) {
         return (
@@ -61,27 +74,61 @@ export function WorkoutModePage() {
                     </div>
                 </div>
                 <p className="mt-4 text-sm text-white/90">{config.description}</p>
+                {config.hints.modeIntro && (
+                    <p className="mt-2 text-xs text-white/80">{config.hints.modeIntro}</p>
+                )}
             </div>
 
-            <div className="space-y-3">
-                <h2 className="text-sm font-medium text-telegram-hint">Пресеты</h2>
-                <div className="grid grid-cols-1 gap-2">
-                    {config.presets.map((preset) => (
-                        <button
-                            key={preset.id}
-                            onClick={() => setSelectedPresetId(preset.id)}
-                            className={`rounded-xl border p-3 text-left transition-colors ${
-                                selectedPresetId === preset.id
-                                    ? 'border-primary bg-primary/10 text-primary'
-                                    : 'border-border bg-telegram-secondary-bg text-telegram-text'
-                            }`}
-                        >
-                            <div className="font-medium">{preset.label}</div>
-                            <div className="text-xs opacity-80">{preset.unit === 'minutes' ? 'Длительность' : 'Интенсивность'}</div>
-                        </button>
-                    ))}
+            <div className="rounded-xl border border-border bg-telegram-secondary-bg p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-telegram-text">
+                    <Timer className="h-4 w-4 text-telegram-hint" />
+                    Таймеры
                 </div>
+                <p className="text-xs text-telegram-hint">
+                    {PRIMARY_TIMER_HINTS[config.timers.primary]}
+                    {config.timers.showRestBetweenSets && (
+                        <> · Отдых между подходами: {config.timers.defaultRestSeconds} с</>
+                    )}
+                    {config.timers.suggestedWorkSeconds != null &&
+                        config.timers.suggestedIntervalRestSeconds != null && (
+                        <>
+                            {' '}
+                            · Интервал: {config.timers.suggestedWorkSeconds}/{config.timers.suggestedIntervalRestSeconds} с
+                        </>
+                    )}
+                </p>
             </div>
+
+            {config.ux.showPresetPicker && (
+                <div className="space-y-3">
+                    <h2 className="text-sm font-medium text-telegram-hint">Пресеты</h2>
+                    {config.hints.presetPicker && (
+                        <p className="text-xs text-telegram-hint">{config.hints.presetPicker}</p>
+                    )}
+                    <div className="grid grid-cols-1 gap-2">
+                        {config.presets.map((preset) => (
+                            <button
+                                key={preset.id}
+                                onClick={() => setSelectedPresetId(preset.id)}
+                                className={`rounded-xl border p-3 text-left transition-colors ${
+                                    selectedPresetId === preset.id
+                                        ? 'border-primary bg-primary/10 text-primary'
+                                        : 'border-border bg-telegram-secondary-bg text-telegram-text'
+                                }`}
+                            >
+                                <div className="font-medium">{preset.label}</div>
+                                <div className="text-xs opacity-80">
+                                    {preset.unit === 'minutes'
+                                        ? 'Длительность'
+                                        : config.ux.emphasizeRoundsInPresets
+                                            ? 'Круги'
+                                            : 'Объём'}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <Button
                 variant="primary"

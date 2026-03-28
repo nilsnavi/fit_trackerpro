@@ -42,8 +42,11 @@ import { Modal } from '@components/ui/Modal';
 import { workoutsApi } from '@/services/workouts';
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp';
 import type { BackendWorkoutType, ExerciseInTemplate, WorkoutTemplateCreateRequest } from '@/types/workouts';
-
-type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other';
+import type { WorkoutType } from '@/types';
+import {
+    WORKOUT_FILTER_TYPE_ORDER,
+    WORKOUT_LIST_TYPE_CONFIG,
+} from '@/features/workouts/config/workoutTypeConfigs';
 
 // ============================================
 // Types
@@ -129,13 +132,9 @@ const mockExercises: Exercise[] = [
     { id: '12', name: 'Shoulder Press', category: 'strength', muscleGroups: ['shoulders'] },
 ];
 
-const workoutTypeOptions: { type: WorkoutType; label: string }[] = [
-    { type: 'cardio', label: 'Cardio' },
-    { type: 'strength', label: 'Strength' },
-    { type: 'flexibility', label: 'Flexibility' },
-    { type: 'sports', label: 'Sports' },
-    { type: 'other', label: 'Other' },
-];
+const workoutTypeOptions: { type: WorkoutType; label: string }[] = WORKOUT_FILTER_TYPE_ORDER.map(
+    (type) => ({ type, label: WORKOUT_LIST_TYPE_CONFIG[type].filterLabel }),
+);
 
 const categoryFilters = [
     { id: 'all', label: 'All' },

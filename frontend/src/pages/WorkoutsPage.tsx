@@ -1,22 +1,19 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Dumbbell, Clock, Flame, ChevronRight } from 'lucide-react'
+import { Plus, Clock, Flame, ChevronRight } from 'lucide-react'
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
-import { WORKOUT_MODE_ORDER, WORKOUT_TYPE_CONFIGS } from '@/features/workouts/config/workoutTypeConfigs'
+import {
+    WORKOUT_FILTER_TYPE_ORDER,
+    WORKOUT_MODE_ORDER,
+    WORKOUT_TYPE_CONFIGS,
+    estimateCaloriesForType,
+    getWorkoutListTypeConfig,
+} from '@/features/workouts/config/workoutTypeConfigs'
 import { WorkoutMode } from '@/features/workouts/types/workoutTypeConfig'
 import { useWorkoutHistoryQuery } from '@/features/workouts/hooks/useWorkoutHistoryQuery'
+import type { WorkoutType } from '@/types'
 import type { WorkoutHistoryItem } from '@/types/workouts'
 import { getErrorMessage } from '@/shared/errors'
-
-type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other'
-
-const workoutTypes: { type: WorkoutType; label: string; color: string }[] = [
-    { type: 'cardio', label: 'Кардио', color: 'bg-red-500' },
-    { type: 'strength', label: 'Силовая', color: 'bg-blue-500' },
-    { type: 'flexibility', label: 'Гибкость', color: 'bg-green-500' },
-    { type: 'sports', label: 'Спорт', color: 'bg-purple-500' },
-    { type: 'other', label: 'Другое', color: 'bg-gray-500' },
-]
 
 interface WorkoutListItem {
     id: number
@@ -26,8 +23,6 @@ interface WorkoutListItem {
     calories: number
     date: string
 }
-
-const estimateCalories = (durationMinutes: number): number => Math.round(durationMinutes * 6.5)
 
 const detectWorkoutType = (item: WorkoutHistoryItem): WorkoutType => {
     const tags = item.tags.map((tag) => tag.toLowerCase())
@@ -52,15 +47,16 @@ const detectWorkoutType = (item: WorkoutHistoryItem): WorkoutType => {
 
 const toWorkoutListItem = (item: WorkoutHistoryItem): WorkoutListItem => {
     const duration = item.duration ?? 0
+    const type = detectWorkoutType(item)
     const firstExerciseName = item.exercises[0]?.name
     const title = item.comments?.trim() || firstExerciseName || `Тренировка #${item.id}`
 
     return {
         id: item.id,
         title,
-        type: detectWorkoutType(item),
+        type,
         duration,
-        calories: estimateCalories(duration),
+        calories: estimateCaloriesForType(type, duration),
         date: item.date,
     }
 }
@@ -162,7 +158,7 @@ export function WorkoutsPage() {
                 >
                     Все
                 </button>
-                {workoutTypes.map(({ type, label }) => (
+                {WORKOUT_FILTER_TYPE_ORDER.map((type) => (
                     <button
                         key={type}
                         onClick={() => handleFilterChange(type)}
@@ -171,7 +167,7 @@ export function WorkoutsPage() {
                             : 'bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-white'
                             }`}
                     >
-                        {label}
+                        {getWorkoutListTypeConfig(type).filterLabel}
                     </button>
                 ))}
             </div>
@@ -231,19 +227,23 @@ export function WorkoutsPage() {
                 )}
                 {!isLoading && !error && filteredWorkouts.length === 0 && (
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Тренировок пока нет
+                        {selectedType === 'all'
+                            ? 'Тренировок пока нет'
+                            : (getWorkoutListTypeConfig(selectedType).hints.emptyHistory ?? 'Нет тренировок этого типа')}
                     </div>
                 )}
                 {!isLoading && !error && filteredWorkouts.map((workout) => {
-                    const typeInfo = workoutTypes.find(t => t.type === workout.type)
+                    const listCfg = getWorkoutListTypeConfig(workout.type)
+                    const TypeIcon = listCfg.icon
+                    const showCals = listCfg.ux.showCaloriesInSummary
                     return (
                         <div
                             key={workout.id}
                             className="bg-gray-50 dark:bg-neutral-800 flex items-center gap-4 p-4 rounded-xl transition-colors cursor-pointer active:scale-[0.98]"
                             onClick={() => handleWorkoutClick(workout.id)}
                         >
-                            <div className={`w-12 h-12 rounded-xl ${typeInfo?.color || 'bg-gray-500'} flex items-center justify-center text-white`}>
-                                <Dumbbell className="w-6 h-6" />
+                            <div className={`w-12 h-12 rounded-xl ${listCfg.listBadgeClass} flex items-center justify-center text-white`}>
+                                <TypeIcon className="w-6 h-6" />
                             </div>
                             <div className="flex-1">
                                 <h3 className="font-medium text-gray-900 dark:text-white">{workout.title}</h3>
@@ -252,10 +252,12 @@ export function WorkoutsPage() {
                                         <Clock className="w-3 h-3" />
                                         {workout.duration} мин
                                     </span>
-                                    <span className="flex items-center gap-1">
-                                        <Flame className="w-3 h-3" />
-                                        {workout.calories} ккал
-                                    </span>
+                                    {showCals && (
+                                        <span className="flex items-center gap-1">
+                                            <Flame className="w-3 h-3" />
+                                            {workout.calories} ккал
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
