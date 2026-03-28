@@ -3,6 +3,7 @@
 <cite>
 **Referenced Files in This Document**
 - [App.tsx](file://frontend/src/App.tsx)
+- [router.tsx](file://frontend/src/app/router.tsx)
 - [Navigation.tsx](file://frontend/src/components/common/Navigation.tsx)
 - [Home.tsx](file://frontend/src/pages/Home.tsx)
 - [HomePage.tsx](file://frontend/src/pages/HomePage.tsx)
@@ -218,31 +219,37 @@ Quick --> End(["Idle"])
 - [HealthPage.tsx:24-123](file://frontend/src/pages/HealthPage.tsx#L24-L123)
 
 ### ProfilePage
-- Purpose: User profile and settings hub.
+- Purpose: Canonical `/profile` screen — user profile, goals, achievements preview, settings, coach access, export, logout.
 - Structure:
-  - Profile header with avatar, name, badges.
-  - Stats summary cards.
-  - Settings menu with navigation placeholders.
-  - Logout button and version info.
-- State Management: Local state for profile data; no external store.
-- Interactions: Tap menu items navigates to settings screens; logout triggers session termination.
-- Styling: Clean card-based layout; prominent action buttons.
-- Mobile: Single-column layout; large touch targets.
+  - Telegram-aware header (avatar, name, badges) and activity stat cards.
+  - Weight goal block with `EditableField`, `ProgressBar`, and derived progress.
+  - `ProfileShowcase` when achievement stats are available.
+  - Profile settings: equipment and limitation chips, units, notifications.
+  - Coach access card + modal (generate code, list/revoke accesses).
+  - Export and logout actions; app version footer.
+- Routing: Declared in `router.tsx` as `<Route path="/profile" element={<ProfilePage />} />` inside `AppShell` (see `frontend/src/app/router.tsx`).
+- State management: Local React state plus `useCallback` data loaders calling `api.ts` directly (does not import `useProfile`).
+- Interactions: Inline edits, chip toggles, modals, haptic feedback via `useTelegramWebApp`.
+- Styling: Telegram theme utility classes; card sections; bottom padding for nav.
 
 ```mermaid
 flowchart TD
-Start(["Render ProfilePage"]) --> Header["Render profile header"]
-Header --> Stats["Render stats summary"]
-Stats --> Menu["Render settings menu"]
-Menu --> Logout["Render logout button"]
-Logout --> End(["Idle"])
+Start(["Render ProfilePage"]) --> Load["GET profile, stats, coach-access"]
+Load --> Header["Header + stat cards"]
+Header --> Weight["Weight goal + progress"]
+Weight --> Ach["Achievements showcase"]
+Ach --> Settings["Equipment, limits, units, notifications"]
+Settings --> Coach["Coach access + modal"]
+Coach --> Actions["Export + logout"]
+Actions --> End(["Idle"])
 ```
 
 **Diagram sources**
-- [ProfilePage.tsx:10-85](file://frontend/src/pages/ProfilePage.tsx#L10-L85)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
+- [router.tsx:14-28](file://frontend/src/app/router.tsx#L14-L28)
 
 **Section sources**
-- [ProfilePage.tsx:10-85](file://frontend/src/pages/ProfilePage.tsx#L10-L85)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
 
 ### Analytics
 - Purpose: Visualize training progress, calculate metrics, and export data.

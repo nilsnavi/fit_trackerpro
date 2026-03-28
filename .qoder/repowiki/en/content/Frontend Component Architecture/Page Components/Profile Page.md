@@ -2,8 +2,9 @@
 
 <cite>
 **Referenced Files in This Document**
-- [Profile.tsx](file://frontend/src/pages/Profile.tsx)
 - [ProfilePage.tsx](file://frontend/src/pages/ProfilePage.tsx)
+- [router.tsx](file://frontend/src/app/router.tsx)
+- [AppShell.tsx](file://frontend/src/app/layouts/AppShell.tsx)
 - [useProfile.ts](file://frontend/src/hooks/useProfile.ts)
 - [api.ts](file://frontend/src/services/api.ts)
 - [userStore.ts](file://frontend/src/stores/userStore.ts)
@@ -26,16 +27,17 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive documentation for the Profile Page and user management system in FitTracker Pro. It covers the user profile interface, personal information management, settings configuration, and account preferences. It also documents profile data binding, form validation, avatar upload functionality, preference persistence, integration with the user store, profile update workflows, and data synchronization patterns. Privacy settings, notification preferences, and account security features are addressed alongside profile customization options, theme selection, and accessibility settings. Finally, it explains the relationship between profile data and other application features.
+This document describes the Profile area of FitTracker Pro. The **canonical profile screen** is a single page module: `ProfilePage.tsx`, registered in `router.tsx` at route `/profile` inside `AppShell` (bottom navigation). The page owns its UI and loads data through `api.ts` with local React state (it does **not** import `useProfile`; that hook is a separate reusable layer for other surfaces). The document still covers `useProfile.ts`, backend models, and navigation because they define the same domain and session patterns used across the app.
 
 ## Project Structure
 The Profile system spans both frontend and backend components:
 - Frontend:
-  - Profile page components (Profile and ProfilePage)
-  - Custom hook for profile operations (useProfile)
-  - API service for HTTP requests
-  - Zustand-based user store for local state
-  - Navigation integration
+  - **ProfilePage.tsx** — sole profile route screen (former `Profile.tsx` and re-export stub merged here)
+  - **router.tsx** — `path="/profile"` → `<ProfilePage />` under `AppShell`
+  - **useProfile.ts** — shared hook with similar API operations (not imported by ProfilePage today)
+  - **api.ts** — HTTP client used by the profile screen
+  - **userStore.ts** — global session store used elsewhere in the app
+  - **Navigation.tsx** — bottom nav link to `/profile`
 - Backend:
   - User model with JSONB fields for profile and settings
   - Users API router with placeholder endpoints
@@ -44,8 +46,8 @@ The Profile system spans both frontend and backend components:
 ```mermaid
 graph TB
 subgraph "Frontend"
-P["Profile.tsx"]
-PP["ProfilePage.tsx"]
+PP["ProfilePage.tsx<br/>(/profile)"]
+RT["router.tsx + AppShell"]
 HP["useProfile.ts"]
 API["api.ts"]
 US["userStore.ts"]
@@ -56,20 +58,19 @@ UM["user.py"]
 UR["users.py"]
 MAIN["main.py"]
 end
-P --> HP
-PP --> P
-P --> API
+RT --> PP
+PP --> API
 HP --> API
 API --> UR
 UR --> UM
 MAIN --> UR
-NAV --> P
+NAV --> RT
 ```
 
 **Diagram sources**
-- [Profile.tsx:276-785](file://frontend/src/pages/Profile.tsx#L276-L785)
-- [ProfilePage.tsx:10-86](file://frontend/src/pages/ProfilePage.tsx#L10-L86)
-- [useProfile.ts:128-327](file://frontend/src/hooks/useProfile.ts#L128-L327)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
+- [router.tsx:14-28](file://frontend/src/app/router.tsx#L14-L28)
+- [useProfile.ts:128-324](file://frontend/src/hooks/useProfile.ts#L128-L324)
 - [api.ts:6-69](file://frontend/src/services/api.ts#L6-L69)
 - [userStore.ts:15-31](file://frontend/src/stores/userStore.ts#L15-L31)
 - [user.py:23-132](file://backend/app/models/user.py#L23-L132)
@@ -78,9 +79,9 @@ NAV --> P
 - [Navigation.tsx:9](file://frontend/src/components/common/Navigation.tsx#L9)
 
 **Section sources**
-- [Profile.tsx:12-11](file://frontend/src/pages/Profile.tsx#L12-L11)
-- [ProfilePage.tsx:1-86](file://frontend/src/pages/ProfilePage.tsx#L1-L86)
-- [useProfile.ts:8-327](file://frontend/src/hooks/useProfile.ts#L8-L327)
+- [ProfilePage.tsx:1-11](file://frontend/src/pages/ProfilePage.tsx#L1-L11)
+- [ProfilePage.tsx:48-71](file://frontend/src/pages/ProfilePage.tsx#L48-L71)
+- [useProfile.ts:8-324](file://frontend/src/hooks/useProfile.ts#L8-L324)
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
 - [userStore.ts:1-31](file://frontend/src/stores/userStore.ts#L1-L31)
 - [user.py:1-132](file://backend/app/models/user.py#L1-L132)
@@ -89,15 +90,13 @@ NAV --> P
 - [Navigation.tsx:9](file://frontend/src/components/common/Navigation.tsx#L9)
 
 ## Core Components
-- Profile page (Profile.tsx):
+- Profile page (ProfilePage.tsx):
   - Displays user avatar, name, username, membership status, and activity statistics
   - Provides interactive editing for current and target weight
   - Offers profile customization via chips for equipment and health limitations
   - Controls measurement units and notifications toggle
   - Manages coach access generation and revocation
   - Exports user data and handles logout
-- Profile page stub (ProfilePage.tsx):
-  - Minimal layout with settings menu, notifications, privacy/security, help, and logout
 - useProfile hook:
   - Centralizes profile fetching, updating, and data synchronization
   - Handles weight progress calculation and coach access management
@@ -116,9 +115,9 @@ NAV --> P
   - Includes users router under /api/v1/users
 
 **Section sources**
-- [Profile.tsx:276-785](file://frontend/src/pages/Profile.tsx#L276-L785)
-- [ProfilePage.tsx:10-86](file://frontend/src/pages/ProfilePage.tsx#L10-L86)
-- [useProfile.ts:128-327](file://frontend/src/hooks/useProfile.ts#L128-L327)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
+- [router.tsx:14-28](file://frontend/src/app/router.tsx#L14-L28)
+- [useProfile.ts:128-324](file://frontend/src/hooks/useProfile.ts#L128-L324)
 - [api.ts:6-69](file://frontend/src/services/api.ts#L6-L69)
 - [userStore.ts:15-31](file://frontend/src/stores/userStore.ts#L15-L31)
 - [user.py:23-132](file://backend/app/models/user.py#L23-L132)
@@ -127,47 +126,36 @@ NAV --> P
 
 ## Architecture Overview
 The Profile system follows a layered architecture:
-- Presentation layer: Profile.tsx renders UI and orchestrates user interactions
-- Domain layer: useProfile.ts encapsulates business logic for profile operations
-- Data access layer: api.ts abstracts HTTP communication with backend
-- Persistence layer: userStore.ts maintains local session state
-- Backend layer: FastAPI router exposes user endpoints; SQLAlchemy model persists profile/settings
+- **Presentation:** `ProfilePage.tsx` renders UI, Telegram chrome (`useTelegramWebApp`), achievements preview (`useAchievements` / `ProfileShowcase`), and calls `api.ts` from local state and `useCallback` handlers.
+- **Reusable domain hook:** `useProfile.ts` mirrors many of the same endpoints and can be adopted by other screens or a future refactor; it is not imported by `ProfilePage.tsx` today.
+- **Data access:** `api.ts` performs authorized HTTP calls (`/auth/me`, `/users/stats`, `/users/coach-access`, etc.).
+- **Session:** `userStore.ts` holds broader app session state; profile screen reads/writes user payload primarily via API responses.
+- **Backend:** FastAPI routers and SQLAlchemy `User` model persist `profile` / `settings` JSONB fields.
 
 ```mermaid
 sequenceDiagram
-participant UI as "Profile.tsx"
-participant Hook as "useProfile.ts"
+participant UI as "ProfilePage.tsx"
 participant API as "api.ts"
-participant Router as "users.py"
-participant Model as "user.py"
-UI->>Hook : "Initialize and bind profile data"
-Hook->>API : "GET /auth/me"
-API->>Router : "GET /api/v1/users/me"
-Router->>Model : "Fetch user by Telegram ID"
-Model-->>Router : "User record (JSONB profile/settings)"
-Router-->>API : "UserResponse"
-API-->>Hook : "UserProfile"
-Hook-->>UI : "Set profile state"
-UI->>Hook : "updateProfile({ current_weight, target_weight, ... })"
-Hook->>API : "PUT /auth/me"
-API->>Router : "PUT /api/v1/users/me"
-Router->>Model : "Update JSONB fields"
-Model-->>Router : "Updated user"
-Router-->>API : "UserProfile"
-API-->>Hook : "UserProfile"
-Hook-->>UI : "Refresh UI with updated profile"
+participant Backend as "FastAPI"
+Note over UI: Local useState and useCallback; no useProfile import.
+UI->>API : "Parallel GET /auth/me, /users/stats, coach-access"
+API->>Backend : "Bearer-authorized HTTP"
+Backend-->>API : "JSON"
+API-->>UI : "setProfile / setStats / setCoachAccesses"
+UI->>API : "PUT /auth/me (merge profile/settings)"
+API->>Backend : "Persist user"
+Backend-->>API : "Updated user"
+API-->>UI : "setProfile(response)"
 ```
 
 **Diagram sources**
-- [Profile.tsx:335-346](file://frontend/src/pages/Profile.tsx#L335-L346)
-- [useProfile.ts:179-191](file://frontend/src/hooks/useProfile.ts#L179-L191)
+- [ProfilePage.tsx:327-357](file://frontend/src/pages/ProfilePage.tsx#L327-L357)
+- [ProfilePage.tsx:297-324](file://frontend/src/pages/ProfilePage.tsx#L297-L324)
 - [api.ts:47-65](file://frontend/src/services/api.ts#L47-L65)
-- [users.py:47-54](file://backend/app/api/users.py#L47-L54)
-- [user.py:23-132](file://backend/app/models/user.py#L23-L132)
 
 ## Detailed Component Analysis
 
-### Profile Page Component (Profile.tsx)
+### Profile Page Component (ProfilePage.tsx)
 - Responsibilities:
   - Render user header with avatar, name, username, and badges
   - Display activity statistics cards
@@ -192,7 +180,7 @@ Hook-->>UI : "Refresh UI with updated profile"
 
 ```mermaid
 flowchart TD
-Start(["Render Profile"]) --> LoadData["Load profile, stats, coach accesses"]
+Start(["Render ProfilePage"]) --> LoadData["Load profile, stats, coach accesses"]
 LoadData --> DisplayHeader["Display user header and badges"]
 DisplayHeader --> StatsGrid["Render stats cards"]
 StatsGrid --> WeightGoal["Render weight goal section"]
@@ -209,13 +197,15 @@ Refresh --> End(["Done"])
 ```
 
 **Diagram sources**
-- [Profile.tsx:276-785](file://frontend/src/pages/Profile.tsx#L276-L785)
-- [Profile.tsx:335-359](file://frontend/src/pages/Profile.tsx#L335-L359)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
+- [ProfilePage.tsx:334-357](file://frontend/src/pages/ProfilePage.tsx#L334-L357)
 
 **Section sources**
-- [Profile.tsx:276-785](file://frontend/src/pages/Profile.tsx#L276-L785)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
 
 ### useProfile Hook
+Not imported by `ProfilePage.tsx` today; documented for parity with other consumers and potential refactors.
+
 - Responsibilities:
   - Fetch profile, stats, and coach accesses
   - Update profile fields and settings
@@ -287,7 +277,7 @@ UserProfile --> SettingsFields : "contains"
 - [useProfile.ts:12-35](file://frontend/src/hooks/useProfile.ts#L12-L35)
 
 **Section sources**
-- [useProfile.ts:128-327](file://frontend/src/hooks/useProfile.ts#L128-L327)
+- [useProfile.ts:128-324](file://frontend/src/hooks/useProfile.ts#L128-L324)
 
 ### API Service (api.ts)
 - Responsibilities:
@@ -296,12 +286,12 @@ UserProfile --> SettingsFields : "contains"
   - Centralize GET, POST, PUT, DELETE helpers
   - Log and propagate API errors
 - Integration:
-  - Consumed by both Profile.tsx and useProfile.ts
+  - Consumed by both ProfilePage.tsx and useProfile.ts
   - Routes map to backend endpoints under /api/v1
 
 ```mermaid
 sequenceDiagram
-participant Caller as "Profile.tsx/useProfile.ts"
+participant Caller as "ProfilePage.tsx/useProfile.ts"
 participant API as "api.ts"
 participant Interceptor as "Axios Interceptor"
 participant Backend as "FastAPI"
@@ -423,10 +413,10 @@ USER ||--o{ EXERCISE : "authors"
   - Icons accompanied by descriptive labels
 - Avatar upload:
   - Current implementation uses Telegram photo_url or initials fallback
-  - No explicit upload UI is present in the current Profile component
+  - No explicit upload UI is present in the current ProfilePage screen
 
 **Section sources**
-- [Profile.tsx:580-671](file://frontend/src/pages/Profile.tsx#L580-L671)
+- [ProfilePage.tsx:571-667](file://frontend/src/pages/ProfilePage.tsx#L571-L667)
 - [useProfile.ts:179-208](file://frontend/src/hooks/useProfile.ts#L179-L208)
 - [user.py:60-69](file://backend/app/models/user.py#L60-L69)
 
@@ -441,7 +431,7 @@ USER ||--o{ EXERCISE : "authors"
   - Bearer token injected automatically for protected routes
 
 **Section sources**
-- [Profile.tsx:329-333](file://frontend/src/pages/Profile.tsx#L329-L333)
+- [ProfilePage.tsx:329-333](file://frontend/src/pages/ProfilePage.tsx#L329-L333)
 - [useProfile.ts:294-302](file://frontend/src/hooks/useProfile.ts#L294-L302)
 - [api.ts:21-45](file://frontend/src/services/api.ts#L21-L45)
 
@@ -457,39 +447,39 @@ USER ||--o{ EXERCISE : "authors"
   - Profile settings may influence emergency mode behavior
 
 **Section sources**
-- [Profile.tsx:555-571](file://frontend/src/pages/Profile.tsx#L555-L571)
+- [ProfilePage.tsx:553-568](file://frontend/src/pages/ProfilePage.tsx#L553-L568)
 - [Achievements.tsx:626](file://frontend/src/components/gamification/Achievements.tsx#L626)
 
 ## Dependency Analysis
 - Frontend dependencies:
-  - Profile.tsx depends on useProfile.ts, api.ts, and UI components
-  - useProfile.ts depends on api.ts and Telegram WebApp hooks
-  - userStore.ts provides local session state
+  - **ProfilePage.tsx** depends on `api.ts`, UI primitives (`Button`, `Input`, `Chip`, `Modal`, `ProgressBar`), `useTelegramWebApp`, `useAchievements`, and `ProfileShowcase`; it does **not** import `useProfile.ts`.
+  - **useProfile.ts** depends on `api.ts` and Telegram WebApp hooks for optional reuse elsewhere.
+  - **userStore.ts** provides broader session state for the app shell and other features.
 - Backend dependencies:
   - users.py router depends on SQLAlchemy User model
   - main.py wires routers into the application
 
 ```mermaid
 graph LR
-Profile["Profile.tsx"] --> useProfile["useProfile.ts"]
-Profile --> api["api.ts"]
-useProfile --> api
+ProfilePage["ProfilePage.tsx"] --> api["api.ts"]
+ProfilePage --> ui["UI + gamification"]
+useProfile["useProfile.ts"] --> api
 api --> usersRouter["users.py"]
 usersRouter --> userModel["user.py"]
 main["main.py"] --> usersRouter
 ```
 
 **Diagram sources**
-- [Profile.tsx:276-785](file://frontend/src/pages/Profile.tsx#L276-L785)
-- [useProfile.ts:128-327](file://frontend/src/hooks/useProfile.ts#L128-L327)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
+- [useProfile.ts:128-324](file://frontend/src/hooks/useProfile.ts#L128-L324)
 - [api.ts:6-69](file://frontend/src/services/api.ts#L6-L69)
 - [users.py:9-65](file://backend/app/api/users.py#L9-L65)
 - [user.py:23-132](file://backend/app/models/user.py#L23-L132)
 - [main.py:89-107](file://backend/app/main.py#L89-L107)
 
 **Section sources**
-- [Profile.tsx:276-785](file://frontend/src/pages/Profile.tsx#L276-L785)
-- [useProfile.ts:128-327](file://frontend/src/hooks/useProfile.ts#L128-L327)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
+- [useProfile.ts:128-324](file://frontend/src/hooks/useProfile.ts#L128-L324)
 - [api.ts:6-69](file://frontend/src/services/api.ts#L6-L69)
 - [users.py:9-65](file://backend/app/api/users.py#L9-L65)
 - [user.py:23-132](file://backend/app/models/user.py#L23-L132)
@@ -498,7 +488,7 @@ main["main.py"] --> usersRouter
 ## Performance Considerations
 - Minimize re-renders:
   - Use memoization for derived values like weight progress
-  - Keep UI components pure and delegate state to hooks
+  - Keep UI components pure; ProfilePage holds screen state locally (or adopt `useProfile` if deduplicating data logic)
 - Network efficiency:
   - Batch related updates (e.g., update profile and settings together)
   - Debounce frequent updates where appropriate
@@ -522,7 +512,7 @@ main["main.py"] --> usersRouter
 **Section sources**
 - [api.ts:21-45](file://frontend/src/services/api.ts#L21-L45)
 - [users.py:47-54](file://backend/app/api/users.py#L47-L54)
-- [Profile.tsx:402-407](file://frontend/src/pages/Profile.tsx#L402-L407)
+- [ProfilePage.tsx:402-407](file://frontend/src/pages/ProfilePage.tsx#L402-L407)
 
 ## Conclusion
-The Profile Page and user management system integrate frontend presentation, domain logic, and backend persistence to deliver a cohesive user experience. The Profile component provides rich customization and control surfaces, while the useProfile hook centralizes data operations and synchronization. The backend model and API define a flexible schema for profile and settings storage. Together, these components support privacy-conscious configuration, personalized preferences, and secure account management.
+The profile experience is delivered by a **single route screen**, `ProfilePage.tsx`, wired at `/profile` in `router.tsx`. The screen combines Telegram context, inline `api.ts` calls, and rich local UI state. The **useProfile** hook documents a parallel, reusable data layer for the same backend contracts. Together with the FastAPI user model and navigation shell, this supports customization, coach access, export, and logout flows without duplicate page modules.

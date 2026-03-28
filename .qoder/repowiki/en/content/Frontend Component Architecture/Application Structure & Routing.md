@@ -4,6 +4,9 @@
 **Referenced Files in This Document**
 - [main.tsx](file://frontend/src/main.tsx)
 - [App.tsx](file://frontend/src/App.tsx)
+- [app/App.tsx](file://frontend/src/app/App.tsx)
+- [router.tsx](file://frontend/src/app/router.tsx)
+- [AppShell.tsx](file://frontend/src/app/layouts/AppShell.tsx)
 - [Navigation.tsx](file://frontend/src/components/common/Navigation.tsx)
 - [Home.tsx](file://frontend/src/pages/Home.tsx)
 - [HomePage.tsx](file://frontend/src/pages/HomePage.tsx)
@@ -22,6 +25,8 @@
 
 ## Update Summary
 **Changes Made**
+- **Profile routing:** `/profile` maps to a single canonical screen module `ProfilePage.tsx` (legacy `Profile.tsx` and the re-export-only `ProfilePage` stub were merged). Imports and routes use `@pages/ProfilePage` from `frontend/src/app/router.tsx`.
+- **Router module:** `BrowserRouter`, `Routes`, nested `AppShell`, and all page `Route` declarations live in `frontend/src/app/router.tsx`; `frontend/src/app/App.tsx` wraps providers (`QueryProvider`, `ThemeProvider`, `TelegramProvider`) and renders `AppRouter`.
 - Updated routing system to include robust theme initialization during application startup
 - Expanded routing configuration to include new `/exercises/add` route for exercise creation
 - Enhanced theme management with proper system preference detection and storage persistence
@@ -40,13 +45,15 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the FitTracker Pro frontend application's structure and routing system. It focuses on how React Router is configured, how routes are defined, and how page components are organized. The application now features a robust routing system with proper theme initialization during application startup and expanded routing configuration including advanced analytics functionality. It covers the main layout with BrowserRouter, route paths, component rendering patterns, the application entry point, global styling setup, and responsive/mobile-first design considerations.
+This document explains the FitTracker Pro frontend application's structure and routing system: **`src/app/router.tsx`** owns `BrowserRouter`, the **`AppShell`** layout (`Outlet` + bottom navigation), and nested **`Route`** declarations (including `/profile` → **`ProfilePage`**). Providers (`QueryProvider`, `ThemeProvider`, `TelegramProvider`) mount in **`src/app/App.tsx`**. The guide also covers the entry point (`main.tsx`), global styling, and mobile-first patterns.
 
 ## Project Structure
 FitTracker Pro follows a feature-based frontend structure under the frontend directory. Key areas include:
-- Entry point and provider setup in main.tsx with React Query integration
-- Application shell and routing in App.tsx with enhanced theme initialization
-- Page components under src/pages including new analytics and exercise creation features
+- Entry in `main.tsx` (mounts root `App`; global CSS import)
+- Providers and router mount in `src/app/App.tsx` (React Query, theme, Telegram context → `AppRouter`)
+- **Route table** in `src/app/router.tsx` (`BrowserRouter`, `Routes`, `AppShell`, per-path `Route` children)
+- Layout `src/app/layouts/AppShell.tsx` renders `<Outlet />` and bottom `Navigation`
+- Page components under `src/pages` (including `ProfilePage.tsx` for `/profile`)
 - Shared UI and common components under src/components
 - Global styles and design tokens under src/styles with comprehensive Telegram theme integration
 - Build tooling and aliases via Vite and Tailwind with optimized chunking strategy
@@ -54,22 +61,26 @@ FitTracker Pro follows a feature-based frontend structure under the frontend dir
 ```mermaid
 graph TB
 subgraph "Entry"
-M["main.tsx<br/>React Query Provider"]
+M["main.tsx"]
 end
-subgraph "Routing Shell"
-A["App.tsx<br/>BrowserRouter + Routes<br/>Theme Initialization"]
-N["Navigation.tsx<br/>Enhanced Bottom Nav"]
+subgraph "Bootstrap"
+APP["app/App.tsx<br/>providers + AppRouter"]
+end
+subgraph "Routing"
+RT["app/router.tsx<br/>BrowserRouter + Routes"]
+SH["AppShell.tsx<br/>Outlet + Navigation"]
 end
 subgraph "Pages"
-HP["HomePage.tsx"]
-H["Home.tsx"]
-W["WorkoutsPage.tsx"]
+HO["Home.tsx"]
+WP["WorkoutsPage.tsx"]
+WBP["WorkoutBuilderPage.tsx"]
+WDP["WorkoutDetailPage.tsx"]
+WMP["WorkoutModePage.tsx"]
+CAT["Catalog.tsx"]
+ADD["AddExercise.tsx"]
 HL["HealthPage.tsx"]
-P["ProfilePage.tsx"]
-AN["Analytics.tsx<br/>Advanced Charts"]
-C["Catalog.tsx"]
-WB["WorkoutBuilder.tsx"]
-AE["AddExercise.tsx<br/>Exercise Creation"]
+AN["AnalyticsPage.tsx"]
+PR["ProfilePage.tsx"]
 end
 subgraph "Styling"
 G["globals.css<br/>Telegram Theme Integration"]
@@ -79,26 +90,30 @@ subgraph "Tooling"
 V["vite.config.ts<br/>Optimized Chunking"]
 PKG["package.json<br/>Enhanced Dependencies"]
 end
-M --> A
-A --> HP
-A --> H
-A --> W
-A --> HL
-A --> P
-A --> AN
-A --> C
-A --> WB
-A --> AE
-A --> N
-A --> G
+M --> APP
+APP --> RT
+RT --> SH
+SH --> HO
+SH --> WP
+SH --> WBP
+SH --> WDP
+SH --> WMP
+SH --> CAT
+SH --> ADD
+SH --> HL
+SH --> AN
+SH --> PR
+M --> G
 G --> T
 V --> T
 V --> PKG
 ```
 
 **Diagram sources**
-- [main.tsx:1-23](file://frontend/src/main.tsx#L1-L23)
-- [App.tsx:1-56](file://frontend/src/App.tsx#L1-L56)
+- [main.tsx:1-11](file://frontend/src/main.tsx#L1-L11)
+- [app/App.tsx:1-14](file://frontend/src/app/App.tsx#L1-L14)
+- [router.tsx:1-34](file://frontend/src/app/router.tsx#L1-L34)
+- [AppShell.tsx:1-12](file://frontend/src/app/layouts/AppShell.tsx#L1-L12)
 - [Navigation.tsx:1-38](file://frontend/src/components/common/Navigation.tsx#L1-L38)
 - [globals.css:1-581](file://frontend/src/styles/globals.css#L1-L581)
 - [tailwind.config.js:1-349](file://frontend/tailwind.config.js#L1-L349)
@@ -106,32 +121,35 @@ V --> PKG
 - [package.json:1-61](file://frontend/package.json#L1-L61)
 
 **Section sources**
-- [main.tsx:1-23](file://frontend/src/main.tsx#L1-L23)
-- [App.tsx:1-56](file://frontend/src/App.tsx#L1-L56)
+- [main.tsx:1-11](file://frontend/src/main.tsx#L1-L11)
+- [app/App.tsx:1-14](file://frontend/src/app/App.tsx#L1-L14)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 - [vite.config.ts:1-40](file://frontend/vite.config.ts#L1-L40)
 - [tailwind.config.js:1-349](file://frontend/tailwind.config.js#L1-L349)
 
 ## Core Components
-- **Application shell and routing**: App.tsx now includes robust theme initialization during application startup with useEffect hook, wrapping the app with BrowserRouter and defining all routes with React Router's Routes and Route.
-- **Enhanced navigation**: Navigation.tsx provides an expanded bottom tab bar with six main destinations (Home, Catalog, Workouts, Analytics, Stats, Profile) aligned to the routes.
-- **Comprehensive page components**: Each route maps to dedicated page components including new Analytics page with advanced charting and AddExercise page for exercise creation.
-- **Entry point**: main.tsx initializes React, React Query provider with optimized caching strategy, and mounts the App component.
+- **Application shell and routing**: `app/App.tsx` composes providers and renders `AppRouter` from `app/router.tsx`. The router defines `BrowserRouter`, `Routes`, a parent `Route` with `AppShell` (outlet + bottom navigation), and nested routes including **`/profile` → `ProfilePage`**.
+- **Enhanced navigation**: `Navigation.tsx` lives inside `AppShell` and provides the bottom tab bar aligned to the route table in `router.tsx`.
+- **Comprehensive page components**: Each path maps to a page module under `src/pages` (workouts builder/detail/mode, catalog, add exercise, health, analytics, profile, etc.).
+- **Entry point**: `main.tsx` mounts the root `App` component and imports global styles; React Query and theme providers wrap the tree from `app/App.tsx`.
 - **Global styles**: globals.css integrates Tailwind layers, Telegram theme variables, and utility classes for responsive and mobile-first design with enhanced dark mode support.
 
 **Updated** Enhanced routing system with proper theme initialization and expanded analytics functionality
 
 Key routing highlights:
-- Root path "/" renders HomePage with improved performance
-- "/workouts" renders WorkoutsPage with workout management
-- "/workouts/builder" renders WorkoutBuilder with template creation
-- "/exercises" renders Catalog with exercise discovery
-- "/exercises/add" renders AddExercise for creating new exercises
-- "/health" renders HealthPage with health metrics
-- "/analytics" renders Analytics with advanced data visualization
-- "/profile" renders ProfilePage with user settings
+- Root path "/" renders `Home`
+- "/workouts" renders `WorkoutsPage`
+- "/workouts/builder" renders `WorkoutBuilderPage`
+- "/workouts/mode/:mode" renders `WorkoutModePage`
+- "/workouts/:id" renders `WorkoutDetailPage`
+- "/exercises" renders `Catalog`
+- "/exercises/add" renders `AddExercise`
+- "/health" renders `HealthPage`
+- "/analytics" renders `AnalyticsPage`
+- "/profile" renders **`ProfilePage`** (single canonical profile module)
 
 **Section sources**
-- [App.tsx:13-53](file://frontend/src/App.tsx#L13-L53)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 - [Navigation.tsx:5-11](file://frontend/src/components/common/Navigation.tsx#L5-L11)
 - [main.tsx:7-22](file://frontend/src/main.tsx#L7-L22)
 - [globals.css:88-118](file://frontend/src/styles/globals.css#L88-L118)
@@ -149,13 +167,13 @@ graph TB
 BR["BrowserRouter"]
 R["Routes"]
 TI["Theme Initialization<br/>localStorage + System Preference"]
-RT1["Route '/' -> HomePage"]
+RT1["Route '/' -> Home"]
 RT2["Route '/workouts' -> WorkoutsPage"]
-RT3["Route '/workouts/builder' -> WorkoutBuilder"]
+RT3["Route '/workouts/builder' -> WorkoutBuilderPage"]
 RT4["Route '/exercises' -> Catalog"]
 RT5["Route '/exercises/add' -> AddExercise"]
 RT6["Route '/health' -> HealthPage"]
-RT7["Route '/analytics' -> Analytics"]
+RT7["Route '/analytics' -> AnalyticsPage"]
 RT8["Route '/profile' -> ProfilePage"]
 NAV["Navigation (expanded bottom tabs)"]
 BR --> TI
@@ -172,51 +190,45 @@ R --> NAV
 ```
 
 **Diagram sources**
-- [App.tsx:16-32](file://frontend/src/App.tsx#L16-L32)
+- [app/App.tsx:1-14](file://frontend/src/app/App.tsx#L1-L14)
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
 
 **Section sources**
-- [App.tsx:28-53](file://frontend/src/App.tsx#L28-L53)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
 
 ## Detailed Component Analysis
 
 ### Enhanced Routing Configuration and Layout
-- App.tsx now includes sophisticated theme initialization that runs during application startup, checking localStorage for stored preferences and system theme preferences.
-- The theme initialization function resolves the appropriate theme (light, dark, or system) and applies the necessary CSS classes for proper Telegram theme integration.
-- BrowserRouter renders a main container with Routes and multiple Route declarations, ensuring proper theme application across all routes.
-- Navigation component renders below the routes to provide a persistent bottom tab bar with enhanced functionality.
+- **app/App.tsx** wraps the tree with `QueryProvider`, `ThemeProvider`, and `TelegramProvider`, then renders **`AppRouter`** (see `app/router.tsx`).
+- Theme persistence and Telegram-aware styling are handled inside the provider layer (not in the root re-export `src/App.tsx`).
+- **router.tsx** defines `BrowserRouter`, top-level `Routes`, the layout route that renders **`AppShell`** (which contains `<Outlet />` and **`Navigation`**), and nested routes for each path.
 
 **Updated** Added robust theme initialization during application startup with localStorage persistence and system preference detection
 
 ```mermaid
 sequenceDiagram
 participant Browser as "Browser"
-participant App as "App Component"
-participant ThemeInit as "initializeTheme()"
-participant Router as "BrowserRouter"
-participant Routes as "Routes"
-participant Route as "Route"
-participant Page as "Page Component"
+participant Root as "main.tsx → App"
+participant Providers as "app/App.tsx"
+participant AppRouter as "router.tsx"
+participant Shell as "AppShell + Outlet"
+participant Page as "Page component"
 participant Nav as "Navigation"
-Browser->>App : Initialize app
-App->>ThemeInit : Call on mount
-ThemeInit->>ThemeInit : Check localStorage
-ThemeInit->>ThemeInit : Check system preference
-ThemeInit->>ThemeInit : Apply CSS classes
-App->>Router : Render with theme applied
-Router->>Routes : Render routes
-Routes->>Route : Match path
-Route->>Page : Render matched component
-Routes->>Nav : Render bottom navigation
+Browser->>Root : Mount React tree
+Root->>Providers : Render providers + AppRouter
+Providers->>AppRouter : BrowserRouter + Routes
+AppRouter->>Shell : Matched layout route
+Shell->>Page : Outlet renders active child route
+Shell->>Nav : Bottom navigation (persistent)
 ```
 
 **Diagram sources**
-- [App.tsx:16-32](file://frontend/src/App.tsx#L16-L32)
+- [app/App.tsx:1-14](file://frontend/src/app/App.tsx#L1-L14)
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
 
 **Section sources**
-- [App.tsx:16-32](file://frontend/src/App.tsx#L16-L32)
+- [app/App.tsx:1-14](file://frontend/src/app/App.tsx#L1-L14)
 
 ### Enhanced Navigation Flow and Bottom Tabs
 - Navigation.tsx defines six bottom tab items: Home, Catalog, Workouts, Analytics, Stats, and Profile. Each tab maps to a route path and uses NavLink to reflect active state.
@@ -245,7 +257,7 @@ IsProfile --> |No| Noop["No-op (invalid)"]
 
 **Diagram sources**
 - [Navigation.tsx:5-11](file://frontend/src/components/common/Navigation.tsx#L5-L11)
-- [App.tsx:38-47](file://frontend/src/App.tsx#L38-L47)
+- [router.tsx:18-28](file://frontend/src/app/router.tsx#L18-L28)
 
 **Section sources**
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
@@ -274,61 +286,61 @@ Rendering patterns:
 - [Home.tsx:22-276](file://frontend/src/pages/Home.tsx#L22-L276)
 - [WorkoutsPage.tsx:21-112](file://frontend/src/pages/WorkoutsPage.tsx#L21-L112)
 - [HealthPage.tsx:24-123](file://frontend/src/pages/HealthPage.tsx#L24-L123)
-- [ProfilePage.tsx:10-85](file://frontend/src/pages/ProfilePage.tsx#L10-L85)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
 - [Analytics.tsx:641-800](file://frontend/src/pages/Analytics.tsx#L641-L800)
 - [Catalog.tsx:1-200](file://frontend/src/pages/Catalog.tsx#L1-L200)
 - [WorkoutBuilder.tsx:267-531](file://frontend/src/pages/WorkoutBuilder.tsx#L267-L531)
 - [AddExercise.tsx:124-845](file://frontend/src/pages/AddExercise.tsx#L124-L845)
 
 ### Component Hierarchy and Composition
-- App.tsx composes:
-  - BrowserRouter with theme initialization
-  - Routes with multiple Route children including new analytics and exercise creation routes
-  - Navigation at the bottom with expanded tab system
-- Each Route renders a page component with optimized chunking for performance.
-- Page components further compose shared UI elements (e.g., cards, inputs, chips, modals) with enhanced styling.
+- **app/App.tsx** composes providers and **`AppRouter`**.
+- **router.tsx** composes `BrowserRouter`, `Routes`, the `AppShell` layout route, and nested routes (including `/profile` → `ProfilePage`).
+- **AppShell** composes the main `<Outlet />` and bottom **Navigation**.
+- Each matched child route renders a page component; pages compose shared UI (cards, inputs, chips, modals).
 
 **Updated** Enhanced component hierarchy with expanded routing and theme management
 
 ```mermaid
 classDiagram
-class App {
+class AppRouter {
 +BrowserRouter
-+Routes
-+Navigation
-+Theme Initialization
++Routes + AppShell layout
 }
-class HomePage
+class AppShell {
++Outlet
++Navigation
+}
 class Home
 class WorkoutsPage
 class HealthPage
 class ProfilePage
-class Analytics
+class AnalyticsPage
 class Catalog
-class WorkoutBuilder
+class WorkoutBuilderPage
 class AddExercise
 class Navigation
-App --> HomePage : "renders '/'"
-App --> WorkoutsPage : "renders '/workouts'"
-App --> HealthPage : "renders '/health'"
-App --> ProfilePage : "renders '/profile'"
-App --> Analytics : "renders '/analytics'"
-App --> Catalog : "renders '/exercises'"
-App --> WorkoutBuilder : "renders '/workouts/builder'"
-App --> AddExercise : "renders '/exercises/add'"
-App --> Navigation : "renders expanded bottom tabs"
+AppRouter --> AppShell : "layout route"
+AppShell --> Home : "outlet '/'"
+AppShell --> WorkoutsPage : "outlet '/workouts'"
+AppShell --> HealthPage : "outlet '/health'"
+AppShell --> ProfilePage : "outlet '/profile'"
+AppShell --> AnalyticsPage : "outlet '/analytics'"
+AppShell --> Catalog : "outlet '/exercises'"
+AppShell --> WorkoutBuilderPage : "outlet '/workouts/builder'"
+AppShell --> AddExercise : "outlet '/exercises/add'"
+AppShell --> Navigation : "bottom tabs"
 ```
 
 **Diagram sources**
-- [App.tsx:38-47](file://frontend/src/App.tsx#L38-L47)
+- [router.tsx:18-28](file://frontend/src/app/router.tsx#L18-L28)
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
 
 **Section sources**
-- [App.tsx:38-47](file://frontend/src/App.tsx#L38-L47)
+- [router.tsx:18-28](file://frontend/src/app/router.tsx#L18-L28)
 
 ## Dependency Analysis
 - **Routing library**: react-router-dom is used for BrowserRouter, Routes, Route, and NavLink with enhanced navigation support.
-- **State/data fetching**: @tanstack/react-query is initialized in main.tsx with optimized caching (5-minute stale time, 1 retry) and retry policies.
+- **State/data fetching**: @tanstack/react-query is configured in `app/providers/QueryProvider.tsx` (default 5-minute stale time, 1 retry) and mounted from `app/App.tsx`.
 - **Advanced analytics**: recharts provides sophisticated charting capabilities for the Analytics page with responsive data visualization.
 - **Tooling and bundling**: Vite resolves aliases for @components, @pages, @hooks, @stores, @services, @types, @utils, @styles with optimized chunking strategy.
 - **Styling pipeline**: Tailwind processes content from index.html and src/**/*.{js,ts,jsx,tsx}, extending design tokens and animations with comprehensive Telegram theme integration.
@@ -375,7 +387,7 @@ VITE --> RC
 
 ## Troubleshooting Guide
 Common issues and remedies:
-- **Routes not matching**: Verify exact path strings in App.tsx Routes and Navigation.tsx navItems, especially for new routes like `/exercises/add`.
+- **Routes not matching**: Verify exact path strings in `router.tsx` and `Navigation.tsx` `navItems`, especially for new routes like `/exercises/add`.
 - **Navigation not highlighting**: Ensure NavLink isActive classes align with current route and that the bottom nav paths match route paths, including the expanded tab system.
 - **Theme not applying**: Confirm theme initialization function runs during app mount and localStorage theme preferences are properly detected.
 - **Analytics not rendering**: Verify recharts dependencies are properly installed and Analytics page components render correctly.
@@ -385,10 +397,10 @@ Common issues and remedies:
 **Updated** Enhanced troubleshooting guide with theme and analytics considerations
 
 **Section sources**
-- [App.tsx:38-47](file://frontend/src/App.tsx#L38-L47)
+- [router.tsx:18-28](file://frontend/src/app/router.tsx#L18-L28)
 - [Navigation.tsx:18-28](file://frontend/src/components/common/Navigation.tsx#L18-L28)
 - [main.tsx:5](file://frontend/src/main.tsx#L5)
 - [vite.config.ts:9-21](file://frontend/vite.config.ts#L9-L21)
 
 ## Conclusion
-FitTracker Pro employs a robust, feature-based routing architecture centered on React Router with enhanced theme management. App.tsx orchestrates the shell with BrowserRouter and Routes, including sophisticated theme initialization during application startup. Navigation.tsx provides an expanded persistent bottom tab system with six main destinations. Each route maps to dedicated page components, enabling modular development with advanced analytics and exercise creation capabilities. Global styles and Tailwind design tokens ensure consistent theming with comprehensive Telegram integration and enhanced dark mode support. For production readiness, consider route-level code splitting with optimized chunking, refined React Query caching, and performance optimizations for heavy pages like Analytics and Catalog with their advanced charting capabilities.
+FitTracker Pro uses React Router with a dedicated **`app/router.tsx`** module: `BrowserRouter`, nested **`AppShell`** routes, and page components under `src/pages`. **`app/App.tsx`** wraps the router with React Query, theme, and Telegram providers (the root `src/App.tsx` file only re-exports the app implementation). **`ProfilePage.tsx`** is the single module behind `/profile`. Global styles and Tailwind tokens keep Telegram Mini App theming consistent. For production readiness, consider route-level code splitting, tuned React Query defaults in `QueryProvider`, and performance work on heavy pages such as Analytics and Catalog.
