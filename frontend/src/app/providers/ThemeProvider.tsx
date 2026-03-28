@@ -1,5 +1,6 @@
-import { PropsWithChildren, createContext, useContext, useMemo } from 'react'
+import { PropsWithChildren, createContext, useContext, useEffect, useMemo } from 'react'
 import { Theme, useTheme } from '@hooks/useTheme'
+import { useTelegramContext } from './TelegramProvider'
 
 interface ThemeProviderValue {
     theme: Theme
@@ -12,6 +13,14 @@ const ThemeContext = createContext<ThemeProviderValue | null>(null)
 
 export function ThemeProvider({ children }: PropsWithChildren) {
     const themeState = useTheme()
+    const { isTelegram, colorScheme } = useTelegramContext()
+
+    useEffect(() => {
+        if (isTelegram && colorScheme) {
+            themeState.setTheme(colorScheme)
+        }
+    }, [isTelegram, colorScheme, themeState.setTheme])
+
     const value = useMemo(
         () => ({
             theme: themeState.theme,
