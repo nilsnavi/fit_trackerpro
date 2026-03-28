@@ -21,6 +21,8 @@ async def test_system_version(client: AsyncClient):
     data = response.json()
     assert data["name"] == "FitTracker Pro API"
     assert data["version"] == "1.0.0"
+    assert "commit_sha" in data
+    assert "build_timestamp" in data
 
 
 @pytest.mark.unit
@@ -75,3 +77,5 @@ async def test_system_version_contract_smoke():
         data = response.json()
         assert data.get("name") == "FitTracker Pro API"
         assert data.get("version") == "1.0.0"
+        assert "commit_sha" in data
+        assert "build_timestamp" in data

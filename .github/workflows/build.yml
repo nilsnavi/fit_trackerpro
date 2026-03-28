@@ -47,6 +47,16 @@ jobs:
             type=sha,prefix={{branch}}-
             latest
 
+      - name: Set backend build metadata
+        id: backend_build
+        run: |
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "app_version=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_version=${{ github.ref_name }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -54,6 +64,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.backend_build.outputs.app_version }}
+            GIT_COMMIT_SHA=${{ github.sha }}
+            BUILD_TIMESTAMP=${{ steps.backend_build.outputs.timestamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
