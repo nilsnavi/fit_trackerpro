@@ -14,7 +14,7 @@ from app.schemas.auth import (
     TelegramUserData,
     UserProfileUpdate,
 )
-from app.utils.config import settings
+from app.core.config import settings
 from app.utils.telegram_auth import validate_and_get_user
 
 

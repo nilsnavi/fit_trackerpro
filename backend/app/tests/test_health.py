@@ -37,7 +37,7 @@ async def test_root_endpoint(client: AsyncClient):
 @pytest.mark.unit
 async def test_api_docs_disabled_in_production():
     """Test that API docs are disabled in production."""
-    from app.utils.config import Settings
+    from app.core.config import Settings
 
     # In production, docs should be None (disabled)
     # This test verifies the configuration logic

@@ -11,7 +11,7 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.utils.config import settings
+from app.core.config import settings
 from app.models import get_async_db, User
 
 # Security scheme

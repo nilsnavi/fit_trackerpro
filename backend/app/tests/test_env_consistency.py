@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.utils.config import Settings
+from app.core.config import Settings
 
 
 def _parse_env_example_keys(path: Path) -> set[str]:
