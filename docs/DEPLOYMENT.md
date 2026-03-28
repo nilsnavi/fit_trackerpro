@@ -122,9 +122,12 @@ docker-compose -f docker-compose.prod.yml logs -f backend
 
 ```bash
 cd ~/fit_trackerpro
-docker-compose -f docker-compose.prod.yml down
-# restore DB backup if needed
+source .rollback-meta.env
+sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
+docker-compose -f docker-compose.prod.yml pull backend frontend
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-Use the latest backup in `~/fit_trackerpro/backups`.
+By default, keep DB as-is. Restore DB from backup only for migration-related incidents.
+
+For the current P1-safe rollback workflow (previous image tag pinning, optional DB restore, and post-rollback health checks), see `docs/ROLLBACK_STRATEGY.md`.

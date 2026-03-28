@@ -30,17 +30,21 @@
 ## Rollback Strategy
 
 Rollback workflow:
-- останавливает текущий stack
-- поднимает Postgres
-- восстанавливает последний `backups/*.sql` (если есть)
-- снова поднимает production stack
+- возвращает `IMAGE_TAG` к предыдущему стабильному значению
+- поднимает сервисы на предыдущем image tag
+- запускает post-rollback health checks
+- восстанавливает БД только при явном решении (`rollback_restore_db=true`)
+
+P1 update: rollback в automation теперь сначала возвращает `IMAGE_TAG` к предыдущему стабильному tag и поднимает сервисы; восстановление БД выполняется только опционально через флаг `rollback_restore_db=true`.
+
+Полный runbook: `docs/ROLLBACK_STRATEGY.md`.
 
 Команда на сервере (ручной эквивалент):
 
 ```bash
-docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml up -d postgres
-docker exec -i fittracker-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < backups/<latest>.sql
+source .rollback-meta.env
+sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
+docker-compose -f docker-compose.prod.yml pull backend frontend
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
