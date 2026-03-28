@@ -11,18 +11,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from app.api import (
-    system,
-    auth,
-    users,
-    workouts,
-    exercises,
-    health_metrics,
-    analytics,
-    achievements,
-    challenges,
-    emergency,
-)
+from app.api.achievements import router as achievements_router
+from app.api.analytics import router as analytics_router
+from app.api.auth import router as auth_router
+from app.api.challenges import router as challenges_router
+from app.api.emergency import router as emergency_router
+from app.api.exercises import router as exercises_router
+from app.api.health_metrics import router as health_metrics_router
+from app.api.system import router as system_router
+from app.api.users import router as users_router
+from app.api.workouts import router as workouts_router
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.utils.config import settings
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
@@ -120,22 +118,22 @@ app.add_middleware(
 app.add_middleware(RateLimitMiddleware)
 
 # Include routers
-app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
 app.include_router(
-    workouts.router, prefix="/api/v1/workouts", tags=["workouts"])
+    workouts_router, prefix="/api/v1/workouts", tags=["workouts"])
 app.include_router(
-    exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
-app.include_router(health_metrics.router, prefix="/api/v1/health-metrics", tags=["health-metrics"])
+    exercises_router, prefix="/api/v1/exercises", tags=["exercises"])
+app.include_router(health_metrics_router, prefix="/api/v1/health-metrics", tags=["health-metrics"])
 app.include_router(
-    analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
-app.include_router(achievements.router,
+    analytics_router, prefix="/api/v1/analytics", tags=["analytics"])
+app.include_router(achievements_router,
                    prefix="/api/v1/achievements", tags=["achievements"])
-app.include_router(challenges.router,
+app.include_router(challenges_router,
                    prefix="/api/v1/challenges", tags=["challenges"])
 app.include_router(
-    emergency.router, prefix="/api/v1/emergency", tags=["emergency"])
+    emergency_router, prefix="/api/v1/emergency", tags=["emergency"])
 
 
 @app.get("/")
