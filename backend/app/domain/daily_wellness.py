@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, Date, JSON, ForeignKey, Index,
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -106,8 +106,6 @@ class DailyWellness(Base):
         "User", back_populates="daily_wellness_entries")
 
     __table_args__ = (
-        Index('ix_daily_wellness_user_id', 'user_id'),
-        Index('ix_daily_wellness_date', 'date'),
         Index('ix_daily_wellness_user_date', 'user_id', 'date', unique=True),
         Index('ix_daily_wellness_sleep_score', 'sleep_score'),
         Index('ix_daily_wellness_energy_score', 'energy_score'),

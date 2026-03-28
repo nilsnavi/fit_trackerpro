@@ -3,10 +3,10 @@ RecoveryState Model
 """
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, ForeignKey, Index, Numeric
+from sqlalchemy import Integer, ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -41,10 +41,6 @@ class RecoveryState(Base):
     user: Mapped["User"] = relationship(
         "User",
         back_populates="recovery_state",
-    )
-
-    __table_args__ = (
-        Index("ix_recovery_state_user_id", "user_id", unique=True),
     )
 
     def __repr__(self) -> str:

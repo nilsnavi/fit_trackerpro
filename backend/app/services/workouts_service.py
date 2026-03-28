@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import MuscleLoad, RecoveryState, TrainingLoadDaily, WorkoutLog, WorkoutTemplate
+from app.domain import MuscleLoad, RecoveryState, TrainingLoadDaily, WorkoutLog, WorkoutTemplate
 from app.repositories.workouts_repository import WorkoutsRepository
 from app.schemas.workouts import (
     WorkoutCompleteRequest,

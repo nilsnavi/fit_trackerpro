@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, Date, JSON, Boolean, ForeignKe
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -124,10 +124,7 @@ class Challenge(Base):
         "User", back_populates="created_challenges")
 
     __table_args__ = (
-        Index('ix_challenges_creator_id', 'creator_id'),
         Index('ix_challenges_type', 'type'),
-        Index('ix_challenges_start_date', 'start_date'),
-        Index('ix_challenges_end_date', 'end_date'),
         Index('ix_challenges_is_public', 'is_public'),
         Index('ix_challenges_status', 'status'),
         Index('ix_challenges_join_code', 'join_code'),

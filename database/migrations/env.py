@@ -7,7 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy import pool
 from logging.config import fileConfig
 import asyncio
-from app.models import Base
+from app.domain import Base
 from app.core.config import settings
 import sys
 import os

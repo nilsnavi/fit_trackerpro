@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import DailyWellness, GlucoseLog, WorkoutLog
+from app.domain import DailyWellness, GlucoseLog, WorkoutLog
 
 
 class HealthRepository:

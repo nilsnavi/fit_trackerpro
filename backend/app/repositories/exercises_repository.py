@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Exercise
+from app.domain import Exercise
 
 
 class ExercisesRepository:

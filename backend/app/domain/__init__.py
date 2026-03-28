@@ -1,6 +1,5 @@
 """
-FitTracker Pro Database Models
-SQLAlchemy ORM models for PostgreSQL database
+Domain layer: SQLAlchemy ORM entities, database engine, and async session.
 """
 from .user import User
 from .workout_template import WorkoutTemplate
@@ -20,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 from app.core.config import settings
-from app.models.base import Base
+from app.domain.base import Base
 
 # Database engines
 engine = create_async_engine(settings.DATABASE_URL, echo=False)

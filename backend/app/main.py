@@ -8,22 +8,22 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.achievements import router as achievements_router
-from app.api.analytics import router as analytics_router
-from app.api.auth import router as auth_router
-from app.api.challenges import router as challenges_router
-from app.api.emergency import router as emergency_router
-from app.api.exercises import router as exercises_router
-from app.api.health_metrics import router as health_metrics_router
-from app.api.system import router as system_router
-from app.api.users import router as users_router
-from app.api.workouts import router as workouts_router
+from app.api.v1.achievements import router as achievements_router
+from app.api.v1.analytics import router as analytics_router
+from app.api.v1.auth import router as auth_router
+from app.api.v1.challenges import router as challenges_router
+from app.api.v1.emergency import router as emergency_router
+from app.api.v1.exercises import router as exercises_router
+from app.api.v1.health_metrics import router as health_metrics_router
+from app.api.v1.system import router as system_router
+from app.api.v1.users import router as users_router
+from app.api.v1.workouts import router as workouts_router
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.telemetry import init_sentry
 from app.middleware.rate_limit import RateLimitMiddleware
-from app.openapi_tags import (
+from app.api.v1.openapi_tags import (
     OPENAPI_TAGS,
     TAG_ACHIEVEMENTS,
     TAG_ANALYTICS,

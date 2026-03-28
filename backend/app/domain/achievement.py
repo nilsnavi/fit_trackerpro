@@ -8,7 +8,7 @@ from sqlalchemy import Integer, String, DateTime, JSON, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.domain.base import Base
 
 if TYPE_CHECKING:
     from .user_achievement import UserAchievement
@@ -95,10 +95,7 @@ class Achievement(Base):
         cascade="all, delete-orphan"
     )
 
-    __table_args__ = (
-        Index('ix_achievements_code', 'code'),
-        Index('ix_achievements_category', 'category'),
-    )
+    __table_args__ = (Index('ix_achievements_category', 'category'),)
 
     def __repr__(self) -> str:
         return f"<Achievement(id={self.id}, code={self.code}, name={self.name})>"
