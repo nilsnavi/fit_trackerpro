@@ -2,8 +2,14 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal } from '@shared/ui/Modal';
 import { Button } from '@shared/ui/Button';
 import { useTelegram } from '@shared/hooks/useTelegram';
-import { api } from '@shared/api/client';
 import { cn } from '@shared/lib/cn';
+import type { WellnessEntry, PainZones } from '@features/health/types/metrics';
+import {
+    useWellnessByDateQuery,
+    useWellnessRecentQuery,
+    useWellnessStatsQuery,
+    useCreateWellnessEntryMutation,
+} from '@features/health/hooks/useHealthQueries';
 import {
     Sun,
     Moon,
@@ -19,48 +25,13 @@ import {
     History
 } from 'lucide-react';
 
+export type { WellnessEntry, WellnessStats, PainZones } from '@features/health/types/metrics';
+
 // ============================================
 // TYPES
 // ============================================
 
 export type PainZone = 'shoulders' | 'knees' | 'back' | 'neck' | 'wrists' | 'hips' | 'ankles' | 'other';
-
-export interface PainZones {
-    head: number;
-    neck: number;
-    shoulders: number;
-    chest: number;
-    back: number;
-    arms: number;
-    wrists: number;
-    hips: number;
-    knees: number;
-    ankles: number;
-}
-
-export interface WellnessEntry {
-    id: number;
-    user_id: number;
-    date: string;
-    sleep_score: number;
-    sleep_hours?: number;
-    energy_score: number;
-    pain_zones: PainZones;
-    stress_level?: number;
-    mood_score?: number;
-    notes?: string;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface WellnessStats {
-    avg_sleep_score_7d?: number;
-    avg_sleep_score_30d?: number;
-    avg_energy_score_7d?: number;
-    avg_energy_score_30d?: number;
-    avg_sleep_hours_7d?: number;
-    avg_sleep_hours_30d?: number;
-}
 
 export interface WellnessCheckinProps {
     onCheckinComplete?: (entry: WellnessEntry) => void;
@@ -794,17 +765,10 @@ interface WellnessCompactWidgetProps {
 }
 
 export const WellnessCompactWidget: React.FC<WellnessCompactWidgetProps> = ({ onClick, className }) => {
-    const [todayEntry, setTodayEntry] = useState<WellnessEntry | null>(null);
     const { hapticFeedback } = useTelegram();
-
-    useEffect(() => {
-        const today = new Date().toISOString().split('T')[0];
-        api.get<WellnessEntry[]>(`/health-metrics/wellness?date=${today}`)
-            .then((data) => {
-                if (data.length > 0) setTodayEntry(data[0]);
-            })
-            .catch(console.error);
-    }, []);
+    const [todayStr] = useState(() => new Date().toISOString().split('T')[0]);
+    const todayQuery = useWellnessByDateQuery(todayStr);
+    const todayEntry = todayQuery.data?.[0] ?? null;
 
     const hasPain = todayEntry && Object.values(todayEntry.pain_zones).some((v) => v > 0);
     const energyRating = todayEntry ? convertScoreToRating(todayEntry.energy_score) : null;
@@ -877,33 +841,16 @@ export const WellnessCheckin: React.FC<WellnessCheckinProps> = ({
     const { hapticFeedback } = useTelegram();
     const [isCheckinOpen, setIsCheckinOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-    const [todayEntry, setTodayEntry] = useState<WellnessEntry | null>(null);
-    const [entries, setEntries] = useState<WellnessEntry[]>([]);
-    const [stats, setStats] = useState<WellnessStats | null>(null);
+    const [todayStr] = useState(() => new Date().toISOString().split('T')[0]);
 
-    // Fetch wellness data
-    const fetchData = useCallback(async () => {
-        try {
-            // Fetch today's entry
-            const today = new Date().toISOString().split('T')[0];
-            const todayData = await api.get<WellnessEntry[]>(`/health-metrics/wellness?date=${today}`);
-            setTodayEntry(todayData[0] || null);
+    const todayQuery = useWellnessByDateQuery(todayStr);
+    const recentQuery = useWellnessRecentQuery(30);
+    const statsQuery = useWellnessStatsQuery();
+    const createWellnessMutation = useCreateWellnessEntryMutation();
 
-            // Fetch recent entries
-            const entriesData = await api.get<WellnessEntry[]>('/health-metrics/wellness?limit=30');
-            setEntries(entriesData);
-
-            // Fetch stats
-            const statsData = await api.get<WellnessStats>('/health-metrics/wellness/stats');
-            setStats(statsData);
-        } catch (error) {
-            console.error('Failed to fetch wellness data:', error);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    const todayEntry = todayQuery.data?.[0] ?? null;
+    const entries = recentQuery.data ?? [];
+    const stats = statsQuery.data ?? null;
 
     // Check if morning check-in should be shown
     useEffect(() => {
@@ -960,10 +907,7 @@ export const WellnessCheckin: React.FC<WellnessCheckinProps> = ({
                 mood_score: convertRatingToScore(data.wellnessRating),
             };
 
-            const response = await api.post<WellnessEntry>('/health-metrics/wellness', wellnessData);
-
-            setTodayEntry(response);
-            setEntries((prev) => [response, ...prev]);
+            const response = await createWellnessMutation.mutateAsync(wellnessData);
 
             onCheckinComplete?.(response);
             onRecommendationChange?.(recommendation);
@@ -1141,40 +1085,24 @@ export const WellnessCheckin: React.FC<WellnessCheckinProps> = ({
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useWellnessForWorkout = () => {
-    const [recommendation, setRecommendation] = useState<WorkoutRecommendation | null>(null);
-    const [todayEntry, setTodayEntry] = useState<WellnessEntry | null>(null);
+    const [todayStr] = useState(() => new Date().toISOString().split('T')[0]);
+    const todayQuery = useWellnessByDateQuery(todayStr);
+    const todayEntry = todayQuery.data?.[0] ?? null;
 
-    useEffect(() => {
-        const fetchTodayEntry = async () => {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                const data = await api.get<WellnessEntry[]>(`/health-metrics/wellness?date=${today}`);
-                if (data.length > 0) {
-                    setTodayEntry(data[0]);
-
-                    // Calculate recommendation
-                    const sleepRating = convertScoreToRating(data[0].sleep_score);
-                    const energyRating = convertScoreToRating(data[0].energy_score);
-                    const painZones: PainZone[] = [];
-
-                    if (data[0].pain_zones.shoulders > 0) painZones.push('shoulders');
-                    if (data[0].pain_zones.knees > 0) painZones.push('knees');
-                    if (data[0].pain_zones.back > 0) painZones.push('back');
-                    if (data[0].pain_zones.neck > 0) painZones.push('neck');
-                    if (data[0].pain_zones.wrists > 0) painZones.push('wrists');
-                    if (data[0].pain_zones.hips > 0) painZones.push('hips');
-                    if (data[0].pain_zones.ankles > 0) painZones.push('ankles');
-
-                    const rec = getRecommendation(sleepRating, energyRating, 3, painZones);
-                    setRecommendation(rec);
-                }
-            } catch (error) {
-                console.error('Failed to fetch wellness data:', error);
-            }
-        };
-
-        fetchTodayEntry();
-    }, []);
+    const recommendation = useMemo((): WorkoutRecommendation | null => {
+        if (!todayEntry) return null;
+        const sleepRating = convertScoreToRating(todayEntry.sleep_score);
+        const energyRating = convertScoreToRating(todayEntry.energy_score);
+        const painZones: PainZone[] = [];
+        if (todayEntry.pain_zones.shoulders > 0) painZones.push('shoulders');
+        if (todayEntry.pain_zones.knees > 0) painZones.push('knees');
+        if (todayEntry.pain_zones.back > 0) painZones.push('back');
+        if (todayEntry.pain_zones.neck > 0) painZones.push('neck');
+        if (todayEntry.pain_zones.wrists > 0) painZones.push('wrists');
+        if (todayEntry.pain_zones.hips > 0) painZones.push('hips');
+        if (todayEntry.pain_zones.ankles > 0) painZones.push('ankles');
+        return getRecommendation(sleepRating, energyRating, 3, painZones);
+    }, [todayEntry]);
 
     const shouldExcludeExercise = useCallback(
         (exerciseRisks: string[]): boolean => {

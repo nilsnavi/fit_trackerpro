@@ -30,7 +30,11 @@ import {
 import { cn } from '@shared/lib/cn'
 import { useTelegram } from '@shared/hooks/useTelegram'
 import { useTimer } from '@shared/hooks/useTimer'
-import { api } from '@shared/api/client'
+import {
+    useEmergencyContactsQuery,
+    useEmergencyLogMutation,
+    useEmergencyNotifyMutation,
+} from '@features/emergency/hooks/useEmergencyQueries'
 
 // ============================================
 // ТИПЫ
@@ -833,9 +837,6 @@ interface EmergencyModalProps {
 function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
     const [step, setStep] = useState<EmergencyStep>('symptoms')
     const [selectedSymptom, setSelectedSymptom] = useState<SymptomType | null>(null)
-    const [contact, setContact] = useState<EmergencyContact | null>(null)
-    const [isLoadingContact, setIsLoadingContact] = useState(false)
-    const [isSending, setIsSending] = useState(false)
 
     // Состояние удержания для закрытия
     const [isHolding, setIsHolding] = useState(false)
@@ -845,12 +846,14 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
 
     const { hapticFeedback } = useTelegram()
 
-    // Загрузка экстренного контакта
-    useEffect(() => {
-        if (isOpen && step === 'contact') {
-            loadEmergencyContact()
-        }
-    }, [isOpen, step])
+    const contactsQuery = useEmergencyContactsQuery(isOpen && step === 'contact')
+    const logMutation = useEmergencyLogMutation()
+    const notifyMutation = useEmergencyNotifyMutation()
+
+    const contact =
+        contactsQuery.data?.items.find((c) => c.contact_username || c.phone) ?? null
+    const isLoadingContact = contactsQuery.isPending
+    const isSending = notifyMutation.isPending
 
     // Сброс состояния при закрытии
     useEffect(() => {
@@ -862,20 +865,6 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
         }
     }, [isOpen])
 
-    const loadEmergencyContact = async () => {
-        setIsLoadingContact(true)
-        try {
-            const response = await api.get<{ items: EmergencyContact[], active_count: number }>('/emergency/contact')
-            const activeContact = response.items.find(c => c.contact_username || c.phone)
-            setContact(activeContact || null)
-        } catch (error) {
-            console.error('Failed to load emergency contact:', error)
-            setContact(null)
-        } finally {
-            setIsLoadingContact(false)
-        }
-    }
-
     const logEvent = useCallback((event: Partial<EmergencyLog>) => {
         const log: EmergencyLog = {
             symptom: selectedSymptom || 'other',
@@ -885,9 +874,8 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
             ...event,
         }
 
-        // Отправка лога в API
-        api.post('/emergency/log', log).catch(console.error)
-    }, [selectedSymptom])
+        logMutation.mutate(log)
+    }, [selectedSymptom, logMutation])
 
     const handleSymptomSelect = (symptom: SymptomType) => {
         setSelectedSymptom(symptom)
@@ -905,7 +893,6 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
     }
 
     const handleSendNotification = async (includeLocation: boolean) => {
-        setIsSending(true)
         let location: string | undefined
 
         if (includeLocation && navigator.geolocation) {
@@ -923,7 +910,7 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
         }
 
         try {
-            await api.post('/emergency/notify', {
+            await notifyMutation.mutateAsync({
                 message: `Экстренная ситуация: ${SYMPTOMS.find(s => s.id === selectedSymptom)?.label || 'Другое'}`,
                 location,
                 severity: 'high',
@@ -932,8 +919,6 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
         } catch (error) {
             console.error('Failed to send notification:', error)
             hapticFeedback.error()
-        } finally {
-            setIsSending(false)
         }
     }
 

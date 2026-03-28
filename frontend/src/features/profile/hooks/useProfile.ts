@@ -1,234 +1,173 @@
 /**
- * useProfile Hook
- * 
- * Хук для работы с профилем пользователя FitTracker Pro.
- * Предоставляет методы для получения и обновления профиля,
- * статистики, настроек и управления доступом тренера.
+ * useProfile — серверное состояние профиля через TanStack Query.
  */
-import { useState, useEffect, useCallback } from 'react';
-import { api } from '@shared/api/client';
-import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
+import { useCallback, useMemo } from 'react'
+import {
+    useMutation,
+    useQuery,
+    useQueryClient,
+} from '@tanstack/react-query'
+import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
+import { queryKeys } from '@shared/api/queryKeys'
+import { authApi } from '@features/profile/api/authApi'
+import { usersApi } from '@features/profile/api/usersApi'
+import type {
+    CoachAccess,
+    UserProfile,
+    UserStats,
+    WeightProgress,
+} from '@features/profile/types/profile'
 
-export interface UserProfile {
-    id: number;
-    telegram_id: number;
-    username?: string;
-    first_name?: string;
-    last_name?: string;
-    profile: {
-        equipment?: string[];
-        limitations?: string[];
-        goals?: string[];
-        current_weight?: number;
-        target_weight?: number;
-        height?: number;
-        birth_date?: string;
-    };
-    settings: {
-        theme?: string;
-        notifications?: boolean;
-        units?: 'metric' | 'imperial';
-        language?: string;
-    };
-    created_at: string;
-    updated_at: string;
+export type {
+    UserProfile,
+    UserStats,
+    CoachAccess,
+    WeightProgress,
+} from '@features/profile/types/profile'
+
+const calculateWeightProgress = (current: number, target: number, start: number): number => {
+    if (start === target) return 100
+    const totalDiff = Math.abs(start - target)
+    const currentDiff = Math.abs(current - target)
+    const progress = ((totalDiff - currentDiff) / totalDiff) * 100
+    return Math.max(0, Math.min(100, progress))
 }
 
-export interface UserStats {
-    active_days: number;
-    total_workouts: number;
-    current_streak: number;
-    longest_streak: number;
-    total_duration: number;
-    total_calories: number;
-}
-
-export interface CoachAccess {
-    id: string;
-    coach_name: string;
-    created_at: string;
-    expires_at?: string;
-}
-
-export interface WeightProgress {
-    current: number;
-    target: number;
-    start: number;
-    progress: number;
-    diff: number;
-    goalDate: Date;
+const calculateGoalDate = (current: number, target: number, weeklyChange: number = 0.5): Date => {
+    const diff = Math.abs(current - target)
+    const weeksNeeded = diff / weeklyChange
+    const goalDate = new Date()
+    goalDate.setDate(goalDate.getDate() + weeksNeeded * 7)
+    return goalDate
 }
 
 export interface UseProfileReturn {
-    /** Данные профиля */
-    profile: UserProfile | null;
-    /** Статистика пользователя */
-    stats: UserStats | null;
-    /** Список доступов тренера */
-    coachAccesses: CoachAccess[];
-    /** Состояние загрузки */
-    isLoading: boolean;
-    /** Ошибка */
-    error: string | null;
-    /** Обновить профиль */
-    updateProfile: (updates: Partial<UserProfile['profile']>) => Promise<void>;
-    /** Обновить настройки */
-    updateSettings: (updates: Partial<UserProfile['settings']>) => Promise<void>;
-    /** Обновить вес */
-    updateWeight: (current: number, target?: number) => Promise<void>;
-    /** Получить прогресс веса */
-    getWeightProgress: () => WeightProgress | null;
-    /** Сгенерировать код доступа для тренера */
-    generateCoachCode: () => Promise<string | null>;
-    /** Отозвать доступ тренера */
-    revokeCoachAccess: (accessId: string) => Promise<void>;
-    /** Экспортировать данные */
-    exportData: () => Promise<void>;
-    /** Обновить данные */
-    refresh: () => Promise<void>;
+    profile: UserProfile | null
+    stats: UserStats | null
+    coachAccesses: CoachAccess[]
+    isLoading: boolean
+    isGeneratingCoachCode: boolean
+    error: string | null
+    updateProfile: (updates: Partial<UserProfile['profile']>) => Promise<void>
+    updateSettings: (updates: Partial<UserProfile['settings']>) => Promise<void>
+    updateWeight: (current: number, target?: number) => Promise<void>
+    getWeightProgress: () => WeightProgress | null
+    generateCoachCode: () => Promise<string | null>
+    revokeCoachAccess: (accessId: string) => Promise<void>
+    exportData: () => Promise<void>
+    refresh: () => Promise<void>
 }
 
-/**
- * Рассчитать прогресс достижения цели по весу
- */
-const calculateWeightProgress = (current: number, target: number, start: number): number => {
-    if (start === target) return 100;
-    const totalDiff = Math.abs(start - target);
-    const currentDiff = Math.abs(current - target);
-    const progress = ((totalDiff - currentDiff) / totalDiff) * 100;
-    return Math.max(0, Math.min(100, progress));
-};
-
-/**
- * Рассчитать прогнозируемую дату достижения цели
- */
-const calculateGoalDate = (current: number, target: number, weeklyChange: number = 0.5): Date => {
-    const diff = Math.abs(current - target);
-    const weeksNeeded = diff / weeklyChange;
-    const goalDate = new Date();
-    goalDate.setDate(goalDate.getDate() + weeksNeeded * 7);
-    return goalDate;
-};
-
-/**
- * Хук для работы с профилем пользователя
- * 
- * @example
- * // Базовое использование
- * const { profile, stats, isLoading } = useProfile();
- * 
- * // Обновление веса
- * const { updateWeight, getWeightProgress } = useProfile();
- * const handleWeightUpdate = async (current, target) => {
- *     await updateWeight(current, target);
- *     const progress = getWeightProgress();
- *     console.log(`Progress: ${progress?.progress}%`);
- * };
- */
 export function useProfile(): UseProfileReturn {
-    const { hapticFeedback } = useTelegramWebApp();
+    const queryClient = useQueryClient()
+    const { hapticFeedback } = useTelegramWebApp()
 
-    // State
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [stats, setStats] = useState<UserStats | null>(null);
-    const [coachAccesses, setCoachAccesses] = useState<CoachAccess[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const profileQuery = useQuery({
+        queryKey: queryKeys.profile.me,
+        queryFn: () => authApi.getCurrentUser(),
+    })
 
-    /**
-     * Получить данные профиля
-     */
-    const fetchProfile = useCallback(async () => {
-        try {
-            const response = await api.get<UserProfile>('/auth/me');
-            setProfile(response);
-            setError(null);
-        } catch (err) {
-            setError('Не удалось загрузить профиль');
-            console.error('Failed to fetch profile:', err);
-        }
-    }, []);
+    const statsQuery = useQuery({
+        queryKey: queryKeys.profile.stats,
+        queryFn: () => usersApi.getStats(),
+    })
 
-    /**
-     * Получить статистику
-     */
-    const fetchStats = useCallback(async () => {
-        try {
-            const response = await api.get<UserStats>('/users/stats');
-            setStats(response);
-        } catch (err) {
-            console.error('Failed to fetch stats:', err);
-        }
-    }, []);
+    const coachAccessQuery = useQuery({
+        queryKey: queryKeys.profile.coachAccess,
+        queryFn: () => usersApi.getCoachAccess(),
+    })
 
-    /**
-     * Получить список доступов
-     */
-    const fetchCoachAccesses = useCallback(async () => {
-        try {
-            const response = await api.get<CoachAccess[]>('/users/coach-access');
-            setCoachAccesses(response);
-        } catch (err) {
-            console.error('Failed to fetch coach accesses:', err);
-        }
-    }, []);
+    const updateProfileMutation = useMutation({
+        mutationFn: async (updates: Partial<UserProfile['profile']>) => {
+            const current = queryClient.getQueryData<UserProfile>(queryKeys.profile.me)
+            return authApi.updateCurrentUser({
+                profile: { ...current?.profile, ...updates },
+            })
+        },
+        onSuccess: (data) => {
+            queryClient.setQueryData(queryKeys.profile.me, data)
+        },
+    })
 
-    /**
-     * Обновить профиль
-     */
-    const updateProfile = useCallback(async (updates: Partial<UserProfile['profile']>) => {
-        try {
-            const response = await api.put<UserProfile>('/auth/me', {
-                profile: { ...profile?.profile, ...updates }
-            });
-            setProfile(response);
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-        } catch (err) {
-            setError('Не удалось обновить профиль');
-            console.error('Failed to update profile:', err);
-            throw err;
-        }
-    }, [profile, hapticFeedback]);
+    const updateSettingsMutation = useMutation({
+        mutationFn: async (updates: Partial<UserProfile['settings']>) => {
+            const current = queryClient.getQueryData<UserProfile>(queryKeys.profile.me)
+            return authApi.updateCurrentUser({
+                settings: { ...current?.settings, ...updates },
+            })
+        },
+        onSuccess: (data) => {
+            queryClient.setQueryData(queryKeys.profile.me, data)
+        },
+    })
 
-    /**
-     * Обновить настройки
-     */
-    const updateSettings = useCallback(async (updates: Partial<UserProfile['settings']>) => {
-        try {
-            const response = await api.put<UserProfile>('/auth/me', {
-                settings: { ...profile?.settings, ...updates }
-            });
-            setProfile(response);
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-        } catch (err) {
-            setError('Не удалось обновить настройки');
-            console.error('Failed to update settings:', err);
-            throw err;
-        }
-    }, [profile, hapticFeedback]);
+    const generateCoachMutation = useMutation({
+        mutationFn: () => usersApi.generateCoachAccess(),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.profile.coachAccess })
+        },
+    })
 
-    /**
-     * Обновить вес
-     */
-    const updateWeight = useCallback(async (current: number, target?: number) => {
-        const updates: Partial<UserProfile['profile']> = {
-            current_weight: current
-        };
-        if (target !== undefined) {
-            updates.target_weight = target;
-        }
-        await updateProfile(updates);
-    }, [updateProfile]);
+    const revokeCoachMutation = useMutation({
+        mutationFn: (accessId: string) => usersApi.revokeCoachAccess(accessId),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.profile.coachAccess })
+        },
+    })
 
-    /**
-     * Получить прогресс веса
-     */
+    const profile = profileQuery.data ?? null
+    const stats = statsQuery.data ?? null
+    const coachAccesses = coachAccessQuery.data ?? []
+
+    const isLoading =
+        profileQuery.isPending || statsQuery.isPending || coachAccessQuery.isPending
+
+    const error =
+        profileQuery.error != null
+            ? 'Не удалось загрузить профиль'
+            : null
+
+    const updateProfile = useCallback(
+        async (updates: Partial<UserProfile['profile']>) => {
+            try {
+                await updateProfileMutation.mutateAsync(updates)
+                hapticFeedback({ type: 'notification', notificationType: 'success' })
+            } catch (err) {
+                console.error('Failed to update profile:', err)
+                throw err
+            }
+        },
+        [updateProfileMutation, hapticFeedback],
+    )
+
+    const updateSettings = useCallback(
+        async (updates: Partial<UserProfile['settings']>) => {
+            try {
+                await updateSettingsMutation.mutateAsync(updates)
+                hapticFeedback({ type: 'notification', notificationType: 'success' })
+            } catch (err) {
+                console.error('Failed to update settings:', err)
+                throw err
+            }
+        },
+        [updateSettingsMutation, hapticFeedback],
+    )
+
+    const updateWeight = useCallback(
+        async (current: number, target?: number) => {
+            const updates: Partial<UserProfile['profile']> = { current_weight: current }
+            if (target !== undefined) updates.target_weight = target
+            await updateProfile(updates)
+        },
+        [updateProfile],
+    )
+
     const getWeightProgress = useCallback((): WeightProgress | null => {
-        if (!profile?.profile.current_weight || !profile?.profile.target_weight) return null;
+        if (!profile?.profile.current_weight || !profile?.profile.target_weight) return null
 
-        const current = profile.profile.current_weight;
-        const target = profile.profile.target_weight;
-        const start = current + (current > target ? 5 : -5);
+        const current = profile.profile.current_weight
+        const target = profile.profile.target_weight
+        const start = current + (current > target ? 5 : -5)
 
         return {
             current,
@@ -237,90 +176,91 @@ export function useProfile(): UseProfileReturn {
             progress: calculateWeightProgress(current, target, start),
             diff: Math.abs(current - target),
             goalDate: calculateGoalDate(current, target),
-        };
-    }, [profile]);
+        }
+    }, [profile])
 
-    /**
-     * Сгенерировать код доступа
-     */
     const generateCoachCode = useCallback(async (): Promise<string | null> => {
         try {
-            const response = await api.post<{ code: string; expires_at: string }>('/users/coach-access/generate');
-            await fetchCoachAccesses();
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-            return response.code;
+            const res = await generateCoachMutation.mutateAsync()
+            hapticFeedback({ type: 'notification', notificationType: 'success' })
+            return res.code
         } catch (err) {
-            console.error('Failed to generate coach code:', err);
-            return null;
+            console.error('Failed to generate coach code:', err)
+            return null
         }
-    }, [fetchCoachAccesses, hapticFeedback]);
+    }, [generateCoachMutation, hapticFeedback])
 
-    /**
-     * Отозвать доступ
-     */
-    const revokeCoachAccess = useCallback(async (accessId: string) => {
-        try {
-            await api.delete(`/users/coach-access/${accessId}`);
-            await fetchCoachAccesses();
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-        } catch (err) {
-            console.error('Failed to revoke access:', err);
-            throw err;
-        }
-    }, [fetchCoachAccesses, hapticFeedback]);
+    const revokeCoachAccess = useCallback(
+        async (accessId: string) => {
+            try {
+                await revokeCoachMutation.mutateAsync(accessId)
+                hapticFeedback({ type: 'notification', notificationType: 'success' })
+            } catch (err) {
+                console.error('Failed to revoke access:', err)
+                throw err
+            }
+        },
+        [revokeCoachMutation, hapticFeedback],
+    )
 
-    /**
-     * Экспорт данных
-     */
     const exportData = useCallback(async () => {
         try {
-            const response = await api.get<Blob>('/users/export');
-            const url = window.URL.createObjectURL(response);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `fittracker-data-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
+            const response = await usersApi.exportData()
+            const url = window.URL.createObjectURL(response)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `fittracker-data-${new Date().toISOString().split('T')[0]}.json`
+            a.click()
+            window.URL.revokeObjectURL(url)
+            hapticFeedback({ type: 'notification', notificationType: 'success' })
         } catch (err) {
-            console.error('Failed to export data:', err);
-            throw err;
+            console.error('Failed to export data:', err)
+            throw err
         }
-    }, [hapticFeedback]);
+    }, [hapticFeedback])
 
-    /**
-     * Обновить все данные
-     */
     const refresh = useCallback(async () => {
-        setIsLoading(true);
         await Promise.all([
-            fetchProfile(),
-            fetchStats(),
-            fetchCoachAccesses(),
-        ]);
-        setIsLoading(false);
-    }, [fetchProfile, fetchStats, fetchCoachAccesses]);
+            queryClient.invalidateQueries({ queryKey: queryKeys.profile.me }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.profile.stats }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.profile.coachAccess }),
+        ])
+    }, [queryClient])
 
-    // Initial load
-    useEffect(() => {
-        refresh();
-    }, [refresh]);
-
-    return {
-        profile,
-        stats,
-        coachAccesses,
-        isLoading,
-        error,
-        updateProfile,
-        updateSettings,
-        updateWeight,
-        getWeightProgress,
-        generateCoachCode,
-        revokeCoachAccess,
-        exportData,
-        refresh,
-    };
+    return useMemo(
+        () => ({
+            profile,
+            stats,
+            coachAccesses,
+            isLoading,
+            isGeneratingCoachCode: generateCoachMutation.isPending,
+            error,
+            updateProfile,
+            updateSettings,
+            updateWeight,
+            getWeightProgress,
+            generateCoachCode,
+            revokeCoachAccess,
+            exportData,
+            refresh,
+        }),
+        [
+            profile,
+            stats,
+            coachAccesses,
+            isLoading,
+            generateCoachMutation.isPending,
+            error,
+            updateProfile,
+            updateSettings,
+            updateWeight,
+            getWeightProgress,
+            generateCoachCode,
+            revokeCoachAccess,
+            exportData,
+            refresh,
+        ],
+    )
 }
 
-export default useProfile;
+export default useProfile

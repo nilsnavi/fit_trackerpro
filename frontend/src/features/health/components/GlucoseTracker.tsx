@@ -1,9 +1,19 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Modal } from '@shared/ui/Modal';
 import { Button } from '@shared/ui/Button';
 import { useTelegram } from '@shared/hooks/useTelegram';
-import { api } from '@shared/api/client';
 import { cn } from '@shared/lib/cn';
+import type {
+    GlucoseReading,
+    GlucoseStats,
+    GlucoseUnit,
+    GlucoseMeasurementType,
+} from '@features/health/types/metrics';
+import {
+    useGlucoseStatsQuery,
+    useGlucoseReadingsQuery,
+    useAddGlucoseReadingMutation,
+} from '@features/health/hooks/useHealthQueries';
 import {
     Droplets,
     TrendingUp,
@@ -17,33 +27,10 @@ import {
     Dumbbell,
 } from 'lucide-react';
 
-// ============================================
-// TYPES
-// ============================================
+export type { GlucoseReading, GlucoseStats } from '@features/health/types/metrics';
 
-type GlucoseUnit = 'mmol' | 'mgdl';
-type MeasurementType = 'before' | 'after' | 'random';
+type MeasurementType = GlucoseMeasurementType;
 type GlucoseStatus = 'hypo' | 'low' | 'optimal' | 'high' | 'danger';
-
-export interface GlucoseReading {
-    id: number;
-    user_id: number;
-    value: number;
-    unit: GlucoseUnit;
-    measurement_type: MeasurementType;
-    recorded_at: string;
-    workout_id?: number | null;
-    notes?: string;
-    created_at: string;
-}
-
-export interface GlucoseStats {
-    average: number;
-    min: number;
-    max: number;
-    count: number;
-    unit: GlucoseUnit;
-}
 
 interface GlucoseTrackerProps {
     onReadingAdded?: (reading: GlucoseReading) => void;
@@ -517,50 +504,20 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
 }) => {
     const { hapticFeedback } = useTelegram();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [stats, setStats] = useState<GlucoseStats | null>(null);
-    const [recentReadings, setRecentReadings] = useState<GlucoseReading[]>([]);
-    const [lastReading, setLastReading] = useState<GlucoseReading | null>(null);
     const [defaultMeasurementType, setDefaultMeasurementType] = useState<MeasurementType>('random');
 
-    // Fetch stats and recent readings
-    const fetchData = useCallback(async () => {
-        try {
-            // Fetch weekly stats
-            const statsData = await api.get<GlucoseStats>('/health-metrics/glucose/stats?period=7d');
-            setStats(statsData);
+    const statsQuery = useGlucoseStatsQuery('7d');
+    const readingsQuery = useGlucoseReadingsQuery(10);
+    const addReadingMutation = useAddGlucoseReadingMutation();
 
-            // Fetch recent readings
-            const readingsData = await api.get<GlucoseReading[]>('/health-metrics/glucose?limit=10');
-            setRecentReadings(readingsData);
-
-            if (readingsData.length > 0) {
-                setLastReading(readingsData[0]);
-            }
-        } catch (error) {
-            console.error('Failed to fetch glucose data:', error);
-        } finally {
-            // no-op
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    const stats = statsQuery.data ?? null;
+    const recentReadings = readingsQuery.data ?? [];
+    const lastReading = recentReadings[0] ?? null;
 
     const handleSaveReading = async (readingData: Omit<GlucoseReading, 'id' | 'user_id' | 'created_at'>) => {
         try {
-            const response = await api.post<GlucoseReading>('/health-metrics/glucose', readingData);
-
-            // Update local state
-            setRecentReadings((prev) => [response, ...prev]);
-            setLastReading(response);
-
-            // Recalculate stats
-            await fetchData();
-
-            // Notify parent
+            const response = await addReadingMutation.mutateAsync(readingData);
             onReadingAdded?.(response);
-
             hapticFeedback?.success();
         } catch (error) {
             console.error('Failed to save glucose reading:', error);
@@ -695,15 +652,8 @@ interface GlucoseCompactWidgetProps {
 }
 
 export const GlucoseCompactWidget: React.FC<GlucoseCompactWidgetProps> = ({ onClick, className }) => {
-    const [lastReading, setLastReading] = useState<GlucoseReading | null>(null);
-
-    useEffect(() => {
-        api.get<GlucoseReading[]>('/health-metrics/glucose?limit=1')
-            .then((data) => {
-                if (data.length > 0) setLastReading(data[0]);
-            })
-            .catch(console.error);
-    }, []);
+    const { data: readings = [] } = useGlucoseReadingsQuery(1);
+    const lastReading = readings[0] ?? null;
 
     const status = lastReading ? getGlucoseStatus(lastReading.value, lastReading.unit) : null;
     const StatusIcon = status ? GLUCOSE_RANGES_MMOL[status].icon : Droplets;

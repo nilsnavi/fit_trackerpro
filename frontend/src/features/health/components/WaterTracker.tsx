@@ -1,9 +1,18 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from '@shared/ui/Modal';
 import { Button } from '@shared/ui/Button';
 import { useTelegram } from '@shared/hooks/useTelegram';
-import { api } from '@shared/api/client';
 import { cn } from '@shared/lib/cn';
+import type { WaterEntry, WaterGoal, WaterReminder, WaterWeeklyStats } from '@features/health/types/metrics';
+import {
+    useWaterGoalQuery,
+    useWaterReminderQuery,
+    useWaterTodayQuery,
+    useWaterWeeklyStatsQuery,
+    useAddWaterEntryMutation,
+    useUpdateWaterGoalMutation,
+    useUpdateWaterReminderMutation,
+} from '@features/health/hooks/useHealthQueries';
 import {
     GlassWater,
     Plus,
@@ -18,57 +27,7 @@ import {
     CheckCircle2,
 } from 'lucide-react';
 
-// ============================================
-// TYPES
-// ============================================
-
-export interface WaterEntry {
-    id: number;
-    user_id: number;
-    amount: number;
-    recorded_at: string;
-    created_at: string;
-}
-
-export interface WaterGoal {
-    id: number;
-    user_id: number;
-    daily_goal: number;
-    workout_increase: number;
-    is_workout_day: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface WaterReminder {
-    id: number;
-    user_id: number;
-    enabled: boolean;
-    interval_hours: number;
-    start_time: string;
-    end_time: string;
-    quiet_hours_start: string;
-    quiet_hours_end: string;
-    telegram_notifications: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface WaterDailyStats {
-    date: string;
-    total: number;
-    goal: number;
-    percentage: number;
-    is_goal_reached: boolean;
-    entry_count: number;
-}
-
-export interface WaterWeeklyStats {
-    days: WaterDailyStats[];
-    average: number;
-    best_day: WaterDailyStats | null;
-    total_entries: number;
-}
+export type { WaterEntry, WaterGoal, WaterReminder, WaterDailyStats, WaterWeeklyStats } from '@features/health/types/metrics';
 
 interface WaterTrackerProps {
     onWaterAdded?: (entry: WaterEntry) => void;
@@ -743,12 +702,28 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
     const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-    const [currentAmount, setCurrentAmount] = useState(0);
-    const [goal, setGoal] = useState<WaterGoal | null>(null);
-    const [reminder, setReminder] = useState<WaterReminder | null>(null);
-    const [weeklyStats, setWeeklyStats] = useState<WaterWeeklyStats | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [todayEntries, setTodayEntries] = useState<WaterEntry[]>([]);
+    const goalQuery = useWaterGoalQuery();
+    const reminderQuery = useWaterReminderQuery();
+    const todayQuery = useWaterTodayQuery();
+    const weeklyStatsQuery = useWaterWeeklyStatsQuery('7d');
+    const addWaterMutation = useAddWaterEntryMutation();
+    const updateGoalMutation = useUpdateWaterGoalMutation();
+    const updateReminderMutation = useUpdateWaterReminderMutation();
+
+    const goal = goalQuery.data ?? null;
+    const reminder = reminderQuery.data ?? null;
+    const todayEntries = todayQuery.data ?? [];
+    const weeklyStats = weeklyStatsQuery.data ?? null;
+
+    const currentAmount = useMemo(
+        () => todayEntries.reduce((sum, entry) => sum + entry.amount, 0),
+        [todayEntries],
+    );
+
+    const isMutating =
+        addWaterMutation.isPending ||
+        updateGoalMutation.isPending ||
+        updateReminderMutation.isPending;
 
     // Calculate effective goal
     const effectiveGoal = useMemo(() => {
@@ -764,78 +739,33 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
 
     const isGoalReached = currentAmount >= effectiveGoal;
 
-    // Fetch data
-    const fetchData = useCallback(async () => {
-        try {
-            setIsLoading(true);
-
-            // Fetch goal settings
-            const goalData = await api.get<WaterGoal>('/health-metrics/water/goal');
-            setGoal(goalData);
-
-            // Fetch reminder settings
-            const reminderData = await api.get<WaterReminder>('/health-metrics/water/reminder');
-            setReminder(reminderData);
-
-            // Fetch today's entries
-            const todayData = await api.get<WaterEntry[]>('/health-metrics/water/today');
-            setTodayEntries(todayData);
-            setCurrentAmount(todayData.reduce((sum, entry) => sum + entry.amount, 0));
-
-            // Fetch weekly stats
-            const statsData = await api.get<WaterWeeklyStats>('/health-metrics/water/stats?period=7d');
-            setWeeklyStats(statsData);
-        } catch (error) {
-            console.error('Failed to fetch water data:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // Add water entry
     const handleAddWater = async (amount: number) => {
+        const prev = currentAmount;
         try {
-            setIsLoading(true);
-            const response = await api.post<WaterEntry>('/health-metrics/water', {
+            const response = await addWaterMutation.mutateAsync({
                 amount,
-                recorded_at: new Date().toISOString()
+                recorded_at: new Date().toISOString(),
             });
 
-            // Update local state
-            setTodayEntries(prev => [response, ...prev]);
-            setCurrentAmount(prev => {
-                const newAmount = prev + amount;
-                // Show achievement notification if goal just reached
-                if (prev < effectiveGoal && newAmount >= effectiveGoal) {
-                    hapticFeedback?.success();
-                } else {
-                    hapticFeedback?.light();
-                }
-                return newAmount;
-            });
+            const newAmount = prev + amount;
+            if (prev < effectiveGoal && newAmount >= effectiveGoal) {
+                hapticFeedback?.success();
+            } else {
+                hapticFeedback?.light();
+            }
 
-            // Refresh stats
-            await fetchData();
-
-            // Notify parent
             onWaterAdded?.(response);
         } catch (error) {
             console.error('Failed to add water:', error);
             hapticFeedback?.error();
-        } finally {
-            setIsLoading(false);
         }
     };
 
     // Update goal
     const handleUpdateGoal = async (goalData: Partial<WaterGoal>) => {
         try {
-            const response = await api.put<WaterGoal>('/health-metrics/water/goal', goalData);
-            setGoal(response);
+            await updateGoalMutation.mutateAsync(goalData);
             hapticFeedback?.success();
         } catch (error) {
             console.error('Failed to update goal:', error);
@@ -846,8 +776,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
     // Update reminder
     const handleUpdateReminder = async (reminderData: Partial<WaterReminder>) => {
         try {
-            const response = await api.put<WaterReminder>('/health-metrics/water/reminder', reminderData);
-            setReminder(response);
+            await updateReminderMutation.mutateAsync(reminderData);
             hapticFeedback?.success();
         } catch (error) {
             console.error('Failed to update reminder:', error);
@@ -966,10 +895,10 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
                     )}
 
                     {/* Quick Add Buttons */}
-                    <QuickAddButtons onAdd={handleAddWater} disabled={isLoading} />
+                    <QuickAddButtons onAdd={handleAddWater} disabled={isMutating} />
 
                     {/* Custom Input */}
-                    <CustomAmountInput onAdd={handleAddWater} disabled={isLoading} />
+                    <CustomAmountInput onAdd={handleAddWater} disabled={isMutating} />
 
                     {/* Action Buttons */}
                     <div className="grid grid-cols-3 gap-3">
@@ -1081,21 +1010,13 @@ interface WaterCompactWidgetProps {
 }
 
 export const WaterCompactWidget: React.FC<WaterCompactWidgetProps> = ({ onClick, className }) => {
-    const [currentAmount, setCurrentAmount] = useState(0);
-    const [goal, setGoal] = useState<WaterGoal | null>(null);
-
-    useEffect(() => {
-        // Fetch initial data
-        Promise.all([
-            api.get<WaterGoal>('/health-metrics/water/goal'),
-            api.get<WaterEntry[]>('/health-metrics/water/today')
-        ])
-            .then(([goalData, entriesData]) => {
-                setGoal(goalData);
-                setCurrentAmount(entriesData.reduce((sum, entry) => sum + entry.amount, 0));
-            })
-            .catch(console.error);
-    }, []);
+    const goalQuery = useWaterGoalQuery();
+    const todayQuery = useWaterTodayQuery();
+    const goal = goalQuery.data ?? null;
+    const currentAmount = useMemo(
+        () => (todayQuery.data ?? []).reduce((sum, entry) => sum + entry.amount, 0),
+        [todayQuery.data],
+    );
 
     const effectiveGoal = goal
         ? goal.is_workout_day

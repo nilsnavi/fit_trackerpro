@@ -1,11 +1,12 @@
 import { api } from '@shared/api/client'
+import type { UserProfile } from '@features/profile/types/profile'
 
 export const authApi = {
-    getCurrentUser() {
-        return api.get('/auth/me')
+    getCurrentUser(): Promise<UserProfile> {
+        return api.get<UserProfile>('/auth/me')
     },
-    updateCurrentUser(payload: unknown) {
-        return api.put('/auth/me', payload)
+    updateCurrentUser(payload: unknown): Promise<UserProfile> {
+        return api.put<UserProfile>('/auth/me', payload)
     },
     refreshToken() {
         return api.post('/auth/refresh')

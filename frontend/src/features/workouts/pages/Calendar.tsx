@@ -1,23 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { cn } from '@shared/lib/cn';
 import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import { Modal } from '@shared/ui/Modal';
-import { api } from '@shared/api/client';
-import { WorkoutType } from '@shared/types';
+import type { CalendarWorkout } from '@features/workouts/types/workouts';
 import { WORKOUT_TYPE_LABELS } from '@/features/workouts/config/workoutTypeConfigs';
-
-// Types
-interface CalendarWorkout {
-    id: number;
-    title: string;
-    type: WorkoutType;
-    status: 'completed' | 'partial' | 'missed' | 'planned';
-    duration_minutes: number;
-    calories_burned?: number;
-    scheduled_at: string;
-    completed_at?: string;
-}
+import { useWorkoutCalendarQuery } from '@features/workouts/hooks/useWorkoutCalendarQuery';
 
 interface DayData {
     date: Date;
@@ -100,44 +88,25 @@ const formatDate = (date: Date): string => {
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 };
 
-// API functions
-const fetchMonthWorkouts = async (year: number, month: number): Promise<CalendarWorkout[]> => {
-    try {
-        const response = await api.get<CalendarWorkout[]>(`/workouts/calendar`, {
-            year,
-            month: month + 1
-        });
-        return response || [];
-    } catch (error) {
-        console.error('Failed to fetch workouts:', error);
-        // Return mock data for development
-        return generateMockWorkouts(year, month);
-    }
-};
+const calculateStreak = (workoutList: CalendarWorkout[]): number => {
+    const today = new Date();
+    let streak = 0;
+    const checkDate = new Date(today);
+    let shouldContinue = true;
 
-const generateMockWorkouts = (year: number, month: number): CalendarWorkout[] => {
-    const workouts: CalendarWorkout[] = [];
-    const statuses: Array<'completed' | 'partial' | 'missed' | 'planned'> = ['completed', 'partial', 'missed', 'planned'];
-    const types: WorkoutType[] = ['cardio', 'strength', 'flexibility', 'sports'];
-
-    for (let day = 1; day <= 28; day++) {
-        if (Math.random() > 0.6) {
-            const numWorkouts = Math.floor(Math.random() * 2) + 1;
-            for (let i = 0; i < numWorkouts; i++) {
-                workouts.push({
-                    id: day * 10 + i,
-                    title: `Тренировка ${types[Math.floor(Math.random() * types.length)]}`,
-                    type: types[Math.floor(Math.random() * types.length)],
-                    status: statuses[Math.floor(Math.random() * statuses.length)],
-                    duration_minutes: Math.floor(Math.random() * 60) + 30,
-                    calories_burned: Math.floor(Math.random() * 400) + 200,
-                    scheduled_at: new Date(year, month, day, 18, 0).toISOString(),
-                    completed_at: Math.random() > 0.5 ? new Date(year, month, day, 19, 30).toISOString() : undefined
-                });
-            }
+    while (shouldContinue) {
+        const hasWorkout = workoutList.some(
+            (w) => w.status === 'completed' && isSameDay(new Date(w.scheduled_at), checkDate),
+        );
+        if (hasWorkout) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+            shouldContinue = false;
         }
     }
-    return workouts;
+
+    return streak;
 };
 
 // Components
@@ -428,64 +397,29 @@ export const Calendar: React.FC = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [workouts, setWorkouts] = useState<CalendarWorkout[]>([]);
-    const [stats, setStats] = useState<MonthStats>({
-        totalWorkouts: 0,
-        completedWorkouts: 0,
-        currentStreak: 0,
-        volumeChange: 0,
-        totalDuration: 0
-    });
-    const [isLoading, setIsLoading] = useState(false);
 
-    // Load workouts for current month
-    useEffect(() => {
-        const loadWorkouts = async () => {
-            setIsLoading(true);
-            const data = await fetchMonthWorkouts(currentMonth.getFullYear(), currentMonth.getMonth());
-            setWorkouts(data);
+    const calendarYear = currentMonth.getFullYear();
+    const calendarMonthIndex = currentMonth.getMonth();
+    const {
+        data: workouts = [],
+        isPending: isLoading,
+        isError,
+        refetch,
+    } = useWorkoutCalendarQuery(calendarYear, calendarMonthIndex);
 
-            // Calculate stats
-            const completed = data.filter(w => w.status === 'completed').length;
-            const totalDuration = data
-                .filter(w => w.status === 'completed')
-                .reduce((sum, w) => sum + w.duration_minutes, 0);
-
-            setStats({
-                totalWorkouts: data.length,
-                completedWorkouts: completed,
-                currentStreak: calculateStreak(data),
-                volumeChange: Math.floor(Math.random() * 20) - 5, // Mock data
-                totalDuration
-            });
-            setIsLoading(false);
+    const stats = useMemo((): MonthStats => {
+        const completed = workouts.filter((w) => w.status === 'completed').length;
+        const totalDuration = workouts
+            .filter((w) => w.status === 'completed')
+            .reduce((sum, w) => sum + w.duration_minutes, 0);
+        return {
+            totalWorkouts: workouts.length,
+            completedWorkouts: completed,
+            currentStreak: calculateStreak(workouts),
+            volumeChange: 0,
+            totalDuration,
         };
-
-        loadWorkouts();
-    }, [currentMonth]);
-
-    // Calculate streak
-    const calculateStreak = (workouts: CalendarWorkout[]): number => {
-        const today = new Date();
-        let streak = 0;
-        const checkDate = new Date(today);
-        let shouldContinue = true;
-
-        while (shouldContinue) {
-            const hasWorkout = workouts.some(w =>
-                w.status === 'completed' &&
-                isSameDay(new Date(w.scheduled_at), checkDate)
-            );
-            if (hasWorkout) {
-                streak++;
-                checkDate.setDate(checkDate.getDate() - 1);
-            } else {
-                shouldContinue = false;
-            }
-        }
-
-        return streak;
-    };
+    }, [workouts]);
 
     // Calendar days with workouts
     const calendarDays = useMemo(() => {
@@ -557,6 +491,13 @@ export const Calendar: React.FC = () => {
                 {isLoading ? (
                     <div className="bg-telegram-secondary-bg rounded-2xl p-8 flex items-center justify-center">
                         <div className="skeleton w-8 h-8 rounded-full" />
+                    </div>
+                ) : isError ? (
+                    <div className="bg-telegram-secondary-bg rounded-2xl p-6 text-center space-y-3">
+                        <p className="text-sm text-telegram-hint">Не удалось загрузить тренировки за месяц</p>
+                        <Button variant="secondary" size="sm" onClick={() => void refetch()}>
+                            Повторить
+                        </Button>
                     </div>
                 ) : (
                     <CalendarGrid days={calendarDays} onDayClick={handleDayClick} />

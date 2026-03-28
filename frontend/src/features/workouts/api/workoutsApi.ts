@@ -6,6 +6,7 @@ import type {
     WorkoutCompleteRequest,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
+    CalendarWorkout,
 } from '@features/workouts/types/workouts'
 
 export const workoutsApi = {
@@ -20,6 +21,10 @@ export const workoutsApi = {
 
     getHistoryItem(workoutId: number): Promise<WorkoutHistoryItem> {
         return api.get<WorkoutHistoryItem>(`/workouts/history/${workoutId}`)
+    },
+
+    getCalendarMonth(params: { year: number; month: number }): Promise<CalendarWorkout[]> {
+        return api.get<CalendarWorkout[]>('/workouts/calendar', params)
     },
 
     createTemplate(payload: WorkoutTemplateCreateRequest) {

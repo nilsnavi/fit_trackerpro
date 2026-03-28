@@ -1,268 +1,164 @@
 /**
- * useAchievements Hook
- * 
- * Хук для работы с системой достижений FitTracker Pro.
- * Предоставляет методы для получения достижений, проверки прогресса,
- * отслеживания разблокировок и работы с уведомлениями.
+ * useAchievements — серверные данные достижений через TanStack Query;
+ * подписки на разблокировки и смена категории списка остаются в хуке (UI-слой).
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '@shared/api/client';
-import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
+import { queryKeys } from '@shared/api/queryKeys'
+import { achievementsApi } from '@features/achievements/api/achievementsApi'
+import {
+    useAchievementsListQuery,
+    useAchievementUserStatsQuery,
+} from '@features/achievements/hooks/useAchievementQueries'
 import type {
     Achievement,
     AchievementCategory,
+    AchievementUnlockData,
     UserAchievement,
     UserAchievementStats,
-    AchievementUnlockData,
-} from '@features/achievements/components';
+} from '@features/achievements/components'
 
 export interface UseAchievementsReturn {
-    /** Список всех достижений */
-    achievements: Achievement[];
-    /** Статистика пользователя */
-    userStats: UserAchievementStats | null;
-    /** Состояние загрузки */
-    isLoading: boolean;
-    /** Ошибка */
-    error: string | null;
-    /** Получить достижения по категории */
-    fetchAchievements: (category?: AchievementCategory) => Promise<void>;
-    /** Обновить статистику пользователя */
-    fetchUserStats: () => Promise<void>;
-    /** Проверить и забрать достижение */
-    claimAchievement: (achievementId: number) => Promise<AchievementUnlockData | null>;
-    /** Проверить прогресс достижений */
-    checkProgress: () => Promise<void>;
-    /** Получить достижение по ID */
-    getAchievementById: (id: number) => Achievement | undefined;
-    /** Получить прогресс достижения пользователя */
-    getUserAchievement: (achievementId: number) => UserAchievement | undefined;
-    /** Подписаться на уведомления о новых достижениях */
-    onAchievementUnlocked: (callback: (data: AchievementUnlockData) => void) => () => void;
-    /** Принудительно проверить новые достижения */
-    checkForNewAchievements: () => Promise<void>;
+    achievements: Achievement[]
+    userStats: UserAchievementStats | null
+    isLoading: boolean
+    error: string | null
+    fetchAchievements: (category?: AchievementCategory) => void
+    fetchUserStats: () => Promise<void>
+    claimAchievement: (achievementId: number) => Promise<AchievementUnlockData | null>
+    checkProgress: () => Promise<void>
+    getAchievementById: (id: number) => Achievement | undefined
+    getUserAchievement: (achievementId: number) => UserAchievement | undefined
+    onAchievementUnlocked: (callback: (data: AchievementUnlockData) => void) => () => void
+    checkForNewAchievements: () => Promise<void>
 }
 
-/**
- * Хук для работы с системой достижений
- * 
- * @example
- * // Базовое использование
- * const { achievements, userStats, isLoading } = useAchievements();
- * 
- * // С фильтрацией по категории
- * const { achievements, fetchAchievements } = useAchievements();
- * useEffect(() => {
- *     fetchAchievements('workouts');
- * }, []);
- * 
- * // С отслеживанием разблокировок
- * const { onAchievementUnlocked } = useAchievements();
- * useEffect(() => {
- *     return onAchievementUnlocked((data) => {
- *         showToast(`Получено: ${data.achievement?.name}`);
- *     });
- * }, []);
- */
 export function useAchievements(): UseAchievementsReturn {
-    const { hapticFeedback } = useTelegramWebApp();
+    const queryClient = useQueryClient()
+    const { hapticFeedback } = useTelegramWebApp()
+    const [listCategory, setListCategory] = useState<AchievementCategory | 'all'>('all')
 
-    // State
-    const [achievements, setAchievements] = useState<Achievement[]>([]);
-    const [userStats, setUserStats] = useState<UserAchievementStats | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const achievementsQuery = useAchievementsListQuery(listCategory)
+    const userStatsQuery = useAchievementUserStatsQuery({ refetchInterval: 30_000 })
 
-    // Refs для отслеживания
-    const unlockedCallbacks = useRef<((data: AchievementUnlockData) => void)[]>([]);
-    const previousCompletedIds = useRef<Set<number>>(new Set());
-    const pollingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+    const unlockedCallbacks = useRef<((data: AchievementUnlockData) => void)[]>([])
+    const previousCompletedIds = useRef<Set<number>>(new Set())
+    const isFirstUserStatsSync = useRef(true)
 
-    /**
-     * Получить список достижений
-     */
-    const fetchAchievements = useCallback(async (category?: AchievementCategory) => {
-        try {
-            setIsLoading(true);
-            setError(null);
+    useEffect(() => {
+        const items = userStatsQuery.data?.items
+        if (!items) return
 
-            const params = category ? { category } : undefined;
-            const response = await api.get<{
-                items: Achievement[];
-                total: number;
-                categories: string[];
-            }>('/achievements', params);
+        const completedIds = new Set(
+            items.filter((ua) => ua.is_completed).map((ua) => ua.achievement_id),
+        )
 
-            setAchievements(response.items);
-        } catch (err) {
-            setError('Не удалось загрузить достижения');
-            console.error('Failed to fetch achievements:', err);
-        } finally {
-            setIsLoading(false);
+        if (isFirstUserStatsSync.current) {
+            previousCompletedIds.current = completedIds
+            isFirstUserStatsSync.current = false
+            return
         }
-    }, []);
 
-    /**
-     * Получить статистику пользователя
-     */
-    const fetchUserStats = useCallback(async () => {
-        try {
-            const response = await api.get<UserAchievementStats>('/achievements/user');
-            setUserStats(response);
+        const newUnlocks = items.filter(
+            (ua) => ua.is_completed && !previousCompletedIds.current.has(ua.achievement_id),
+        )
 
-            // Сохраняем ID завершенных достижений для отслеживания новых
-            if (response?.items) {
-                previousCompletedIds.current = new Set(
-                    response.items
-                        .filter(ua => ua.is_completed)
-                        .map(ua => ua.achievement_id)
-                );
+        newUnlocks.forEach((ua) => {
+            const unlockData: AchievementUnlockData = {
+                unlocked: true,
+                achievement: ua.achievement,
+                points_earned: ua.achievement.points,
+                new_total_points: userStatsQuery.data?.total_points ?? 0,
+                message: `Достижение разблокировано: ${ua.achievement.name}`,
             }
-        } catch (err) {
-            console.error('Failed to fetch user stats:', err);
-        }
-    }, []);
+            unlockedCallbacks.current.forEach((cb) => cb(unlockData))
+        })
 
-    /**
-     * Забрать достижение
-     */
-    const claimAchievement = useCallback(async (
-        achievementId: number
-    ): Promise<AchievementUnlockData | null> => {
-        try {
-            const response = await api.post<AchievementUnlockData>(
-                `/achievements/${achievementId}/claim`
-            );
+        previousCompletedIds.current = completedIds
+    }, [userStatsQuery.data])
 
+    const claimMutation = useMutation({
+        mutationFn: (achievementId: number) => achievementsApi.claim(achievementId),
+        onSuccess: async (response) => {
             if (response.unlocked) {
-                // Haptic feedback
-                hapticFeedback({ type: 'notification', notificationType: 'success' });
-
-                // Уведомляем подписчиков
-                unlockedCallbacks.current.forEach(callback => callback(response));
-
-                // Обновляем статистику
-                await fetchUserStats();
+                hapticFeedback({ type: 'notification', notificationType: 'success' })
+                unlockedCallbacks.current.forEach((cb) => cb(response))
             }
+            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
+        },
+    })
 
-            return response;
-        } catch (err) {
-            console.error('Failed to claim achievement:', err);
-            return null;
-        }
-    }, [fetchUserStats, hapticFeedback]);
+    const checkProgressMutation = useMutation({
+        mutationFn: () => achievementsApi.checkProgress(),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
+        },
+    })
 
-    /**
-     * Проверить прогресс достижений
-     */
+    const achievements = achievementsQuery.data?.items ?? []
+    const userStats = userStatsQuery.data ?? null
+
+    const fetchAchievements = useCallback((category?: AchievementCategory) => {
+        setListCategory(category ?? 'all')
+    }, [])
+
+    const fetchUserStats = useCallback(async () => {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
+    }, [queryClient])
+
+    const claimAchievement = useCallback(
+        async (achievementId: number): Promise<AchievementUnlockData | null> => {
+            try {
+                return await claimMutation.mutateAsync(achievementId)
+            } catch (err) {
+                console.error('Failed to claim achievement:', err)
+                return null
+            }
+        },
+        [claimMutation],
+    )
+
     const checkProgress = useCallback(async () => {
         try {
-            await api.post('/achievements/check-progress');
-            await fetchUserStats();
+            await checkProgressMutation.mutateAsync()
         } catch (err) {
-            console.error('Failed to check progress:', err);
+            console.error('Failed to check progress:', err)
         }
-    }, [fetchUserStats]);
+    }, [checkProgressMutation])
 
-    /**
-     * Получить достижение по ID
-     */
-    const getAchievementById = useCallback((id: number): Achievement | undefined => {
-        return achievements.find(a => a.id === id);
-    }, [achievements]);
+    const getAchievementById = useCallback(
+        (id: number): Achievement | undefined => achievements.find((a) => a.id === id),
+        [achievements],
+    )
 
-    /**
-     * Получить прогресс достижения пользователя
-     */
-    const getUserAchievement = useCallback((achievementId: number): UserAchievement | undefined => {
-        return userStats?.items.find(ua => ua.achievement_id === achievementId);
-    }, [userStats]);
+    const getUserAchievement = useCallback(
+        (achievementId: number): UserAchievement | undefined =>
+            userStats?.items.find((ua) => ua.achievement_id === achievementId),
+        [userStats],
+    )
 
-    /**
-     * Подписаться на уведомления о разблокировке
-     */
     const onAchievementUnlocked = useCallback(
         (callback: (data: AchievementUnlockData) => void): (() => void) => {
-            unlockedCallbacks.current.push(callback);
-
-            // Возвращаем функцию отписки
+            unlockedCallbacks.current.push(callback)
             return () => {
-                const index = unlockedCallbacks.current.indexOf(callback);
-                if (index > -1) {
-                    unlockedCallbacks.current.splice(index, 1);
-                }
-            };
-        },
-        []
-    );
-
-    /**
-     * Проверить новые достижения
-     */
-    const checkForNewAchievements = useCallback(async () => {
-        try {
-            const response = await api.get<UserAchievementStats>('/achievements/user');
-
-            if (!response?.items) return;
-
-            // Находим новые разблокированные достижения
-            const newUnlocks = response.items.filter(ua => {
-                const isNewlyCompleted = ua.is_completed &&
-                    !previousCompletedIds.current.has(ua.achievement_id);
-                return isNewlyCompleted;
-            });
-
-            // Обновляем статистику
-            setUserStats(response);
-
-            // Обновляем отслеживаемые ID
-            previousCompletedIds.current = new Set(
-                response.items
-                    .filter(ua => ua.is_completed)
-                    .map(ua => ua.achievement_id)
-            );
-
-            // Уведомляем о новых достижениях
-            newUnlocks.forEach(ua => {
-                const unlockData: AchievementUnlockData = {
-                    unlocked: true,
-                    achievement: ua.achievement,
-                    points_earned: ua.achievement.points,
-                    new_total_points: response.total_points,
-                    message: `Достижение разблокировано: ${ua.achievement.name}`,
-                };
-
-                unlockedCallbacks.current.forEach(callback => callback(unlockData));
-            });
-        } catch (err) {
-            console.error('Failed to check for new achievements:', err);
-        }
-    }, []);
-
-    // Автоматическая загрузка при монтировании
-    useEffect(() => {
-        fetchAchievements();
-        fetchUserStats();
-    }, [fetchAchievements, fetchUserStats]);
-
-    // Периодическая проверка новых достижений (каждые 30 секунд)
-    useEffect(() => {
-        pollingInterval.current = setInterval(() => {
-            checkForNewAchievements();
-        }, 30000);
-
-        return () => {
-            if (pollingInterval.current) {
-                clearInterval(pollingInterval.current);
+                const i = unlockedCallbacks.current.indexOf(callback)
+                if (i > -1) unlockedCallbacks.current.splice(i, 1)
             }
-        };
-    }, [checkForNewAchievements]);
+        },
+        [],
+    )
+
+    const checkForNewAchievements = useCallback(async () => {
+        await userStatsQuery.refetch()
+    }, [userStatsQuery])
 
     return {
         achievements,
         userStats,
-        isLoading,
-        error,
+        isLoading: achievementsQuery.isPending,
+        error:
+            achievementsQuery.error != null ? 'Не удалось загрузить достижения' : null,
         fetchAchievements,
         fetchUserStats,
         claimAchievement,
@@ -271,7 +167,7 @@ export function useAchievements(): UseAchievementsReturn {
         getUserAchievement,
         onAchievementUnlocked,
         checkForNewAchievements,
-    };
+    }
 }
 
-export default useAchievements;
+export default useAchievements

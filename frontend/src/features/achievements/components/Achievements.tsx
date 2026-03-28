@@ -15,7 +15,10 @@ import { ProgressBar } from '@shared/ui/ProgressBar';
 import { Modal } from '@shared/ui/Modal';
 import { Button } from '@shared/ui/Button';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
-import { api } from '@shared/api/client';
+import {
+    useAchievementsListQuery,
+    useAchievementUserStatsQuery,
+} from '@features/achievements/hooks/useAchievementQueries';
 
 // ============================================
 // Types
@@ -639,12 +642,25 @@ export const Achievements: React.FC<AchievementsProps> = ({
 }) => {
     const { hapticFeedback } = useTelegramWebApp();
 
-    // State
-    const [achievements, setAchievements] = useState<Achievement[]>([]);
-    const [userStats, setUserStats] = useState<UserAchievementStats | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>(category || 'all');
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (category) setSelectedCategory(category);
+    }, [category]);
+
+    const achievementsQuery = useAchievementsListQuery(selectedCategory);
+    const userStatsQuery = useAchievementUserStatsQuery();
+
+    const achievements = achievementsQuery.data?.items ?? [];
+    const userStats = userStatsQuery.data ?? null;
+    const isLoading = achievementsQuery.isPending || userStatsQuery.isPending;
+    const error =
+        achievementsQuery.error != null ? 'Не удалось загрузить достижения' : null;
+
+    const refetchAchievements = useCallback(() => {
+        void achievementsQuery.refetch();
+        void userStatsQuery.refetch();
+    }, [achievementsQuery, userStatsQuery]);
 
     // Modal state
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
@@ -652,39 +668,6 @@ export const Achievements: React.FC<AchievementsProps> = ({
     const [unlockedPoints, setUnlockedPoints] = useState(0);
     void setUnlockedAchievement;
     void setUnlockedPoints;
-
-    // Fetch achievements
-    const fetchAchievements = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            const params = selectedCategory !== 'all' ? { category: selectedCategory } : undefined;
-            const response = await api.get<{ items: Achievement[]; total: number; categories: string[] }>(
-                '/achievements',
-                params
-            );
-            setAchievements(response.items);
-        } catch (err) {
-            setError('Не удалось загрузить достижения');
-            console.error('Failed to fetch achievements:', err);
-        }
-    }, [selectedCategory]);
-
-    // Fetch user achievements
-    const fetchUserStats = useCallback(async () => {
-        try {
-            const response = await api.get<UserAchievementStats>('/achievements/user');
-            setUserStats(response);
-        } catch (err) {
-            console.error('Failed to fetch user achievements:', err);
-        }
-    }, []);
-
-    // Initial load
-    useEffect(() => {
-        Promise.all([fetchAchievements(), fetchUserStats()]).finally(() => {
-            setIsLoading(false);
-        });
-    }, [fetchAchievements, fetchUserStats]);
 
     // Group achievements by category
     const groupedAchievements = useMemo(() => {
@@ -746,7 +729,7 @@ export const Achievements: React.FC<AchievementsProps> = ({
                     </svg>
                 </div>
                 <p className="text-telegram-text mb-2">{error}</p>
-                <Button variant="secondary" onClick={fetchAchievements}>
+                <Button variant="secondary" onClick={refetchAchievements}>
                     Попробовать снова
                 </Button>
             </div>

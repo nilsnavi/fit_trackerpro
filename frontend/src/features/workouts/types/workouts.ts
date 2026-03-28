@@ -1,3 +1,5 @@
+import type { WorkoutType } from '@shared/types'
+
 export type BackendWorkoutType = 'cardio' | 'strength' | 'flexibility' | 'mixed'
 export type WorkoutStartType = BackendWorkoutType | 'custom'
 
@@ -80,4 +82,15 @@ export interface WorkoutHistoryResponse {
     page_size: number
     date_from?: string
     date_to?: string
+}
+
+export interface CalendarWorkout {
+    id: number
+    title: string
+    type: WorkoutType
+    status: 'completed' | 'partial' | 'missed' | 'planned'
+    duration_minutes: number
+    calories_burned?: number
+    scheduled_at: string
+    completed_at?: string
 }

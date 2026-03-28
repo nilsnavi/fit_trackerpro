@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { cn } from '@shared/lib/cn';
 import { Button, Input, Modal, ProgressBar, Chip, ChipGroup } from '@shared/ui';
-import { api } from '@shared/api/client';
 import type { ExerciseCategory, EquipmentType, RiskType, DifficultyLevel } from '@shared/types';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
+import { useCreateCustomExerciseMutation } from '@features/exercises/hooks/useExerciseMutations';
 
 // ============================================
 // Types & Constants
@@ -124,6 +124,7 @@ const validateFile = (file: File | null): string | undefined => {
 
 export const AddExercise: React.FC = () => {
     const tg = useTelegramWebApp()
+    const createCustomMutation = useCreateCustomExerciseMutation()
 
     // Form state
     const [formData, setFormData] = useState<ExerciseFormData>({
@@ -365,8 +366,7 @@ export const AddExercise: React.FC = () => {
                 setUploadProgress(prev => Math.min(prev + 10, 90));
             }, 200);
 
-            // Submit to API
-            await api.post('/exercises/custom', uploadData);
+            await createCustomMutation.mutateAsync(uploadData);
 
             clearInterval(progressInterval);
             setUploadProgress(100);
