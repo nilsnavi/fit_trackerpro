@@ -7,7 +7,7 @@ import {
     Wind,
 } from 'lucide-react'
 import type { WorkoutType } from '@/types'
-import type { WorkoutMode, WorkoutSessionField, WorkoutTypeConfig } from '../types/workoutTypeConfig'
+import type { WorkoutSessionField, WorkoutTypeConfig } from '../types/workoutTypeConfig'
 
 const cardio: WorkoutTypeConfig = {
     id: 'cardio',
@@ -284,25 +284,28 @@ const other: WorkoutTypeConfig = {
     },
 }
 
-/** Все определения типов (единый реестр). */
-export const WORKOUT_TYPE_DEFINITIONS: WorkoutTypeConfig[] = [
+/**
+ * Реестр режимов быстрого старта (`/workouts/mode/:mode`).
+ * Новый режим: добавьте объект в этот map — тип `WorkoutMode` и страница подхватятся без копипасты.
+ */
+export const WORKOUT_TYPE_CONFIGS = {
     cardio,
     strength,
     functional,
     yoga,
+} as const satisfies Record<string, WorkoutTypeConfig>
+
+export type WorkoutMode = keyof typeof WORKOUT_TYPE_CONFIGS
+
+/** Порядок карточек режимов на экране «Тренировки». */
+export const WORKOUT_MODE_ORDER = ['strength', 'cardio', 'functional', 'yoga'] as const satisfies readonly WorkoutMode[]
+
+/** Все определения типов (режимы + типы только для списка/фильтров). */
+export const WORKOUT_TYPE_DEFINITIONS: WorkoutTypeConfig[] = [
+    ...WORKOUT_MODE_ORDER.map((m) => WORKOUT_TYPE_CONFIGS[m]),
     sports,
     other,
 ]
-
-/** Порядок карточек режимов на экране «Тренировки». */
-export const WORKOUT_MODE_ORDER: WorkoutMode[] = ['strength', 'cardio', 'functional', 'yoga']
-
-export const WORKOUT_TYPE_CONFIGS: Record<WorkoutMode, WorkoutTypeConfig> = {
-    cardio,
-    strength,
-    functional,
-    yoga,
-}
 
 /** Конфиг для фильтров и строк истории по значению `WorkoutType` из БД/клиента. */
 export const WORKOUT_LIST_TYPE_CONFIG: Record<WorkoutType, WorkoutTypeConfig> = {
