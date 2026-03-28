@@ -1,5 +1,5 @@
 import { PropsWithChildren, createContext, useContext, useEffect, useMemo } from 'react'
-import { Theme, useTheme } from '@hooks/useTheme'
+import { Theme, useTheme } from '@shared/hooks/useTheme'
 import { useTelegramContext } from './TelegramProvider'
 
 interface ThemeProviderValue {

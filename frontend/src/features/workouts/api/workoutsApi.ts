@@ -1,4 +1,4 @@
-import { api } from '@/services/api'
+import { api } from '@shared/api/client'
 import type {
     WorkoutTemplateCreateRequest,
     WorkoutStartRequest,
@@ -6,7 +6,7 @@ import type {
     WorkoutCompleteRequest,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
-} from '@/types/workouts'
+} from '@features/workouts/types/workouts'
 
 export const workoutsApi = {
     getHistory(params?: {

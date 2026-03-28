@@ -24,30 +24,6 @@
             "@/*": [
                 "src/*"
             ],
-            "@components/*": [
-                "src/components/*"
-            ],
-            "@pages/*": [
-                "src/pages/*"
-            ],
-            "@hooks/*": [
-                "src/hooks/*"
-            ],
-            "@stores/*": [
-                "src/stores/*"
-            ],
-            "@services/*": [
-                "src/services/*"
-            ],
-            "@types/*": [
-                "src/types/*"
-            ],
-            "@utils/*": [
-                "src/utils/*"
-            ],
-            "@styles/*": [
-                "src/styles/*"
-            ],
             "@app/*": [
                 "src/app/*"
             ],

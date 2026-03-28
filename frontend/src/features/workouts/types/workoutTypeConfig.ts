@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
-import type { WorkoutType } from '@/types'
-import type { BackendWorkoutType } from '@/types/workouts'
+import type { WorkoutType } from '@shared/types'
+import type { BackendWorkoutType } from '@features/workouts/types/workouts'
 
 /** Поля сессии / упражнения, которыми можно управлять из конфига (рендер форм, итоги). */
 export type WorkoutSessionField =
