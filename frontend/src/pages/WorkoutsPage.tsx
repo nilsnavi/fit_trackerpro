@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Dumbbell, Clock, Flame, ChevronRight } from 'lucide-react'
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
-import { WORKOUT_TYPE_CONFIGS } from '@/features/workouts/config/workoutTypeConfigs'
+import { WORKOUT_MODE_ORDER, WORKOUT_TYPE_CONFIGS } from '@/features/workouts/config/workoutTypeConfigs'
 import { WorkoutMode } from '@/features/workouts/types/workoutTypeConfig'
 import { useWorkoutHistoryQuery } from '@/features/workouts/hooks/useWorkoutHistoryQuery'
 import type { WorkoutHistoryItem } from '@/types/workouts'
@@ -17,8 +17,6 @@ const workoutTypes: { type: WorkoutType; label: string; color: string }[] = [
     { type: 'sports', label: 'Спорт', color: 'bg-purple-500' },
     { type: 'other', label: 'Другое', color: 'bg-gray-500' },
 ]
-
-const workoutModeCards: WorkoutMode[] = ['strength', 'cardio', 'functional', 'yoga']
 
 interface WorkoutListItem {
     id: number
@@ -181,7 +179,7 @@ export function WorkoutsPage() {
             <div className="space-y-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Режимы тренировки</h2>
                 <div className="grid grid-cols-2 gap-3">
-                    {workoutModeCards.map((mode) => {
+                    {WORKOUT_MODE_ORDER.map((mode) => {
                         const modeConfig = WORKOUT_TYPE_CONFIGS[mode]
                         const ModeIcon = modeConfig.icon
                         return (

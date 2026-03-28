@@ -12,10 +12,9 @@
 - [WorkoutsPage.tsx](file://frontend/src/pages/WorkoutsPage.tsx)
 - [Catalog.tsx](file://frontend/src/pages/Catalog.tsx)
 - [AddExercise.tsx](file://frontend/src/pages/AddExercise.tsx)
-- [WorkoutStrength.tsx](file://frontend/src/pages/WorkoutStrength.tsx)
-- [WorkoutCardio.tsx](file://frontend/src/pages/WorkoutCardio.tsx)
-- [WorkoutYoga.tsx](file://frontend/src/pages/WorkoutYoga.tsx)
-- [WorkoutFunctional.tsx](file://frontend/src/pages/WorkoutFunctional.tsx)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [WorkoutDetailPage.tsx](file://frontend/src/pages/WorkoutDetailPage.tsx)
+- [workoutTypeConfigs.ts](file://frontend/src/features/workouts/config/workoutTypeConfigs.ts)
 - [RestTimer.tsx](file://frontend/src/components/workout/RestTimer.tsx)
 - [useTimer.ts](file://frontend/src/hooks/useTimer.ts)
 - [cd723942379e_initial_schema.py](file://database/migrations/versions/cd723942379e_initial_schema.py)
@@ -33,7 +32,7 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive documentation for the workout tracking system implementation. It covers the complete workflow from workout template creation to session completion, including exercise selection, timer management, rest period handling, and progress tracking. The backend API exposes endpoints for workout management, template CRUD operations, and session logging. The frontend includes components for workout browsing, exercise selection, and real-time workout execution across different workout types (strength, cardio, yoga, functional).
+This document provides comprehensive documentation for the workout tracking system implementation. It covers the workflow from workout template creation to session completion, including exercise selection, timers, and progress tracking. The backend API exposes endpoints for workout management, template CRUD operations, and session logging. The frontend includes workout browsing (`WorkoutsPage`), a single mode-driven start flow (`WorkoutModePage` + `workoutTypeConfigs.ts`), template building (`WorkoutBuilder`), and history detail (`WorkoutDetailPage`).
 
 ## Project Structure
 The system follows a clear separation of concerns with distinct backend and frontend layers:
@@ -225,35 +224,22 @@ WorkoutTemplate --> ExerciseInTemplate : contains
 
 ### Real-Time Workout Execution
 
-The system provides specialized workout screens for different exercise types with integrated timing and progression tracking:
+The app starts sessions from **mode cards** on `WorkoutsPage`, then `WorkoutModePage` applies the selected `WorkoutMode` config (presets, titles, backend `type`) and calls `POST /workouts/start`. The user is routed to `WorkoutDetailPage` for the new session id. Rich per-type live tracking (sets, rest modals, equipment UI) can evolve on top of this unified entry; `RestTimer` is available as a shared component (see `RestTimerDemo`).
 
 ```mermaid
 flowchart TD
-Start([Workout Session Start]) --> TypeSelection["Select Workout Type"]
-TypeSelection --> Strength["Strength Training"]
-TypeSelection --> Cardio["Cardio Training"]
-TypeSelection --> Yoga["Yoga/Meditation"]
-TypeSelection --> Functional["HIIT/Functional"]
-Strength --> ExerciseCycle["Exercise Cycle"]
-ExerciseCycle --> SetLogging["Log Set Performance"]
-SetLogging --> RestPeriod["Rest Period Timer"]
-RestPeriod --> NextExercise["Next Exercise"]
-NextExercise --> ExerciseCycle
-Cardio --> EquipmentSelection["Equipment Selection"]
-EquipmentSelection --> ParameterTracking["Real-time Parameter Tracking"]
-ParameterTracking --> SpeedGraph["Live Speed Graph"]
-SpeedGraph --> SessionComplete["Session Complete"]
-Yoga --> BreathingCycle["Breathing/Cycle Timer"]
-Functional --> IntervalTraining["Work/Rest Intervals"]
-SessionComplete --> DataPersistence["Persist Workout Data"]
-DataPersistence --> End([Session End])
+Start([WorkoutsPage]) --> Pick["Tap mode: strength / cardio / yoga / functional"]
+Pick --> Mode["WorkoutModePage /workouts/mode/:mode"]
+Mode --> Preset["Choose preset"]
+Preset --> API["POST /workouts/start"]
+API --> Detail["WorkoutDetailPage /workouts/:id"]
 ```
 
 **Diagram sources**
-- [WorkoutStrength.tsx:1-823](file://frontend/src/pages/WorkoutStrength.tsx#L1-L823)
-- [WorkoutCardio.tsx:1-941](file://frontend/src/pages/WorkoutCardio.tsx#L1-L941)
-- [WorkoutYoga.tsx:1-959](file://frontend/src/pages/WorkoutYoga.tsx#L1-L959)
-- [WorkoutFunctional.tsx:1-738](file://frontend/src/pages/WorkoutFunctional.tsx#L1-L738)
+- [WorkoutModePage.tsx](file://frontend/src/pages/WorkoutModePage.tsx)
+- [WorkoutsPage.tsx](file://frontend/src/pages/WorkoutsPage.tsx)
+- [WorkoutDetailPage.tsx](file://frontend/src/pages/WorkoutDetailPage.tsx)
+- [workoutTypeConfigs.ts](file://frontend/src/features/workouts/config/workoutTypeConfigs.ts)
 
 **Section sources**
 - [RestTimer.tsx:1-550](file://frontend/src/components/workout/RestTimer.tsx#L1-L550)
@@ -308,18 +294,17 @@ ExerciseFilterParams --> Exercise : filters
 
 ### Frontend Component Architecture
 
-The frontend implements a modular component system with specialized screens for each workout type:
+The frontend uses a modular layout: one **mode** page plus shared building blocks.
 
 **Shared Components:**
 - `RestTimer` - High-precision timer with haptic feedback and sound
 - `useTimer` - Hook for accurate timing with requestAnimationFrame
 - `api.ts` - Centralized API service with interceptors
 
-**Workout Type Components:**
-- `WorkoutStrength` - Weight training with set logging and progression
-- `WorkoutCardio` - Cardio sessions with equipment selection and metrics
-- `WorkoutYoga` - Meditation and yoga with breathing cycles
-- `WorkoutFunctional` - HIIT intervals with auto-switching
+**Workout flow:**
+- `WorkoutsPage` — mode cards and history
+- `WorkoutModePage` + `workoutTypeConfigs.ts` — unified start flow for all modes (no separate page per type)
+- `WorkoutDetailPage` — session detail from history API
 
 **Section sources**
 - [api.ts:1-69](file://frontend/src/services/api.ts#L1-L69)
