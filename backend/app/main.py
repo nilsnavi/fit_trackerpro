@@ -36,7 +36,7 @@ from app.openapi_tags import (
     TAG_USERS,
     TAG_WORKOUTS,
 )
-from app.utils.config import settings
+from app.core.config import settings
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
 
 logging.basicConfig(level=logging.INFO)
