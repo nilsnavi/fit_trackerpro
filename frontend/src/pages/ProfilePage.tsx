@@ -272,7 +272,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, action }) =>
 // ============================================
 
 export const ProfilePage: React.FC = () => {
-    const { user, init, setHeaderColor, setBackgroundColor, hapticFeedback } = useTelegramWebApp();
+    const { user, hapticFeedback } = useTelegramWebApp();
     const { userStats } = useAchievements();
 
     // State
@@ -285,13 +285,6 @@ export const ProfilePage: React.FC = () => {
     const [showCoachModal, setShowCoachModal] = useState(false);
     const [accessCode, setAccessCode] = useState('');
     const [isGeneratingCode, setIsGeneratingCode] = useState(false);
-
-    // Initialize
-    useEffect(() => {
-        init();
-        setHeaderColor('bg_color');
-        setBackgroundColor('bg_color');
-    }, [init, setHeaderColor, setBackgroundColor]);
 
     // Fetch profile data
     const fetchProfile = useCallback(async () => {

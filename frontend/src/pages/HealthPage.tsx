@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Plus, ChevronRight } from 'lucide-react'
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
 
@@ -25,14 +25,6 @@ const mockData: Record<MetricType, { current: number; previous: number; target: 
 export function HealthPage() {
     const [selectedMetric, setSelectedMetric] = useState<MetricType>('weight')
     const tg = useTelegramWebApp()
-
-    // Set up Telegram UI
-    useEffect(() => {
-        if (tg.isTelegram) {
-            tg.setHeaderColor('bg_color')
-            tg.setBackgroundColor('bg_color')
-        }
-    }, [tg])
 
     const getTrend = (current: number, previous: number) => {
         if (current > previous) return { icon: TrendingUp, color: 'text-green-500', sign: '+' }

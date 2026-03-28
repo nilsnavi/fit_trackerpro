@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Clock, Flame, ChevronRight } from 'lucide-react'
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
@@ -102,14 +102,6 @@ export function WorkoutsPage() {
             totalCalories,
         }
     }, [workouts])
-
-    // Set up Telegram back button
-    useEffect(() => {
-        if (tg.isTelegram) {
-            tg.setHeaderColor('bg_color')
-            tg.setBackgroundColor('bg_color')
-        }
-    }, [tg])
 
     // Handle filter change with haptic feedback
     const handleFilterChange = (type: WorkoutType | 'all') => {
