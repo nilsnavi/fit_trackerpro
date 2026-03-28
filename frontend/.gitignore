@@ -33,6 +33,9 @@ dist-ssr
 
 # Testing
 coverage
+coverage/
+coverage.xml
+*.lcov
 .nyc_output
 
 # Cache
