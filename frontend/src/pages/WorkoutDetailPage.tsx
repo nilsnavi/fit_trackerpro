@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarDays, Clock3, MessageSquare, Tags } from 'lucide-rea
 import { workoutsApi } from '@/services/workouts'
 import type { WorkoutHistoryItem } from '@/types/workouts'
 import { useTelegramWebApp } from '@hooks/useTelegramWebApp'
+import { getErrorMessage } from '@/shared/errors'
 
 const formatDate = (value: string): string => {
     const date = new Date(value)
@@ -67,7 +68,7 @@ export function WorkoutDetailPage() {
             } catch (loadError) {
                 console.error('Failed to load workout detail:', loadError)
                 if (!isCancelled) {
-                    setError('Не удалось загрузить детали тренировки')
+                    setError(getErrorMessage(loadError))
                 }
             } finally {
                 if (!isCancelled) {
