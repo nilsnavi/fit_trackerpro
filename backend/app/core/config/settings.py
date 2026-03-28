@@ -19,6 +19,10 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "FitTracker Pro"
+    APP_VERSION: str = "1.0.0"
+    # Release diagnostics (set at image build or runtime, e.g. CI build-args)
+    GIT_COMMIT_SHA: str | None = None
+    BUILD_TIMESTAMP: str | None = None  # ISO 8601 UTC, e.g. 2026-03-28T12:00:00Z
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
 
@@ -100,6 +104,15 @@ class Settings(BaseSettings):
         if "your-domain.com" in normalized.lower():
             raise ValueError("TELEGRAM_WEBAPP_URL contains a placeholder value")
         return normalized
+
+    @field_validator("GIT_COMMIT_SHA", "BUILD_TIMESTAMP", mode="before")
+    @classmethod
+    def empty_optional_release_metadata(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value.strip() if isinstance(value, str) else value
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod

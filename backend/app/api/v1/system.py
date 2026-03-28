@@ -3,6 +3,7 @@ System endpoints (service health/version), no user data.
 """
 from fastapi import APIRouter
 
+from app.core.config import settings
 from app.schemas.system import HealthCheckResponse, ServiceVersionResponse
 
 router = APIRouter()
@@ -21,8 +22,13 @@ async def system_health():
 @router.get(
     "/version",
     response_model=ServiceVersionResponse,
-    summary="Service version",
+    summary="Service version and build metadata",
     operation_id="system_version",
 )
 async def system_version():
-    return ServiceVersionResponse(name="FitTracker Pro API", version="1.0.0")
+    return ServiceVersionResponse(
+        name=f"{settings.APP_NAME} API",
+        version=settings.APP_VERSION,
+        commit_sha=settings.GIT_COMMIT_SHA,
+        build_timestamp=settings.BUILD_TIMESTAMP,
+    )
