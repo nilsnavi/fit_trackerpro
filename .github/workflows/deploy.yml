@@ -18,6 +18,11 @@ on:
         required: false
         default: "latest"
         type: string
+      rollback_restore_db:
+        description: "Restore DB from pre-deploy backup during rollback"
+        required: false
+        default: false
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -75,6 +80,15 @@ jobs:
             cd ~/fittracker-pro || exit 1
             mkdir -p backups nginx/ssl nginx/logs
             
+            PREVIOUS_IMAGE_TAG="latest"
+            if [ -f .env ]; then
+              # Keep previous runtime tag to enable deterministic rollback.
+              PREVIOUS_IMAGE_TAG="$(grep -E '^IMAGE_TAG=' .env | tail -n1 | cut -d'=' -f2- || true)"
+              if [ -z "${PREVIOUS_IMAGE_TAG}" ]; then
+                PREVIOUS_IMAGE_TAG="latest"
+              fi
+            fi
+
             # Create .env file from secrets
             cat > .env << EOL
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
@@ -90,12 +104,21 @@ jobs:
           IMAGE_TAG=${{ env.DEPLOY_IMAGE_TAG }}
           GITHUB_REPOSITORY=${{ github.repository }}
           EOL
+
+            # Persist rollback metadata for post-failure recovery.
+            cat > .rollback-meta.env << EOL
+          PREVIOUS_IMAGE_TAG=${PREVIOUS_IMAGE_TAG}
+          TARGET_IMAGE_TAG=${{ env.DEPLOY_IMAGE_TAG }}
+          DEPLOY_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOL
             
             mkdir -p backups
 
             # Backup database before migration (required)
             echo "Creating database backup..."
-            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > backups/backup_$(date +%Y%m%d_%H%M%S).sql
+            DB_BACKUP_PATH="backups/backup_$(date +%Y%m%d_%H%M%S).sql"
+            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > "${DB_BACKUP_PATH}"
+            echo "DB_BACKUP_PATH=${DB_BACKUP_PATH}" >> .rollback-meta.env
             
             # Pull latest images
             echo "Pulling latest images..."
@@ -209,22 +232,43 @@ jobs:
             set -Eeuo pipefail
             cd ~/fittracker-pro
             
-            echo "Rolling back to previous version..."
-            docker-compose -f docker-compose.prod.yml down
-            
-            # Restore from backup if available
-            LATEST_BACKUP=$(ls -t backups/*.sql 2>/dev/null | head -1)
-            if [ -n "$LATEST_BACKUP" ]; then
-              echo "Restoring from backup: $LATEST_BACKUP"
-              docker-compose -f docker-compose.prod.yml up -d postgres
-              sleep 8
-              docker exec -i fittracker-postgres psql -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} < "$LATEST_BACKUP"
+            PREVIOUS_IMAGE_TAG="latest"
+            DB_BACKUP_PATH=""
+            if [ -f .rollback-meta.env ]; then
+              # shellcheck disable=SC1091
+              source .rollback-meta.env
             fi
-            
-            # Restart with pulled images pinned in compose
+
+            if [ -f .env ]; then
+              sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
+            else
+              echo "IMAGE_TAG=${PREVIOUS_IMAGE_TAG}" > .env
+              echo "GITHUB_REPOSITORY=${{ github.repository }}" >> .env
+            fi
+
+            echo "Rolling back to image tag: ${PREVIOUS_IMAGE_TAG}"
+            docker-compose -f docker-compose.prod.yml pull backend frontend
             docker-compose -f docker-compose.prod.yml up -d
-            
-            echo "Rollback completed"
+
+            if [ "${{ inputs.rollback_restore_db || 'false' }}" = "true" ]; then
+              if [ -n "${DB_BACKUP_PATH}" ] && [ -f "${DB_BACKUP_PATH}" ]; then
+                echo "Restoring DB from pre-deploy backup: ${DB_BACKUP_PATH}"
+                docker-compose -f docker-compose.prod.yml up -d postgres
+                sleep 8
+                docker exec -i fittracker-postgres psql -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} < "${DB_BACKUP_PATH}"
+              else
+                echo "rollback_restore_db=true, but backup not found: ${DB_BACKUP_PATH}"
+                exit 1
+              fi
+            else
+              echo "DB restore skipped (rollback_restore_db=false)"
+            fi
+
+            sleep 15
+            curl -fsS http://localhost:8000/api/v1/system/health > /dev/null
+            curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
+            curl -fsS http://localhost/ > /dev/null
+            echo "Rollback completed and health checks passed"
           EOF
 
   notify:

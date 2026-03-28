@@ -17,6 +17,7 @@
 | `TELEGRAM_SETUP.md` | Интеграция Telegram Mini App и auth flow | BotFather setup, env, auth endpoints, troubleshooting, security notes | Backend Lead |
 | `docs/ENVIRONMENT_SETUP.md` | Полная настройка переменных окружения | Backend vars, Frontend vars, Production compose vars, validation checklist | DevOps |
 | `docs/DEPLOYMENT.md` | Полный гайд production-деплоя | Prerequisites, Server bootstrap, secrets, SSL/Nginx, manual/automated deploy, rollback | DevOps |
+| `docs/ROLLBACK_STRATEGY.md` | P1-стратегия безопасного отката | Trigger conditions, workflow rollback, DB restore policy, manual runbook | DevOps/SRE |
 | `docs/PRODUCTION_CHECKLIST.md` | Релизный чеклист перед/после выката | Before release, Environment and secrets, Smoke checks, Rollback readiness | Release Manager |
 | `docs/SECURITY_CHECKLIST.md` | Безопасность приложения и инфраструктуры | Transport, Auth/session security, Secrets, Containers/dependencies, Review cadence | Security Owner |
 | `docs/PROJECT_AUDIT_2026-03-26.md` | Технический аудит и план стабилизации | Findings, Priorities, Iteration plan, Quick wins | Tech Lead |
