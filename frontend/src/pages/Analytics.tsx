@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     LineChart,
     Line,
@@ -657,14 +657,6 @@ const Analytics: React.FC = () => {
     const [activeTab, setActiveTab] = useState<ViewTab>('chart');
 
     const tg = useTelegramWebApp();
-
-    // Initialize Telegram UI
-    useEffect(() => {
-        if (tg.isTelegram) {
-            tg.setHeaderColor('bg_color')
-            tg.setBackgroundColor('bg_color')
-        }
-    }, [tg])
 
     // Определяем цвета для графика в зависимости от темы
     const isDark = document.documentElement.classList.contains('dark');

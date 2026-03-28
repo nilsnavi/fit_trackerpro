@@ -4,26 +4,59 @@ import { useThemeContext } from './ThemeProvider'
 
 const TelegramContext = createContext<UseTelegramWebAppReturn | null>(null)
 
+/** App-level Telegram Mini App setup (ready, layout, chrome). */
+function bootstrapTelegramWebApp(
+    tg: Pick<
+        UseTelegramWebAppReturn,
+        'init' | 'expand' | 'enableClosingConfirmation' | 'setHeaderColor' | 'setBackgroundColor'
+    >,
+) {
+    tg.init()
+    tg.expand()
+    tg.enableClosingConfirmation()
+    tg.setHeaderColor('bg_color')
+    tg.setBackgroundColor('bg_color')
+}
+
 export function TelegramProvider({ children }: PropsWithChildren) {
     const telegram = useTelegramWebApp()
     const { setTheme } = useThemeContext()
 
-    useEffect(() => {
-        if (!telegram.isTelegram) {
-            return
-        }
-        telegram.init()
-        telegram.expand()
-        telegram.enableClosingConfirmation()
-        telegram.setHeaderColor('bg_color')
-        telegram.setBackgroundColor('bg_color')
-    }, [telegram])
+    const {
+        isTelegram,
+        init,
+        expand,
+        enableClosingConfirmation,
+        setHeaderColor,
+        setBackgroundColor,
+        colorScheme,
+    } = telegram
 
     useEffect(() => {
-        if (telegram.isTelegram && telegram.colorScheme) {
-            setTheme(telegram.colorScheme)
+        if (!isTelegram) {
+            return
         }
-    }, [telegram.isTelegram, telegram.colorScheme, setTheme])
+        bootstrapTelegramWebApp({
+            init,
+            expand,
+            enableClosingConfirmation,
+            setHeaderColor,
+            setBackgroundColor,
+        })
+    }, [
+        isTelegram,
+        init,
+        expand,
+        enableClosingConfirmation,
+        setHeaderColor,
+        setBackgroundColor,
+    ])
+
+    useEffect(() => {
+        if (isTelegram && colorScheme) {
+            setTheme(colorScheme)
+        }
+    }, [isTelegram, colorScheme, setTheme])
 
     const value = useMemo(() => telegram, [telegram])
     return <TelegramContext.Provider value={value}>{children}</TelegramContext.Provider>

@@ -166,10 +166,6 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
         if (webAppRef.current) {
             webAppRef.current.ready()
             setIsReady(true)
-
-            // Set default colors based on theme
-            webAppRef.current.setHeaderColor('bg_color')
-            webAppRef.current.setBackgroundColor('bg_color')
         }
     }, [])
 
