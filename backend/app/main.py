@@ -22,6 +22,20 @@ from app.api.system import router as system_router
 from app.api.users import router as users_router
 from app.api.workouts import router as workouts_router
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.openapi_tags import (
+    OPENAPI_TAGS,
+    TAG_ACHIEVEMENTS,
+    TAG_ANALYTICS,
+    TAG_AUTHENTICATION,
+    TAG_CHALLENGES,
+    TAG_EMERGENCY,
+    TAG_EXERCISES,
+    TAG_HEALTH_METRICS,
+    TAG_INTEGRATIONS,
+    TAG_SYSTEM,
+    TAG_USERS,
+    TAG_WORKOUTS,
+)
 from app.utils.config import settings
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
 
@@ -101,6 +115,7 @@ app = FastAPI(
     """,
     version="1.0.0",
     lifespan=lifespan,
+    openapi_tags=OPENAPI_TAGS,
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
 )
@@ -118,34 +133,35 @@ app.add_middleware(
 app.add_middleware(RateLimitMiddleware)
 
 # Include routers
-app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
-app.include_router(auth_router, prefix="/api/v1/users/auth", tags=["auth"])
-app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
+app.include_router(system_router, prefix="/api/v1/system", tags=[TAG_SYSTEM])
+app.include_router(auth_router, prefix="/api/v1/users/auth", tags=[TAG_AUTHENTICATION])
+app.include_router(users_router, prefix="/api/v1/users", tags=[TAG_USERS])
 app.include_router(
-    workouts_router, prefix="/api/v1/workouts", tags=["workouts"])
+    workouts_router, prefix="/api/v1/workouts", tags=[TAG_WORKOUTS])
 app.include_router(
-    exercises_router, prefix="/api/v1/exercises", tags=["exercises"])
-app.include_router(health_metrics_router, prefix="/api/v1/health-metrics", tags=["health-metrics"])
+    exercises_router, prefix="/api/v1/exercises", tags=[TAG_EXERCISES])
 app.include_router(
-    analytics_router, prefix="/api/v1/analytics", tags=["analytics"])
+    health_metrics_router, prefix="/api/v1/health-metrics", tags=[TAG_HEALTH_METRICS])
+app.include_router(
+    analytics_router, prefix="/api/v1/analytics", tags=[TAG_ANALYTICS])
 app.include_router(achievements_router,
-                   prefix="/api/v1/analytics/achievements", tags=["achievements"])
+                   prefix="/api/v1/analytics/achievements", tags=[TAG_ACHIEVEMENTS])
 app.include_router(challenges_router,
-                   prefix="/api/v1/analytics/challenges", tags=["challenges"])
+                   prefix="/api/v1/analytics/challenges", tags=[TAG_CHALLENGES])
 app.include_router(
-    emergency_router, prefix="/api/v1/system/emergency", tags=["emergency"])
+    emergency_router, prefix="/api/v1/system/emergency", tags=[TAG_EMERGENCY])
 
 # Backward-compatible deprecated aliases for legacy clients.
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"], deprecated=True)
+app.include_router(auth_router, prefix="/api/v1/auth", tags=[TAG_AUTHENTICATION], deprecated=True)
 app.include_router(achievements_router,
-                   prefix="/api/v1/achievements", tags=["achievements"], deprecated=True)
+                   prefix="/api/v1/achievements", tags=[TAG_ACHIEVEMENTS], deprecated=True)
 app.include_router(challenges_router,
-                   prefix="/api/v1/challenges", tags=["challenges"], deprecated=True)
+                   prefix="/api/v1/challenges", tags=[TAG_CHALLENGES], deprecated=True)
 app.include_router(
-    emergency_router, prefix="/api/v1/emergency", tags=["emergency"], deprecated=True)
+    emergency_router, prefix="/api/v1/emergency", tags=[TAG_EMERGENCY], deprecated=True)
 
 
-@app.get("/")
+@app.get("/", tags=[TAG_SYSTEM])
 async def root():
     return {
         "message": "FitTracker Pro API",
@@ -154,7 +170,7 @@ async def root():
     }
 
 
-@app.post("/telegram/webhook")
+@app.post("/telegram/webhook", tags=[TAG_INTEGRATIONS])
 async def telegram_webhook(request: Request):
     """
     Handle incoming Telegram webhook updates
