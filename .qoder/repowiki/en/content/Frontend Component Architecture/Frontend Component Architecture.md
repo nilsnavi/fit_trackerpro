@@ -23,12 +23,14 @@
 - [WorkoutsPage.tsx](file://frontend/src/pages/WorkoutsPage.tsx)
 - [HealthPage.tsx](file://frontend/src/pages/HealthPage.tsx)
 - [ProfilePage.tsx](file://frontend/src/pages/ProfilePage.tsx)
+- [router.tsx](file://frontend/src/app/router.tsx)
 - [Catalog.tsx](file://frontend/src/pages/Catalog.tsx)
 - [AddExercise.tsx](file://frontend/src/pages/AddExercise.tsx)
 </cite>
 
 ## Update Summary
 **Changes Made**
+- **Profile screen:** one canonical `ProfilePage.tsx` for `/profile` (removed duplicate `Profile.tsx` + thin re-export file)
 - Enhanced Telegram WebApp integration with comprehensive haptic feedback system
 - Added safe area handling and improved navigation patterns across all pages
 - Implemented Telegram-specific UI elements with proper theme synchronization
@@ -141,7 +143,7 @@ API --> HOME
 - [WorkoutBuilder.tsx:1-800](file://frontend/src/pages/WorkoutBuilder.tsx#L1-L800)
 - [WorkoutsPage.tsx:1-151](file://frontend/src/pages/WorkoutsPage.tsx#L1-L151)
 - [HealthPage.tsx:1-159](file://frontend/src/pages/HealthPage.tsx#L1-L159)
-- [ProfilePage.tsx:1-134](file://frontend/src/pages/ProfilePage.tsx#L1-L134)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
 - [Catalog.tsx:1-800](file://frontend/src/pages/Catalog.tsx#L1-L800)
 - [AddExercise.tsx:1-800](file://frontend/src/pages/AddExercise.tsx#L1-L800)
 
@@ -506,15 +508,15 @@ The HealthPage includes Telegram integration:
 - [HealthPage.tsx:1-159](file://frontend/src/pages/HealthPage.tsx#L1-L159)
 
 #### ProfilePage Enhancement
-The ProfilePage features Telegram integration:
-- User profile display with Telegram styling
-- Menu items with proper haptic feedback
-- Theme toggle with Telegram-aware styling
-- Logout functionality with Telegram confirmation dialogs
-- Version information with Telegram styling
+The `/profile` route renders a single **`ProfilePage.tsx`** module (legacy duplicate `Profile.tsx` / stub re-export removed). Telegram integration includes:
+- `useTelegramWebApp` for header/background colors, user photo/name, and haptic feedback on successful saves
+- Achievement preview via `useAchievements` / `ProfileShowcase`
+- Card-based layout using Telegram theme utility classes
+- Coach access modal, data export, and logout (redirect to `/login`)
 
 **Section sources**
-- [ProfilePage.tsx:1-134](file://frontend/src/pages/ProfilePage.tsx#L1-L134)
+- [ProfilePage.tsx:274-780](file://frontend/src/pages/ProfilePage.tsx#L274-L780)
+- [router.tsx:28](file://frontend/src/app/router.tsx#L28)
 
 #### Catalog Enhancement
 The Catalog includes comprehensive Telegram integration:

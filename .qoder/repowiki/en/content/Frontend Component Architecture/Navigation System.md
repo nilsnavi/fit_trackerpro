@@ -4,6 +4,8 @@
 **Referenced Files in This Document**
 - [Navigation.tsx](file://frontend/src/components/common/Navigation.tsx)
 - [App.tsx](file://frontend/src/App.tsx)
+- [router.tsx](file://frontend/src/app/router.tsx)
+- [AppShell.tsx](file://frontend/src/app/layouts/AppShell.tsx)
 - [main.tsx](file://frontend/src/main.tsx)
 - [globals.css](file://frontend/src/styles/globals.css)
 - [cn.ts](file://frontend/src/utils/cn.ts)
@@ -33,7 +35,7 @@ The navigation system is implemented as a reusable bottom navigation component i
 ```mermaid
 graph TB
 subgraph "Application Shell"
-App["App.tsx<br/>BrowserRouter, Routes, Main Content"]
+App["app/App.tsx + router.tsx<br/>providers + AppRouter"]
 Nav["Navigation.tsx<br/>Bottom Navigation Bar"]
 Main["Main Content Area<br/>Pages rendered by Routes"]
 end
@@ -55,13 +57,13 @@ Nav --> CN
 ```
 
 **Diagram sources**
-- [App.tsx:12-32](file://frontend/src/App.tsx#L12-L32)
+- [app/App.tsx:1-14](file://frontend/src/app/App.tsx#L1-L14)
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
 - [globals.css:293-302](file://frontend/src/styles/globals.css#L293-L302)
 - [cn.ts:4-6](file://frontend/src/utils/cn.ts#L4-L6)
 
 **Section sources**
-- [App.tsx:12-32](file://frontend/src/App.tsx#L12-L32)
+- [app/App.tsx:1-14](file://frontend/src/app/App.tsx#L1-L14)
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
 - [globals.css:293-302](file://frontend/src/styles/globals.css#L293-L302)
 - [cn.ts:4-6](file://frontend/src/utils/cn.ts#L4-L6)
@@ -79,7 +81,7 @@ Key characteristics:
 **Section sources**
 - [Navigation.tsx:5-11](file://frontend/src/components/common/Navigation.tsx#L5-L11)
 - [Navigation.tsx:13-37](file://frontend/src/components/common/Navigation.tsx#L13-L37)
-- [App.tsx:17-26](file://frontend/src/App.tsx#L17-L26)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 
 ## Architecture Overview
 The navigation system participates in the application's routing architecture. The main App component sets up React Router with BrowserRouter and defines all application routes. The Navigation component is rendered outside the routing context to remain persistent across page navigations.
@@ -98,11 +100,11 @@ Note over Nav,Page : Navigation remains fixed at bottom
 ```
 
 **Diagram sources**
-- [App.tsx:14-31](file://frontend/src/App.tsx#L14-L31)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 - [Navigation.tsx:18-28](file://frontend/src/components/common/Navigation.tsx#L18-L28)
 
 **Section sources**
-- [App.tsx:14-31](file://frontend/src/App.tsx#L14-L31)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 - [Navigation.tsx:18-28](file://frontend/src/components/common/Navigation.tsx#L18-L28)
 
 ## Detailed Component Analysis
@@ -150,16 +152,17 @@ Menu structure:
 - Catalog (/exercises): Exercise catalog
 - Workouts (/workouts): Workout management
 - Analytics (/analytics): Statistics and insights
-- Profile (/profile): User profile and settings
+- Profile (/profile): User profile hub — single page module **`ProfilePage.tsx`** (no duplicate `Profile.tsx`)
 
 Integration with routing:
-- Routes are defined in App.tsx with corresponding page components
+- Routes are defined in **`app/router.tsx`**; **`AppShell`** wraps matched pages and renders this **Navigation** below the `<Outlet />`
 - Navigation links match route paths exactly
 - Active state reflects current route
 
 **Section sources**
 - [Navigation.tsx:5-11](file://frontend/src/components/common/Navigation.tsx#L5-L11)
-- [App.tsx:17-26](file://frontend/src/App.tsx#L17-L26)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
+- [AppShell.tsx:1-12](file://frontend/src/app/layouts/AppShell.tsx#L1-L12)
 
 ### Active State Management
 Active state is managed declaratively through React Router's NavLink component. The component receives an isActive callback that determines styling based on the current route.
@@ -184,7 +187,7 @@ Navigation flow:
 
 **Section sources**
 - [Navigation.tsx:18-21](file://frontend/src/components/common/Navigation.tsx#L18-L21)
-- [App.tsx:17-26](file://frontend/src/App.tsx#L17-L26)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 
 ### Styling Patterns and Design System Integration
 The navigation component leverages the application's design system through Tailwind CSS utilities and custom component classes. The styling follows established patterns for consistent visual hierarchy and responsive behavior.
@@ -293,7 +296,7 @@ External dependencies:
 Internal dependencies:
 - cn utility function for class merging
 - globals.css for shared styling patterns
-- App.tsx for routing integration
+- `router.tsx` / `AppShell` for routing integration
 
 ```mermaid
 graph LR
@@ -306,7 +309,7 @@ end
 subgraph "Internal Dependencies"
 CN["cn.ts"]
 CSS["globals.css"]
-APP["App.tsx"]
+APP["app/router.tsx"]
 end
 NAV["Navigation.tsx"] --> RR
 NAV --> LC
@@ -347,7 +350,7 @@ Optimization opportunities:
 Common issues and solutions for the navigation system:
 
 Navigation not working:
-- Verify route paths match between navigation and App.tsx routes
+- Verify route paths match between navigation and `router.tsx` routes
 - Check that BrowserRouter is properly configured
 - Ensure NavLink components are used within Router context
 
@@ -367,7 +370,7 @@ Responsive behavior:
 - Check viewport units and mobile-specific CSS
 
 **Section sources**
-- [App.tsx:14-31](file://frontend/src/App.tsx#L14-L31)
+- [router.tsx:14-30](file://frontend/src/app/router.tsx#L14-L30)
 - [Navigation.tsx:18-28](file://frontend/src/components/common/Navigation.tsx#L18-L28)
 - [globals.css:142-146](file://frontend/src/styles/globals.css#L142-L146)
 

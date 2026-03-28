@@ -8,7 +8,7 @@
 - [OneRMCalculator.tsx](file://frontend/src/components/analytics/OneRMCalculator.tsx)
 - [AddExercise.tsx](file://frontend/src/pages/AddExercise.tsx)
 - [Catalog.tsx](file://frontend/src/pages/Catalog.tsx)
-- [Profile.tsx](file://frontend/src/pages/Profile.tsx)
+- [ProfilePage.tsx](file://frontend/src/pages/ProfilePage.tsx)
 </cite>
 
 ## Table of Contents
@@ -43,14 +43,14 @@ end
 subgraph "Pages & Features"
 Analytics[Analytics Pages]
 Health[Health Tracking]
-Profile[User Profile]
+ProfilePage[Profile page]
 Catalog[Exercise Catalog]
 end
 Input --> CN
 Input --> Theme
 Analytics --> Input
 Health --> Input
-Profile --> Input
+ProfilePage --> Input
 Catalog --> Input
 ```
 

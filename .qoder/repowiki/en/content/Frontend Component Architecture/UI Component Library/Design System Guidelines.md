@@ -243,7 +243,7 @@ The theme system includes robust persistence and initialization mechanisms:
 **Section sources**
 - [useTheme.ts:16-22](file://frontend/src/hooks/useTheme.ts#L16-L22)
 - [App.tsx:16-26](file://frontend/src/App.tsx#L16-L26)
-- [ProfilePage.tsx:53-62](file://frontend/src/pages/ProfilePage.tsx#L53-L62)
+- [ProfilePage.tsx:289-294](file://frontend/src/pages/ProfilePage.tsx#L289-L294)
 
 ## Detailed Component Analysis
 
