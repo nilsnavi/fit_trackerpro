@@ -16,6 +16,7 @@ from app.schemas.analytics import (
     DataExportResponse,
     ExerciseProgressData,
     ExerciseProgressResponse,
+    MuscleImbalanceSignalsResponse,
     MuscleLoadEntry,
     MuscleLoadTableResponse,
     RecoveryStateRecalculateResponse,
@@ -614,7 +615,7 @@ class AnalyticsService:
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
         return payload
 
-    async def get_muscle_imbalance_signals(self, user_id: int) -> Dict[str, Any]:
+    async def get_muscle_imbalance_signals(self, user_id: int) -> MuscleImbalanceSignalsResponse:
         muscle_signals_enabled = await is_feature_enabled(self.db, "muscle_imbalance_signals", default=False)
         if not muscle_signals_enabled:
             raise AnalyticsNotFoundError("Muscle imbalance signals are disabled")
@@ -622,16 +623,17 @@ class AnalyticsService:
         cache_key = self._build_cache_key("muscle-signals", user_id)
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return MuscleImbalanceSignalsResponse.model_validate(cached)
 
         try:
             signals = await self.repository.get_muscle_imbalance_signals(user_id)
         except SQLAlchemyError as exc:
             raise AnalyticsUnavailableError("Muscle imbalance signals are temporarily unavailable") from exc
 
-        payload = {
-            "available": bool(signals),
-            "signals": signals,
-        }
-        await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        dto = MuscleImbalanceSignalsResponse(available=bool(signals), signals=signals or {})
+        await set_cache_json(
+            cache_key,
+            dto.model_dump(mode="json"),
+            ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS,
+        )
+        return dto

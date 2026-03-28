@@ -13,7 +13,10 @@ from app.schemas.challenges import (
     ChallengeCreate,
     ChallengeDetailResponse,
     ChallengeJoinResponse,
+    ChallengeLeaderboardResponse,
+    ChallengeLeaveResponse,
     ChallengeListResponse,
+    ChallengeMyActiveResponse,
     ChallengeResponse,
 )
 from app.services.challenges_service import (
@@ -59,7 +62,7 @@ async def get_challenges(
         raise _map_service_error(exc) from exc
 
 
-@router.get("/my/active")
+@router.get("/my/active", response_model=ChallengeMyActiveResponse)
 async def get_my_active_challenges(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
@@ -115,7 +118,7 @@ async def join_challenge(
         raise _map_service_error(exc) from exc
 
 
-@router.post("/{challenge_id}/leave")
+@router.post("/{challenge_id}/leave", response_model=ChallengeLeaveResponse)
 async def leave_challenge(
     challenge_id: int,
     current_user: User = Depends(get_current_user),
@@ -128,7 +131,7 @@ async def leave_challenge(
         raise _map_service_error(exc) from exc
 
 
-@router.get("/{challenge_id}/leaderboard")
+@router.get("/{challenge_id}/leaderboard", response_model=ChallengeLeaderboardResponse)
 async def get_challenge_leaderboard(
     challenge_id: int,
     limit: int = Query(20, ge=1, le=100),

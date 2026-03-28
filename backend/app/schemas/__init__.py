@@ -73,6 +73,7 @@ from .emergency import (
     EmergencyContactCreate,
     EmergencyContactResponse,
     EmergencyContactListResponse,
+    EmergencyLogEventRequest,
     EmergencyNotifyRequest,
     EmergencyNotifyResponse,
 )
@@ -134,6 +135,7 @@ __all__ = [
     "EmergencyContactCreate",
     "EmergencyContactResponse",
     "EmergencyContactListResponse",
+    "EmergencyLogEventRequest",
     "EmergencyNotifyRequest",
     "EmergencyNotifyResponse",
 ]

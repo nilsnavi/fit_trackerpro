@@ -15,6 +15,7 @@ from app.schemas.analytics import (
     DataExportRequest,
     DataExportResponse,
     ExerciseProgressResponse,
+    MuscleImbalanceSignalsResponse,
     MuscleLoadEntry,
     MuscleLoadTableResponse,
     RecoveryStateRecalculateResponse,
@@ -245,7 +246,7 @@ async def get_analytics_summary(
         raise _map_service_error(exc) from exc
 
 
-@router.get("/muscle-signals")
+@router.get("/muscle-signals", response_model=MuscleImbalanceSignalsResponse)
 async def get_muscle_imbalance_signals(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),

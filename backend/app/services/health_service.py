@@ -10,8 +10,10 @@ from app.domain import DailyWellness, GlucoseLog
 from app.repositories.health_repository import HealthRepository
 from app.schemas.health import (
     DailyWellnessCreate,
+    DailyWellnessResponse,
     GlucoseHistoryResponse,
     GlucoseLogCreate,
+    GlucoseLogResponse,
     GlucoseStats,
     HealthStatsResponse,
     WellnessStats,
@@ -29,7 +31,7 @@ class HealthService:
         self.db = db
         self.repository = HealthRepository(db)
 
-    async def create_glucose_log(self, user_id: int, data: GlucoseLogCreate) -> GlucoseLog:
+    async def create_glucose_log(self, user_id: int, data: GlucoseLogCreate) -> GlucoseLogResponse:
         if data.workout_id:
             workout = await self.repository.get_workout(user_id=user_id, workout_id=data.workout_id)
             if not workout:
@@ -46,7 +48,7 @@ class HealthService:
         self.db.add(glucose_log)
         await self.db.commit()
         await self.db.refresh(glucose_log)
-        return glucose_log
+        return GlucoseLogResponse.model_validate(glucose_log, from_attributes=True)
 
     async def get_glucose_history(
         self,
@@ -78,7 +80,7 @@ class HealthService:
             measurement_type=measurement_type,
         )
         return GlucoseHistoryResponse(
-            items=logs,
+            items=[GlucoseLogResponse.model_validate(log, from_attributes=True) for log in logs],
             total=total,
             page=page,
             page_size=page_size,
@@ -89,11 +91,11 @@ class HealthService:
             max_value=round(max_val, 2) if max_val else None,
         )
 
-    async def get_glucose_log(self, user_id: int, log_id: int) -> GlucoseLog:
+    async def get_glucose_log(self, user_id: int, log_id: int) -> GlucoseLogResponse:
         log = await self.repository.get_glucose_log(user_id=user_id, log_id=log_id)
         if not log:
             raise HealthNotFoundError("Glucose log not found")
-        return log
+        return GlucoseLogResponse.model_validate(log, from_attributes=True)
 
     async def delete_glucose_log(self, user_id: int, log_id: int) -> None:
         log = await self.repository.get_glucose_log(user_id=user_id, log_id=log_id)
@@ -102,7 +104,7 @@ class HealthService:
         await self.db.delete(log)
         await self.db.commit()
 
-    async def create_or_update_wellness(self, user_id: int, data: DailyWellnessCreate) -> DailyWellness:
+    async def create_or_update_wellness(self, user_id: int, data: DailyWellnessCreate) -> DailyWellnessResponse:
         existing = await self.repository.get_wellness_by_date(user_id=user_id, entry_date=data.date)
         if existing:
             existing.sleep_score = data.sleep_score
@@ -115,7 +117,7 @@ class HealthService:
             await self.db.commit()
             await self.db.refresh(existing)
             await invalidate_user_analytics_cache(user_id)
-            return existing
+            return DailyWellnessResponse.model_validate(existing, from_attributes=True)
 
         wellness = DailyWellness(
             user_id=user_id,
@@ -132,7 +134,7 @@ class HealthService:
         await self.db.commit()
         await self.db.refresh(wellness)
         await invalidate_user_analytics_cache(user_id)
-        return wellness
+        return DailyWellnessResponse.model_validate(wellness, from_attributes=True)
 
     async def get_wellness_history(
         self,
@@ -140,19 +142,20 @@ class HealthService:
         date_from: Optional[date],
         date_to: Optional[date],
         limit: int,
-    ) -> List[DailyWellness]:
-        return await self.repository.list_wellness_entries(
+    ) -> List[DailyWellnessResponse]:
+        rows = await self.repository.list_wellness_entries(
             user_id=user_id,
             date_from=date_from,
             date_to=date_to,
             limit=limit,
         )
+        return [DailyWellnessResponse.model_validate(row, from_attributes=True) for row in rows]
 
-    async def get_wellness_entry(self, user_id: int, entry_id: int) -> DailyWellness:
+    async def get_wellness_entry(self, user_id: int, entry_id: int) -> DailyWellnessResponse:
         entry = await self.repository.get_wellness_entry(user_id=user_id, entry_id=entry_id)
         if not entry:
             raise HealthNotFoundError("Wellness entry not found")
-        return entry
+        return DailyWellnessResponse.model_validate(entry, from_attributes=True)
 
     async def get_health_stats(self, user_id: int, period: str) -> HealthStatsResponse:
         days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365}

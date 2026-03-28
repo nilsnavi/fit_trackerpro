@@ -4,7 +4,7 @@ Pydantic models for authentication endpoints
 """
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class TelegramAuthRequest(BaseModel):
@@ -18,7 +18,6 @@ class TelegramAuthRequest(BaseModel):
 
 class TelegramUserData(BaseModel):
     """Telegram user data model"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(..., description="Telegram user ID")
     username: Optional[str] = Field(None, description="Username")
@@ -58,8 +57,7 @@ class UserProfileUpdate(BaseModel):
 
 
 class UserProfileResponse(BaseModel):
-    """User profile response"""
-    model_config = ConfigDict(from_attributes=True)
+    """User profile response (API contract; not an ORM model)."""
 
     id: int
     telegram_id: int
@@ -69,6 +67,20 @@ class UserProfileResponse(BaseModel):
     settings: dict = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
+
+
+def user_profile_from_db(user) -> UserProfileResponse:
+    """Map persisted user row to API DTO (no ORM in route handlers)."""
+    return UserProfileResponse(
+        id=user.id,
+        telegram_id=user.telegram_id,
+        username=user.username,
+        first_name=user.first_name,
+        profile=dict(user.profile or {}),
+        settings=dict(user.settings or {}),
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+    )
 
 
 class TokenPayload(BaseModel):
@@ -82,6 +94,14 @@ class TokenPayload(BaseModel):
 class RefreshTokenRequest(BaseModel):
     """Request model for token refresh"""
     refresh_token: str = Field(..., description="Refresh token")
+
+
+class RefreshTokenResponse(BaseModel):
+    """Token refresh response"""
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int = Field(..., description="Access token lifetime in seconds")
 
 
 class LogoutResponse(BaseModel):

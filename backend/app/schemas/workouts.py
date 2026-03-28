@@ -5,7 +5,7 @@ Pydantic models for workout endpoints
 from typing import Optional, List
 from datetime import datetime, date
 from decimal import Decimal
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class ExerciseInTemplate(BaseModel):
@@ -67,7 +67,6 @@ class WorkoutTemplateCreate(BaseModel):
 
 class WorkoutTemplateResponse(BaseModel):
     """Workout template response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: int
@@ -99,7 +98,6 @@ class WorkoutStartRequest(BaseModel):
 
 class WorkoutStartResponse(BaseModel):
     """Response for started workout"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: int
@@ -122,7 +120,6 @@ class WorkoutCompleteRequest(BaseModel):
 
 class WorkoutCompleteResponse(BaseModel):
     """Response for completed workout"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: int
@@ -140,7 +137,6 @@ class WorkoutCompleteResponse(BaseModel):
 
 class WorkoutHistoryItem(BaseModel):
     """Single workout history entry"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     date: date

@@ -11,11 +11,13 @@ from app.repositories.workouts_repository import WorkoutsRepository
 from app.schemas.workouts import (
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
+    WorkoutHistoryItem,
     WorkoutHistoryResponse,
     WorkoutStartRequest,
     WorkoutStartResponse,
     WorkoutTemplateCreate,
     WorkoutTemplateList,
+    WorkoutTemplateResponse,
 )
 from app.utils.cache import invalidate_user_analytics_cache
 
@@ -124,9 +126,14 @@ class WorkoutsService:
             page_size=page_size,
             template_type=template_type,
         )
-        return WorkoutTemplateList(items=templates, total=total, page=page, page_size=page_size)
+        return WorkoutTemplateList(
+            items=[WorkoutTemplateResponse.model_validate(t, from_attributes=True) for t in templates],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
 
-    async def create_template(self, user_id: int, data: WorkoutTemplateCreate) -> WorkoutTemplate:
+    async def create_template(self, user_id: int, data: WorkoutTemplateCreate) -> WorkoutTemplateResponse:
         template = WorkoutTemplate(
             user_id=user_id,
             name=data.name,
@@ -137,20 +144,20 @@ class WorkoutsService:
         self.db.add(template)
         await self.db.commit()
         await self.db.refresh(template)
-        return template
+        return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
 
-    async def get_template(self, user_id: int, template_id: int) -> WorkoutTemplate:
+    async def get_template(self, user_id: int, template_id: int) -> WorkoutTemplateResponse:
         template = await self.repository.get_template(user_id=user_id, template_id=template_id)
         if not template:
             raise WorkoutNotFoundError("Template not found")
-        return template
+        return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
 
     async def update_template(
         self,
         user_id: int,
         template_id: int,
         data: WorkoutTemplateCreate,
-    ) -> WorkoutTemplate:
+    ) -> WorkoutTemplateResponse:
         template = await self.repository.get_template(user_id=user_id, template_id=template_id)
         if not template:
             raise WorkoutNotFoundError("Template not found")
@@ -161,7 +168,7 @@ class WorkoutsService:
         template.is_public = data.is_public
         await self.db.commit()
         await self.db.refresh(template)
-        return template
+        return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
 
     async def delete_template(self, user_id: int, template_id: int) -> None:
         template = await self.repository.get_template(user_id=user_id, template_id=template_id)
@@ -191,7 +198,7 @@ class WorkoutsService:
             date_to=date_to,
         )
         return WorkoutHistoryResponse(
-            items=workouts,
+            items=[WorkoutHistoryItem.model_validate(w, from_attributes=True) for w in workouts],
             total=total,
             page=page,
             page_size=page_size,
@@ -383,8 +390,8 @@ class WorkoutsService:
             message="Workout completed successfully",
         )
 
-    async def get_workout_detail(self, user_id: int, workout_id: int) -> WorkoutLog:
+    async def get_workout_detail(self, user_id: int, workout_id: int) -> WorkoutHistoryItem:
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
         if not workout:
             raise WorkoutNotFoundError("Workout not found")
-        return workout
+        return WorkoutHistoryItem.model_validate(workout, from_attributes=True)

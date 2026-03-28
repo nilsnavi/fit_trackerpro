@@ -4,7 +4,7 @@ Pydantic models for exercise endpoints
 """
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class ExerciseFilterParams(BaseModel):
@@ -58,7 +58,6 @@ class ExerciseUpdate(BaseModel):
 
 class ExerciseResponse(BaseModel):
     """Exercise response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     name: str
@@ -81,3 +80,31 @@ class ExerciseListResponse(BaseModel):
     page: int
     page_size: int
     filters: dict = Field(default_factory=dict)
+
+
+class ExerciseCategoryItem(BaseModel):
+    value: str
+    label: str
+    icon: str
+
+
+class ExerciseCategoriesResponse(BaseModel):
+    categories: List[ExerciseCategoryItem]
+
+
+class ExerciseEquipmentItem(BaseModel):
+    value: str
+    label: str
+
+
+class ExerciseEquipmentListResponse(BaseModel):
+    equipment: List[ExerciseEquipmentItem]
+
+
+class ExerciseMuscleGroupItem(BaseModel):
+    value: str
+    label: str
+
+
+class ExerciseMuscleGroupsResponse(BaseModel):
+    muscle_groups: List[ExerciseMuscleGroupItem]

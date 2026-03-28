@@ -4,7 +4,7 @@ Pydantic models for health tracking endpoints
 """
 from typing import Optional, List
 from datetime import datetime, date
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class GlucoseLogCreate(BaseModel):
@@ -24,7 +24,6 @@ class GlucoseLogCreate(BaseModel):
 
 class GlucoseLogResponse(BaseModel):
     """Glucose log response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: int
@@ -79,7 +78,6 @@ class DailyWellnessCreate(BaseModel):
 
 class DailyWellnessResponse(BaseModel):
     """Daily wellness response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: int

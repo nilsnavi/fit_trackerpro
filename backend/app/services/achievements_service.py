@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain import UserAchievement
 from app.repositories.achievements_repository import AchievementsRepository
 from app.schemas.achievements import (
+    AchievementLeaderboardEntry,
+    AchievementLeaderboardResponse,
     AchievementListResponse,
+    AchievementResponse,
     AchievementUnlockResponse,
     UserAchievementListResponse,
     UserAchievementResponse,
@@ -27,7 +30,7 @@ class AchievementsService:
         achievements = await self.repository.list_achievements(category=category)
         categories = await self.repository.list_categories()
         return AchievementListResponse(
-            items=achievements,
+            items=[AchievementResponse.model_validate(a, from_attributes=True) for a in achievements],
             total=len(achievements),
             categories=categories,
         )
@@ -51,7 +54,7 @@ class AchievementsService:
                     id=ua.id,
                     user_id=ua.user_id,
                     achievement_id=ua.achievement_id,
-                    achievement=achievement,
+                    achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
                     earned_at=ua.earned_at,
                     progress=ua.progress,
                     progress_data=ua.progress_data,
@@ -81,7 +84,7 @@ class AchievementsService:
             id=ua.id,
             user_id=ua.user_id,
             achievement_id=ua.achievement_id,
-            achievement=achievement,
+            achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
             earned_at=ua.earned_at,
             progress=ua.progress,
             progress_data=ua.progress_data,
@@ -100,7 +103,7 @@ class AchievementsService:
         if existing and existing.progress >= 100:
             return AchievementUnlockResponse(
                 unlocked=False,
-                achievement=achievement,
+                achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
                 points_earned=0,
                 new_total_points=0,
                 message="Achievement already unlocked",
@@ -123,34 +126,34 @@ class AchievementsService:
         total_points = await self.repository.get_user_total_points(user_id=user_id)
         return AchievementUnlockResponse(
             unlocked=True,
-            achievement=achievement,
+            achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
             points_earned=achievement.points,
             new_total_points=total_points,
             message=f"Achievement unlocked! {achievement.description}",
         )
 
-    async def get_leaderboard(self, user_id: int, limit: int):
+    async def get_leaderboard(self, user_id: int, limit: int) -> AchievementLeaderboardResponse:
         top_users = await self.repository.list_top_users(limit=limit)
-        leaderboard = []
+        leaderboard: list[AchievementLeaderboardEntry] = []
         for rank, row in enumerate(top_users, 1):
             user = await self.repository.get_user(user_id=row.user_id)
             leaderboard.append(
-                {
-                    "rank": rank,
-                    "user_id": row.user_id,
-                    "username": user.username if user else None,
-                    "first_name": user.first_name if user else None,
-                    "total_points": row.total_points,
-                    "achievements_count": row.achievements_count,
-                }
+                AchievementLeaderboardEntry(
+                    rank=rank,
+                    user_id=row.user_id,
+                    username=user.username if user else None,
+                    first_name=user.first_name if user else None,
+                    total_points=row.total_points,
+                    achievements_count=row.achievements_count,
+                )
             )
 
         user_points = await self.repository.get_user_total_points(user_id=user_id)
         higher_ranked = await self.repository.count_higher_ranked_users(user_points=user_points)
         total_users = await self.repository.count_users_in_leaderboard()
-        return {
-            "leaderboard": leaderboard,
-            "user_rank": higher_ranked + 1,
-            "user_points": user_points,
-            "total_users": total_users,
-        }
+        return AchievementLeaderboardResponse(
+            leaderboard=leaderboard,
+            user_rank=higher_ranked + 1,
+            user_points=user_points,
+            total_users=total_users,
+        )
