@@ -51,6 +51,22 @@ secrets/
 # Misc
 .cache/
 
+# Python / тесты и линтеры (все каталоги: database/, scripts/, корень)
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.hypothesis/
+*.cover
+.dmypy.json
+dmypy.json
+
 # Accidental root Node/Prisma artifacts
 /node_modules/
 /package.json
