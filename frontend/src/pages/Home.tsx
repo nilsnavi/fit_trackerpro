@@ -22,7 +22,7 @@ const recentWorkouts = [
     { id: 3, title: 'Йога', duration: '60 мин', calories: 180, date: '2 дня назад' },
 ]
 
-export function HomePage() {
+export function Home() {
     const tg = useTelegramWebApp()
     const [stats] = useState<UserStats>(defaultStats)
 

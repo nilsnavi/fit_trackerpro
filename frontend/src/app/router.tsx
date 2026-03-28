@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layouts/AppShell'
-import { HomePage } from '@pages/HomePage'
+import { Home } from '@pages/Home'
 import { WorkoutsPage } from '@pages/WorkoutsPage'
 import { WorkoutBuilderPage } from '@pages/WorkoutBuilderPage'
 import { WorkoutDetailPage } from '@pages/WorkoutDetailPage'
@@ -16,7 +16,7 @@ export function AppRouter() {
         <BrowserRouter>
             <Routes>
                 <Route element={<AppShell />}>
-                    <Route path="/" element={<HomePage />} />
+                    <Route path="/" element={<Home />} />
                     <Route path="/workouts" element={<WorkoutsPage />} />
                     <Route path="/workouts/builder" element={<WorkoutBuilderPage />} />
                     <Route path="/workouts/mode/:mode" element={<WorkoutModePage />} />
