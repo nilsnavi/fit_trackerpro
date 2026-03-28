@@ -42,7 +42,7 @@ jobs:
         run: npm run test:ci
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v6
         with:
           files: ./frontend/coverage/lcov.info
           flags: frontend
@@ -109,7 +109,7 @@ jobs:
         run: pytest
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v6
         with:
           files: ./backend/coverage.xml
           flags: backend
