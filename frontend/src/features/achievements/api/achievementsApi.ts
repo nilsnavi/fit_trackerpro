@@ -1,14 +1,29 @@
 import { api } from '@shared/api/client'
+import type {
+    Achievement,
+    AchievementCategory,
+    AchievementUnlockData,
+    UserAchievementStats,
+} from '@features/achievements/components'
+
+export interface AchievementsListResponse {
+    items: Achievement[]
+    total: number
+    categories: string[]
+}
 
 export const achievementsApi = {
-    list() {
-        return api.get('/achievements')
+    list(params?: { category?: AchievementCategory }): Promise<AchievementsListResponse> {
+        return api.get<AchievementsListResponse>('/achievements', params)
     },
-    getUserAchievements() {
-        return api.get('/achievements/user')
+    getUserAchievements(): Promise<UserAchievementStats> {
+        return api.get<UserAchievementStats>('/achievements/user')
     },
-    claim(achievementId: number) {
-        return api.post(`/achievements/${achievementId}/claim`)
+    claim(achievementId: number): Promise<AchievementUnlockData> {
+        return api.post<AchievementUnlockData>(`/achievements/${achievementId}/claim`)
+    },
+    checkProgress(): Promise<void> {
+        return api.post('/achievements/check-progress')
     },
     getLeaderboard() {
         return api.get('/achievements/leaderboard')

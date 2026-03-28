@@ -9,7 +9,7 @@
  * - Доступ для тренера
  * - Экспорт данных
  */
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
     Edit2,
     Target,
@@ -38,51 +38,8 @@ import { ProgressBar } from '@shared/ui/ProgressBar';
 import { Modal } from '@shared/ui/Modal';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import { useAchievements } from '@features/achievements/hooks/useAchievements';
-import { api } from '@shared/api/client';
+import { useProfile } from '@features/profile/hooks/useProfile';
 import { ProfileShowcase } from '@features/achievements/components';
-
-// ============================================
-// Types
-// ============================================
-
-interface UserProfile {
-    id: number;
-    telegram_id: number;
-    username?: string;
-    first_name?: string;
-    last_name?: string;
-    profile: {
-        equipment?: string[];
-        limitations?: string[];
-        goals?: string[];
-        current_weight?: number;
-        target_weight?: number;
-        height?: number;
-        birth_date?: string;
-    };
-    settings: {
-        theme?: string;
-        notifications?: boolean;
-        units?: 'metric' | 'imperial';
-        language?: string;
-    };
-    created_at: string;
-    updated_at: string;
-}
-
-interface UserStats {
-    active_days: number;
-    total_workouts: number;
-    current_streak: number;
-    longest_streak: number;
-}
-
-interface CoachAccess {
-    id: string;
-    coach_name: string;
-    created_at: string;
-    expires_at?: string;
-}
 
 // ============================================
 // Constants
@@ -114,22 +71,6 @@ const LIMITATION_OPTIONS = [
 // ============================================
 // Helper Functions
 // ============================================
-
-const calculateWeightProgress = (current: number, target: number, start: number): number => {
-    if (start === target) return 100;
-    const totalDiff = Math.abs(start - target);
-    const currentDiff = Math.abs(current - target);
-    const progress = ((totalDiff - currentDiff) / totalDiff) * 100;
-    return Math.max(0, Math.min(100, progress));
-};
-
-const calculateGoalDate = (current: number, target: number, weeklyChange: number = 0.5): Date => {
-    const diff = Math.abs(current - target);
-    const weeksNeeded = diff / weeklyChange;
-    const goalDate = new Date();
-    goalDate.setDate(goalDate.getDate() + weeksNeeded * 7);
-    return goalDate;
-};
 
 const formatDate = (date: Date): string => {
     return date.toLocaleDateString('ru-RU', {
@@ -272,142 +213,42 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, action }) =>
 // ============================================
 
 export const ProfilePage: React.FC = () => {
-    const { user, hapticFeedback } = useTelegramWebApp();
+    const { user } = useTelegramWebApp();
     const { userStats } = useAchievements();
+    const {
+        profile,
+        stats,
+        coachAccesses,
+        isLoading,
+        isGeneratingCoachCode,
+        updateProfile,
+        updateSettings,
+        getWeightProgress,
+        generateCoachCode,
+        revokeCoachAccess,
+        exportData,
+    } = useProfile();
 
-    // State
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [stats, setStats] = useState<UserStats | null>(null);
-    const [coachAccesses, setCoachAccesses] = useState<CoachAccess[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [, setShowAllAchievements] = useState(false);
     const [, setShowSettings] = useState(false);
     const [showCoachModal, setShowCoachModal] = useState(false);
     const [accessCode, setAccessCode] = useState('');
-    const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
-    // Fetch profile data
-    const fetchProfile = useCallback(async () => {
-        try {
-            const response = await api.get<UserProfile>('/auth/me');
-            setProfile(response);
-        } catch (err) {
-            console.error('Failed to fetch profile:', err);
-        }
-    }, []);
+    const generateAccessCode = async () => {
+        const code = await generateCoachCode();
+        if (code) setAccessCode(code);
+    };
 
-    // Fetch user stats
-    const fetchStats = useCallback(async () => {
-        try {
-            const response = await api.get<UserStats>('/users/stats');
-            setStats(response);
-        } catch (err) {
-            console.error('Failed to fetch stats:', err);
-        }
-    }, []);
+    const revokeAccess = async (accessId: string) => {
+        await revokeCoachAccess(accessId);
+    };
 
-    // Fetch coach accesses
-    const fetchCoachAccesses = useCallback(async () => {
-        try {
-            const response = await api.get<CoachAccess[]>('/users/coach-access');
-            setCoachAccesses(response);
-        } catch (err) {
-            console.error('Failed to fetch coach accesses:', err);
-        }
-    }, []);
-
-    // Initial load
-    useEffect(() => {
-        Promise.all([fetchProfile(), fetchStats(), fetchCoachAccesses()]).finally(() => {
-            setIsLoading(false);
-        });
-    }, [fetchProfile, fetchStats, fetchCoachAccesses]);
-
-    // Update profile field
-    const updateProfile = useCallback(async (updates: Partial<UserProfile['profile']>) => {
-        try {
-            const response = await api.put<UserProfile>('/auth/me', {
-                profile: { ...profile?.profile, ...updates }
-            });
-            setProfile(response);
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-        } catch (err) {
-            console.error('Failed to update profile:', err);
-        }
-    }, [profile, hapticFeedback]);
-
-    // Update settings
-    const updateSettings = useCallback(async (updates: Partial<UserProfile['settings']>) => {
-        try {
-            const response = await api.put<UserProfile>('/auth/me', {
-                settings: { ...profile?.settings, ...updates }
-            });
-            setProfile(response);
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-        } catch (err) {
-            console.error('Failed to update settings:', err);
-        }
-    }, [profile, hapticFeedback]);
-
-    // Generate coach access code
-    const generateAccessCode = useCallback(async () => {
-        try {
-            setIsGeneratingCode(true);
-            const response = await api.post<{ code: string; expires_at: string }>('/users/coach-access/generate');
-            setAccessCode(response.code);
-            await fetchCoachAccesses();
-        } catch (err) {
-            console.error('Failed to generate access code:', err);
-        } finally {
-            setIsGeneratingCode(false);
-        }
-    }, [fetchCoachAccesses]);
-
-    // Revoke coach access
-    const revokeAccess = useCallback(async (accessId: string) => {
-        try {
-            await api.delete(`/users/coach-access/${accessId}`);
-            await fetchCoachAccesses();
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-        } catch (err) {
-            console.error('Failed to revoke access:', err);
-        }
-    }, [fetchCoachAccesses, hapticFeedback]);
-
-    // Export data
-    const exportData = useCallback(async () => {
-        try {
-            const response = await api.get<Blob>('/users/export', undefined);
-            const url = window.URL.createObjectURL(response);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `fittracker-data-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            hapticFeedback({ type: 'notification', notificationType: 'success' });
-        } catch (err) {
-            console.error('Failed to export data:', err);
-        }
-    }, [hapticFeedback]);
-
-    // Logout
-    const handleLogout = useCallback(() => {
+    const handleLogout = () => {
         localStorage.removeItem('auth_token');
         window.location.href = '/login';
-    }, []);
+    };
 
-    // Weight goal calculations
-    const weightProgress = useMemo(() => {
-        if (!profile?.profile.current_weight || !profile?.profile.target_weight) return null;
-        const current = profile.profile.current_weight;
-        const target = profile.profile.target_weight;
-        const start = current + (current > target ? 5 : -5); // Assume 5kg from start
-        return {
-            progress: calculateWeightProgress(current, target, start),
-            goalDate: calculateGoalDate(current, target),
-            diff: Math.abs(current - target),
-        };
-    }, [profile]);
+    const weightProgress = getWeightProgress();
 
     if (isLoading) {
         return (
@@ -736,7 +577,7 @@ export const ProfilePage: React.FC = () => {
                             fullWidth
                             leftIcon={<Plus className="w-5 h-5" />}
                             onClick={generateAccessCode}
-                            isLoading={isGeneratingCode}
+                            isLoading={isGeneratingCoachCode}
                         >
                             Сгенерировать код
                         </Button>

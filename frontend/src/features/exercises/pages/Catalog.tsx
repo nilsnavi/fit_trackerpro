@@ -7,43 +7,24 @@ import { Card } from '@shared/ui/Card';
 import { Modal } from '@shared/ui/Modal';
 import { cn } from '@shared/lib/cn';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
+import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery';
+import type {
+    Exercise,
+    ExerciseCategory,
+    EquipmentType,
+    RiskType,
+    DifficultyLevel,
+    ExerciseFilters,
+} from '@features/exercises/types/catalogUi';
 
-// ============================================
-// Types
-// ============================================
-
-export type ExerciseCategory = 'all' | 'legs' | 'back' | 'chest' | 'shoulders' | 'arms' | 'cardio' | 'stretching';
-export type EquipmentType = 'barbell' | 'dumbbells' | 'bodyweight' | 'machines' | 'cables' | 'kettlebell';
-export type RiskType = 'shoulder' | 'knee' | 'back' | 'wrist' | 'elbow';
-export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
-
-export interface Exercise {
-    id: number;
-    name: string;
-    category: Exclude<ExerciseCategory, 'all'>;
-    equipment: EquipmentType[];
-    primaryMuscles: string[];
-    secondaryMuscles: string[];
-    difficulty: DifficultyLevel;
-    risks: RiskType[];
-    description: string;
-    instructions: string[];
-    tips: string[];
-    videoUrl?: string;
-    gifUrl?: string;
-    imageUrl?: string;
-    isCustom: boolean;
-    createdBy?: number;
-    similarExercises?: number[];
-}
-
-export interface ExerciseFilters {
-    search: string;
-    categories: ExerciseCategory[];
-    equipment: EquipmentType[];
-    risks: RiskType[];
-    difficulty: DifficultyLevel[];
-}
+export type {
+    Exercise,
+    ExerciseCategory,
+    EquipmentType,
+    RiskType,
+    DifficultyLevel,
+    ExerciseFilters,
+} from '@features/exercises/types/catalogUi';
 
 // ============================================
 // Constants
@@ -835,9 +816,18 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 export const Catalog: React.FC = () => {
     const navigate = useNavigate();
     const tg = useTelegramWebApp();
+    const exercisesQuery = useExercisesCatalogQuery();
+
+    const exercises = useMemo(
+        () =>
+            exercisesQuery.data ??
+            (exercisesQuery.isError ? MOCK_EXERCISES : []),
+        [exercisesQuery.data, exercisesQuery.isError],
+    );
+
+    const isLoading = exercisesQuery.isPending;
 
     // State
-    const [exercises, setExercises] = useState<Exercise[]>(MOCK_EXERCISES);
     const [filters, setFilters] = useState<ExerciseFilters>({
         search: '',
         categories: ['all'],
@@ -848,29 +838,6 @@ export const Catalog: React.FC = () => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Load exercises from API
-    useEffect(() => {
-        const loadExercises = async () => {
-            setIsLoading(true);
-            try {
-                // TODO: Replace with actual API call
-                // const data = await api.get<Exercise[]>('/exercises');
-                // setExercises(data);
-
-                // Using mock data for now
-                await new Promise(resolve => setTimeout(resolve, 500));
-                setExercises(MOCK_EXERCISES);
-            } catch (error) {
-                console.error('Failed to load exercises:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadExercises();
-    }, [tg]);
 
     // Setup Telegram back button
     useEffect(() => {
@@ -1134,6 +1101,18 @@ export const Catalog: React.FC = () => {
 
             {/* Exercise List */}
             <div className="px-4 py-4">
+                {exercisesQuery.isError && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 text-center">
+                        Не удалось загрузить каталог с сервера — показаны демо-данные.
+                        <button
+                            type="button"
+                            className="ml-2 underline font-medium"
+                            onClick={() => void exercisesQuery.refetch()}
+                        >
+                            Повторить
+                        </button>
+                    </p>
+                )}
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-12">
                         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />

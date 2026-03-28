@@ -1,6 +1,6 @@
 import { Dumbbell, Zap, Heart, Activity, Plus, ChevronRight } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import type { WorkoutTemplate } from '@features/home/store/homeStore'
+import type { WorkoutTemplate } from '@features/home/types/homeWidgets'
 
 interface WorkoutCardProps {
     template: WorkoutTemplate
