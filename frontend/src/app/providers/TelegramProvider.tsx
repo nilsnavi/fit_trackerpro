@@ -1,6 +1,5 @@
 import { PropsWithChildren, createContext, useContext, useEffect, useMemo } from 'react'
 import { UseTelegramWebAppReturn, useTelegramWebApp } from '@hooks/useTelegramWebApp'
-import { useThemeContext } from './ThemeProvider'
 
 const TelegramContext = createContext<UseTelegramWebAppReturn | null>(null)
 
@@ -20,7 +19,6 @@ function bootstrapTelegramWebApp(
 
 export function TelegramProvider({ children }: PropsWithChildren) {
     const telegram = useTelegramWebApp()
-    const { setTheme } = useThemeContext()
 
     const {
         isTelegram,
@@ -29,7 +27,6 @@ export function TelegramProvider({ children }: PropsWithChildren) {
         enableClosingConfirmation,
         setHeaderColor,
         setBackgroundColor,
-        colorScheme,
     } = telegram
 
     useEffect(() => {
@@ -51,12 +48,6 @@ export function TelegramProvider({ children }: PropsWithChildren) {
         setHeaderColor,
         setBackgroundColor,
     ])
-
-    useEffect(() => {
-        if (isTelegram && colorScheme) {
-            setTheme(colorScheme)
-        }
-    }, [isTelegram, colorScheme, setTheme])
 
     const value = useMemo(() => telegram, [telegram])
     return <TelegramContext.Provider value={value}>{children}</TelegramContext.Provider>

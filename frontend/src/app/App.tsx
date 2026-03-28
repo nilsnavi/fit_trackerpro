@@ -6,11 +6,11 @@ import { AppRouter } from './router'
 export default function App() {
     return (
         <QueryProvider>
-            <ThemeProvider>
-                <TelegramProvider>
+            <TelegramProvider>
+                <ThemeProvider>
                     <AppRouter />
-                </TelegramProvider>
-            </ThemeProvider>
+                </ThemeProvider>
+            </TelegramProvider>
         </QueryProvider>
     )
 }
