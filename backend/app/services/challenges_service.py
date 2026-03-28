@@ -11,7 +11,10 @@ from app.schemas.challenges import (
     ChallengeCreate,
     ChallengeDetailResponse,
     ChallengeJoinResponse,
+    ChallengeLeaderboardResponse,
+    ChallengeLeaveResponse,
     ChallengeListResponse,
+    ChallengeMyActiveResponse,
     ChallengeResponse,
 )
 
@@ -184,26 +187,26 @@ class ChallengesService:
             participant_count=46,
         )
 
-    async def leave_challenge(self, challenge_id: int):
+    async def leave_challenge(self, challenge_id: int) -> ChallengeLeaveResponse:
         challenge = await self.repository.get_challenge(challenge_id)
         if not challenge:
             raise ChallengeNotFoundError("Challenge not found")
-        return {
-            "success": True,
-            "challenge_id": challenge_id,
-            "message": "Successfully left the challenge",
-        }
+        return ChallengeLeaveResponse(
+            success=True,
+            challenge_id=challenge_id,
+            message="Successfully left the challenge",
+        )
 
-    async def get_challenge_leaderboard(self, challenge_id: int):
+    async def get_challenge_leaderboard(self, challenge_id: int) -> ChallengeLeaderboardResponse:
         challenge = await self.repository.get_challenge(challenge_id)
         if not challenge:
             raise ChallengeNotFoundError("Challenge not found")
-        return {
-            "challenge_id": challenge_id,
-            "entries": [],
-            "user_rank": None,
-            "total_participants": 0,
-        }
+        return ChallengeLeaderboardResponse(
+            challenge_id=challenge_id,
+            entries=[],
+            user_rank=None,
+            total_participants=0,
+        )
 
-    async def get_my_active_challenges(self):
-        return {"items": [], "total": 0}
+    async def get_my_active_challenges(self) -> ChallengeMyActiveResponse:
+        return ChallengeMyActiveResponse(items=[], total=0)

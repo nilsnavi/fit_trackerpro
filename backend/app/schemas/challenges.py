@@ -4,7 +4,7 @@ Pydantic models for challenges endpoints
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class ChallengeGoal(BaseModel):
@@ -53,7 +53,6 @@ class ChallengeParticipant(BaseModel):
 
 class ChallengeResponse(BaseModel):
     """Challenge response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     creator_id: int
@@ -105,6 +104,12 @@ class ChallengeLeaveResponse(BaseModel):
     success: bool
     challenge_id: int
     message: str
+
+
+class ChallengeMyActiveResponse(BaseModel):
+    """Current user's active challenges"""
+    items: List[ChallengeResponse]
+    total: int
 
 
 class ChallengeProgressUpdate(BaseModel):

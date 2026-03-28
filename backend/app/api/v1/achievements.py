@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.middleware.auth import get_current_user
 from app.domain import User, get_async_db
 from app.schemas.achievements import (
+    AchievementLeaderboardResponse,
     AchievementListResponse,
     AchievementUnlockResponse,
     UserAchievementListResponse,
@@ -83,7 +84,7 @@ async def claim_achievement(
         raise _map_service_error(exc) from exc
 
 
-@router.get("/leaderboard")
+@router.get("/leaderboard", response_model=AchievementLeaderboardResponse)
 async def get_achievements_leaderboard(
     limit: int = Query(10, ge=1, le=100),
     current_user: User = Depends(get_current_user),

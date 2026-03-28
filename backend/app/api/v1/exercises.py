@@ -9,7 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user, require_admin
 from app.domain import User, get_async_db
-from app.schemas.exercises import ExerciseCreate, ExerciseListResponse, ExerciseResponse, ExerciseUpdate
+from app.schemas.exercises import (
+    ExerciseCategoriesResponse,
+    ExerciseCreate,
+    ExerciseEquipmentListResponse,
+    ExerciseListResponse,
+    ExerciseMuscleGroupsResponse,
+    ExerciseResponse,
+    ExerciseUpdate,
+)
 from app.services.exercises_service import ExerciseNotFoundError, ExercisesService
 
 router = APIRouter()
@@ -115,7 +123,7 @@ async def approve_exercise(
         raise _map_service_error(exc) from exc
 
 
-@router.get("/categories/list")
+@router.get("/categories/list", response_model=ExerciseCategoriesResponse)
 async def get_exercise_categories(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
@@ -124,7 +132,7 @@ async def get_exercise_categories(
     return service.get_categories()
 
 
-@router.get("/equipment/list")
+@router.get("/equipment/list", response_model=ExerciseEquipmentListResponse)
 async def get_equipment_list(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
@@ -133,7 +141,7 @@ async def get_equipment_list(
     return service.get_equipment()
 
 
-@router.get("/muscle-groups/list")
+@router.get("/muscle-groups/list", response_model=ExerciseMuscleGroupsResponse)
 async def get_muscle_groups(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),

@@ -41,7 +41,6 @@ class EmergencyContactUpdate(BaseModel):
 
 class EmergencyContactResponse(BaseModel):
     """Emergency contact response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: int
@@ -114,3 +113,34 @@ class WorkoutEndNotification(BaseModel):
     end_time: datetime
     duration: int
     completed_successfully: bool
+
+
+class EmergencyWorkoutNotifyResponse(BaseModel):
+    """Result of workout start/end notify-to-contacts action"""
+    message: str
+    contacts_notified: Optional[int] = None
+    preview: Optional[str] = None
+
+
+class EmergencySettingsResponse(BaseModel):
+    """User emergency feature settings snapshot"""
+    auto_notify_on_workout: bool
+    emergency_timeout_minutes: int
+    location_sharing: bool
+    contacts_count: int
+    active_contacts_count: int
+
+
+class EmergencyLogEventRequest(BaseModel):
+    """Client-reported emergency-related event (audit / support)."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    symptom: Optional[str] = Field(None, max_length=500)
+    protocol_started: Optional[bool] = Field(default=None, alias="protocolStarted")
+    contact_notified: Optional[bool] = Field(default=None, alias="contactNotified")
+
+
+class EmergencyLogEventResponse(BaseModel):
+    """Acknowledgement after logging an emergency-related client event"""
+    logged: bool
+    event_id: str

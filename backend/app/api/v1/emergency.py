@@ -14,8 +14,12 @@ from app.schemas.emergency import (
     EmergencyContactListResponse,
     EmergencyContactResponse,
     EmergencyContactUpdate,
+    EmergencyLogEventRequest,
+    EmergencyLogEventResponse,
     EmergencyNotifyRequest,
     EmergencyNotifyResponse,
+    EmergencySettingsResponse,
+    EmergencyWorkoutNotifyResponse,
 )
 from app.services.emergency_service import EmergencyNotFoundError, EmergencyService, EmergencyValidationError
 
@@ -118,7 +122,7 @@ async def send_emergency_notification(
         raise _map_service_error(exc) from exc
 
 
-@router.post("/notify/workout-start")
+@router.post("/notify/workout-start", response_model=EmergencyWorkoutNotifyResponse)
 async def notify_workout_start(
     workout_id: int,
     estimated_duration: Optional[int] = None,
@@ -137,7 +141,7 @@ async def notify_workout_start(
         raise _map_service_error(exc) from exc
 
 
-@router.post("/notify/workout-end")
+@router.post("/notify/workout-end", response_model=EmergencyWorkoutNotifyResponse)
 async def notify_workout_end(
     workout_id: int,
     duration: int,
@@ -158,7 +162,7 @@ async def notify_workout_end(
         raise _map_service_error(exc) from exc
 
 
-@router.get("/settings")
+@router.get("/settings", response_model=EmergencySettingsResponse)
 async def get_emergency_settings(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
@@ -170,9 +174,9 @@ async def get_emergency_settings(
         raise _map_service_error(exc) from exc
 
 
-@router.post("/log")
+@router.post("/log", response_model=EmergencyLogEventResponse)
 async def log_emergency_event(
-    log_data: dict,
+    log_data: EmergencyLogEventRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):

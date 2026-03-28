@@ -4,7 +4,7 @@ Pydantic models for analytics endpoints
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 class ExerciseProgressData(BaseModel):
@@ -113,7 +113,7 @@ class AnalyticsSummaryResponse(BaseModel):
 
 class TrainingLoadDailyEntry(BaseModel):
     """Daily training load aggregate entry"""
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True)
 
     id: int
     user_id: int = Field(..., serialization_alias="userId")
@@ -137,7 +137,7 @@ class TrainingLoadDailyTableResponse(BaseModel):
 
 class MuscleLoadEntry(BaseModel):
     """Daily muscle load aggregate entry"""
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True)
 
     id: int
     user_id: int = Field(..., serialization_alias="userId")
@@ -160,7 +160,7 @@ class MuscleLoadTableResponse(BaseModel):
 
 class RecoveryStateResponse(BaseModel):
     """Current user recovery state"""
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True)
 
     id: int
     user_id: int = Field(..., serialization_alias="userId")
@@ -173,3 +173,17 @@ class RecoveryStateRecalculateResponse(RecoveryStateResponse):
     recalculated_for_date: date = Field(..., serialization_alias="recalculatedForDate")
     date_from: date = Field(..., serialization_alias="dateFrom")
     date_to: date = Field(..., serialization_alias="dateTo")
+
+
+class MuscleImbalanceSignalsResponse(BaseModel):
+    """Muscle imbalance signals payload (stable API envelope)."""
+    available: bool
+    signals: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Feature-specific signal data from analytics repository",
+    )
+
+    @field_validator("signals", mode="before")
+    @classmethod
+    def _signals_none_as_empty(cls, v: Any) -> Any:
+        return {} if v is None else v

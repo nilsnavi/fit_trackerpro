@@ -4,7 +4,7 @@ Pydantic models for achievements endpoints
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class AchievementCondition(BaseModel):
@@ -16,7 +16,6 @@ class AchievementCondition(BaseModel):
 
 class AchievementResponse(BaseModel):
     """Achievement response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     code: str
@@ -40,7 +39,6 @@ class AchievementListResponse(BaseModel):
 
 class UserAchievementResponse(BaseModel):
     """User achievement response"""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: int
@@ -78,3 +76,19 @@ class AchievementUnlockResponse(BaseModel):
     points_earned: int
     new_total_points: int
     message: str
+
+
+class AchievementLeaderboardEntry(BaseModel):
+    rank: int
+    user_id: int
+    username: Optional[str]
+    first_name: Optional[str]
+    total_points: int
+    achievements_count: int
+
+
+class AchievementLeaderboardResponse(BaseModel):
+    leaderboard: List[AchievementLeaderboardEntry]
+    user_rank: int
+    user_points: int
+    total_users: int

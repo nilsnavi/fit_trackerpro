@@ -10,9 +10,14 @@ from app.repositories.emergency_repository import EmergencyRepository
 from app.schemas.emergency import (
     EmergencyContactCreate,
     EmergencyContactListResponse,
+    EmergencyContactResponse,
     EmergencyContactUpdate,
+    EmergencyLogEventRequest,
+    EmergencyLogEventResponse,
     EmergencyNotifyRequest,
     EmergencyNotifyResponse,
+    EmergencySettingsResponse,
+    EmergencyWorkoutNotifyResponse,
     NotificationResult,
 )
 
@@ -35,12 +40,12 @@ class EmergencyService:
     async def get_contacts(self, user_id: int) -> EmergencyContactListResponse:
         contacts = await self.repository.list_contacts(user_id=user_id)
         return EmergencyContactListResponse(
-            items=contacts,
+            items=[EmergencyContactResponse.model_validate(c, from_attributes=True) for c in contacts],
             total=len(contacts),
             active_count=sum(1 for c in contacts if c.is_active),
         )
 
-    async def create_contact(self, user_id: int, data: EmergencyContactCreate) -> EmergencyContact:
+    async def create_contact(self, user_id: int, data: EmergencyContactCreate) -> EmergencyContactResponse:
         if not data.contact_username and not data.phone:
             raise EmergencyValidationError("Either contact_username or phone must be provided")
         contact = EmergencyContact(
@@ -58,15 +63,17 @@ class EmergencyService:
         self.db.add(contact)
         await self.db.commit()
         await self.db.refresh(contact)
-        return contact
+        return EmergencyContactResponse.model_validate(contact, from_attributes=True)
 
-    async def get_contact(self, user_id: int, contact_id: int) -> EmergencyContact:
+    async def get_contact(self, user_id: int, contact_id: int) -> EmergencyContactResponse:
         contact = await self.repository.get_contact(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise EmergencyNotFoundError("Emergency contact not found")
-        return contact
+        return EmergencyContactResponse.model_validate(contact, from_attributes=True)
 
-    async def update_contact(self, user_id: int, contact_id: int, data: EmergencyContactUpdate) -> EmergencyContact:
+    async def update_contact(
+        self, user_id: int, contact_id: int, data: EmergencyContactUpdate
+    ) -> EmergencyContactResponse:
         contact = await self.repository.get_contact(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise EmergencyNotFoundError("Emergency contact not found")
@@ -74,7 +81,7 @@ class EmergencyService:
             setattr(contact, field, value)
         await self.db.commit()
         await self.db.refresh(contact)
-        return contact
+        return EmergencyContactResponse.model_validate(contact, from_attributes=True)
 
     async def delete_contact(self, user_id: int, contact_id: int) -> None:
         contact = await self.repository.get_contact(user_id=user_id, contact_id=contact_id)
@@ -135,38 +142,59 @@ class EmergencyService:
             failed_count=failed,
         )
 
-    async def notify_workout_start(self, user_id: int, user_name: str, estimated_duration: int | None):
+    async def notify_workout_start(
+        self, user_id: int, user_name: str, estimated_duration: int | None
+    ) -> EmergencyWorkoutNotifyResponse:
         contacts = await self.repository.list_contacts_for_workout_start(user_id=user_id)
         if not contacts:
-            return {"message": "No contacts configured for workout start notifications"}
+            return EmergencyWorkoutNotifyResponse(
+                message="No contacts configured for workout start notifications"
+            )
         duration_str = f" (estimated {estimated_duration} min)" if estimated_duration else ""
         message = f"🏃 {user_name} has started a workout{duration_str}. You'll be notified when they finish."
-        return {"message": "Workout start notifications sent", "contacts_notified": len(contacts), "preview": message}
+        return EmergencyWorkoutNotifyResponse(
+            message="Workout start notifications sent",
+            contacts_notified=len(contacts),
+            preview=message,
+        )
 
-    async def notify_workout_end(self, user_id: int, user_name: str, duration: int, completed_successfully: bool):
+    async def notify_workout_end(
+        self, user_id: int, user_name: str, duration: int, completed_successfully: bool
+    ) -> EmergencyWorkoutNotifyResponse:
         contacts = await self.repository.list_contacts_for_workout_end(user_id=user_id)
         if not contacts:
-            return {"message": "No contacts configured for workout end notifications"}
+            return EmergencyWorkoutNotifyResponse(
+                message="No contacts configured for workout end notifications"
+            )
         status = "completed" if completed_successfully else "ended"
         message = f"✅ {user_name} has {status} their workout ({duration} min). All is well!"
-        return {"message": "Workout end notifications sent", "contacts_notified": len(contacts), "preview": message}
+        return EmergencyWorkoutNotifyResponse(
+            message="Workout end notifications sent",
+            contacts_notified=len(contacts),
+            preview=message,
+        )
 
-    async def get_settings(self, user_id: int):
+    async def get_settings(self, user_id: int) -> EmergencySettingsResponse:
         contacts = await self.repository.list_contacts(user_id=user_id)
-        return {
-            "auto_notify_on_workout": False,
-            "emergency_timeout_minutes": 60,
-            "location_sharing": True,
-            "contacts_count": len(contacts),
-            "active_contacts_count": sum(1 for c in contacts if c.is_active),
-        }
+        return EmergencySettingsResponse(
+            auto_notify_on_workout=False,
+            emergency_timeout_minutes=60,
+            location_sharing=True,
+            contacts_count=len(contacts),
+            active_contacts_count=sum(1 for c in contacts if c.is_active),
+        )
 
-    async def log_emergency_event(self, user_id: int, log_data: dict):
+    async def log_emergency_event(
+        self, user_id: int, log_data: EmergencyLogEventRequest
+    ) -> EmergencyLogEventResponse:
         logger.info(
             "Emergency event logged for user %s: symptom=%s, protocol_started=%s, contact_notified=%s",
             user_id,
-            log_data.get("symptom"),
-            log_data.get("protocolStarted"),
-            log_data.get("contactNotified"),
+            log_data.symptom,
+            log_data.protocol_started,
+            log_data.contact_notified,
         )
-        return {"logged": True, "event_id": f"evt_{user_id}_{int(datetime.utcnow().timestamp())}"}
+        return EmergencyLogEventResponse(
+            logged=True,
+            event_id=f"evt_{user_id}_{int(datetime.utcnow().timestamp())}",
+        )

@@ -11,9 +11,12 @@ from app.schemas.auth import (
     AuthResponse,
     LogoutResponse,
     RefreshTokenRequest,
+    RefreshTokenResponse,
     TelegramAuthRequest,
     TelegramUserData,
+    UserProfileResponse,
     UserProfileUpdate,
+    user_profile_from_db,
 )
 from app.core.config import settings
 from app.utils.telegram_auth import validate_and_get_user
@@ -80,7 +83,9 @@ class AuthService:
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
-    async def update_profile(self, current_user: User, profile_update: UserProfileUpdate) -> User:
+    async def update_profile(
+        self, current_user: User, profile_update: UserProfileUpdate
+    ) -> UserProfileResponse:
         update_data = profile_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             if field in ["profile", "settings"] and value is not None:
@@ -92,22 +97,22 @@ class AuthService:
                 setattr(current_user, field, value)
         await self.db.commit()
         await self.db.refresh(current_user)
-        return current_user
+        return user_profile_from_db(current_user)
 
     @staticmethod
-    def refresh_token(refresh_request: RefreshTokenRequest):
+    def refresh_token(refresh_request: RefreshTokenRequest) -> RefreshTokenResponse:
         user_id = verify_token(refresh_request.refresh_token, token_type="refresh")
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired refresh token",
             )
-        return {
-            "access_token": create_access_token(user_id),
-            "refresh_token": create_refresh_token(user_id),
-            "token_type": "bearer",
-            "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        }
+        return RefreshTokenResponse(
+            access_token=create_access_token(user_id),
+            refresh_token=create_refresh_token(user_id),
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
 
     @staticmethod
     def logout() -> LogoutResponse:
