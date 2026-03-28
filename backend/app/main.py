@@ -119,7 +119,7 @@ app.add_middleware(RateLimitMiddleware)
 
 # Include routers
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(auth_router, prefix="/api/v1/users/auth", tags=["auth"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
 app.include_router(
     workouts_router, prefix="/api/v1/workouts", tags=["workouts"])
@@ -129,11 +129,20 @@ app.include_router(health_metrics_router, prefix="/api/v1/health-metrics", tags=
 app.include_router(
     analytics_router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(achievements_router,
-                   prefix="/api/v1/achievements", tags=["achievements"])
+                   prefix="/api/v1/analytics/achievements", tags=["achievements"])
 app.include_router(challenges_router,
-                   prefix="/api/v1/challenges", tags=["challenges"])
+                   prefix="/api/v1/analytics/challenges", tags=["challenges"])
 app.include_router(
-    emergency_router, prefix="/api/v1/emergency", tags=["emergency"])
+    emergency_router, prefix="/api/v1/system/emergency", tags=["emergency"])
+
+# Backward-compatible deprecated aliases for legacy clients.
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"], deprecated=True)
+app.include_router(achievements_router,
+                   prefix="/api/v1/achievements", tags=["achievements"], deprecated=True)
+app.include_router(challenges_router,
+                   prefix="/api/v1/challenges", tags=["challenges"], deprecated=True)
+app.include_router(
+    emergency_router, prefix="/api/v1/emergency", tags=["emergency"], deprecated=True)
 
 
 @app.get("/")

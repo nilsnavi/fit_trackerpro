@@ -29,19 +29,19 @@ VITE_TELEGRAM_BOT_USERNAME=your_bot_username
 
 ## 3) Backend endpoints (current)
 
-- `POST /api/v1/auth/telegram` - validate `init_data`, create/update user, return JWT pair
-- `GET /api/v1/auth/me` - current user profile
-- `PUT /api/v1/auth/me` - update profile
-- `POST /api/v1/auth/refresh` - refresh token
-- `POST /api/v1/auth/logout` - logout
+- `POST /api/v1/users/auth/telegram` - validate `init_data`, create/update user, return JWT pair
+- `GET /api/v1/users/auth/me` - current user profile
+- `PUT /api/v1/users/auth/me` - update profile
+- `POST /api/v1/users/auth/refresh` - refresh token
+- `POST /api/v1/users/auth/logout` - logout
 
 ## 4) Frontend auth flow
 
 1. Get `initData` from Telegram WebApp SDK
-2. Send it to `POST /api/v1/auth/telegram`
+2. Send it to `POST /api/v1/users/auth/telegram`
 3. Store access/refresh tokens
 4. Use access token as `Authorization: Bearer <token>`
-5. Refresh via `/auth/refresh` on 401/expiry
+5. Refresh via `/users/auth/refresh` on 401/expiry
 
 ## 5) Validation model used by backend
 
@@ -65,8 +65,13 @@ Telegram requires HTTPS for real WebApp launch. For local validation:
 
 - **Invalid hash**: wrong `TELEGRAM_BOT_TOKEN` or modified `init_data`
 - **Mini App does not open**: URL in BotFather not HTTPS or mismatched domain
-- **401 from `/auth/me`**: expired/missing token or wrong `Authorization` header
+- **401 from `/users/auth/me`**: expired/missing token or wrong `Authorization` header
 - **CORS errors**: check `ALLOWED_ORIGINS` in backend env
+
+## 9) Deprecation note
+
+Legacy auth routes under `/api/v1/auth/*` are still available as deprecated aliases.
+Plan removal in `v1.2.0` (target date `2026-06-30`).
 
 ## 8) Security notes
 

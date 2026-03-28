@@ -46,10 +46,22 @@ docker-compose exec backend alembic upgrade head
 - `/api/v1/system/version`
 - `/api/v1/health-metrics/*`
 - `/api/v1/analytics/*`
+- `/api/v1/analytics/achievements/*`
+- `/api/v1/analytics/challenges/*`
 - `/api/v1/workouts/*`
 - `/api/v1/exercises/*`
 - `/api/v1/users/*`
-- `/api/v1/auth/*`
+- `/api/v1/users/auth/*`
+
+### Legacy Aliases (Deprecated)
+
+Legacy routes are still available for backward compatibility and marked as deprecated:
+- `/api/v1/auth/*` -> use `/api/v1/users/auth/*`
+- `/api/v1/achievements/*` -> use `/api/v1/analytics/achievements/*`
+- `/api/v1/challenges/*` -> use `/api/v1/analytics/challenges/*`
+- `/api/v1/emergency/*` -> use `/api/v1/system/emergency/*`
+
+Removal plan: legacy aliases will be removed in `v1.2.0` (target date `2026-06-30`).
 
 ## Breaking Changes
 

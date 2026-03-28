@@ -36,9 +36,15 @@ Checklist for releasing current FitTracker Pro stack.
 
 - [ ] `GET /api/v1/system/health` returns 200
 - [ ] `GET /api/v1/system/version` returns 200
-- [ ] Telegram login works (`POST /api/v1/auth/telegram`)
-- [ ] `GET /api/v1/auth/me` works with access token
+- [ ] Telegram login works (`POST /api/v1/users/auth/telegram`)
+- [ ] `GET /api/v1/users/auth/me` works with access token
 - [ ] Core user flow works: workouts, health, analytics
+
+## API prefix migration note
+
+- [ ] Clients use standardized prefixes (`users`, `workouts`, `exercises`, `analytics`, `health-metrics`, `system`)
+- [ ] No production clients depend on legacy aliases (`/api/v1/auth`, `/api/v1/achievements`, `/api/v1/challenges`, `/api/v1/emergency`)
+- [ ] Legacy aliases removal is scheduled for `v1.2.0` (`2026-06-30`)
 
 ## 6) Post-deploy
 

@@ -22,12 +22,16 @@ class RateLimitConfig:
     # Endpoint specific limits
     ENDPOINT_LIMITS = {
         # Auth endpoints
-        "/api/v1/auth/telegram": (5, 60),      # 5 per minute
-        "/api/v1/auth/refresh": (10, 60),      # 10 per minute
-        "/api/v1/auth/logout": (10, 60),       # 10 per minute
+        "/api/v1/users/auth/telegram": (5, 60),      # 5 per minute
+        "/api/v1/users/auth/refresh": (10, 60),      # 10 per minute
+        "/api/v1/users/auth/logout": (10, 60),       # 10 per minute
+        "/api/v1/auth/telegram": (5, 60),            # legacy alias
+        "/api/v1/auth/refresh": (10, 60),            # legacy alias
+        "/api/v1/auth/logout": (10, 60),             # legacy alias
 
         # Emergency endpoints - higher limits
-        "/api/v1/emergency/notify": (20, 60),  # 20 per minute
+        "/api/v1/system/emergency/notify": (20, 60),  # 20 per minute
+        "/api/v1/emergency/notify": (20, 60),         # legacy alias
 
         # Export endpoints - lower limits
         "/api/v1/analytics/export": (5, 3600),  # 5 per hour

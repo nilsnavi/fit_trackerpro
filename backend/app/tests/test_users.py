@@ -59,7 +59,7 @@ async def test_user_registration_and_profile_flow(
 ):
     """Test complete user registration and profile flow."""
     # 1. Authenticate
-    auth_response = await client.post("/api/v1/auth/telegram", json=mock_telegram_auth_data)
+    auth_response = await client.post("/api/v1/users/auth/telegram", json=mock_telegram_auth_data)
 
     if auth_response.status_code != 200:
         pytest.skip("Authentication endpoint not fully implemented")

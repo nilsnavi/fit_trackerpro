@@ -6,7 +6,7 @@ from httpx import AsyncClient
 @pytest.mark.auth
 async def test_telegram_auth_missing_data(client: AsyncClient):
     """Test authentication with missing data."""
-    response = await client.post("/api/v1/auth/telegram", json={})
+    response = await client.post("/api/v1/users/auth/telegram", json={})
     assert response.status_code == 422  # Validation error
 
 
@@ -21,7 +21,7 @@ async def test_telegram_auth_invalid_hash(client: AsyncClient, mock_telegram_aut
         "hash": "invalid_hash"
     }
 
-    response = await client.post("/api/v1/auth/telegram", json=auth_data)
+    response = await client.post("/api/v1/users/auth/telegram", json=auth_data)
     # The actual response depends on your validation logic
     assert response.status_code in [200, 401, 403]
 
@@ -55,7 +55,7 @@ async def test_authentication_flow(client: AsyncClient, mock_telegram_auth_data)
     # 4. Test accessing protected endpoint with token
 
     # For now, just verify the endpoint exists
-    response = await client.post("/api/v1/auth/telegram", json=mock_telegram_auth_data)
+    response = await client.post("/api/v1/users/auth/telegram", json=mock_telegram_auth_data)
     # Status depends on your validation implementation
     assert response.status_code in [200, 401, 403, 422]
 
@@ -66,7 +66,7 @@ async def test_token_refresh(client: AsyncClient):
     """Test token refresh endpoint."""
     # This would test the token refresh functionality
     # Placeholder for the actual implementation
-    response = await client.post("/api/v1/auth/refresh", json={})
+    response = await client.post("/api/v1/users/auth/refresh", json={})
     # Endpoint might not exist yet
     assert response.status_code in [200, 404, 422]
 
@@ -75,6 +75,6 @@ async def test_token_refresh(client: AsyncClient):
 @pytest.mark.auth
 async def test_logout(client: AsyncClient):
     """Test logout endpoint."""
-    response = await client.post("/api/v1/auth/logout")
+    response = await client.post("/api/v1/users/auth/logout")
     # Endpoint might not exist yet
     assert response.status_code in [200, 404, 401]
