@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useTimer } from '../../hooks/useTimer';
+import { useTimer } from '../../shared/hooks/useTimer';
 
 /**
  * useTimer drives the clock via requestAnimationFrame. Queue callbacks and flush

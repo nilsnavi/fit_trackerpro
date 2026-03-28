@@ -16,7 +16,10 @@ export default {
     },
     moduleNameMapper: {
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-        '^@/(.*)$': '<rootDir>/src/$1'
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@app/(.*)$': '<rootDir>/src/app/$1',
+        '^@features/(.*)$': '<rootDir>/src/features/$1',
+        '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     },
     setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
     collectCoverageFrom: [
@@ -24,8 +27,7 @@ export default {
         '!src/**/*.d.ts',
         '!src/main.tsx',
         '!src/vite-env.d.ts',
-        '!src/**/index.ts',
-        '!src/types/**'
+        '!src/**/index.ts'
     ],
     coverageThreshold: {
         global: {

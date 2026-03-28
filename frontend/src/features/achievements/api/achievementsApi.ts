@@ -1,4 +1,4 @@
-import { api } from '@/services/api'
+import { api } from '@shared/api/client'
 
 export const achievementsApi = {
     list() {

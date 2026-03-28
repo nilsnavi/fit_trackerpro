@@ -1,5 +1,5 @@
 import { PropsWithChildren, createContext, useContext, useEffect, useMemo } from 'react'
-import { UseTelegramWebAppReturn, useTelegramWebApp } from '@hooks/useTelegramWebApp'
+import { UseTelegramWebAppReturn, useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 
 const TelegramContext = createContext<UseTelegramWebAppReturn | null>(null)
 

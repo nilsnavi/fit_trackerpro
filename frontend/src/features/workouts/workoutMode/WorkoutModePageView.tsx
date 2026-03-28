@@ -1,5 +1,5 @@
 import { Flag, Play, Timer } from 'lucide-react'
-import { Button } from '@components/ui/Button'
+import { Button } from '@shared/ui/Button'
 import type { WorkoutTypeConfig } from '../types/workoutTypeConfig'
 import { PRIMARY_TIMER_HINTS } from './workoutModePageModel'
 

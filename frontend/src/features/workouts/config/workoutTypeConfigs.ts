@@ -6,7 +6,7 @@ import {
     Trophy,
     Wind,
 } from 'lucide-react'
-import type { WorkoutType } from '@/types'
+import type { WorkoutType } from '@shared/types'
 import type { WorkoutSessionField, WorkoutTypeConfig } from '../types/workoutTypeConfig'
 
 const cardio: WorkoutTypeConfig = {
