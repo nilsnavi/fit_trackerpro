@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.middleware.auth import create_access_token, create_refresh_token, verify_token
+from app.core.security import create_access_token, create_refresh_token, verify_token
 from app.models import User
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import (

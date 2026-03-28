@@ -1,15 +1,12 @@
 """
 FitTracker Pro - FastAPI Backend Application
 """
-import logging
 import asyncio
-import sentry_sdk
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from app.api.achievements import router as achievements_router
 from app.api.analytics import router as analytics_router
@@ -21,6 +18,10 @@ from app.api.health_metrics import router as health_metrics_router
 from app.api.system import router as system_router
 from app.api.users import router as users_router
 from app.api.workouts import router as workouts_router
+from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
+from app.core.config import settings
+from app.core.logging import configure_logging
+from app.core.telemetry import init_sentry
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.openapi_tags import (
     OPENAPI_TAGS,
@@ -36,28 +37,13 @@ from app.openapi_tags import (
     TAG_USERS,
     TAG_WORKOUTS,
 )
-from app.core.config import settings
-from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
 
-logging.basicConfig(level=logging.INFO)
+configure_logging(settings)
 logger = logging.getLogger(__name__)
+init_sentry(settings)
 
 # Bot task reference
 _bot_task = None
-
-# Initialize Sentry if DSN is configured
-if settings.SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        environment=settings.ENVIRONMENT,
-        integrations=[
-            FastApiIntegration(),
-            SqlalchemyIntegration(),
-        ],
-        traces_sample_rate=0.1 if settings.ENVIRONMENT == "production" else 1.0,
-        profiles_sample_rate=0.1 if settings.ENVIRONMENT == "production" else 1.0,
-    )
-    logger.info("Sentry initialized")
 
 
 @asynccontextmanager
