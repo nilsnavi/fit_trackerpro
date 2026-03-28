@@ -51,11 +51,6 @@ export interface ApiResponse<T> {
     message?: string
 }
 
-export interface ApiError {
-    detail: string
-    status_code: number
-}
-
 // Exercise Types
 export type ExerciseCategory = 'all' | 'legs' | 'back' | 'chest' | 'shoulders' | 'arms' | 'cardio' | 'stretching'
 export type EquipmentType = 'barbell' | 'dumbbells' | 'bodyweight' | 'machines' | 'cables' | 'kettlebell'

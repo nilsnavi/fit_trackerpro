@@ -6,6 +6,7 @@ import { WORKOUT_TYPE_CONFIGS } from '@/features/workouts/config/workoutTypeConf
 import { WorkoutMode } from '@/features/workouts/types/workoutTypeConfig'
 import { useWorkoutHistoryQuery } from '@/features/workouts/hooks/useWorkoutHistoryQuery'
 import type { WorkoutHistoryItem } from '@/types/workouts'
+import { getErrorMessage } from '@/shared/errors'
 
 type WorkoutType = 'cardio' | 'strength' | 'flexibility' | 'sports' | 'other'
 
@@ -227,7 +228,7 @@ export function WorkoutsPage() {
                 )}
                 {!isLoading && error && (
                     <div className="text-sm text-red-500 dark:text-red-400">
-                        Не удалось загрузить тренировки
+                        {getErrorMessage(error)}
                     </div>
                 )}
                 {!isLoading && !error && filteredWorkouts.length === 0 && (

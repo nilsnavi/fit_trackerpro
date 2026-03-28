@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
-import { ApiError } from '@/types'
+import axios, { AxiosInstance } from 'axios'
+import { AppHttpError, normalizeError } from '@/shared/errors'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
@@ -32,14 +32,17 @@ class ApiService {
             (error) => Promise.reject(error)
         )
 
-        // Response interceptor
+        // Response interceptor — reject with unified AppHttpError payload
         this.client.interceptors.response.use(
             (response) => response,
-            (error: AxiosError<ApiError>) => {
-                if (error.response) {
-                    console.error('API Error:', error.response.data)
+            (error: unknown) => {
+                const clientError = normalizeError(error)
+                if (clientError.status != null) {
+                    console.error('API Error:', clientError)
+                } else {
+                    console.error('API Error:', clientError.message, clientError.code)
                 }
-                return Promise.reject(error)
+                return Promise.reject(new AppHttpError(clientError))
             }
         )
     }

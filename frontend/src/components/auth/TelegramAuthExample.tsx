@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { useTelegramWebApp } from '../../hooks/useTelegramWebApp'
 import type { TelegramUser, ThemeParams } from '../../types/telegram'
+import { AppHttpError, clientErrorFromFetchResponse, getErrorMessage } from '@/shared/errors'
 
 interface AuthState {
     isAuthenticated: boolean
@@ -88,8 +89,7 @@ export function TelegramAuthExample() {
             })
 
             if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.detail || 'Authentication failed')
+                throw new AppHttpError(await clientErrorFromFetchResponse(response))
             }
 
             const data = await response.json()
@@ -113,7 +113,7 @@ export function TelegramAuthExample() {
             setAuthState(prev => ({
                 ...prev,
                 isLoading: false,
-                error: err instanceof Error ? err.message : 'Unknown error'
+                error: getErrorMessage(err)
             }))
 
             // Error haptic feedback
@@ -142,6 +142,10 @@ export function TelegramAuthExample() {
                 body: JSON.stringify({ init_data: tg.webApp.initData })
             })
 
+            if (!response.ok) {
+                throw new AppHttpError(await clientErrorFromFetchResponse(response))
+            }
+
             const data = await response.json()
 
             if (data.valid) {
@@ -155,7 +159,7 @@ export function TelegramAuthExample() {
             setAuthState(prev => ({
                 ...prev,
                 isLoading: false,
-                error: err instanceof Error ? err.message : 'Validation failed'
+                error: getErrorMessage(err)
             }))
             tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
         } finally {
