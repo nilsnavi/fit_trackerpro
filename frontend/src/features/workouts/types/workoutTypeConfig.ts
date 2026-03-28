@@ -2,9 +2,6 @@ import type { LucideIcon } from 'lucide-react'
 import type { WorkoutType } from '@/types'
 import type { BackendWorkoutType } from '@/types/workouts'
 
-/** Режим быстрого старта: маршрут `/workouts/mode/:mode`. */
-export type WorkoutMode = 'cardio' | 'strength' | 'functional' | 'yoga'
-
 /** Поля сессии / упражнения, которыми можно управлять из конфига (рендер форм, итоги). */
 export type WorkoutSessionField =
     | 'duration'
@@ -78,8 +75,8 @@ export interface WorkoutTypeHints {
 export interface WorkoutTypeConfig {
     /** Стабильный id записи в реестре. */
     id: string
-    /** Если задан — доступен быстрый старт по маршруту режима. */
-    mode?: WorkoutMode
+    /** Если задан — сегмент `/workouts/mode/:mode` и ключ в `WORKOUT_TYPE_CONFIGS`. */
+    mode?: string
     /**
      * Какие значения `WorkoutType` (БД/фильтры) отображаются этим конфигом.
      * У режима без записи в списке (например functional) — пусто.

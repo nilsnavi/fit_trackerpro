@@ -8,8 +8,8 @@ import {
     WORKOUT_TYPE_CONFIGS,
     estimateCaloriesForType,
     getWorkoutListTypeConfig,
+    type WorkoutMode,
 } from '@/features/workouts/config/workoutTypeConfigs'
-import { WorkoutMode } from '@/features/workouts/types/workoutTypeConfig'
 import { useWorkoutHistoryQuery } from '@/features/workouts/hooks/useWorkoutHistoryQuery'
 import type { WorkoutType } from '@/types'
 import type { WorkoutHistoryItem } from '@/types/workouts'
