@@ -125,7 +125,7 @@ class TestUser:
             "hash": "mock_hash"
         }
 
-        response = await self.client.post("/api/v1/auth/telegram", json=auth_data)
+        response = await self.client.post("/api/v1/users/auth/telegram", json=auth_data)
         assert response.status_code == 200
 
         self.token = response.json()["access_token"]

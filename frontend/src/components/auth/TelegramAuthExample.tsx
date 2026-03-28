@@ -79,7 +79,7 @@ export function TelegramAuthExample() {
             }
 
             // Send to backend for validation
-            const response = await fetch('/api/v1/auth/telegram', {
+            const response = await fetch('/api/v1/users/auth/telegram', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -134,7 +134,7 @@ export function TelegramAuthExample() {
         setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
 
         try {
-            const response = await fetch('/api/v1/auth/validate', {
+            const response = await fetch('/api/v1/users/auth/validate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
