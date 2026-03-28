@@ -1,5 +1,6 @@
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from app.main import app
 
 
 @pytest.mark.unit
@@ -49,3 +50,28 @@ async def test_api_docs_disabled_in_production():
     )
 
     assert settings.DEBUG is False
+
+
+@pytest.mark.unit
+async def test_system_and_health_metrics_separation_smoke():
+    """Smoke test: system endpoints are public, health metrics are protected."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        system_response = await client.get("/api/v1/system/health")
+        assert system_response.status_code == 200
+        assert system_response.json().get("status") == "healthy"
+
+        metrics_response = await client.get("/api/v1/health-metrics/stats")
+        assert metrics_response.status_code == 401
+
+
+@pytest.mark.unit
+async def test_system_version_contract_smoke():
+    """Smoke test: system version endpoint returns expected contract."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/system/version")
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("name") == "FitTracker Pro API"
+        assert data.get("version") == "1.0.0"
