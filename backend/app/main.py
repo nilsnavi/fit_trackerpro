@@ -17,7 +17,7 @@ from app.api import (
     users,
     workouts,
     exercises,
-    health,
+    health_metrics,
     analytics,
     achievements,
     challenges,
@@ -127,7 +127,7 @@ app.include_router(
     workouts.router, prefix="/api/v1/workouts", tags=["workouts"])
 app.include_router(
     exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
-app.include_router(health.router, prefix="/api/v1/health-metrics", tags=["health-metrics"])
+app.include_router(health_metrics.router, prefix="/api/v1/health-metrics", tags=["health-metrics"])
 app.include_router(
     analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(achievements.router,

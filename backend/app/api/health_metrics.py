@@ -1,6 +1,6 @@
 """
-Health API Router
-HTTP-only endpoints delegating business logic to services
+Health metrics API router.
+HTTP-only endpoints delegating business logic to services.
 """
 from datetime import date
 from typing import List, Optional
