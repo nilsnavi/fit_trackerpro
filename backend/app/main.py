@@ -3,6 +3,7 @@ FitTracker Pro - FastAPI Backend Application
 """
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 
 import sentry_sdk
@@ -16,7 +17,13 @@ from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_w
 from app.settings import settings
 from app.core.logging import configure_logging
 from app.core.telemetry import init_sentry, setup_prometheus_metrics
-from app.middleware.rate_limit import RateLimitMiddleware
+from app.infrastructure.cache import close_cache
+from app.infrastructure.database import close_db, init_db
+from app.middleware.rate_limit import (
+    RateLimitMiddleware,
+    close_rate_limit_redis_client,
+    create_rate_limit_redis_client,
+)
 from app.middleware.request_logging import StructuredRequestLoggingMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
 from app.schemas.system import HealthCheckResponse
@@ -26,46 +33,79 @@ configure_logging(settings)
 logger = logging.getLogger(__name__)
 init_sentry(settings)
 
-# Bot task reference
+# Bot task reference (polling mode)
 _bot_task = None
+
+_PYTEST = os.environ.get("PYTEST_RUNNING") == "1"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan handler"""
+    """Startup: DB check, Redis for rate limit, optional Telegram bot. Shutdown releases all."""
     global _bot_task
     logger.info("Starting up FitTracker Pro API...")
 
-    # Start Telegram bot
-    if settings.TELEGRAM_BOT_TOKEN:
+    await init_db()
+    logger.info("Database connection OK")
+
+    app.state.redis_rate_limit = None
+    if not _PYTEST:
+        app.state.redis_rate_limit = create_rate_limit_redis_client()
+        if app.state.redis_rate_limit:
+            logger.info("Redis (rate limiting) connected")
+        else:
+            logger.info("Redis (rate limiting) unavailable; using in-memory counters")
+
+    bot_started = False
+    if not _PYTEST and settings.TELEGRAM_BOT_TOKEN:
         try:
             bot_app = setup_bot()
             if bot_app:
+                bot_started = True
                 if settings.ENVIRONMENT == "production":
-                    # Use webhook mode in production
                     await start_bot_webhook(bot_app)
                     logger.info("Telegram bot started in webhook mode")
                 else:
-                    # Use polling mode in development
                     _bot_task = asyncio.create_task(start_bot(bot_app))
                     logger.info("Telegram bot started in polling mode")
         except Exception as e:
-            logger.error(f"Failed to start Telegram bot: {e}")
-    else:
+            logger.error("Failed to start Telegram bot: %s", e)
+    elif not settings.TELEGRAM_BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN not set, bot not started")
 
-    yield
+    try:
+        yield
+    finally:
+        logger.info("Shutting down FitTracker Pro API...")
 
-    # Shutdown bot
-    if _bot_task:
-        try:
-            await stop_bot()
-            _bot_task.cancel()
-            logger.info("Telegram bot stopped")
-        except Exception as e:
-            logger.error(f"Error stopping bot: {e}")
+        if bot_started:
+            try:
+                await stop_bot()
+                if _bot_task:
+                    _bot_task.cancel()
+                    try:
+                        await _bot_task
+                    except asyncio.CancelledError:
+                        pass
+            except Exception as e:
+                logger.error("Error stopping bot: %s", e)
+            finally:
+                _bot_task = None
 
-    logger.info("Shutting down FitTracker Pro API...")
+        if not _PYTEST:
+            try:
+                await close_cache()
+            except Exception as e:
+                logger.warning("Error closing analytics cache Redis: %s", e)
+            try:
+                close_rate_limit_redis_client(getattr(app.state, "redis_rate_limit", None))
+                app.state.redis_rate_limit = None
+            except Exception as e:
+                logger.warning("Error closing rate-limit Redis: %s", e)
+            try:
+                await close_db()
+            except Exception as e:
+                logger.warning("Error disposing database engine: %s", e)
 
 
 app = FastAPI(

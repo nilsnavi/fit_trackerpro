@@ -1,6 +1,7 @@
 """
 Async SQLAlchemy engine and session factory (persistence wiring).
 """
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -14,6 +15,17 @@ engine = create_async_engine(settings.DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
+
+
+async def init_db() -> None:
+    """Verify DB connectivity at startup (pool is created lazily otherwise)."""
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+
+
+async def close_db() -> None:
+    """Dispose engine and close all pooled connections."""
+    await engine.dispose()
 
 
 async def get_async_db():

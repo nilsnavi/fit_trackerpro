@@ -2,6 +2,7 @@
 Rate Limiting Middleware
 Rate limiting using Redis for distributed tracking
 """
+import logging
 import os
 import time
 import redis
@@ -13,6 +14,31 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.settings import settings
+
+logger = logging.getLogger(__name__)
+
+
+def create_rate_limit_redis_client() -> Optional[redis.Redis]:
+    """
+    Create a synchronous Redis client for rate limiting.
+    Returns None if Redis is unavailable (middleware falls back to in-memory).
+    Caller must close the client on application shutdown.
+    """
+    try:
+        client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        client.ping()
+        return client
+    except (redis.ConnectionError, redis.TimeoutError, OSError) as e:
+        logger.warning("Redis unavailable for rate limiting, using in-memory: %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Redis rate-limit init failed, using in-memory: %s", e)
+        return None
+
+
+def close_rate_limit_redis_client(client: Optional[redis.Redis]) -> None:
+    if client is not None:
+        client.close()
 
 
 class RateLimitConfig:
@@ -46,21 +72,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Tracks request counts per IP address and endpoint
     """
 
-    def __init__(self, app, redis_client: Optional[redis.Redis] = None):
+    def __init__(self, app):
         super().__init__(app)
         self.config = RateLimitConfig()
-
-        # Initialize Redis client
-        try:
-            self.redis = redis_client or redis.from_url(
-                settings.REDIS_URL,
-                decode_responses=True
-            )
-            self.redis.ping()
-        except (redis.ConnectionError, Exception):
-            # Fallback to in-memory storage if Redis is unavailable
-            self.redis = None
-            self._memory_storage = {}
+        self._memory_storage: dict = {}
 
     def _get_key(self, identifier: str, path: str) -> str:
         """Generate rate limit key"""
@@ -93,7 +108,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         identifier: str,
         path: str,
         limit: int,
-        window: int
+        window: int,
+        redis_client: Optional[redis.Redis],
     ) -> tuple[bool, int, int]:
         """
         Check if request is within rate limit
@@ -103,9 +119,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         key = self._get_key(identifier, path)
 
-        if self.redis:
+        if redis_client:
             # Use Redis
-            pipe = self.redis.pipeline()
+            pipe = redis_client.pipeline()
             now = time.time()
 
             # Remove old entries
@@ -165,12 +181,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Get rate limit for this endpoint
         limit, window = self._get_endpoint_limit(request.url.path)
 
+        redis_client = getattr(request.app.state, "redis_rate_limit", None)
+
         # Check rate limit
         allowed, remaining, reset_time = self._check_rate_limit(
             identifier,
             request.url.path,
             limit,
-            window
+            window,
+            redis_client,
         )
 
         if not allowed:
