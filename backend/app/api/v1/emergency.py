@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
+from app.api.deps.idempotency import optional_idempotency_key
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.emergency import (
@@ -87,11 +88,13 @@ async def send_emergency_notification(
     notify_data: EmergencyNotifyRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
+    idempotency_key: str | None = Depends(optional_idempotency_key),
 ):
     service = EmergencyService(db)
     return await service.send_emergency_notification(
         user=current_user,
         notify_data=notify_data,
+        idempotency_key=idempotency_key,
     )
 
 
@@ -101,12 +104,14 @@ async def notify_workout_start(
     estimated_duration: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
+    idempotency_key: str | None = Depends(optional_idempotency_key),
 ):
     service = EmergencyService(db)
     return await service.notify_workout_start(
         user=current_user,
         workout_id=workout_id,
         estimated_duration=estimated_duration,
+        idempotency_key=idempotency_key,
     )
 
 
@@ -117,6 +122,7 @@ async def notify_workout_end(
     completed_successfully: bool = True,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
+    idempotency_key: str | None = Depends(optional_idempotency_key),
 ):
     service = EmergencyService(db)
     return await service.notify_workout_end(
@@ -124,6 +130,7 @@ async def notify_workout_end(
         workout_id=workout_id,
         duration=duration,
         completed_successfully=completed_successfully,
+        idempotency_key=idempotency_key,
     )
 
 

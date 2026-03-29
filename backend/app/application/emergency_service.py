@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.user import User
 from app.domain.emergency_contact import EmergencyContact
 from app.domain.exceptions import EmergencyNotFoundError, EmergencyValidationError
+from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.emergency_repository import EmergencyRepository
+from app.settings import settings
 from app.schemas.emergency import (
     EmergencyContactCreate,
     EmergencyContactListResponse,
@@ -83,7 +85,7 @@ class EmergencyService:
             raise EmergencyNotFoundError("Emergency contact not found")
         await self.repository.delete_contact(contact)
 
-    async def send_emergency_notification(
+    async def _send_emergency_notification_impl(
         self,
         user: User,
         notify_data: EmergencyNotifyRequest,
@@ -127,16 +129,42 @@ class EmergencyService:
                 )
             )
 
+        severity_value = (
+            notify_data.severity.value
+            if hasattr(notify_data.severity, "value")
+            else str(notify_data.severity)
+        )
         return EmergencyNotifyResponse(
             notified_at=datetime.utcnow(),
-            severity=notify_data.severity,
+            severity=severity_value,
             message_sent=message,
             results=results,
             successful_count=successful,
             failed_count=failed,
         )
 
-    async def notify_workout_start(
+    async def send_emergency_notification(
+        self,
+        user: User,
+        notify_data: EmergencyNotifyRequest,
+        idempotency_key: str | None = None,
+    ) -> EmergencyNotifyResponse:
+        async def _run() -> EmergencyNotifyResponse:
+            return await self._send_emergency_notification_impl(user, notify_data)
+
+        if idempotency_key:
+            return await run_idempotent(
+                user_id=user.id,
+                scope="emergency_notify",
+                raw_key=idempotency_key,
+                ttl_seconds=settings.IDEMPOTENCY_EMERGENCY_TTL_SECONDS,
+                execute=_run,
+                serialize_result=lambda r: r.model_dump(mode="json"),
+                deserialize_result=lambda d: EmergencyNotifyResponse.model_validate(d),
+            )
+        return await _run()
+
+    async def _notify_workout_start_impl(
         self,
         user: User,
         workout_id: int,
@@ -158,7 +186,29 @@ class EmergencyService:
             preview=message,
         )
 
-    async def notify_workout_end(
+    async def notify_workout_start(
+        self,
+        user: User,
+        workout_id: int,
+        estimated_duration: int | None,
+        idempotency_key: str | None = None,
+    ) -> EmergencyWorkoutNotifyResponse:
+        async def _run() -> EmergencyWorkoutNotifyResponse:
+            return await self._notify_workout_start_impl(user, workout_id, estimated_duration)
+
+        if idempotency_key:
+            return await run_idempotent(
+                user_id=user.id,
+                scope=f"emergency_notify_workout_start:{workout_id}",
+                raw_key=idempotency_key,
+                ttl_seconds=settings.IDEMPOTENCY_EMERGENCY_TTL_SECONDS,
+                execute=_run,
+                serialize_result=lambda r: r.model_dump(mode="json"),
+                deserialize_result=lambda d: EmergencyWorkoutNotifyResponse.model_validate(d),
+            )
+        return await _run()
+
+    async def _notify_workout_end_impl(
         self,
         user: User,
         workout_id: int,
@@ -180,6 +230,31 @@ class EmergencyService:
             contacts_notified=len(contacts),
             preview=message,
         )
+
+    async def notify_workout_end(
+        self,
+        user: User,
+        workout_id: int,
+        duration: int,
+        completed_successfully: bool,
+        idempotency_key: str | None = None,
+    ) -> EmergencyWorkoutNotifyResponse:
+        async def _run() -> EmergencyWorkoutNotifyResponse:
+            return await self._notify_workout_end_impl(
+                user, workout_id, duration, completed_successfully
+            )
+
+        if idempotency_key:
+            return await run_idempotent(
+                user_id=user.id,
+                scope=f"emergency_notify_workout_end:{workout_id}",
+                raw_key=idempotency_key,
+                ttl_seconds=settings.IDEMPOTENCY_EMERGENCY_TTL_SECONDS,
+                execute=_run,
+                serialize_result=lambda r: r.model_dump(mode="json"),
+                deserialize_result=lambda d: EmergencyWorkoutNotifyResponse.model_validate(d),
+            )
+        return await _run()
 
     async def get_settings(self, user_id: int) -> EmergencySettingsResponse:
         contacts = await self.repository.list_contacts(user_id=user_id)

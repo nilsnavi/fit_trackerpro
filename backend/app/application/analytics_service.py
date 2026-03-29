@@ -15,6 +15,7 @@ from app.domain.exceptions import (
     AnalyticsValidationError,
 )
 from app.infrastructure.repositories.analytics_repository import AnalyticsRepository
+from app.schemas.enums import DataExportStatus
 from app.schemas.analytics import (
     AnalyticsSummaryResponse,
     CalendarDayEntry,
@@ -41,6 +42,7 @@ from app.infrastructure.cache import (
     invalidate_user_analytics_cache,
     set_cache_json,
 )
+from app.infrastructure.idempotency import run_idempotent
 from app.settings import settings
 from app.infrastructure.repositories.feature_flags_repository import FeatureFlagsRepository
 
@@ -503,18 +505,41 @@ class AnalyticsService:
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
         return response
 
-    async def export_data(self, user_id: int, export_request: DataExportRequest) -> DataExportResponse:
-        _ = user_id
-        export_id = f"exp_{uuid.uuid4().hex[:12]}"
-        return DataExportResponse(
-            export_id=export_id,
-            status="pending",
-            format=export_request.format,
-            download_url=None,
-            expires_at=datetime.utcnow() + timedelta(days=1),
-            requested_at=datetime.utcnow(),
-            file_size=None,
-        )
+    async def export_data(
+        self,
+        user_id: int,
+        export_request: DataExportRequest,
+        idempotency_key: str | None = None,
+    ) -> DataExportResponse:
+        async def _once() -> DataExportResponse:
+            _ = user_id
+            export_id = f"exp_{uuid.uuid4().hex[:12]}"
+            fmt = (
+                export_request.format.value
+                if hasattr(export_request.format, "value")
+                else str(export_request.format)
+            )
+            return DataExportResponse(
+                export_id=export_id,
+                status=DataExportStatus.PENDING,
+                format=fmt,
+                download_url=None,
+                expires_at=datetime.utcnow() + timedelta(days=1),
+                requested_at=datetime.utcnow(),
+                file_size=None,
+            )
+
+        if idempotency_key:
+            return await run_idempotent(
+                user_id=user_id,
+                scope="analytics_export",
+                raw_key=idempotency_key,
+                ttl_seconds=settings.IDEMPOTENCY_DEFAULT_TTL_SECONDS,
+                execute=_once,
+                serialize_result=lambda r: r.model_dump(mode="json"),
+                deserialize_result=lambda d: DataExportResponse.model_validate(d),
+            )
+        return await _once()
 
     async def get_export_status(self, user_id: int, export_id: str) -> DataExportResponse:
         _ = user_id

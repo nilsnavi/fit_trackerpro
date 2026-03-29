@@ -41,6 +41,11 @@ def _memory_set(key: str, value: Any, ttl_seconds: int) -> None:
     _memory_cache[key] = (time.time() + ttl_seconds, payload)
 
 
+async def get_redis_cache_client() -> Optional[Redis]:
+    """Shared Redis client for cache and idempotency (``None`` if cache disabled)."""
+    return await _get_redis_client()
+
+
 async def _get_redis_client() -> Optional[Redis]:
     global _redis_client
 

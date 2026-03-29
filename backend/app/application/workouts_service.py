@@ -13,7 +13,10 @@ from app.domain.workout_log import WorkoutLog
 from app.domain.workout_template import WorkoutTemplate
 from app.domain.exceptions import WorkoutNotFoundError
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
+from app.infrastructure.idempotency import run_idempotent
+from app.settings import settings
 from app.schemas.workouts import (
+    CompletedExercise,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
@@ -399,7 +402,29 @@ class WorkoutsService:
             )
         )
 
-    async def complete_workout(
+    def _workout_log_to_complete_response(
+        self,
+        workout: WorkoutLog,
+        exercises: list[CompletedExercise],
+        *,
+        message: str,
+    ) -> WorkoutCompleteResponse:
+        return WorkoutCompleteResponse(
+            id=workout.id,
+            user_id=workout.user_id,
+            template_id=workout.template_id,
+            date=workout.date,
+            duration=workout.duration or 0,
+            exercises=exercises,
+            comments=workout.comments,
+            tags=list(workout.tags or []),
+            glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
+            glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            completed_at=workout.updated_at,
+            message=message,
+        )
+
+    async def _complete_workout_once(
         self,
         user_id: int,
         workout_id: int,
@@ -409,6 +434,15 @@ class WorkoutsService:
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
         if not workout:
             raise WorkoutNotFoundError("Workout not found")
+
+        if workout.duration is not None:
+            raw_ex = workout.exercises or []
+            exercises = [CompletedExercise.model_validate(ex) for ex in raw_ex]
+            return self._workout_log_to_complete_response(
+                workout,
+                exercises,
+                message="Workout was already completed; duplicate request ignored.",
+            )
 
         workout.duration = data.duration
         workout.exercises = [ex.model_dump() for ex in data.exercises]
@@ -447,6 +481,34 @@ class WorkoutsService:
             completed_at=workout.updated_at,
             message="Workout completed successfully",
         )
+
+    async def complete_workout(
+        self,
+        user_id: int,
+        workout_id: int,
+        data: WorkoutCompleteRequest,
+        client_ip: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> WorkoutCompleteResponse:
+        async def _run() -> WorkoutCompleteResponse:
+            return await self._complete_workout_once(
+                user_id=user_id,
+                workout_id=workout_id,
+                data=data,
+                client_ip=client_ip,
+            )
+
+        if idempotency_key:
+            return await run_idempotent(
+                user_id=user_id,
+                scope=f"workout_complete:{workout_id}",
+                raw_key=idempotency_key,
+                ttl_seconds=settings.IDEMPOTENCY_DEFAULT_TTL_SECONDS,
+                execute=_run,
+                serialize_result=lambda r: r.model_dump(mode="json"),
+                deserialize_result=lambda d: WorkoutCompleteResponse.model_validate(d),
+            )
+        return await _run()
 
     async def get_workout_detail(self, user_id: int, workout_id: int) -> WorkoutHistoryItem:
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)

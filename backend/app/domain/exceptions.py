@@ -103,3 +103,11 @@ class NotImplementedFeatureError(DomainError):
     code = "not_implemented"
     http_status = 501
     default_message = "This feature is not implemented yet"
+
+
+class IdempotencyKeyInvalidError(DomainError):
+    """Malformed or oversized ``Idempotency-Key`` header."""
+
+    code = "idempotency_key_invalid"
+    http_status = 400
+    default_message = "Invalid Idempotency-Key"
