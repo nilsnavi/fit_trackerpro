@@ -61,7 +61,7 @@ jobs:
         if: github.event.inputs.command == 'upgrade' || github.event.inputs.command == 'downgrade'
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -e
+            set -Eeuo pipefail
             cd ~/fittracker-pro
             mkdir -p backups
             docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > backups/pre_migration_$(date +%Y%m%d_%H%M%S).sql
@@ -71,7 +71,7 @@ jobs:
       - name: Run migration
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << EOF
-            set -e
+            set -Eeuo pipefail
             cd ~/fittracker-pro
             
             case "${{ github.event.inputs.command }}" in
@@ -101,15 +101,16 @@ jobs:
         if: github.event.inputs.command == 'upgrade'
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -e
+            set -Eeuo pipefail
             cd ~/fittracker-pro
             
             # Check if backend is still healthy
             if docker-compose -f docker-compose.prod.yml ps | grep -q "healthy"; then
               echo "Services are healthy after migration"
             else
-              echo "Warning: Some services may not be healthy"
+              echo "Post-migration health check failed: expected at least one healthy service"
               docker-compose -f docker-compose.prod.yml ps
+              exit 1
             fi
           EOF
 
