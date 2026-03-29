@@ -18,8 +18,13 @@ export default defineConfig({
             manifest: false,
             includeAssets: ['vite.svg', 'icons/**/*.png', 'manifest.webmanifest'],
             workbox: {
-                /** Precache = app shell (HTML, hashed JS/CSS, icons). Runtime API stays uncached here. */
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
+                /**
+                 * Precache: immutable hashed bundles under /assets, shell HTML, PWA icons, fonts.
+                 * Runtime rules below apply when a request is not precached (lazy edges, cache miss).
+                 */
+                globPatterns: [
+                    '**/*.{js,css,html,ico,png,svg,webp,avif,woff,woff2,ttf,otf,webmanifest}',
+                ],
                 globIgnores: ['**/config.js'],
                 navigateFallback: 'index.html',
                 /** Same-origin API must not fall back to SPA HTML. */
@@ -29,6 +34,61 @@ export default defineConfig({
                 skipWaiting: false,
                 clientsClaim: false,
                 maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+                /**
+                 * Static asset strategies (same-origin, production URLs).
+                 * Order matters: first match wins. Fonts before /assets/* so *.woff2 is not treated as JS.
+                 */
+                runtimeCaching: [
+                    {
+                        urlPattern: /^https?:\/\/[^/]+\/.*\.(?:woff2?|ttf|otf)(?:\?.*)?$/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'pwa-fonts',
+                            expiration: {
+                                maxEntries: 32,
+                                maxAgeSeconds: 60 * 60 * 24 * 365,
+                            },
+                            cacheableResponse: { statuses: [0, 200] },
+                        },
+                    },
+                    {
+                        urlPattern: /^https?:\/\/[^/]+\/assets\/.*\.(?:m?js)(?:\?.*)?$/i,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'pwa-js',
+                            expiration: {
+                                maxEntries: 64,
+                                maxAgeSeconds: 60 * 60 * 24 * 7,
+                            },
+                            cacheableResponse: { statuses: [0, 200] },
+                        },
+                    },
+                    {
+                        urlPattern: /^https?:\/\/[^/]+\/assets\/.*\.css(?:\?.*)?$/i,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'pwa-css',
+                            expiration: {
+                                maxEntries: 32,
+                                maxAgeSeconds: 60 * 60 * 24 * 7,
+                            },
+                            cacheableResponse: { statuses: [0, 200] },
+                        },
+                    },
+                    {
+                        urlPattern:
+                            /^https?:\/\/[^/]+\/(?:icons\/.*|vite\.svg|assets\/.*\.(?:png|svg|ico|webp|avif))(?:\?.*)?$/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'pwa-icons-images',
+                            expiration: {
+                                maxEntries: 128,
+                                maxAgeSeconds: 60 * 60 * 24 * 30,
+                            },
+                            cacheableResponse: { statuses: [0, 200] },
+                        },
+                    },
+                ],
             },
             devOptions: {
                 enabled: false,
