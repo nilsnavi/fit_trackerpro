@@ -16,6 +16,7 @@ import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
 import type { WorkoutType } from '@shared/types'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 import { getErrorMessage } from '@shared/errors'
+import { WorkoutsHistoryBlockSkeleton } from '@shared/ui/page-skeletons'
 
 interface WorkoutListItem {
     id: number
@@ -248,6 +249,10 @@ export function WorkoutsPage() {
                 </div>
             </div>
 
+            {isLoading ? (
+                <WorkoutsHistoryBlockSkeleton />
+            ) : (
+                <>
             {/* Weekly Summary */}
             <div className="bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl transition-colors">
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">На этой неделе</h2>
@@ -270,24 +275,19 @@ export function WorkoutsPage() {
             {/* Workouts List */}
             <div className="space-y-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Недавние</h2>
-                {isLoading && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Загрузка тренировок...
-                    </div>
-                )}
-                {!isLoading && error && (
+                {error && (
                     <div className="text-sm text-red-500 dark:text-red-400">
                         {getErrorMessage(error)}
                     </div>
                 )}
-                {!isLoading && !error && filteredWorkouts.length === 0 && (
+                {!error && filteredWorkouts.length === 0 && (
                     <div className="text-sm text-gray-500 dark:text-gray-400">
                         {selectedType === 'all'
                             ? 'Тренировок пока нет'
                             : (getWorkoutListTypeConfig(selectedType).hints.emptyHistory ?? 'Нет тренировок этого типа')}
                     </div>
                 )}
-                {!isLoading && !error && filteredWorkouts.map((workout) => {
+                {!error && filteredWorkouts.map((workout) => {
                     const listCfg = getWorkoutListTypeConfig(workout.type)
                     const TypeIcon = listCfg.icon
                     const showCals = listCfg.ux.showCaloriesInSummary
@@ -320,6 +320,8 @@ export function WorkoutsPage() {
                     )
                 })}
             </div>
+                </>
+            )}
         </div>
     )
 }

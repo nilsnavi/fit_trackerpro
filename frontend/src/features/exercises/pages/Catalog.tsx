@@ -16,6 +16,7 @@ import type {
     DifficultyLevel,
     ExerciseFilters,
 } from '@features/exercises/types/catalogUi';
+import { CatalogExerciseListSkeleton } from '@shared/ui/page-skeletons';
 
 export type {
     Exercise,
@@ -1004,7 +1005,7 @@ export const Catalog: React.FC = () => {
                 <div className="px-4 py-3">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">Каталог упражнений</h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        {filteredExercises.length} упражнений
+                        {isLoading ? 'Загрузка…' : `${filteredExercises.length} упражнений`}
                     </p>
                 </div>
 
@@ -1114,10 +1115,7 @@ export const Catalog: React.FC = () => {
                     </p>
                 )}
                 {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                        <p className="text-gray-500 text-sm mt-4">Загрузка упражнений...</p>
-                    </div>
+                    <CatalogExerciseListSkeleton rows={8} />
                 ) : filteredExercises.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                         <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
