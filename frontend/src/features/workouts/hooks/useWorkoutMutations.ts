@@ -10,6 +10,13 @@ import type {
 } from '@features/workouts/types/workouts'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
+import { isOfflineMutationQueuedError, isRecoverableSyncError } from '@shared/offline/syncQueue'
+import {
+    enqueueOfflineTemplateCreate,
+    enqueueOfflineTemplateUpdate,
+    enqueueOfflineWorkoutComplete,
+    enqueueOfflineWorkoutStart,
+} from '@shared/offline/workoutOfflineEnqueue'
 import {
     appendCalendarWorkoutForMatchingMonth,
     buildCalendarEntryFromStartPayload,
@@ -77,7 +84,16 @@ function invalidateWorkouts(queryClient: QueryClient): void {
 export function useCreateWorkoutTemplateMutation() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (payload: WorkoutTemplateCreateRequest) => workoutsApi.createTemplate(payload),
+        mutationFn: async (payload: WorkoutTemplateCreateRequest) => {
+            try {
+                return await workoutsApi.createTemplate(payload)
+            } catch (e) {
+                if (isRecoverableSyncError(e)) {
+                    enqueueOfflineTemplateCreate(payload)
+                }
+                throw e
+            }
+        },
         onMutate: async (payload) => {
             await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
             const tempId = nextOptimisticNegativeId()
@@ -86,7 +102,8 @@ export function useCreateWorkoutTemplateMutation() {
             prependTemplateToMatchingLists(queryClient, row, payload)
             return { tempId, templateListsSnap } satisfies CreateTemplateContext
         },
-        onError: (_err, _payload, ctx) => {
+        onError: (err, _payload, ctx) => {
+            if (isOfflineMutationQueuedError(err)) return
             if (!ctx) return
             restoreSnapshotEntries(queryClient, ctx.templateListsSnap)
         },
@@ -109,8 +126,16 @@ export function useCreateWorkoutTemplateMutation() {
 export function useUpdateWorkoutTemplateMutation() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ templateId, payload }: UpdateTemplateVariables) =>
-            workoutsApi.updateTemplate(templateId, payload),
+        mutationFn: async ({ templateId, payload }: UpdateTemplateVariables) => {
+            try {
+                return await workoutsApi.updateTemplate(templateId, payload)
+            } catch (e) {
+                if (isRecoverableSyncError(e)) {
+                    enqueueOfflineTemplateUpdate(templateId, payload)
+                }
+                throw e
+            }
+        },
         onMutate: async ({ templateId, payload }) => {
             await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
             const prev = findTemplateInCaches(queryClient, templateId)
@@ -128,7 +153,8 @@ export function useUpdateWorkoutTemplateMutation() {
             }
             return { templateListsSnap } satisfies UpdateTemplateContext
         },
-        onError: (_err, _vars, ctx) => {
+        onError: (err, _vars, ctx) => {
+            if (isOfflineMutationQueuedError(err)) return
             if (!ctx) return
             restoreSnapshotEntries(queryClient, ctx.templateListsSnap)
         },
@@ -144,7 +170,17 @@ export function useUpdateWorkoutTemplateMutation() {
 export function useStartWorkoutMutation() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (payload: WorkoutStartRequest) => workoutsApi.startWorkout(payload),
+        mutationFn: async (payload: WorkoutStartRequest) => {
+            const invocationId = crypto.randomUUID()
+            try {
+                return await workoutsApi.startWorkout(payload)
+            } catch (e) {
+                if (isRecoverableSyncError(e)) {
+                    enqueueOfflineWorkoutStart(invocationId, payload)
+                }
+                throw e
+            }
+        },
         onMutate: async (payload) => {
             await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
             const tempId = nextOptimisticNegativeId()
@@ -163,7 +199,8 @@ export function useStartWorkoutMutation() {
                 historyListsSnap,
             } satisfies StartMutationContext
         },
-        onError: (_err, _payload, ctx) => {
+        onError: (err, _payload, ctx) => {
+            if (isOfflineMutationQueuedError(err)) return
             if (!ctx) return
             restoreSnapshotEntries(queryClient, ctx.calendarSnap)
             restoreSnapshotEntries(queryClient, ctx.historyListsSnap)
@@ -208,8 +245,16 @@ export function useStartWorkoutMutation() {
 export function useCompleteWorkoutMutation() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ workoutId, payload }: CompleteWorkoutVariables) =>
-            workoutsApi.completeWorkout(workoutId, payload),
+        mutationFn: async ({ workoutId, payload }: CompleteWorkoutVariables) => {
+            try {
+                return await workoutsApi.completeWorkout(workoutId, payload)
+            } catch (e) {
+                if (isRecoverableSyncError(e)) {
+                    enqueueOfflineWorkoutComplete(workoutId, payload)
+                }
+                throw e
+            }
+        },
         onMutate: async ({ workoutId, payload }) => {
             await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
             const calendarSnap = takeWorkoutsCalendarSnapshot(queryClient)
@@ -239,7 +284,8 @@ export function useCompleteWorkoutMutation() {
                 detailKey,
             } satisfies CompleteMutationContext
         },
-        onError: (_err, _vars, ctx) => {
+        onError: (err, _vars, ctx) => {
+            if (isOfflineMutationQueuedError(err)) return
             if (!ctx) return
             restoreSnapshotEntries(queryClient, ctx.calendarSnap)
             restoreSnapshotEntries(queryClient, ctx.historyListsSnap)
