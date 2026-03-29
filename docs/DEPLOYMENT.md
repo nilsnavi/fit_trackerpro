@@ -1,11 +1,13 @@
 # Deployment Guide
 
-Production deployment guide aligned with current repository and workflows.
+Production deployment guide aligned with current repository and workflows. Краткий runbook: `README-DEPLOYMENT.md`.
 
-## Deployment Modes
+## Deployment modes
 
-- **Recommended:** GitHub Actions `deploy.yml` (release or manual dispatch)
-- **Manual:** SSH + `docker-compose.prod.yml`
+- **Recommended:** GitHub Actions `.github/workflows/deploy.yml` (GitHub Release **published** or **workflow_dispatch**)
+- **Manual:** SSH + `docker-compose.prod.yml` (same steps as the remote portion of `deploy.yml`)
+
+**Deploy directory on the server** (hardcoded in `deploy.yml` as `DEPLOY_DIR`): `~/fittracker-pro`. Use this path for bootstrap, SSL paths, and manual commands.
 
 ## Prerequisites
 
@@ -26,7 +28,7 @@ sudo apt install -y nginx certbot python3-certbot-nginx
 ```
 
 ```bash
-mkdir -p ~/fit_trackerpro/backups ~/fit_trackerpro/nginx ~/fit_trackerpro/nginx/ssl ~/fit_trackerpro/nginx/logs
+mkdir -p ~/fittracker-pro/backups ~/fittracker-pro/nginx ~/fittracker-pro/nginx/ssl ~/fittracker-pro/nginx/logs
 ```
 
 ## Root `.env` for production compose
@@ -45,7 +47,7 @@ SENTRY_DSN=
 VITE_API_URL=https://fit.example.com/api/v1
 VITE_TELEGRAM_BOT_USERNAME=fit_tracker_bot
 
-GITHUB_REPOSITORY=nilsnavi/fit_trackerpro
+GITHUB_REPOSITORY=your-org/fit_trackerpro
 IMAGE_TAG=latest
 ```
 
@@ -77,43 +79,49 @@ sudo certbot certonly --standalone -d fit.example.com
 2. Place certs where production compose expects them:
 
 ```bash
-mkdir -p ~/fit_trackerpro/nginx/ssl
-sudo cp /etc/letsencrypt/live/fit.example.com/fullchain.pem ~/fit_trackerpro/nginx/ssl/
-sudo cp /etc/letsencrypt/live/fit.example.com/privkey.pem ~/fit_trackerpro/nginx/ssl/
-sudo chown -R $USER:$USER ~/fit_trackerpro/nginx/ssl
+mkdir -p ~/fittracker-pro/nginx/ssl
+sudo cp /etc/letsencrypt/live/fit.example.com/fullchain.pem ~/fittracker-pro/nginx/ssl/
+sudo cp /etc/letsencrypt/live/fit.example.com/privkey.pem ~/fittracker-pro/nginx/ssl/
+sudo chown -R $USER:$USER ~/fittracker-pro/nginx/ssl
 ```
 
-## Manual Deploy
+## Manual deploy
 
 ```bash
-mkdir -p ~/fit_trackerpro/nginx
-scp docker-compose.prod.yml <user>@<host>:~/fit_trackerpro/docker-compose.prod.yml
-scp nginx/nginx.conf <user>@<host>:~/fit_trackerpro/nginx/nginx.conf
+mkdir -p ~/fittracker-pro/nginx
+scp docker-compose.prod.yml <user>@<host>:~/fittracker-pro/docker-compose.prod.yml
+scp nginx/nginx.conf <user>@<host>:~/fittracker-pro/nginx/nginx.conf
 ssh <user>@<host>
-cd ~/fit_trackerpro
+cd ~/fittracker-pro
+# Ensure root .env exists with the same variables as GitHub Secrets (see above)
 docker-compose -f docker-compose.prod.yml pull
 docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-## Automated Deploy (GitHub Actions)
+## Automated deploy (GitHub Actions)
 
-The current `deploy.yml` workflow:
+Workflow: `.github/workflows/deploy.yml`. Image builds: `.github/workflows/build.yml` (GHCR).
 
-1. Connects via SSH
-2. Syncs infra files (`docker-compose.prod.yml`, `nginx/nginx.conf`) to server
-3. Regenerates root `.env` from GitHub secrets
-4. Sets deploy image tag (`release tag` or manual `image_tag`)
-5. Creates DB backup
-6. Pulls images and applies migrations
-7. Restarts stack
-8. Runs backend health checks (`/api/v1/system/health`, `/api/v1/system/version`)
+1. SSH to `DEPLOY_HOST` as `DEPLOY_USER` (key from `SSH_PRIVATE_KEY`)
+2. Sync `docker-compose.prod.yml` and `nginx/nginx.conf` to `~/fittracker-pro`
+3. Rewrite root `~/fittracker-pro/.env` from secrets (including `IMAGE_TAG` from release tag or `workflow_dispatch` input `image_tag`)
+4. Write `~/fittracker-pro/.rollback-meta.env` (previous tag, backup path, etc.)
+5. `pg_dump` to `backups/` before migration
+6. `docker-compose pull`, `run --rm backend alembic upgrade head`, `up -d`, `docker image prune -f`
+7. On-server checks: `http://localhost:8000/api/v1/system/health`, `/api/v1/system/version`, `http://localhost/`
+8. **Post-deploy smoke** job (from the runner): uses `VITE_API_URL` to hit public API URLs with retries
+9. **Rollback on failure** if deploy or smoke failed: restore `IMAGE_TAG` to `PREVIOUS_IMAGE_TAG`, `pull` backend/frontend, `up -d`; optional DB restore only when manual run sets `rollback_restore_db=true`
+10. **Notify**: Slack if `SLACK_WEBHOOK_URL` is set
+
+The **Environment** dropdown on `workflow_dispatch` (production / staging) is not referenced in the workflow YAML today; the target remains `DEPLOY_HOST` + `~/fittracker-pro`.
 
 ## Verification
 
 ```bash
 curl -f https://fit.example.com/api/v1/system/health
 curl -f https://fit.example.com/api/v1/system/version
+cd ~/fittracker-pro
 docker-compose -f docker-compose.prod.yml ps
 docker-compose -f docker-compose.prod.yml logs -f backend
 ```
@@ -121,7 +129,7 @@ docker-compose -f docker-compose.prod.yml logs -f backend
 ## Rollback
 
 ```bash
-cd ~/fit_trackerpro
+cd ~/fittracker-pro
 source .rollback-meta.env
 sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
 docker-compose -f docker-compose.prod.yml pull backend frontend
