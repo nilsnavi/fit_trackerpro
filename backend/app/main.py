@@ -9,16 +9,8 @@ import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.achievements import router as achievements_router
-from app.api.v1.analytics import router as analytics_router
-from app.api.v1.auth import router as auth_router
-from app.api.v1.challenges import router as challenges_router
-from app.api.v1.emergency import router as emergency_router
-from app.api.v1.exercises import router as exercises_router
-from app.api.v1.health_metrics import router as health_metrics_router
-from app.api.v1.system import health_check_response, router as system_router
-from app.api.v1.users import router as users_router
-from app.api.v1.workouts import router as workouts_router
+from app.api.v1.registration import register_v1_routes
+from app.api.v1.system import health_check_response
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
 from app.settings import settings
 from app.core.logging import configure_logging
@@ -27,20 +19,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_logging import StructuredRequestLoggingMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
 from app.schemas.system import HealthCheckResponse
-from app.api.v1.openapi_tags import (
-    OPENAPI_TAGS,
-    TAG_ACHIEVEMENTS,
-    TAG_ANALYTICS,
-    TAG_AUTHENTICATION,
-    TAG_CHALLENGES,
-    TAG_EMERGENCY,
-    TAG_EXERCISES,
-    TAG_HEALTH_METRICS,
-    TAG_INTEGRATIONS,
-    TAG_SYSTEM,
-    TAG_USERS,
-    TAG_WORKOUTS,
-)
+from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
 
 configure_logging(settings)
 logger = logging.getLogger(__name__)
@@ -128,33 +107,7 @@ app.add_middleware(RateLimitMiddleware)
 # Access / correlation logging (outermost: full duration including rate limit)
 app.add_middleware(StructuredRequestLoggingMiddleware)
 
-# Include routers
-app.include_router(system_router, prefix="/api/v1/system", tags=[TAG_SYSTEM])
-app.include_router(auth_router, prefix="/api/v1/users/auth", tags=[TAG_AUTHENTICATION])
-app.include_router(users_router, prefix="/api/v1/users", tags=[TAG_USERS])
-app.include_router(
-    workouts_router, prefix="/api/v1/workouts", tags=[TAG_WORKOUTS])
-app.include_router(
-    exercises_router, prefix="/api/v1/exercises", tags=[TAG_EXERCISES])
-app.include_router(
-    health_metrics_router, prefix="/api/v1/health-metrics", tags=[TAG_HEALTH_METRICS])
-app.include_router(
-    analytics_router, prefix="/api/v1/analytics", tags=[TAG_ANALYTICS])
-app.include_router(achievements_router,
-                   prefix="/api/v1/analytics/achievements", tags=[TAG_ACHIEVEMENTS])
-app.include_router(challenges_router,
-                   prefix="/api/v1/analytics/challenges", tags=[TAG_CHALLENGES])
-app.include_router(
-    emergency_router, prefix="/api/v1/system/emergency", tags=[TAG_EMERGENCY])
-
-# Backward-compatible deprecated aliases for legacy clients.
-app.include_router(auth_router, prefix="/api/v1/auth", tags=[TAG_AUTHENTICATION], deprecated=True)
-app.include_router(achievements_router,
-                   prefix="/api/v1/achievements", tags=[TAG_ACHIEVEMENTS], deprecated=True)
-app.include_router(challenges_router,
-                   prefix="/api/v1/challenges", tags=[TAG_CHALLENGES], deprecated=True)
-app.include_router(
-    emergency_router, prefix="/api/v1/emergency", tags=[TAG_EMERGENCY], deprecated=True)
+register_v1_routes(app)
 
 setup_prometheus_metrics(app, settings)
 

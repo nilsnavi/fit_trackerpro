@@ -1,8 +1,8 @@
 """
 OpenAPI tag names and metadata for Swagger / ReDoc.
 
-Single source of truth: use these constants in include_router(tags=[...])
-and keep openapi_tags on FastAPI in sync.
+Single source of truth: use these constants in ``registration.register_v1_routes``
+(``include_router(..., tags=[...])``) and keep ``openapi_tags`` on FastAPI in sync.
 """
 from __future__ import annotations
 
