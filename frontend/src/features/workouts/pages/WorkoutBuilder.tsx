@@ -322,7 +322,7 @@ export const WorkoutBuilder: React.FC = () => {
         return () => {
             tg.hideBackButton()
         }
-    }, [tg])
+    }, [tg.isTelegram, tg.showBackButton, tg.hideBackButton])
 
     // Sensors for DnD
     const sensors = useSensors(

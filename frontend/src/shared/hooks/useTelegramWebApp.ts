@@ -2,7 +2,8 @@
  * Telegram WebApp Hook
  * Provides comprehensive integration with Telegram WebApp API
  */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { getTelegramWebAppFromWindow, isTelegramMiniAppRuntime } from '@shared/lib/telegramEnv'
 import type {
     WebApp,
     TelegramUser,
@@ -23,7 +24,7 @@ export type HapticType =
  * Hook return type
  */
 export interface UseTelegramWebAppReturn {
-    /** Telegram WebApp instance */
+    /** Telegram WebApp instance (есть и в обычном браузере после загрузки скрипта) */
     webApp: WebApp | null
     /** Whether the WebApp is ready */
     isReady: boolean
@@ -33,6 +34,10 @@ export interface UseTelegramWebAppReturn {
     theme: ThemeParams | null
     /** Color scheme (light/dark) */
     colorScheme: 'light' | 'dark' | null
+    /** Сырая строка initData для валидации на бэкенде; вне Telegram — пустая */
+    initData: string
+    /** telegram: Mini App в клиенте; browser: скрипт есть, но initData пустой */
+    launchMode: 'telegram' | 'browser'
     /** Initialize the WebApp */
     init: () => void
     /** Get user data */
@@ -45,7 +50,7 @@ export interface UseTelegramWebAppReturn {
     close: () => void
     /** Expand to full screen */
     expand: () => void
-    /** Check if running inside Telegram */
+    /** True только при непустом initData (реальный запуск из Telegram) */
     isTelegram: boolean
     /** Show main button */
     showMainButton: (text: string, onClick: () => void, color?: string) => void
@@ -95,67 +100,46 @@ export interface UseTelegramWebAppReturn {
 }
 
 /**
- * Check if running inside Telegram WebApp
- */
-const isTelegramWebApp = (): boolean => {
-    return typeof window !== 'undefined' &&
-        window.Telegram !== undefined &&
-        window.Telegram.WebApp !== undefined
-}
-
-/**
- * Get WebApp instance
- */
-const getWebApp = (): WebApp | null => {
-    if (isTelegramWebApp()) {
-        return window.Telegram!.WebApp ?? null
-    }
-    return null
-}
-
-/**
  * Hook for Telegram WebApp integration
  */
 export function useTelegramWebApp(): UseTelegramWebAppReturn {
-    const [webApp, setWebApp] = useState<WebApp | null>(null)
+    const [webApp] = useState<WebApp | null>(() => getTelegramWebAppFromWindow())
+    const isTelegram = isTelegramMiniAppRuntime(webApp)
+    const initData = webApp?.initData ?? ''
+    const launchMode: 'telegram' | 'browser' = isTelegram ? 'telegram' : 'browser'
+
     const [isReady, setIsReady] = useState(false)
-    const [user, setUser] = useState<TelegramUser | null>(null)
-    const [theme, setTheme] = useState<ThemeParams | null>(null)
-    const [colorScheme, setColorScheme] = useState<'light' | 'dark' | null>(null)
-
-    const webAppRef = useRef<WebApp | null>(null)
-
-    // Initialize WebApp on mount
-    useEffect(() => {
-        const tg = getWebApp()
-        if (tg) {
-            webAppRef.current = tg
-            setWebApp(tg)
-            setColorScheme(tg.colorScheme)
-            setTheme(tg.themeParams)
-
-            // Extract user from initData
-            if (tg.initDataUnsafe?.user) {
-                setUser(tg.initDataUnsafe.user as TelegramUser)
-            }
+    const [user] = useState<TelegramUser | null>(() => {
+        const tg = getTelegramWebAppFromWindow()
+        if (tg && isTelegramMiniAppRuntime(tg) && tg.initDataUnsafe?.user) {
+            return tg.initDataUnsafe.user as TelegramUser
         }
-    }, [])
+        return null
+    })
+    const [theme, setTheme] = useState<ThemeParams | null>(() => getTelegramWebAppFromWindow()?.themeParams ?? null)
+    const [colorScheme, setColorScheme] = useState<'light' | 'dark' | null>(
+        () => getTelegramWebAppFromWindow()?.colorScheme ?? null,
+    )
 
-    // Listen for theme changes
+    const webAppRef = useRef<WebApp | null>(webApp)
+    webAppRef.current = webApp
+
+    // Тема из Telegram только в реальном Mini App; в браузере не подписываемся на события заглушки
     useEffect(() => {
-        if (!webAppRef.current) return
+        const tg = webAppRef.current
+        if (!tg || !isTelegramMiniAppRuntime(tg)) return
 
         const handleThemeChanged = () => {
-            if (webAppRef.current) {
-                setColorScheme(webAppRef.current.colorScheme)
-                setTheme(webAppRef.current.themeParams)
-            }
+            const current = webAppRef.current
+            if (!current) return
+            setColorScheme(current.colorScheme)
+            setTheme(current.themeParams)
         }
 
-        webAppRef.current.onEvent('themeChanged', handleThemeChanged)
+        tg.onEvent('themeChanged', handleThemeChanged)
 
         return () => {
-            webAppRef.current?.offEvent('themeChanged', handleThemeChanged)
+            tg.offEvent('themeChanged', handleThemeChanged)
         }
     }, [webApp])
 
@@ -163,8 +147,12 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
      * Initialize the WebApp
      */
     const init = useCallback(() => {
-        if (webAppRef.current) {
-            webAppRef.current.ready()
+        try {
+            if (webAppRef.current) {
+                webAppRef.current.ready()
+                setIsReady(true)
+            }
+        } catch {
             setIsReady(true)
         }
     }, [])
@@ -173,8 +161,10 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
      * Get user data
      */
     const getUser = useCallback((): TelegramUser | null => {
-        if (webAppRef.current?.initDataUnsafe?.user) {
-            return webAppRef.current.initDataUnsafe.user as TelegramUser
+        const tg = webAppRef.current
+        if (!tg || !isTelegramMiniAppRuntime(tg)) return null
+        if (tg.initDataUnsafe?.user) {
+            return tg.initDataUnsafe.user as TelegramUser
         }
         return user
     }, [user])
@@ -193,6 +183,7 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
      * Trigger haptic feedback
      */
     const hapticFeedback = useCallback((type: HapticType) => {
+        if (!isTelegramMiniAppRuntime(webAppRef.current)) return
         if (!webAppRef.current?.HapticFeedback) return
 
         const haptic = webAppRef.current.HapticFeedback
@@ -228,6 +219,7 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
      * Show main button
      */
     const showMainButton = useCallback((text: string, onClick: () => void, color?: string) => {
+        if (!isTelegramMiniAppRuntime(webAppRef.current)) return
         if (!webAppRef.current?.MainButton) return
 
         const mainButton = webAppRef.current.MainButton
@@ -278,6 +270,7 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
      * Show back button
      */
     const showBackButton = useCallback((onClick: () => void) => {
+        if (!isTelegramMiniAppRuntime(webAppRef.current)) return
         if (!webAppRef.current?.BackButton) return
 
         webAppRef.current.BackButton.onClick(onClick)
@@ -393,111 +386,150 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
         webAppRef.current?.disableClosingConfirmation()
     }, [])
 
-    /**
-     * Cloud storage methods
-     */
-    const cloudStorage = {
-        setItem: (key: string, value: string): Promise<boolean> => {
-            return new Promise((resolve) => {
-                if (!webAppRef.current?.CloudStorage) {
-                    resolve(false)
-                    return
-                }
-                webAppRef.current.CloudStorage.setItem(key, value, (error: string | null, result?: boolean) => {
-                    resolve(!error && result === true)
+    const cloudStorage = useMemo(
+        () => ({
+            setItem: (key: string, value: string): Promise<boolean> => {
+                return new Promise((resolve) => {
+                    if (!webAppRef.current?.CloudStorage) {
+                        resolve(false)
+                        return
+                    }
+                    webAppRef.current.CloudStorage.setItem(key, value, (error: string | null, result?: boolean) => {
+                        resolve(!error && result === true)
+                    })
                 })
-            })
-        },
-        getItem: (key: string): Promise<string | null> => {
-            return new Promise((resolve) => {
-                if (!webAppRef.current?.CloudStorage) {
-                    resolve(null)
-                    return
-                }
-                webAppRef.current.CloudStorage.getItem(key, (error: string | null, result?: string) => {
-                    resolve(error ? null : result || null)
+            },
+            getItem: (key: string): Promise<string | null> => {
+                return new Promise((resolve) => {
+                    if (!webAppRef.current?.CloudStorage) {
+                        resolve(null)
+                        return
+                    }
+                    webAppRef.current.CloudStorage.getItem(key, (error: string | null, result?: string) => {
+                        resolve(error ? null : result || null)
+                    })
                 })
-            })
-        },
-        getItems: (keys: string[]): Promise<Record<string, string> | null> => {
-            return new Promise((resolve) => {
-                if (!webAppRef.current?.CloudStorage) {
-                    resolve(null)
-                    return
-                }
-                webAppRef.current.CloudStorage.getItems(keys, (error: string | null, result?: Record<string, string>) => {
-                    resolve(error ? null : result || null)
+            },
+            getItems: (keys: string[]): Promise<Record<string, string> | null> => {
+                return new Promise((resolve) => {
+                    if (!webAppRef.current?.CloudStorage) {
+                        resolve(null)
+                        return
+                    }
+                    webAppRef.current.CloudStorage.getItems(keys, (error: string | null, result?: Record<string, string>) => {
+                        resolve(error ? null : result || null)
+                    })
                 })
-            })
-        },
-        removeItem: (key: string): Promise<boolean> => {
-            return new Promise((resolve) => {
-                if (!webAppRef.current?.CloudStorage) {
-                    resolve(false)
-                    return
-                }
-                webAppRef.current.CloudStorage.removeItem(key, (error: string | null, result?: boolean) => {
-                    resolve(!error && result === true)
+            },
+            removeItem: (key: string): Promise<boolean> => {
+                return new Promise((resolve) => {
+                    if (!webAppRef.current?.CloudStorage) {
+                        resolve(false)
+                        return
+                    }
+                    webAppRef.current.CloudStorage.removeItem(key, (error: string | null, result?: boolean) => {
+                        resolve(!error && result === true)
+                    })
                 })
-            })
-        },
-        removeItems: (keys: string[]): Promise<boolean> => {
-            return new Promise((resolve) => {
-                if (!webAppRef.current?.CloudStorage) {
-                    resolve(false)
-                    return
-                }
-                webAppRef.current.CloudStorage.removeItems(keys, (error: string | null, result?: boolean) => {
-                    resolve(!error && result === true)
+            },
+            removeItems: (keys: string[]): Promise<boolean> => {
+                return new Promise((resolve) => {
+                    if (!webAppRef.current?.CloudStorage) {
+                        resolve(false)
+                        return
+                    }
+                    webAppRef.current.CloudStorage.removeItems(keys, (error: string | null, result?: boolean) => {
+                        resolve(!error && result === true)
+                    })
                 })
-            })
-        },
-        getKeys: (): Promise<string[] | null> => {
-            return new Promise((resolve) => {
-                if (!webAppRef.current?.CloudStorage) {
-                    resolve(null)
-                    return
-                }
-                webAppRef.current.CloudStorage.getKeys((error: string | null, result?: string[]) => {
-                    resolve(error ? null : result || null)
+            },
+            getKeys: (): Promise<string[] | null> => {
+                return new Promise((resolve) => {
+                    if (!webAppRef.current?.CloudStorage) {
+                        resolve(null)
+                        return
+                    }
+                    webAppRef.current.CloudStorage.getKeys((error: string | null, result?: string[]) => {
+                        resolve(error ? null : result || null)
+                    })
                 })
-            })
-        }
-    }
+            },
+        }),
+        [],
+    )
 
-    return {
-        webApp,
-        isReady,
-        user,
-        theme,
-        colorScheme,
-        init,
-        getUser,
-        getTheme,
-        hapticFeedback,
-        close,
-        expand,
-        isTelegram: isTelegramWebApp(),
-        showMainButton,
-        hideMainButton,
-        enableMainButton,
-        disableMainButton,
-        showMainButtonProgress,
-        hideMainButtonProgress,
-        showBackButton,
-        hideBackButton,
-        setHeaderColor,
-        setBackgroundColor,
-        showPopup,
-        showAlert,
-        showConfirm,
-        sendData,
-        openLink,
-        openTelegramLink,
-        enableClosingConfirmation,
-        disableClosingConfirmation,
-        cloudStorage
-    }
+    return useMemo(
+        () => ({
+            webApp,
+            isReady,
+            user,
+            theme,
+            colorScheme,
+            initData,
+            launchMode,
+            init,
+            getUser,
+            getTheme,
+            hapticFeedback,
+            close,
+            expand,
+            isTelegram,
+            showMainButton,
+            hideMainButton,
+            enableMainButton,
+            disableMainButton,
+            showMainButtonProgress,
+            hideMainButtonProgress,
+            showBackButton,
+            hideBackButton,
+            setHeaderColor,
+            setBackgroundColor,
+            showPopup,
+            showAlert,
+            showConfirm,
+            sendData,
+            openLink,
+            openTelegramLink,
+            enableClosingConfirmation,
+            disableClosingConfirmation,
+            cloudStorage,
+        }),
+        [
+            webApp,
+            isReady,
+            user,
+            theme,
+            colorScheme,
+            initData,
+            launchMode,
+            isTelegram,
+            init,
+            getUser,
+            getTheme,
+            hapticFeedback,
+            close,
+            expand,
+            showMainButton,
+            hideMainButton,
+            enableMainButton,
+            disableMainButton,
+            showMainButtonProgress,
+            hideMainButtonProgress,
+            showBackButton,
+            hideBackButton,
+            setHeaderColor,
+            setBackgroundColor,
+            showPopup,
+            showAlert,
+            showConfirm,
+            sendData,
+            openLink,
+            openTelegramLink,
+            enableClosingConfirmation,
+            disableClosingConfirmation,
+            cloudStorage,
+        ],
+    )
 }
 
 export default useTelegramWebApp

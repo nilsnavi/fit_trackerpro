@@ -158,7 +158,7 @@ export const AddExercise: React.FC = () => {
         return () => {
             tg.hideBackButton()
         }
-    }, [tg])
+    }, [tg.isTelegram, tg.showBackButton, tg.hideBackButton])
 
     // Available muscles based on category
     const availableMuscles = formData.category && formData.category !== 'all'

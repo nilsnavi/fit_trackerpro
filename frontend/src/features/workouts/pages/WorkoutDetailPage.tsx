@@ -62,7 +62,7 @@ export function WorkoutDetailPage() {
         return () => {
             tg.hideBackButton()
         }
-    }, [tg, navigate])
+    }, [tg.isTelegram, navigate, tg.showBackButton, tg.hideBackButton])
 
     const errorMessage = !isValidWorkoutId
         ? 'Неверный идентификатор тренировки'

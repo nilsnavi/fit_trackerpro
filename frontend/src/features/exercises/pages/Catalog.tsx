@@ -850,7 +850,7 @@ export const Catalog: React.FC = () => {
         return () => {
             tg.hideBackButton()
         }
-    }, [tg, navigate])
+    }, [tg.isTelegram, navigate, tg.showBackButton, tg.hideBackButton])
 
     // Filter logic
     const filteredExercises = useMemo(() => {
@@ -922,7 +922,7 @@ export const Catalog: React.FC = () => {
                 categories: newCategories.length === 0 ? ['all'] : newCategories,
             };
         });
-    }, [tg]);
+    }, [tg.hapticFeedback]);
 
     const handleEquipmentToggle = useCallback((equipment: EquipmentType) => {
         tg.hapticFeedback({ type: 'selection' })
@@ -932,7 +932,7 @@ export const Catalog: React.FC = () => {
                 ? prev.equipment.filter(e => e !== equipment)
                 : [...prev.equipment, equipment],
         }));
-    }, [tg]);
+    }, [tg.hapticFeedback]);
 
     const handleRiskToggle = useCallback((risk: RiskType) => {
         tg.hapticFeedback({ type: 'selection' })
@@ -942,7 +942,7 @@ export const Catalog: React.FC = () => {
                 ? prev.risks.filter(r => r !== risk)
                 : [...prev.risks, risk],
         }));
-    }, [tg]);
+    }, [tg.hapticFeedback]);
 
     const handleDifficultyToggle = useCallback((difficulty: DifficultyLevel) => {
         tg.hapticFeedback({ type: 'selection' })
@@ -952,7 +952,7 @@ export const Catalog: React.FC = () => {
                 ? prev.difficulty.filter(d => d !== difficulty)
                 : [...prev.difficulty, difficulty],
         }));
-    }, [tg]);
+    }, [tg.hapticFeedback]);
 
     const handleApplyFilters = useCallback(() => {
         setIsFilterOpen(false);
@@ -973,7 +973,7 @@ export const Catalog: React.FC = () => {
         tg.hapticFeedback({ type: 'impact', style: 'light' })
         setSelectedExercise(exercise);
         setIsDetailOpen(true);
-    }, [tg]);
+    }, [tg.hapticFeedback]);
 
     const handleCloseDetail = useCallback(() => {
         setIsDetailOpen(false);
@@ -985,7 +985,7 @@ export const Catalog: React.FC = () => {
         console.log('Add to workout:', exercise);
         tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
         handleCloseDetail();
-    }, [handleCloseDetail, tg]);
+    }, [handleCloseDetail, tg.hapticFeedback]);
 
     const handleAddExercise = useCallback(() => {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
