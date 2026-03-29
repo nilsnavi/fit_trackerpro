@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react'
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { PwaUpdatePrompt } from './app/components/PwaUpdatePrompt'
 import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
@@ -83,6 +84,7 @@ export default function App() {
                 <TelegramProvider>
                     <ThemeProvider>
                         <BrowserRouter>
+                            <PwaUpdatePrompt />
                             <Suspense fallback={<RoutePageFallback />}>
                                 <Routes>
                                     <Route element={<AppShell />}>
