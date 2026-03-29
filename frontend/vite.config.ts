@@ -14,29 +14,10 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: 'auto',
-            includeAssets: ['vite.svg'],
-            manifest: {
-                name: 'FitTracker Pro',
-                short_name: 'FitTracker',
-                description: 'FitTracker Pro - Track your fitness journey',
-                theme_color: '#2481cc',
-                background_color: '#ffffff',
-                display: 'standalone',
-                orientation: 'portrait',
-                lang: 'en',
-                scope: '/',
-                start_url: '/',
-                icons: [
-                    {
-                        src: 'vite.svg',
-                        sizes: '512x512',
-                        type: 'image/svg+xml',
-                        purpose: 'any',
-                    },
-                ],
-            },
+            manifest: false,
+            includeAssets: ['vite.svg', 'icons/**/*.png', 'manifest.webmanifest'],
             workbox: {
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
                 globIgnores: ['**/config.js'],
                 navigateFallback: 'index.html',
             },
