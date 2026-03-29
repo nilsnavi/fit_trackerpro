@@ -22,3 +22,10 @@ export type { ModalProps } from './Modal';
 
 export { Timer } from './Timer';
 export type { TimerProps, TimerVariant, TimerState } from './Timer';
+
+export { SectionEmptyState } from './SectionEmptyState';
+export type {
+    SectionEmptyStateProps,
+    SectionEmptyStateTone,
+    SectionEmptyStateAction,
+} from './SectionEmptyState';
