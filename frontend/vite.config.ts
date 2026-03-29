@@ -12,14 +12,23 @@ export default defineConfig({
     plugins: [
         react(),
         VitePWA({
-            registerType: 'autoUpdate',
+            /** New SW waits until user confirms via PwaUpdatePrompt — avoids mid-session chunk/SW mismatch. */
+            registerType: 'prompt',
             injectRegister: 'auto',
             manifest: false,
             includeAssets: ['vite.svg', 'icons/**/*.png', 'manifest.webmanifest'],
             workbox: {
+                /** Precache = app shell (HTML, hashed JS/CSS, icons). Runtime API stays uncached here. */
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
                 globIgnores: ['**/config.js'],
                 navigateFallback: 'index.html',
+                /** Same-origin API must not fall back to SPA HTML. */
+                navigateFallbackDenylist: [/^\/api\//],
+                cleanupOutdatedCaches: true,
+                cacheId: 'fittracker-shell',
+                skipWaiting: false,
+                clientsClaim: false,
+                maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
             },
             devOptions: {
                 enabled: false,
