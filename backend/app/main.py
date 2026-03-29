@@ -25,6 +25,7 @@ from app.middleware.rate_limit import (
     create_rate_limit_redis_client,
 )
 from app.middleware.request_logging import StructuredRequestLoggingMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
 from app.schemas.system import HealthCheckResponse
 from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
@@ -153,6 +154,9 @@ app.add_middleware(RateLimitMiddleware)
 
 # Access / correlation logging (outermost: full duration including rate limit)
 app.add_middleware(StructuredRequestLoggingMiddleware)
+
+# Baseline security headers on all API responses (innermost: final response envelope)
+app.add_middleware(SecurityHeadersMiddleware)
 
 register_v1_routes(app)
 
