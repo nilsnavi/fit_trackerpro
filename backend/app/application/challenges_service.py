@@ -12,6 +12,7 @@ from app.domain.exceptions import (
     ChallengeValidationError,
 )
 from app.infrastructure.repositories.challenges_repository import ChallengesRepository
+from app.core.audit import CHALLENGE_CREATE, CHALLENGE_JOIN, CHALLENGE_LEAVE, audit_log
 from app.schemas.challenges import (
     ChallengeCreate,
     ChallengeDetailResponse,
@@ -111,7 +112,13 @@ class ChallengesService:
             user_rank=None,
         )
 
-    async def create_challenge(self, user_id: int, user_first_name: str | None, data: ChallengeCreate) -> ChallengeResponse:
+    async def create_challenge(
+        self,
+        user_id: int,
+        user_first_name: str | None,
+        data: ChallengeCreate,
+        client_ip: str | None = None,
+    ) -> ChallengeResponse:
         if data.end_date <= data.start_date:
             raise ChallengeValidationError("End date must be after start date")
 
@@ -142,6 +149,15 @@ class ChallengesService:
         )
         challenge = await self.repository.create_challenge(challenge)
 
+        audit_log(
+            action=CHALLENGE_CREATE,
+            user_db_id=user_id,
+            resource_type="challenge",
+            resource_id=challenge.id,
+            client_ip=client_ip,
+            meta={"is_public": data.is_public, "status": challenge_status},
+        )
+
         return ChallengeResponse(
             id=challenge.id,
             creator_id=challenge.creator_id,
@@ -164,7 +180,11 @@ class ChallengesService:
         )
 
     async def join_challenge(
-        self, user_id: int, challenge_id: int, join_code: str | None
+        self,
+        user_id: int,
+        challenge_id: int,
+        join_code: str | None,
+        client_ip: str | None = None,
     ) -> ChallengeJoinResponse:
         _ = user_id
         challenge = await self.repository.get_challenge(challenge_id)
@@ -177,6 +197,15 @@ class ChallengesService:
         if not challenge.is_public and (not join_code or join_code.upper() != challenge.join_code):
             raise ChallengeForbiddenError("Invalid join code")
 
+        audit_log(
+            action=CHALLENGE_JOIN,
+            user_db_id=user_id,
+            resource_type="challenge",
+            resource_id=challenge_id,
+            client_ip=client_ip,
+            meta={"private": not challenge.is_public},
+        )
+
         return ChallengeJoinResponse(
             success=True,
             challenge_id=challenge_id,
@@ -185,11 +214,22 @@ class ChallengesService:
             participant_count=46,
         )
 
-    async def leave_challenge(self, user_id: int, challenge_id: int) -> ChallengeLeaveResponse:
-        _ = user_id
+    async def leave_challenge(
+        self,
+        user_id: int,
+        challenge_id: int,
+        client_ip: str | None = None,
+    ) -> ChallengeLeaveResponse:
         challenge = await self.repository.get_challenge(challenge_id)
         if not challenge:
             raise ChallengeNotFoundError("Challenge not found")
+        audit_log(
+            action=CHALLENGE_LEAVE,
+            user_db_id=user_id,
+            resource_type="challenge",
+            resource_id=challenge_id,
+            client_ip=client_ip,
+        )
         return ChallengeLeaveResponse(
             success=True,
             challenge_id=challenge_id,

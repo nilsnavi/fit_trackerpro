@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.exceptions import AchievementNotFoundError
 from app.infrastructure.repositories.achievements_repository import AchievementsRepository
+from app.core.audit import ACHIEVEMENT_CLAIM, audit_log
 from app.schemas.achievements import (
     AchievementLeaderboardEntry,
     AchievementLeaderboardResponse,
@@ -87,7 +88,12 @@ class AchievementsService:
             is_completed=ua.progress >= 100,
         )
 
-    async def claim_achievement(self, user_id: int, achievement_id: int) -> AchievementUnlockResponse:
+    async def claim_achievement(
+        self,
+        user_id: int,
+        achievement_id: int,
+        client_ip: str | None = None,
+    ) -> AchievementUnlockResponse:
         achievement = await self.repository.get_achievement(achievement_id=achievement_id)
         if not achievement:
             raise AchievementNotFoundError("Achievement not found")
@@ -113,6 +119,14 @@ class AchievementsService:
         )
 
         total_points = await self.repository.get_user_total_points(user_id=user_id)
+        audit_log(
+            action=ACHIEVEMENT_CLAIM,
+            user_db_id=user_id,
+            resource_type="achievement",
+            resource_id=achievement_id,
+            client_ip=client_ip,
+            meta={"points_earned": achievement.points, "new_total_points": total_points},
+        )
         return AchievementUnlockResponse(
             unlocked=True,
             achievement=AchievementResponse.model_validate(achievement, from_attributes=True),

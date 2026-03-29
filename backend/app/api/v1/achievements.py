@@ -4,9 +4,10 @@ HTTP-only endpoints delegating business logic to services
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import get_client_ip
 from app.middleware.auth import get_current_user
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
@@ -57,6 +58,7 @@ async def get_user_achievement_detail(
 @router.post("/{achievement_id}/claim", response_model=AchievementUnlockResponse)
 async def claim_achievement(
     achievement_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -64,6 +66,7 @@ async def claim_achievement(
     return await service.claim_achievement(
         user_id=current_user.id,
         achievement_id=achievement_id,
+        client_ip=get_client_ip(request),
     )
 
 

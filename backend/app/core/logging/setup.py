@@ -17,11 +17,17 @@ STRUCTURED_RECORD_KEYS = (
     "request_id",
     "correlation_id",
     "user_id",
+    "telegram_id",
     "route",
     "path",
     "method",
     "status_code",
     "duration_ms",
+    "audit_action",
+    "audit_resource_type",
+    "audit_resource_id",
+    "audit_meta",
+    "client_ip",
 )
 
 

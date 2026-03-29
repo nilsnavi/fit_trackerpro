@@ -20,6 +20,14 @@ from app.schemas.auth import (
 )
 from app.settings import settings
 from app.infrastructure.telegram_auth import validate_and_get_user
+from app.core.audit import (
+    AUTH_ACCOUNT_DELETE,
+    AUTH_LOGOUT,
+    AUTH_PROFILE_UPDATE,
+    AUTH_REFRESH,
+    AUTH_TELEGRAM_LOGIN,
+    audit_log,
+)
 
 
 class AuthService:
@@ -30,10 +38,18 @@ class AuthService:
     def get_profile(user: User) -> UserProfileResponse:
         return user_profile_from_db(user)
 
-    async def delete_account(self, user: User) -> None:
+    async def delete_account(self, user: User, client_ip: str | None = None) -> None:
+        uid = user.id
+        tg = user.telegram_id
         await self.repository.delete_user(user)
+        audit_log(
+            action=AUTH_ACCOUNT_DELETE,
+            user_db_id=uid,
+            telegram_id=tg,
+            client_ip=client_ip,
+        )
 
-    async def _get_or_create_user(self, telegram_user_data: dict) -> User:
+    async def _get_or_create_user(self, telegram_user_data: dict) -> tuple[User, bool]:
         telegram_id = telegram_user_data["id"]
         user = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
         if user is None:
@@ -44,14 +60,18 @@ class AuthService:
                 profile={"equipment": [], "limitations": [], "goals": []},
                 settings={"theme": "telegram", "notifications": True, "units": "metric"},
             )
-            return await self.repository.insert_user(user)
+            return await self.repository.insert_user(user), True
 
         user.username = telegram_user_data.get("username") or user.username
         user.first_name = telegram_user_data.get("first_name") or user.first_name
         await self.repository.commit_user_fields()
-        return user
+        return user, False
 
-    async def authenticate_telegram(self, auth_request: TelegramAuthRequest) -> AuthResponse:
+    async def authenticate_telegram(
+        self,
+        auth_request: TelegramAuthRequest,
+        client_ip: str | None = None,
+    ) -> AuthResponse:
         is_valid, user_data, error = validate_and_get_user(
             init_data=auth_request.init_data,
             bot_token=settings.TELEGRAM_BOT_TOKEN,
@@ -60,9 +80,17 @@ class AuthService:
         if not is_valid:
             raise AuthenticationError(f"Authentication failed: {error}")
 
-        user = await self._get_or_create_user(user_data)
+        user, created = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
         create_refresh_token(user.telegram_id)  # preserved side-effect compatibility
+
+        audit_log(
+            action=AUTH_TELEGRAM_LOGIN,
+            user_db_id=user.id,
+            telegram_id=user.telegram_id,
+            client_ip=client_ip,
+            meta={"is_new_user": created},
+        )
 
         user_response = TelegramUserData(
             id=user_data["id"],
@@ -84,7 +112,10 @@ class AuthService:
         )
 
     async def update_profile(
-        self, current_user: User, profile_update: UserProfileUpdate
+        self,
+        current_user: User,
+        profile_update: UserProfileUpdate,
+        client_ip: str | None = None,
     ) -> UserProfileResponse:
         update_data = profile_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
@@ -96,13 +127,28 @@ class AuthService:
             else:
                 setattr(current_user, field, value)
         await self.repository.save_profile(current_user)
+        audit_log(
+            action=AUTH_PROFILE_UPDATE,
+            user_db_id=current_user.id,
+            telegram_id=current_user.telegram_id,
+            client_ip=client_ip,
+            meta={"fields": sorted(update_data.keys())},
+        )
         return user_profile_from_db(current_user)
 
     @staticmethod
-    def refresh_token(refresh_request: RefreshTokenRequest) -> RefreshTokenResponse:
+    def refresh_token(
+        refresh_request: RefreshTokenRequest,
+        client_ip: str | None = None,
+    ) -> RefreshTokenResponse:
         user_id = verify_token(refresh_request.refresh_token, token_type="refresh")
         if user_id is None:
             raise AuthenticationError("Invalid or expired refresh token")
+        audit_log(
+            action=AUTH_REFRESH,
+            telegram_id=user_id,
+            client_ip=client_ip,
+        )
         return RefreshTokenResponse(
             access_token=create_access_token(user_id),
             refresh_token=create_refresh_token(user_id),
@@ -111,5 +157,11 @@ class AuthService:
         )
 
     @staticmethod
-    def logout() -> LogoutResponse:
+    def logout(current_user: User, client_ip: str | None = None) -> LogoutResponse:
+        audit_log(
+            action=AUTH_LOGOUT,
+            user_db_id=current_user.id,
+            telegram_id=current_user.telegram_id,
+            client_ip=client_ip,
+        )
         return LogoutResponse()

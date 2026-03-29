@@ -25,6 +25,14 @@ from app.schemas.workouts import (
     WorkoutTemplateResponse,
 )
 from app.infrastructure.cache import invalidate_user_analytics_cache
+from app.core.audit import (
+    WORKOUT_COMPLETE,
+    WORKOUT_START,
+    WORKOUT_TEMPLATE_CREATE,
+    WORKOUT_TEMPLATE_DELETE,
+    WORKOUT_TEMPLATE_UPDATE,
+    audit_log,
+)
 
 
 class WorkoutsService:
@@ -133,7 +141,12 @@ class WorkoutsService:
             page_size=page_size,
         )
 
-    async def create_template(self, user_id: int, data: WorkoutTemplateCreate) -> WorkoutTemplateResponse:
+    async def create_template(
+        self,
+        user_id: int,
+        data: WorkoutTemplateCreate,
+        client_ip: str | None = None,
+    ) -> WorkoutTemplateResponse:
         template = WorkoutTemplate(
             user_id=user_id,
             name=data.name,
@@ -142,6 +155,14 @@ class WorkoutsService:
             is_public=data.is_public,
         )
         template = await self.repository.create_template(template)
+        audit_log(
+            action=WORKOUT_TEMPLATE_CREATE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=template.id,
+            client_ip=client_ip,
+            meta={"type": data.type},
+        )
         return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
 
     async def get_template(self, user_id: int, template_id: int) -> WorkoutTemplateResponse:
@@ -155,6 +176,7 @@ class WorkoutsService:
         user_id: int,
         template_id: int,
         data: WorkoutTemplateCreate,
+        client_ip: str | None = None,
     ) -> WorkoutTemplateResponse:
         template = await self.repository.get_template(user_id=user_id, template_id=template_id)
         if not template:
@@ -165,13 +187,32 @@ class WorkoutsService:
         template.exercises = [ex.model_dump() for ex in data.exercises]
         template.is_public = data.is_public
         template = await self.repository.update_template(template)
+        audit_log(
+            action=WORKOUT_TEMPLATE_UPDATE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=template_id,
+            client_ip=client_ip,
+        )
         return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
 
-    async def delete_template(self, user_id: int, template_id: int) -> None:
+    async def delete_template(
+        self,
+        user_id: int,
+        template_id: int,
+        client_ip: str | None = None,
+    ) -> None:
         template = await self.repository.get_template(user_id=user_id, template_id=template_id)
         if not template:
             raise WorkoutNotFoundError("Template not found")
         await self.repository.delete_template(template)
+        audit_log(
+            action=WORKOUT_TEMPLATE_DELETE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=template_id,
+            client_ip=client_ip,
+        )
 
     async def get_history(
         self,
@@ -202,7 +243,12 @@ class WorkoutsService:
             date_to=date_to,
         )
 
-    async def start_workout(self, user_id: int, data: WorkoutStartRequest) -> WorkoutStartResponse:
+    async def start_workout(
+        self,
+        user_id: int,
+        data: WorkoutStartRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutStartResponse:
         if data.template_id:
             template = await self.repository.get_template(user_id=user_id, template_id=data.template_id)
             if not template:
@@ -217,6 +263,15 @@ class WorkoutsService:
         )
         workout = await self.repository.create_workout_log(workout)
         await invalidate_user_analytics_cache(user_id)
+
+        audit_log(
+            action=WORKOUT_START,
+            user_db_id=user_id,
+            resource_type="workout_log",
+            resource_id=workout.id,
+            client_ip=client_ip,
+            meta={"template_id": data.template_id},
+        )
 
         return WorkoutStartResponse(
             id=workout.id,
@@ -349,6 +404,7 @@ class WorkoutsService:
         user_id: int,
         workout_id: int,
         data: WorkoutCompleteRequest,
+        client_ip: str | None = None,
     ) -> WorkoutCompleteResponse:
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
         if not workout:
@@ -367,6 +423,15 @@ class WorkoutsService:
 
         await self.repository.commit_workout_completion(workout)
         await invalidate_user_analytics_cache(user_id)
+
+        audit_log(
+            action=WORKOUT_COMPLETE,
+            user_db_id=user_id,
+            resource_type="workout_log",
+            resource_id=workout_id,
+            client_ip=client_ip,
+            meta={"duration_min": data.duration},
+        )
 
         return WorkoutCompleteResponse(
             id=workout.id,
