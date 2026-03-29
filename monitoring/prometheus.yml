@@ -1,3 +1,7 @@
+# FitTracker monitoring — только то, что реально поднимается в docker-compose.monitoring.yml
+# + backend на сети fittracker-network. Экспортёры Postgres/Redis подключайте отдельным
+# файлом или добавьте job ниже, когда сервисы появятся в compose.
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -9,40 +13,39 @@ alerting:
     - static_configs:
         - targets: []
 
-rule_files:
-  # - "alert_rules.yml"
+rule_files: []
 
 scrape_configs:
-  # Prometheus itself
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]
 
-  # Node Exporter - System metrics
+  # Хост: CPU, память, диск, сеть — база для «почему тормозит»
   - job_name: "node-exporter"
     static_configs:
       - targets: ["node-exporter:9100"]
 
-  # cAdvisor - Container metrics
+  # Контейнеры: CPU/RSS по сервисам compose (тяжёлый таргет — реже скрейпим)
   - job_name: "cadvisor"
+    scrape_interval: 30s
+    scrape_timeout: 10s
     static_configs:
       - targets: ["cadvisor:8080"]
 
-  # FitTracker Backend
+  # API: HTTP RPS, латентность, коды ответа (эндпоинт /metrics в приложении)
   - job_name: "fittracker-backend"
+    metrics_path: /metrics
+    scrape_interval: 15s
     static_configs:
       - targets: ["backend:8000"]
-    metrics_path: /metrics
-    scrape_interval: 30s
 
-  # PostgreSQL Exporter (if added)
-  - job_name: "postgres"
-    static_configs:
-      - targets: ["postgres-exporter:9187"]
-    scrape_interval: 30s
-
-  # Redis Exporter (if added)
-  - job_name: "redis"
-    static_configs:
-      - targets: ["redis-exporter:9121"]
-    scrape_interval: 30s
+# Пример: раскомментируйте после добавления postgres-exporter и redis-exporter в compose.
+#  - job_name: "postgres"
+#    scrape_interval: 30s
+#    static_configs:
+#      - targets: ["postgres-exporter:9187"]
+#
+#  - job_name: "redis"
+#    scrape_interval: 30s
+#    static_configs:
+#      - targets: ["redis-exporter:9121"]

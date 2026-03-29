@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     # Sentry
     SENTRY_DSN: str | None = None
 
+    # Prometheus (/metrics); safe to disable if unused. With Gunicorn workers>1,
+    # counters/histograms reflect the worker that handled the scrape unless multiproc mode is configured.
+    ENABLE_PROMETHEUS_METRICS: bool = True
+
     # Email
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587

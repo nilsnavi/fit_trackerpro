@@ -147,7 +147,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Skip rate limiting for certain paths
-        if request.url.path in ["/", "/docs", "/redoc", "/openapi.json", "/health"]:
+        if request.url.path in [
+            "/",
+            "/metrics",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/health",
+            "/api/v1/system/health",
+        ]:
             return await call_next(request)
 
         # Get identifier (prefer user ID from auth, fallback to IP)

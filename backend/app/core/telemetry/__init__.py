@@ -4,9 +4,13 @@ Error tracking and APM hooks (Sentry, etc.).
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import sentry_sdk
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
@@ -57,3 +61,27 @@ def init_sentry(settings: Settings) -> None:
         before_send=_before_send,
     )
     logger.info("Sentry initialized")
+
+
+def setup_prometheus_metrics(app: "FastAPI", settings: Settings) -> None:
+    """Expose Prometheus metrics for scraping (HTTP latency, in-progress, request totals)."""
+    if not settings.ENABLE_PROMETHEUS_METRICS:
+        return
+
+    from prometheus_fastapi_instrumentator import Instrumentator
+
+    Instrumentator(
+        should_group_status_codes=True,
+        should_ignore_untemplated=True,
+        should_instrument_requests_inprogress=True,
+        excluded_handlers=[
+            "^/metrics$",
+            "^/api/v1/system/health$",
+            "^/docs$",
+            "^/redoc$",
+            r"^/openapi\.json$",
+            r"^/favicon\.ico$",
+        ],
+    ).instrument(app).expose(app, include_in_schema=False, should_gzip=False)
+
+    logger.info("Prometheus metrics enabled at /metrics")
