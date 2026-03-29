@@ -19,6 +19,12 @@ import type {
     ExerciseFilters,
 } from '@features/exercises/types/catalogUi';
 import { CatalogExerciseListSkeleton } from '@shared/ui/page-skeletons';
+import {
+    CATEGORIES,
+    DIFFICULTY_OPTIONS,
+    EQUIPMENT_OPTIONS,
+    RISK_OPTIONS,
+} from '@features/exercises/constants/catalogReferenceUi';
 
 export type {
     Exercise,
@@ -28,44 +34,6 @@ export type {
     DifficultyLevel,
     ExerciseFilters,
 } from '@features/exercises/types/catalogUi';
-
-// ============================================
-// Constants
-// ============================================
-
-const CATEGORIES: { id: ExerciseCategory; label: string; icon: string }[] = [
-    { id: 'all', label: 'Все', icon: '🔍' },
-    { id: 'legs', label: 'Ноги', icon: '🦵' },
-    { id: 'back', label: 'Спина', icon: '🔙' },
-    { id: 'chest', label: 'Грудь', icon: '💪' },
-    { id: 'shoulders', label: 'Плечи', icon: '🙆' },
-    { id: 'arms', label: 'Руки', icon: '💪' },
-    { id: 'cardio', label: 'Кардио', icon: '❤️' },
-    { id: 'stretching', label: 'Растяжка', icon: '🧘' },
-];
-
-const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string }[] = [
-    { id: 'barbell', label: 'Штанга' },
-    { id: 'dumbbells', label: 'Гантели' },
-    { id: 'bodyweight', label: 'Свой вес' },
-    { id: 'machines', label: 'Тренажёры' },
-    { id: 'cables', label: 'Тросы' },
-    { id: 'kettlebell', label: 'Гиря' },
-];
-
-const RISK_OPTIONS: { id: RiskType; label: string }[] = [
-    { id: 'shoulder', label: 'Плечи' },
-    { id: 'knee', label: 'Колени' },
-    { id: 'back', label: 'Спина' },
-    { id: 'wrist', label: 'Запястья' },
-    { id: 'elbow', label: 'Локти' },
-];
-
-const DIFFICULTY_OPTIONS: { id: DifficultyLevel; label: string }[] = [
-    { id: 'beginner', label: 'Начинающий' },
-    { id: 'intermediate', label: 'Средний' },
-    { id: 'advanced', label: 'Продвинутый' },
-];
 
 // ============================================
 // Mock Data (заменить на API)
@@ -1121,7 +1089,9 @@ export const Catalog: React.FC = () => {
             <div className="px-4 py-4">
                 {exercisesQuery.isError && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 text-center">
-                        Не удалось загрузить каталог с сервера — показаны демо-данные.
+                        {exercisesQuery.data
+                            ? 'Нет сети — показана сохранённая копия каталога.'
+                            : 'Не удалось загрузить каталог с сервера — показаны демо-данные.'}
                         <button
                             type="button"
                             className="ml-2 underline font-medium"
