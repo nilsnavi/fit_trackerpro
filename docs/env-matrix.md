@@ -21,13 +21,13 @@
 | `ANALYTICS_DEFAULT_MAX_DATA_POINTS` | backend | `backend/.env*.example`, `backend/app/settings/config.py` | `120` | опционально |
 | `ANALYTICS_MAX_DATA_POINTS_HARD_LIMIT` | backend | `backend/.env*.example`, `backend/app/settings/config.py` | `365` | опционально |
 | `TELEGRAM_BOT_TOKEN` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `your_bot_token_here` | обязательно для Telegram-функций |
-| `TELEGRAM_WEBAPP_URL` | backend/frontend bridge | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `https://your-domain.com` | обязательно в prod |
+| `TELEGRAM_WEBAPP_URL` | backend/frontend bridge | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `https://fittrackpro.ru` (prod) | обязательно в prod |
 | `SECRET_KEY` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `your_secret_key_here...` | обязательно |
 | `ALGORITHM` | backend | `backend/.env.example`, `backend/app/settings/config.py` | `HS256` | опционально |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | backend | `backend/.env.example`, `backend/app/settings/config.py` | `30` | опционально |
 | `ALLOWED_ORIGINS` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | `http://localhost:3000,...` | обязательно в prod (не `*`) |
 | `SENTRY_DSN` | backend/frontend | `backend/.env*.example`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | пусто | опционально |
-| `VITE_API_URL` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts`, `frontend/src/services/api.ts`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | `http://localhost:8000/api/v1` | обязательно для frontend |
+| `VITE_API_URL` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts`, `frontend/src/services/api.ts`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | `http://localhost:8000/api/v1`; prod: `https://fittrackpro.ru/api/v1` | обязательно для frontend |
 | `VITE_TELEGRAM_BOT_USERNAME` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | `your_bot_username` | обязательно для Telegram Mini App |
 | `VITE_ENVIRONMENT` | frontend | `frontend/.env.example`, `docker-compose*.yml` | `development` / `production` | опционально |
 | `VITE_SENTRY_DSN` | frontend | `frontend/.env.example` | пусто | опционально |

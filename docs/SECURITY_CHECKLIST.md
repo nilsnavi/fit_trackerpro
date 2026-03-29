@@ -56,9 +56,9 @@ Security review checklist for current FitTracker Pro deployment.
 ## Quick verification commands
 
 ```bash
-curl -I https://your-domain.com
-curl -f https://your-domain.com/api/v1/system/health
-curl -f https://your-domain.com/api/v1/system/version
+curl -I https://fittrackpro.ru
+curl -f https://fittrackpro.ru/api/v1/system/health
+curl -f https://fittrackpro.ru/api/v1/system/version
 npm audit
 pip-audit
 ```

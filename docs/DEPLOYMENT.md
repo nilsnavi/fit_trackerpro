@@ -40,11 +40,11 @@ POSTGRES_DB=fittracker
 
 SECRET_KEY=change_me
 TELEGRAM_BOT_TOKEN=change_me
-TELEGRAM_WEBAPP_URL=https://fit.example.com
-ALLOWED_ORIGINS=https://fit.example.com
+TELEGRAM_WEBAPP_URL=https://fittrackpro.ru
+ALLOWED_ORIGINS=https://fittrackpro.ru
 SENTRY_DSN=
 
-VITE_API_URL=https://fit.example.com/api/v1
+VITE_API_URL=https://fittrackpro.ru/api/v1
 VITE_TELEGRAM_BOT_USERNAME=fit_tracker_bot
 
 GITHUB_REPOSITORY=your-org/fit_trackerpro
@@ -76,15 +76,15 @@ IMAGE_TAG=v1.0.0
 1. Issue certificate:
 
 ```bash
-sudo certbot certonly --standalone -d fit.example.com
+sudo certbot certonly --standalone -d fittrackpro.ru
 ```
 
 2. Place certs where production compose expects them:
 
 ```bash
 mkdir -p ~/fittracker-pro/nginx/ssl
-sudo cp /etc/letsencrypt/live/fit.example.com/fullchain.pem ~/fittracker-pro/nginx/ssl/
-sudo cp /etc/letsencrypt/live/fit.example.com/privkey.pem ~/fittracker-pro/nginx/ssl/
+sudo cp /etc/letsencrypt/live/fittrackpro.ru/fullchain.pem ~/fittracker-pro/nginx/ssl/
+sudo cp /etc/letsencrypt/live/fittrackpro.ru/privkey.pem ~/fittracker-pro/nginx/ssl/
 sudo chown -R $USER:$USER ~/fittracker-pro/nginx/ssl
 ```
 
@@ -122,8 +122,8 @@ The **Environment** dropdown on `workflow_dispatch` (production / staging) is no
 ## Verification
 
 ```bash
-curl -f https://fit.example.com/api/v1/system/health
-curl -f https://fit.example.com/api/v1/system/version
+curl -f https://fittrackpro.ru/api/v1/system/health
+curl -f https://fittrackpro.ru/api/v1/system/version
 cd ~/fittracker-pro
 docker-compose -f docker-compose.prod.yml ps
 docker-compose -f docker-compose.prod.yml logs -f backend
