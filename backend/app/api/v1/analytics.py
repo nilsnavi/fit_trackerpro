@@ -30,7 +30,7 @@ from app.services.analytics_service import (
     AnalyticsUnavailableError,
     AnalyticsValidationError,
 )
-from app.core.config import settings
+from app.settings import settings
 
 router = APIRouter()
 

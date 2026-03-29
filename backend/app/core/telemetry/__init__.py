@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from app.core.config import Settings
+from app.settings import Settings
 
 logger = logging.getLogger(__name__)
 

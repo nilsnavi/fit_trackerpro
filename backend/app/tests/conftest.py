@@ -21,7 +21,7 @@ from typing import AsyncGenerator, Generator
 from app.domain import Base, get_async_db
 from app.main import app
 from app.tests.telegram_webapp import build_init_data
-from app.core.config import settings
+from app.settings import settings
 
 # One shared in-memory SQLite so multiple HTTP requests in a test see the same DB.
 _test_engine = create_async_engine(

@@ -1,9 +1,7 @@
 """
-Application core: config, security, logging, telemetry.
+Application core: security, logging, telemetry.
 
-Prefer importing from submodules, e.g. ``app.core.config``, ``app.core.security``.
+Application settings live in ``app.settings`` (see ``app.settings.config``).
 """
 
-from app.core.config import Settings, settings
-
-__all__ = ["Settings", "settings"]
+__all__: list[str] = []

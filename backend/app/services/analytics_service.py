@@ -30,7 +30,7 @@ from app.utils.cache import (
     invalidate_user_analytics_cache,
     set_cache_json,
 )
-from app.core.config import settings
+from app.settings import settings
 from app.utils.feature_flags import is_feature_enabled
 
 

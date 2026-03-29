@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 from redis.asyncio import Redis
 
-from app.core.config import settings
+from app.settings import settings
 
 _redis_client: Optional[Redis] = None
 _memory_cache: dict[str, tuple[float, str]] = {}

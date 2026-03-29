@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from app.core.logging.context import request_id_var, user_id_var
 
 if TYPE_CHECKING:
-    from app.core.config import Settings
+    from app.settings import Settings
 
 # Merged into JSON / propagated from `logger.*(..., extra={...})`.
 STRUCTURED_RECORD_KEYS = (

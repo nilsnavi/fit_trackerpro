@@ -3,7 +3,7 @@ System endpoints (service health/version), no user data.
 """
 from fastapi import APIRouter
 
-from app.core.config import settings
+from app.settings import settings
 from app.schemas.system import HealthCheckResponse, ServiceVersionResponse
 
 router = APIRouter()

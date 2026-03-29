@@ -18,7 +18,7 @@ from app.schemas.auth import (
     UserProfileUpdate,
     user_profile_from_db,
 )
-from app.core.config import settings
+from app.settings import settings
 from app.utils.telegram_auth import validate_and_get_user
 
 

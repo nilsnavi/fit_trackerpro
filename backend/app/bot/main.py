@@ -20,7 +20,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from app.core.config import settings
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from sqlalchemy import pool
 from logging.config import fileConfig
 import asyncio
 from app.domain import Base
-from app.core.config import settings
+from app.settings import settings
 import sys
 import os
 

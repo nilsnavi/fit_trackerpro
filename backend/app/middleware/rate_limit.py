@@ -12,7 +12,7 @@ from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.core.config import settings
+from app.settings import settings
 
 
 class RateLimitConfig:

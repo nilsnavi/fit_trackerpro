@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-from app.core.config import settings
+from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
 
 
