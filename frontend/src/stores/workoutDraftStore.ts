@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { WorkoutMode } from '../config/workoutTypeConfigs'
+import type { WorkoutMode } from '@features/workouts/config/workoutTypeConfigs'
 
 interface WorkoutDraftState {
     selectedMode: WorkoutMode | null
