@@ -27,7 +27,7 @@ aiohttp==3.13.4
 # Utilities
 python-dotenv==1.2.2
 orjson==3.11.7
-redis==5.0.1
+redis==7.4.0
 
 # Logging and Monitoring
 structlog==24.1.0
