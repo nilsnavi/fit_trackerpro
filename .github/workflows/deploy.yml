@@ -140,8 +140,8 @@ jobs:
             echo "Running health checks..."
             sleep 15
             
-            # Check backend health
-            if curl -fsS http://localhost:8000/api/v1/system/health; then
+            # Check backend health (same JSON as GET /api/v1/system/health)
+            if curl -fsS http://localhost:8000/health; then
               echo "Backend is healthy"
             else
               echo "Backend health check failed"
@@ -265,7 +265,7 @@ jobs:
             fi
 
             sleep 15
-            curl -fsS http://localhost:8000/api/v1/system/health > /dev/null
+            curl -fsS http://localhost:8000/health > /dev/null
             curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
             curl -fsS http://localhost/ > /dev/null
             echo "Rollback completed and health checks passed"

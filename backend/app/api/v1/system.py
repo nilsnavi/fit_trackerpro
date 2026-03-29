@@ -9,6 +9,11 @@ from app.schemas.system import HealthCheckResponse, ServiceVersionResponse
 router = APIRouter()
 
 
+def health_check_response() -> HealthCheckResponse:
+    """Canonical liveness payload for GET /api/v1/system/health and GET /health."""
+    return HealthCheckResponse(status="healthy")
+
+
 @router.get(
     "/health",
     response_model=HealthCheckResponse,
@@ -16,7 +21,7 @@ router = APIRouter()
     operation_id="system_health_check",
 )
 async def system_health():
-    return HealthCheckResponse(status="healthy")
+    return health_check_response()
 
 
 @router.get(

@@ -16,7 +16,7 @@ from app.api.v1.challenges import router as challenges_router
 from app.api.v1.emergency import router as emergency_router
 from app.api.v1.exercises import router as exercises_router
 from app.api.v1.health_metrics import router as health_metrics_router
-from app.api.v1.system import router as system_router
+from app.api.v1.system import health_check_response, router as system_router
 from app.api.v1.users import router as users_router
 from app.api.v1.workouts import router as workouts_router
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
@@ -26,6 +26,7 @@ from app.core.telemetry import init_sentry, setup_prometheus_metrics
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_logging import StructuredRequestLoggingMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
+from app.schemas.system import HealthCheckResponse
 from app.api.v1.openapi_tags import (
     OPENAPI_TAGS,
     TAG_ACHIEVEMENTS,
@@ -156,6 +157,17 @@ app.include_router(
     emergency_router, prefix="/api/v1/emergency", tags=[TAG_EMERGENCY], deprecated=True)
 
 setup_prometheus_metrics(app, settings)
+
+
+@app.get(
+    "/health",
+    response_model=HealthCheckResponse,
+    tags=[TAG_SYSTEM],
+    summary="Liveness probe (alias)",
+    include_in_schema=False,
+)
+async def health_probe():
+    return health_check_response()
 
 
 @app.get("/", tags=[TAG_SYSTEM])

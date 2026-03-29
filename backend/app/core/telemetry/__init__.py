@@ -76,7 +76,9 @@ def setup_prometheus_metrics(app: "FastAPI", settings: Settings) -> None:
         should_instrument_requests_inprogress=True,
         excluded_handlers=[
             "^/metrics$",
+            "^/health$",
             "^/api/v1/system/health$",
+            "^/api/v1/system/version$",
             "^/docs$",
             "^/redoc$",
             r"^/openapi\.json$",

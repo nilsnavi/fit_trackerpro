@@ -14,6 +14,16 @@ async def test_health_check(client: AsyncClient):
 
 
 @pytest.mark.unit
+async def test_health_probe_alias_matches_canonical(client: AsyncClient):
+    """GET /health returns the same JSON contract as GET /api/v1/system/health."""
+    canonical = await client.get("/api/v1/system/health")
+    alias = await client.get("/health")
+    assert canonical.status_code == 200
+    assert alias.status_code == 200
+    assert canonical.json() == alias.json()
+
+
+@pytest.mark.unit
 async def test_system_version(client: AsyncClient):
     """Test system version endpoint."""
     response = await client.get("/api/v1/system/version")
