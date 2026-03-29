@@ -1,9 +1,11 @@
 version: '3.8'
 
+# Infra images pinned by registry index digest (multi-arch). Bump when upgrading:
+#   docker buildx imagetools inspect <image:tag> --format '{{json .Manifest.Digest}}'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: fittracker-postgres
     restart: always
     environment:
@@ -28,7 +30,7 @@ services:
 
   # Redis Cache
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
     container_name: fittracker-redis
     restart: always
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -47,9 +49,9 @@ services:
           cpus: '0.5'
           memory: 256M
 
-  # Backend API
+  # Backend API (GHCR: semver on release, or branch-sha from main — never :latest)
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY}/backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/backend:${IMAGE_TAG:?IMAGE_TAG is required}
     container_name: fittracker-backend
     restart: always
     environment:
@@ -85,7 +87,7 @@ services:
 
   # Frontend
   frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:${IMAGE_TAG:?IMAGE_TAG is required}
     container_name: fittracker-frontend
     restart: always
     environment:
@@ -105,7 +107,7 @@ services:
 
   # Nginx Reverse Proxy
   nginx:
-    image: nginx:alpine
+    image: nginx:alpine@sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203cd34cf6d1
     container_name: fittracker-nginx
     restart: always
     ports:

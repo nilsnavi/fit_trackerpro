@@ -48,8 +48,11 @@ VITE_API_URL=https://fit.example.com/api/v1
 VITE_TELEGRAM_BOT_USERNAME=fit_tracker_bot
 
 GITHUB_REPOSITORY=your-org/fit_trackerpro
-IMAGE_TAG=latest
+# Версионированный тег из GHCR (semver релиза или main-<sha>), не latest
+IMAGE_TAG=v1.0.0
 ```
+
+`docker-compose.prod.yml` требует непустой `IMAGE_TAG`; базовые образы (Postgres, Redis, Nginx) в файле закреплены по digest.
 
 ## GitHub Secrets (required by workflows)
 
@@ -105,13 +108,13 @@ Workflow: `.github/workflows/deploy.yml`. Image builds: `.github/workflows/build
 
 1. SSH to `DEPLOY_HOST` as `DEPLOY_USER` (key from `SSH_PRIVATE_KEY`)
 2. Sync `docker-compose.prod.yml` and `nginx/nginx.conf` to `~/fittracker-pro`
-3. Rewrite root `~/fittracker-pro/.env` from secrets (including `IMAGE_TAG` from release tag or `workflow_dispatch` input `image_tag`)
+3. Rewrite root `~/fittracker-pro/.env` from secrets (including `IMAGE_TAG` from the release tag, or from the required `workflow_dispatch` input `image_tag` — must not be empty or `latest`)
 4. Write `~/fittracker-pro/.rollback-meta.env` (previous tag, backup path, etc.)
 5. `pg_dump` to `backups/` before migration
 6. `docker-compose pull`, `run --rm backend alembic upgrade head`, `up -d`, `docker image prune -f`
 7. On-server checks: `http://localhost:8000/api/v1/system/health`, `/api/v1/system/version`, `http://localhost/`
 8. **Post-deploy smoke** job (from the runner): uses `VITE_API_URL` to hit public API URLs with retries
-9. **Rollback on failure** if deploy or smoke failed: restore `IMAGE_TAG` to `PREVIOUS_IMAGE_TAG`, `pull` backend/frontend, `up -d`; optional DB restore only when manual run sets `rollback_restore_db=true`
+9. **Rollback on failure** if deploy or smoke failed: restore `IMAGE_TAG` to `PREVIOUS_IMAGE_TAG` (only if a previous tag was recorded before deploy; first deploy on a clean server has no previous tag), `pull` backend/frontend, `up -d`; optional DB restore only when manual run sets `rollback_restore_db=true`
 10. **Notify**: Slack if `SLACK_WEBHOOK_URL` is set
 
 The **Environment** dropdown on `workflow_dispatch` (production / staging) is not referenced in the workflow YAML today; the target remains `DEPLOY_HOST` + `~/fittracker-pro`.
