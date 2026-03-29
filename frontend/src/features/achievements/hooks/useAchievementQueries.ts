@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { AchievementCategory } from '@features/achievements/components'
+import type { AchievementCategory } from '@features/achievements/types'
 import { achievementsApi } from '@features/achievements/api/achievementsApi'
 import { queryKeys, type AchievementListFilter } from '@shared/api/queryKeys'
 

@@ -35,34 +35,17 @@ import {
     useEmergencyLogMutation,
     useEmergencyNotifyMutation,
 } from '@features/emergency/hooks/useEmergencyQueries'
+import type {
+    EmergencyContact,
+    EmergencyLogPayload,
+    EmergencySymptom,
+} from '@features/emergency/api/emergencyApi'
 
-// ============================================
-// ТИПЫ
-// ============================================
-
-type SymptomType = 'hypoglycemia' | 'dizziness' | 'pain' | 'other'
-
-interface Symptom {
-    id: SymptomType
+interface EmergencySymptomOption {
+    id: EmergencySymptom
     label: string
     description: string
     icon: React.ReactNode
-}
-
-interface EmergencyContact {
-    id: number
-    contact_name: string
-    contact_username?: string
-    phone?: string
-    relationship_type?: string
-}
-
-interface EmergencyLog {
-    symptom: SymptomType
-    timestamp: string
-    protocolStarted: boolean
-    contactNotified: boolean
-    location?: string
 }
 
 type EmergencyStep = 'button' | 'symptoms' | 'protocol' | 'contact' | 'help'
@@ -71,7 +54,7 @@ type EmergencyStep = 'button' | 'symptoms' | 'protocol' | 'contact' | 'help'
 // КОНСТАНТЫ
 // ============================================
 
-const SYMPTOMS: Symptom[] = [
+const SYMPTOMS: EmergencySymptomOption[] = [
     {
         id: 'hypoglycemia',
         label: 'Гипогликемия',
@@ -255,13 +238,13 @@ function CloseButton({
 // ============================================
 
 interface SymptomSelectionProps {
-    onSelect: (symptom: SymptomType) => void
+    onSelect: (symptom: EmergencySymptom) => void
 }
 
 function SymptomSelection({ onSelect }: SymptomSelectionProps) {
     const { hapticFeedback } = useTelegram()
 
-    const handleSelect = (symptom: SymptomType) => {
+    const handleSelect = (symptom: EmergencySymptom) => {
         hapticFeedback.medium()
         onSelect(symptom)
     }
@@ -836,7 +819,7 @@ interface EmergencyModalProps {
 
 function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
     const [step, setStep] = useState<EmergencyStep>('symptoms')
-    const [selectedSymptom, setSelectedSymptom] = useState<SymptomType | null>(null)
+    const [selectedSymptom, setSelectedSymptom] = useState<EmergencySymptom | null>(null)
 
     // Состояние удержания для закрытия
     const [isHolding, setIsHolding] = useState(false)
@@ -865,8 +848,8 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
         }
     }, [isOpen])
 
-    const logEvent = useCallback((event: Partial<EmergencyLog>) => {
-        const log: EmergencyLog = {
+    const logEvent = useCallback((event: Partial<EmergencyLogPayload>) => {
+        const log: EmergencyLogPayload = {
             symptom: selectedSymptom || 'other',
             timestamp: new Date().toISOString(),
             protocolStarted: false,
@@ -877,7 +860,7 @@ function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
         logMutation.mutate(log)
     }, [selectedSymptom, logMutation])
 
-    const handleSymptomSelect = (symptom: SymptomType) => {
+    const handleSymptomSelect = (symptom: EmergencySymptom) => {
         setSelectedSymptom(symptom)
         logEvent({ symptom, protocolStarted: false })
 

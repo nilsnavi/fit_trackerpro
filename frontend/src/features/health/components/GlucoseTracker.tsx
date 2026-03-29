@@ -15,6 +15,10 @@ import {
     useAddGlucoseReadingMutation,
 } from '@features/health/hooks/useHealthQueries';
 import {
+    getGlucoseClinicalStatus,
+    type GlucoseClinicalStatus,
+} from '@features/health/lib/glucoseClinicalStatus';
+import {
     Droplets,
     TrendingUp,
     TrendingDown,
@@ -30,7 +34,6 @@ import {
 export type { GlucoseReading, GlucoseStats } from '@features/health/types/metrics';
 
 type MeasurementType = GlucoseMeasurementType;
-type GlucoseStatus = 'hypo' | 'low' | 'optimal' | 'high' | 'danger';
 
 interface GlucoseTrackerProps {
     onReadingAdded?: (reading: GlucoseReading) => void;
@@ -42,23 +45,22 @@ interface GlucoseTrackerProps {
 // CONSTANTS & CONFIG
 // ============================================
 
-const GLUCOSE_RANGES_MMOL = {
-    hypo: { max: 3.5, label: 'Гипогликемия', color: 'danger', icon: AlertCircle },
-    low: { min: 3.5, max: 4.5, label: 'Низкий уровень', color: 'warning', icon: TrendingDown },
-    optimal: { min: 4.5, max: 10, label: 'Оптимально', color: 'success', icon: Activity },
-    high: { min: 10, max: 15, label: 'Высокий уровень', color: 'warning', icon: TrendingUp },
-    danger: { min: 15, label: 'Опасно', color: 'danger', icon: AlertCircle },
-} as const;
+/** Подписи и иконки по клиническому статусу (пороги — в glucoseClinicalStatus). */
+const GLUCOSE_STATUS_UI: Record<
+    GlucoseClinicalStatus,
+    { label: string; color: string; icon: React.ElementType }
+> = {
+    hypo: { label: 'Гипогликемия', color: 'danger', icon: AlertCircle },
+    low: { label: 'Низкий уровень', color: 'warning', icon: TrendingDown },
+    optimal: { label: 'Оптимально', color: 'success', icon: Activity },
+    high: { label: 'Высокий уровень', color: 'warning', icon: TrendingUp },
+    danger: { label: 'Опасно', color: 'danger', icon: AlertCircle },
+};
 
-const GLUCOSE_RANGES_MGDL = {
-    hypo: { max: 63, label: 'Гипогликемия', color: 'danger', icon: AlertCircle },
-    low: { min: 63, max: 81, label: 'Низкий уровень', color: 'warning', icon: TrendingDown },
-    optimal: { min: 81, max: 180, label: 'Оптимально', color: 'success', icon: Activity },
-    high: { min: 180, max: 270, label: 'Высокий уровень', color: 'warning', icon: TrendingUp },
-    danger: { min: 270, label: 'Опасно', color: 'danger', icon: AlertCircle },
-} as const;
-
-const RECOMMENDATIONS: Record<GlucoseStatus, { title: string; text: string; action: string; icon: React.ElementType }> = {
+const RECOMMENDATIONS: Record<
+    GlucoseClinicalStatus,
+    { title: string; text: string; action: string; icon: React.ElementType }
+> = {
     hypo: {
         title: 'Требуется действие!',
         text: 'Глюкоза ниже нормы. Немедленно примите 15г быстрых углеводов.',
@@ -108,19 +110,8 @@ const convertGlucose = (value: number, from: GlucoseUnit, to: GlucoseUnit): numb
     return value;
 };
 
-const getGlucoseStatus = (value: number, unit: GlucoseUnit): GlucoseStatus => {
-    const ranges = unit === 'mmol' ? GLUCOSE_RANGES_MMOL : GLUCOSE_RANGES_MGDL;
-    const val = unit === 'mmol' ? value : Math.round(value);
-
-    if (val < ranges.hypo.max!) return 'hypo';
-    if (val >= ranges.low.min! && val < ranges.low.max!) return 'low';
-    if (val >= ranges.optimal.min! && val < ranges.optimal.max!) return 'optimal';
-    if (val >= ranges.high.min! && val < ranges.high.max!) return 'high';
-    return 'danger';
-};
-
-const getStatusColor = (status: GlucoseStatus): string => {
-    const colors: Record<GlucoseStatus, string> = {
+const getStatusColor = (status: GlucoseClinicalStatus): string => {
+    const colors: Record<GlucoseClinicalStatus, string> = {
         hypo: 'text-danger-500',
         low: 'text-warning-500',
         optimal: 'text-success-500',
@@ -130,8 +121,8 @@ const getStatusColor = (status: GlucoseStatus): string => {
     return colors[status];
 };
 
-const getStatusBgColor = (status: GlucoseStatus): string => {
-    const colors: Record<GlucoseStatus, string> = {
+const getStatusBgColor = (status: GlucoseClinicalStatus): string => {
+    const colors: Record<GlucoseClinicalStatus, string> = {
         hypo: 'bg-danger-500/10',
         low: 'bg-warning-500/10',
         optimal: 'bg-success-500/10',
@@ -141,8 +132,8 @@ const getStatusBgColor = (status: GlucoseStatus): string => {
     return colors[status];
 };
 
-const getStatusBorderColor = (status: GlucoseStatus): string => {
-    const colors: Record<GlucoseStatus, string> = {
+const getStatusBorderColor = (status: GlucoseClinicalStatus): string => {
+    const colors: Record<GlucoseClinicalStatus, string> = {
         hypo: 'border-danger-500',
         low: 'border-warning-500',
         optimal: 'border-success-500',
@@ -169,7 +160,7 @@ const VisualScale: React.FC<VisualScaleProps> = ({ value, unit, min = 3, max = 1
         return ((clamped - min) / (max - min)) * 100;
     }, [value, min, max]);
 
-    const status = getGlucoseStatus(value, unit);
+    const status = getGlucoseClinicalStatus(value, unit);
     return (
         <div className="relative w-full h-3 bg-telegram-secondary-bg rounded-full overflow-hidden">
             {/* Background gradient zones */}
@@ -258,7 +249,7 @@ const QuickStats: React.FC<QuickStatsProps> = ({ stats, recentReadings }) => {
                     </div>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                         {recentReadings.slice(0, 5).map((reading) => {
-                            const status = getGlucoseStatus(reading.value, reading.unit);
+                            const status = getGlucoseClinicalStatus(reading.value, reading.unit);
                             return (
                                 <div
                                     key={reading.id}
@@ -311,7 +302,7 @@ const GlucoseInputModal: React.FC<GlucoseInputModalProps> = ({
     const [notes, setNotes] = useState('');
 
     const numericValue = parseFloat(value) || 0;
-    const status = numericValue > 0 ? getGlucoseStatus(numericValue, unit) : null;
+    const status = numericValue > 0 ? getGlucoseClinicalStatus(numericValue, unit) : null;
     const recommendation = status ? RECOMMENDATIONS[status] : null;
 
     const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -532,7 +523,7 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
     };
 
     // Get status for last reading
-    const lastStatus = lastReading ? getGlucoseStatus(lastReading.value, lastReading.unit) : null;
+    const lastStatus = lastReading ? getGlucoseClinicalStatus(lastReading.value, lastReading.unit) : null;
 
     return (
         <div className="space-y-4">
@@ -573,7 +564,7 @@ export const GlucoseTracker: React.FC<GlucoseTrackerProps> = ({
                                         </span>
                                         {lastStatus && (
                                             <span className={cn('text-xs font-medium', getStatusColor(lastStatus))}>
-                                                {GLUCOSE_RANGES_MMOL[lastStatus].label}
+                                                {GLUCOSE_STATUS_UI[lastStatus].label}
                                             </span>
                                         )}
                                     </div>
@@ -655,8 +646,8 @@ export const GlucoseCompactWidget: React.FC<GlucoseCompactWidgetProps> = ({ onCl
     const { data: readings = [] } = useGlucoseReadingsQuery(1);
     const lastReading = readings[0] ?? null;
 
-    const status = lastReading ? getGlucoseStatus(lastReading.value, lastReading.unit) : null;
-    const StatusIcon = status ? GLUCOSE_RANGES_MMOL[status].icon : Droplets;
+    const status = lastReading ? getGlucoseClinicalStatus(lastReading.value, lastReading.unit) : null;
+    const StatusIcon = status ? GLUCOSE_STATUS_UI[status].icon : Droplets;
 
     return (
         <button
@@ -689,7 +680,7 @@ export const GlucoseCompactWidget: React.FC<GlucoseCompactWidgetProps> = ({ onCl
                         </span>
                     </div>
                     <span className={cn('text-xs font-medium', status ? getStatusColor(status) : 'text-telegram-hint')}>
-                        {status ? GLUCOSE_RANGES_MMOL[status].label : 'Нет данных'}
+                        {status ? GLUCOSE_STATUS_UI[status].label : 'Нет данных'}
                     </span>
                 </>
             ) : (

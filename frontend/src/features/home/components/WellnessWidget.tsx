@@ -1,6 +1,6 @@
 import { Smile, Frown, Meh, AlertCircle, Sparkles } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import type { WellnessData } from '@features/home/types/homeWidgets'
+import type { WellnessData } from '@shared/types'
 
 interface WellnessWidgetProps {
     data: WellnessData | null

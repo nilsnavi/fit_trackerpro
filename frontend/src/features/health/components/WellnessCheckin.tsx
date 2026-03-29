@@ -4,6 +4,7 @@ import { Button } from '@shared/ui/Button';
 import { useTelegram } from '@shared/hooks/useTelegram';
 import { cn } from '@shared/lib/cn';
 import type { WellnessEntry, PainZones } from '@features/health/types/metrics';
+import type { PainZone, WorkoutRecommendation } from '@features/health/types/wellnessUi';
 import {
     useWellnessByDateQuery,
     useWellnessRecentQuery,
@@ -26,28 +27,13 @@ import {
 } from 'lucide-react';
 
 export type { WellnessEntry, WellnessStats, PainZones } from '@features/health/types/metrics';
-
-// ============================================
-// TYPES
-// ============================================
-
-export type PainZone = 'shoulders' | 'knees' | 'back' | 'neck' | 'wrists' | 'hips' | 'ankles' | 'other';
+export type { PainZone, WorkoutRecommendation } from '@features/health/types/wellnessUi';
 
 export interface WellnessCheckinProps {
     onCheckinComplete?: (entry: WellnessEntry) => void;
     onRecommendationChange?: (recommendation: WorkoutRecommendation) => void;
     showTrigger?: boolean;
     className?: string;
-}
-
-export interface WorkoutRecommendation {
-    level: 'full' | 'reduced' | 'rest';
-    title: string;
-    description: string;
-    intensityModifier: number;
-    excludedZones: PainZone[];
-    color: string;
-    icon: React.ElementType;
 }
 
 // ============================================

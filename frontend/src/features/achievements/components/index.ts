@@ -13,5 +13,5 @@ export type {
     UserAchievement,
     UserAchievementStats,
     AchievementUnlockData,
-    AchievementsProps,
-} from './Achievements';
+} from '@features/achievements/types';
+export type { AchievementsProps } from './Achievements';
