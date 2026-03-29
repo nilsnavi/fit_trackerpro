@@ -1,37 +1,90 @@
 """
 Application configuration — single entry point (Pydantic Settings).
-"""
-from pathlib import Path
-from typing import List
 
-from pydantic import ValidationInfo, field_validator
+Environment variables are read from the process environment and ``backend/.env``.
+
+**Production-critical** (must be overridden for real deployments; insecure defaults
+below exist only for local development and automated tests — they are rejected when
+``ENVIRONMENT=production``):
+
+- ``DATABASE_URL``
+- ``TELEGRAM_BOT_TOKEN``
+- ``TELEGRAM_WEBAPP_URL``
+- ``SECRET_KEY``
+
+**Optional** — all other fields have safe defaults suitable for dev/test.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated, Final, List, Self
+
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Backend root (directory containing `.env`)
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+
+# -----------------------------------------------------------------------------
+# Local development / test defaults — never rely on these in production
+# (validated in ``reject_insecure_defaults_in_production``).
+# -----------------------------------------------------------------------------
+_DEV_DATABASE_URL: Final[str] = "sqlite+aiosqlite:///./dev.db"
+_DEV_SECRET_KEY: Final[str] = "dev-only-secret-key-minimum-32-characters-long"
+_DEV_TELEGRAM_BOT_TOKEN: Final[str] = (
+    "000000000:AAHdev_local_only_replace_for_production_bot_token"
+)
+_DEV_TELEGRAM_WEBAPP_URL: Final[str] = "http://localhost:5173"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),
         case_sensitive=True,
+        env_ignore_empty=True,
     )
 
-    # Application
-    APP_NAME: str = "FitTracker Pro"
-    APP_VERSION: str = "1.0.0"
-    # Release diagnostics (set at image build or runtime, e.g. CI build-args)
-    GIT_COMMIT_SHA: str | None = None
-    BUILD_TIMESTAMP: str | None = None  # ISO 8601 UTC, e.g. 2026-03-28T12:00:00Z
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = False
+    # --- Optional: application metadata & runtime mode ---
+    APP_NAME: Annotated[str, Field(description="Human-readable API name.")] = "FitTracker Pro"
+    APP_VERSION: Annotated[str, Field(description="Semantic version exposed in /version.")] = (
+        "1.0.0"
+    )
+    GIT_COMMIT_SHA: Annotated[
+        str | None,
+        Field(description="Git SHA for release diagnostics (optional)."),
+    ] = None
+    BUILD_TIMESTAMP: Annotated[
+        str | None,
+        Field(description="ISO 8601 build time for release diagnostics (optional)."),
+    ] = None
+    ENVIRONMENT: Annotated[
+        str,
+        Field(description='Logical environment: "development", "test", "production", etc.'),
+    ] = "development"
+    DEBUG: Annotated[
+        bool,
+        Field(description="Enable FastAPI docs and verbose behaviour; must be false in production."),
+    ] = False
 
-    # Database
-    DATABASE_URL: str
-    DATABASE_URL_SYNC: str | None = None
+    # --- Production-critical (dev/test defaults; override in prod) ---
+    DATABASE_URL: Annotated[
+        str,
+        Field(
+            description=(
+                "SQLAlchemy async URL. Defaults to local SQLite file for development; "
+                "use PostgreSQL in production."
+            ),
+        ),
+    ] = _DEV_DATABASE_URL
+    DATABASE_URL_SYNC: Annotated[
+        str | None,
+        Field(description="Optional sync driver URL (e.g. Alembic); derived if unset."),
+    ] = None
 
-    # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
+    # --- Optional: Redis & analytics caching ---
+    REDIS_URL: Annotated[str, Field(description="Redis for rate limiting and optional cache.")] = (
+        "redis://localhost:6379/0"
+    )
     ANALYTICS_CACHE_ENABLED: bool = True
     ANALYTICS_CACHE_TTL_SECONDS: int = 120
     ANALYTICS_MEMORY_CACHE_ENABLED: bool = True
@@ -41,42 +94,43 @@ class Settings(BaseSettings):
     ANALYTICS_DEFAULT_MAX_DATA_POINTS: int = 120
     ANALYTICS_MAX_DATA_POINTS_HARD_LIMIT: int = 365
 
-    # Telegram
-    TELEGRAM_BOT_TOKEN: str
-    TELEGRAM_WEBAPP_URL: str
+    # --- Production-critical (dev/test defaults; override in prod) ---
+    TELEGRAM_BOT_TOKEN: Annotated[
+        str,
+        Field(description="Telegram Bot API token from @BotFather."),
+    ] = _DEV_TELEGRAM_BOT_TOKEN
+    TELEGRAM_WEBAPP_URL: Annotated[
+        str,
+        Field(description="Public base URL of the Telegram Mini App (WebApp)."),
+    ] = _DEV_TELEGRAM_WEBAPP_URL
 
-    # Security
-    SECRET_KEY: str
+    SECRET_KEY: Annotated[
+        str,
+        Field(description="JWT signing secret; use a long random value in production."),
+    ] = _DEV_SECRET_KEY
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    # CORS
+    # --- Optional: CORS & observability ---
     ALLOWED_ORIGINS: str | List[str] = "*"
-
-    # Sentry
     SENTRY_DSN: str | None = None
-
-    # Prometheus (/metrics); safe to disable if unused. With Gunicorn workers>1,
-    # counters/histograms reflect the worker that handled the scrape unless multiproc mode is configured.
     ENABLE_PROMETHEUS_METRICS: bool = True
 
-    # Email
+    # --- Optional: email ---
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     SMTP_TLS: bool = True
 
-    # Uploads
+    # --- Optional: uploads & rate limiting ---
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
-
-    # Rate limiting
     RATE_LIMIT_PER_MINUTE: int = 60
 
-    # Logging
+    # --- Optional: logging ---
     LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "text"  # set to "json" for structured stderr logs
+    LOG_FORMAT: str = "text"
 
     @field_validator(
         "DATABASE_URL",
@@ -148,6 +202,34 @@ class Settings(BaseSettings):
         if environment == "production" and value:
             raise ValueError("DEBUG must be false in production")
         return value
+
+    @model_validator(mode="after")
+    def reject_insecure_defaults_in_production(self) -> Self:
+        """Block development defaults when ``ENVIRONMENT`` is production."""
+        if self.ENVIRONMENT.strip().lower() != "production":
+            return self
+
+        errors: list[str] = []
+        db = self.DATABASE_URL.strip()
+        if db in (_DEV_DATABASE_URL, "sqlite+aiosqlite:///:memory:"):
+            errors.append(
+                "DATABASE_URL must not use the SQLite dev default or in-memory DB in production"
+            )
+        elif db.lower().startswith("sqlite"):
+            errors.append("DATABASE_URL must use a production-grade database (not SQLite)")
+
+        if self.SECRET_KEY == _DEV_SECRET_KEY:
+            errors.append("SECRET_KEY must be set to a unique secret in production")
+
+        if self.TELEGRAM_BOT_TOKEN == _DEV_TELEGRAM_BOT_TOKEN:
+            errors.append("TELEGRAM_BOT_TOKEN must be set to a real bot token in production")
+
+        if self.TELEGRAM_WEBAPP_URL.strip() == _DEV_TELEGRAM_WEBAPP_URL:
+            errors.append("TELEGRAM_WEBAPP_URL must be set to your public Mini App URL in production")
+
+        if errors:
+            raise ValueError("; ".join(errors))
+        return self
 
 
 settings = Settings()

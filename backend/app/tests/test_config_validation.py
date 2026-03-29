@@ -45,3 +45,25 @@ def test_telegram_env_fields_reject_placeholder_values(field_name: str, invalid_
 
     with pytest.raises(ValidationError):
         Settings(**payload)
+
+
+@pytest.mark.unit
+def test_production_rejects_development_default_secrets():
+    """Built-in dev defaults must not be accepted when ENVIRONMENT=production."""
+    with pytest.raises(ValidationError):
+        Settings(ENVIRONMENT="production")
+
+
+@pytest.mark.unit
+def test_production_accepts_realistic_overrides():
+    payload = {
+        "ENVIRONMENT": "production",
+        "DATABASE_URL": "postgresql+asyncpg://user:pass@db.example.com:5432/app",
+        "SECRET_KEY": "x" * 32,
+        "TELEGRAM_BOT_TOKEN": "123456789:AAHproduction_token_not_equal_to_dev_default",
+        "TELEGRAM_WEBAPP_URL": "https://fittrackpro.ru",
+        "DEBUG": False,
+    }
+    s = Settings(**payload)
+    assert s.ENVIRONMENT == "production"
+    assert s.DEBUG is False
