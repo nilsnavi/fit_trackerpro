@@ -8,7 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.core.config import settings
+from app.settings import settings
 from app.core.request_identity import user_id_from_authorization_header
 
 

@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
-from app.core.config import settings
+from app.settings import settings
 from app.domain.base import Base
 
 # Database engines

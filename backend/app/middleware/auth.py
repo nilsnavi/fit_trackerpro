@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.settings import settings
 from app.core.security import security, verify_token
 from app.domain import get_async_db, User
 

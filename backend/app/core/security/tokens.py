@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
-from app.core.config import settings
+from app.settings import settings
 
 security = HTTPBearer(auto_error=False)
 

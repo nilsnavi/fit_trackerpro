@@ -8,7 +8,7 @@ import urllib.parse
 from typing import Dict, Optional, Any
 from datetime import datetime, timezone
 
-from app.core.config import settings
+from app.settings import settings
 
 
 def parse_init_data(init_data: str) -> Dict[str, Any]:

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.core.config import Settings
+from app.settings import Settings
 
 
 def _valid_settings_payload() -> dict:

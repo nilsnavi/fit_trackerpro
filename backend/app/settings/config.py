@@ -8,7 +8,7 @@ from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Backend root (directory containing `.env`)
-BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
