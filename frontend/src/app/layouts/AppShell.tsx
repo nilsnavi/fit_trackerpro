@@ -1,10 +1,12 @@
 import { Outlet } from 'react-router-dom'
 import { Navigation } from '@app/components/Navigation'
 import { useTelegramContext } from '../providers/TelegramProvider'
+import { useWorkoutSessionDraftCloudSync } from '@shared/hooks/useWorkoutSessionDraftCloudSync'
 import { cn } from '@shared/lib/cn'
 
 export function AppShell() {
     const { isTelegram } = useTelegramContext()
+    useWorkoutSessionDraftCloudSync()
 
     return (
         <div

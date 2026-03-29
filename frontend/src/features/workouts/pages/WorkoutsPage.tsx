@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Clock, Flame, ChevronRight } from 'lucide-react'
+import { Plus, Clock, Flame, ChevronRight, Play } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import {
     WORKOUT_FILTER_TYPE_ORDER,
@@ -11,6 +11,8 @@ import {
     type WorkoutMode,
 } from '@/features/workouts/config/workoutTypeConfigs'
 import { useWorkoutHistoryQuery } from '@/features/workouts/hooks/useWorkoutHistoryQuery'
+import { useWorkoutHistoryItemQuery } from '@/features/workouts/hooks/useWorkoutHistoryItemQuery'
+import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
 import type { WorkoutType } from '@shared/types'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 import { getErrorMessage } from '@shared/errors'
@@ -65,6 +67,25 @@ export function WorkoutsPage() {
     const [selectedType, setSelectedType] = useState<WorkoutType | 'all'>('all')
     const tg = useTelegramWebApp()
     const navigate = useNavigate()
+    const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
+    const draftTitle = useWorkoutSessionDraftStore((s) => s.title)
+    const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
+
+    const {
+        data: draftRemoteWorkout,
+        isError: draftRemoteError,
+    } = useWorkoutHistoryItemQuery(draftWorkoutId ?? 0, draftWorkoutId != null)
+
+    useEffect(() => {
+        if (draftWorkoutId == null) return
+        if (draftRemoteError) clearWorkoutSessionDraft()
+    }, [draftWorkoutId, draftRemoteError, clearWorkoutSessionDraft])
+
+    useEffect(() => {
+        if (!draftRemoteWorkout) return
+        const d = draftRemoteWorkout.duration
+        if (typeof d === 'number' && d > 0) clearWorkoutSessionDraft()
+    }, [draftRemoteWorkout, clearWorkoutSessionDraft])
     const {
         data: workoutHistory,
         isLoading,
@@ -126,6 +147,12 @@ export function WorkoutsPage() {
         navigate(`/workouts/${workoutId}`)
     }
 
+    const handleResumeDraft = () => {
+        if (draftWorkoutId == null) return
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
+        navigate(`/workouts/${draftWorkoutId}`)
+    }
+
     return (
         <div className="p-4 space-y-6">
             {/* Header */}
@@ -138,6 +165,25 @@ export function WorkoutsPage() {
                     <Plus className="w-5 h-5" />
                 </button>
             </div>
+
+            {draftWorkoutId != null && (
+                <button
+                    type="button"
+                    onClick={handleResumeDraft}
+                    className="w-full text-left rounded-xl border border-primary/25 bg-primary/10 dark:bg-primary/15 px-4 py-3 flex items-center gap-3 active:scale-[0.99] transition-transform"
+                >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+                        <Play className="h-5 w-5" fill="currentColor" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-primary">Незавершённая тренировка</div>
+                        <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                            {draftTitle?.trim() || `Тренировка #${draftWorkoutId}`}
+                        </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500" />
+                </button>
+            )}
 
             {/* Filter */}
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
