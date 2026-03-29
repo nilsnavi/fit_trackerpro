@@ -1,12 +1,15 @@
 """
-Telegram WebApp Authentication endpoints
-HTTP-only endpoints delegating business logic to services
+Telegram WebApp authentication: public login/refresh vs JWT-protected session routes.
+
+Public: ``POST /telegram``, ``POST /refresh`` (no Bearer required).
+Protected: profile under ``/me``, ``POST /logout`` (Bearer access token).
 """
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps.auth import get_current_user
+from app.application.auth_service import AuthService
 from app.core.audit import get_client_ip
-from app.middleware.auth import get_current_user
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.auth import (
@@ -18,12 +21,15 @@ from app.schemas.auth import (
     UserProfileResponse,
     UserProfileUpdate,
 )
-from app.application.auth_service import AuthService
 
-router = APIRouter()
+# Login and token refresh — no Authorization header.
+public_auth_router = APIRouter()
+
+# Session-bound routes — Bearer access token (see ``ROUTER_DEPENDENCIES_AUTHENTICATED`` in registration).
+protected_auth_router = APIRouter()
 
 
-@router.post("/telegram", response_model=AuthResponse)
+@public_auth_router.post("/telegram", response_model=AuthResponse)
 async def authenticate_telegram(
     auth_request: TelegramAuthRequest,
     request: Request,
@@ -36,12 +42,20 @@ async def authenticate_telegram(
     )
 
 
-@router.get("/me", response_model=UserProfileResponse)
+@public_auth_router.post("/refresh", response_model=RefreshTokenResponse)
+async def refresh_token(refresh_request: RefreshTokenRequest, request: Request):
+    return AuthService.refresh_token(
+        refresh_request=refresh_request,
+        client_ip=get_client_ip(request),
+    )
+
+
+@protected_auth_router.get("/me", response_model=UserProfileResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return AuthService.get_profile(current_user)
 
 
-@router.put("/me", response_model=UserProfileResponse)
+@protected_auth_router.put("/me", response_model=UserProfileResponse)
 async def update_user_profile(
     profile_update: UserProfileUpdate,
     request: Request,
@@ -56,14 +70,6 @@ async def update_user_profile(
     )
 
 
-@router.post("/refresh", response_model=RefreshTokenResponse)
-async def refresh_token(refresh_request: RefreshTokenRequest, request: Request):
-    return AuthService.refresh_token(
-        refresh_request=refresh_request,
-        client_ip=get_client_ip(request),
-    )
-
-
-@router.post("/logout", response_model=LogoutResponse)
+@protected_auth_router.post("/logout", response_model=LogoutResponse)
 async def logout(request: Request, current_user: User = Depends(get_current_user)):
     return AuthService.logout(current_user=current_user, client_ip=get_client_ip(request))

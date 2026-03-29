@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.middleware.auth import get_current_user, require_admin
+from app.api.deps.auth import get_current_user, require_admin
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.exercises import (

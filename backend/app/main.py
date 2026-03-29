@@ -116,7 +116,11 @@ app = FastAPI(
     Backend API for FitTracker Pro Telegram Mini App
     
     ## Authentication
-    All endpoints (except auth) require JWT Bearer token in Authorization header:
+    **Public (no JWT):** ``GET /`` and ``GET /health``, ``/api/v1/system/*``,
+    ``POST /api/v1/users/auth/telegram``, ``POST /api/v1/users/auth/refresh``,
+    ``POST /api/v1/users/``, ``GET /api/v1/users/{user_id}``, plus integration webhooks.
+
+    **Authenticated:** all other ``/api/v1`` routes require a Bearer access token:
     ```
     Authorization: Bearer <access_token>
     ```
