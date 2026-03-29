@@ -1,11 +1,12 @@
 """
 HTTP access logging: request-id, user-id, route, duration, status.
+
+Request / correlation ID is set by ``RequestCorrelationMiddleware`` (outermost).
 """
 from __future__ import annotations
 
 import logging
 import time
-import uuid
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -15,14 +16,6 @@ from app.core.logging.context import request_id_var, user_id_var
 from app.core.request_identity import user_id_from_authorization_header
 
 logger = logging.getLogger("app.http")
-
-
-def _incoming_request_id(request: Request) -> str | None:
-    raw = request.headers.get("x-request-id") or request.headers.get("X-Request-ID")
-    if not raw:
-        return None
-    s = raw.strip()
-    return s or None
 
 
 def _matched_route_template(request: Request) -> str | None:
@@ -37,29 +30,26 @@ def _matched_route_template(request: Request) -> str | None:
 
 class StructuredRequestLoggingMiddleware(BaseHTTPMiddleware):
     """
-    Outermost-friendly middleware: full wall time, propagates X-Request-ID,
-    binds request_id / user_id for application logs via logging.Filter.
+    Binds ``user_id`` for application logs; logs one structured line per request.
+
+    ``request_id`` / correlation comes from ``RequestCorrelationMiddleware`` via contextvars.
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        request_id = _incoming_request_id(request) or str(uuid.uuid4())
         user_id = user_id_from_authorization_header(request)
-
-        rid_token = request_id_var.set(request_id)
         uid_token = user_id_var.set(user_id)
 
         start = time.perf_counter()
         status_code = 500
-        response: Response | None = None
         try:
             response = await call_next(request)
             status_code = response.status_code
-            response.headers["X-Request-ID"] = request_id
             return response
         finally:
             duration_ms = round((time.perf_counter() - start) * 1000, 3)
             route = _matched_route_template(request)
             path = request.url.path
+            request_id = request_id_var.get()
             logger.info(
                 "http_request",
                 extra={
@@ -73,5 +63,4 @@ class StructuredRequestLoggingMiddleware(BaseHTTPMiddleware):
                     "duration_ms": duration_ms,
                 },
             )
-            request_id_var.reset(rid_token)
             user_id_var.reset(uid_token)

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 STRUCTURED_RECORD_KEYS = (
     "event",
     "request_id",
+    "correlation_id",
     "user_id",
     "route",
     "path",
@@ -29,8 +30,11 @@ class RequestContextFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         rid = request_id_var.get()
-        if rid is not None and not hasattr(record, "request_id"):
-            record.request_id = rid
+        if rid is not None:
+            if not hasattr(record, "request_id"):
+                record.request_id = rid
+            if not hasattr(record, "correlation_id"):
+                record.correlation_id = rid
         uid = user_id_var.get()
         if uid is not None and not hasattr(record, "user_id"):
             record.user_id = uid
