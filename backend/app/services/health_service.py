@@ -158,9 +158,6 @@ class HealthService:
         return DailyWellnessResponse.model_validate(entry, from_attributes=True)
 
     async def get_health_stats(self, user_id: int, period: str) -> HealthStatsResponse:
-        days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365}
-        days = days_map.get(period, 30)
-
         date_7d = date.today() - timedelta(days=7)
         date_30d = date.today() - timedelta(days=30)
 

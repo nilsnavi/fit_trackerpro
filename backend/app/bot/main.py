@@ -2,7 +2,6 @@
 Telegram Bot Main Module
 Sets up bot commands, menu button, and WebApp integration
 """
-import asyncio
 import logging
 from typing import Optional
 
