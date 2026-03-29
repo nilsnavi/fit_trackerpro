@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Button } from '@shared/ui/Button'
 import { ArrowLeft, CalendarDays, Clock3, MessageSquare, Tags } from 'lucide-react'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
@@ -36,6 +37,7 @@ export function WorkoutDetailPage() {
     const tg = useTelegramWebApp()
     const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
     const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
+    const abandonWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.abandonDraft)
 
     const workoutId = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId = Number.isFinite(workoutId)
@@ -82,6 +84,16 @@ export function WorkoutDetailPage() {
         ), 0)
     }, [workout])
 
+    const isActiveDraft =
+        workout != null &&
+        draftWorkoutId === workout.id &&
+        (workout.duration == null || workout.duration <= 0)
+
+    const handleAbandonDraft = () => {
+        abandonWorkoutSessionDraft()
+        navigate('/workouts')
+    }
+
     return (
         <div className="p-4 space-y-4">
             <div className="flex items-center gap-2">
@@ -104,6 +116,23 @@ export function WorkoutDetailPage() {
 
             {!isLoading && !errorMessage && workout && (
                 <>
+                    {isActiveDraft && (
+                        <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/50 dark:bg-amber-950/40 p-4 space-y-3">
+                            <p className="text-sm text-gray-800 dark:text-amber-100/90">
+                                Тренировка ещё не завершена. Можно отменить черновик, если вы не планируете её
+                                сохранять.
+                            </p>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="w-full border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/50"
+                                onClick={handleAbandonDraft}
+                            >
+                                Отменить тренировку
+                            </Button>
+                        </div>
+                    )}
                     <div className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 space-y-4">
                         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                             <CalendarDays className="w-4 h-4" />

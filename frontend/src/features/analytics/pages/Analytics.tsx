@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
     LineChart,
     Line,
@@ -42,6 +42,7 @@ import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
 import { OneRMCalculator } from '@features/analytics/components';
 import { useTelegramWebApp, UseTelegramWebAppReturn } from '@shared/hooks/useTelegramWebApp';
+import { trackBusinessMetric } from '@shared/lib/businessMetrics';
 
 // ============================================
 // Types
@@ -657,6 +658,10 @@ const Analytics: React.FC = () => {
     const [activeTab, setActiveTab] = useState<ViewTab>('chart');
 
     const tg = useTelegramWebApp();
+
+    useEffect(() => {
+        trackBusinessMetric('viewed_analytics');
+    }, []);
 
     // Определяем цвета для графика в зависимости от темы
     const isDark = document.documentElement.classList.contains('dark');

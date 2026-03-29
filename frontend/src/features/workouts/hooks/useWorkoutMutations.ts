@@ -8,6 +8,7 @@ import type {
     WorkoutHistoryItem,
 } from '@features/workouts/types/workouts'
 import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
+import { trackBusinessMetric } from '@shared/lib/businessMetrics'
 import {
     appendCalendarWorkoutForMatchingMonth,
     buildCalendarEntryFromStartPayload,
@@ -91,6 +92,11 @@ export function useCreateWorkoutTemplateMutation() {
             if (ctx) {
                 replaceTemplateIdInLists(queryClient, ctx.tempId, data)
             }
+            trackBusinessMetric('created_template', {
+                template_id: data.id,
+                exercise_count: data.exercises.length,
+                type: data.type,
+            })
         },
         onSettled: () => {
             invalidateWorkouts(queryClient)
@@ -167,6 +173,11 @@ export function useStartWorkoutMutation() {
             const item = historyItemFromStartResponse(data, variables)
             queryClient.setQueryData(queryKeys.workouts.historyItem(data.id), item)
             replaceHistoryListTemporalId(queryClient, ctx.tempId, item)
+            trackBusinessMetric('started_workout', {
+                workout_id: data.id,
+                template_id: variables.template_id ?? null,
+                type: variables.type ?? null,
+            })
         },
         onSettled: () => {
             invalidateWorkouts(queryClient)
@@ -229,6 +240,11 @@ export function useCompleteWorkoutMutation() {
                 data.completed_at,
                 data.date,
             )
+            trackBusinessMetric('completed_workout', {
+                workout_id: data.id,
+                duration_minutes: data.duration,
+                exercise_count: data.exercises.length,
+            })
         },
         onSettled: () => {
             invalidateWorkouts(queryClient)
