@@ -18,6 +18,7 @@ from app.schemas.challenges import (
     ChallengeJoinResponse,
     ChallengeLeaderboardResponse,
     ChallengeLeaveResponse,
+    ChallengeListFilters,
     ChallengeListResponse,
     ChallengeMyActiveResponse,
     ChallengeResponse,
@@ -74,7 +75,11 @@ class ChallengesService:
             total=total,
             page=page,
             page_size=page_size,
-            filters={"status": status, "type": challenge_type, "is_public": is_public},
+            filters=ChallengeListFilters(
+                status=status,
+                type=challenge_type,
+                is_public=is_public,
+            ),
         )
 
     async def get_challenge(self, challenge_id: int) -> ChallengeDetailResponse:

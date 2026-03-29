@@ -3,8 +3,9 @@ from __future__ import annotations
 import calendar
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
+from pydantic import TypeAdapter
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,8 +20,12 @@ from app.schemas.analytics import (
     CalendarDayEntry,
     DataExportRequest,
     DataExportResponse,
+    ExerciseBestPerformance,
     ExerciseProgressData,
+    ExerciseProgressDataPoint,
     ExerciseProgressResponse,
+    FavoriteExercise,
+    MuscleImbalanceSignalsDetail,
     MuscleImbalanceSignalsResponse,
     MuscleLoadEntry,
     MuscleLoadTableResponse,
@@ -29,6 +34,7 @@ from app.schemas.analytics import (
     TrainingLoadDailyEntry,
     TrainingLoadDailyTableResponse,
     WorkoutCalendarResponse,
+    WorkoutCalendarSummary,
 )
 from app.infrastructure.cache import (
     get_cache_json,
@@ -72,7 +78,7 @@ class AnalyticsService:
         user_id: int,
         date_from: Optional[date],
         date_to: Optional[date],
-    ) -> List[Dict[str, Any]]:
+    ) -> List[TrainingLoadDailyEntry]:
         effective_date_from, effective_date_to = self._resolve_date_range(date_from, date_to)
         cache_key = self._build_cache_key(
             "training-load-daily",
@@ -82,14 +88,14 @@ class AnalyticsService:
         )
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return TypeAdapter(list[TrainingLoadDailyEntry]).validate_python(cached)
 
         rows = await self.repository.list_training_load_daily(
             user_id=user_id,
             date_from=effective_date_from,
             date_to=effective_date_to,
         )
-        payload = [
+        items = [
             TrainingLoadDailyEntry(
                 id=row.id,
                 user_id=row.user_id,
@@ -97,11 +103,12 @@ class AnalyticsService:
                 volume=float(row.volume or 0),
                 fatigue_score=float(row.fatigue_score or 0),
                 avg_rpe=float(row.avg_rpe) if row.avg_rpe is not None else None,
-            ).model_dump(mode="json", by_alias=True)
+            )
             for row in rows
         ]
+        payload = [i.model_dump(mode="json", by_alias=True) for i in items]
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        return items
 
     async def get_daily_training_load_table(
         self,
@@ -110,7 +117,7 @@ class AnalyticsService:
         page_size: int,
         date_from: Optional[date],
         date_to: Optional[date],
-    ) -> Dict[str, Any]:
+    ) -> TrainingLoadDailyTableResponse:
         effective_date_from, effective_date_to = self._resolve_date_range(date_from, date_to)
         cache_key = self._build_cache_key(
             "training-load-daily-table",
@@ -122,7 +129,7 @@ class AnalyticsService:
         )
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return TrainingLoadDailyTableResponse.model_validate(cached)
 
         total = await self.repository.count_training_load_daily(
             user_id=user_id,
@@ -156,14 +163,14 @@ class AnalyticsService:
         )
         payload = model.model_dump(mode="json", by_alias=True)
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        return model
 
     async def get_muscle_load(
         self,
         user_id: int,
         date_from: Optional[date],
         date_to: Optional[date],
-    ) -> List[Dict[str, Any]]:
+    ) -> List[MuscleLoadEntry]:
         effective_date_from, effective_date_to = self._resolve_date_range(date_from, date_to)
         cache_key = self._build_cache_key(
             "muscle-load",
@@ -173,25 +180,26 @@ class AnalyticsService:
         )
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return TypeAdapter(list[MuscleLoadEntry]).validate_python(cached)
 
         rows = await self.repository.list_muscle_load(
             user_id=user_id,
             date_from=effective_date_from,
             date_to=effective_date_to,
         )
-        payload = [
+        items = [
             MuscleLoadEntry(
                 id=row.id,
                 user_id=row.user_id,
                 muscle_group=row.muscle_group,
                 date=row.date,
                 load_score=float(row.load_score or 0),
-            ).model_dump(mode="json", by_alias=True)
+            )
             for row in rows
         ]
+        payload = [i.model_dump(mode="json", by_alias=True) for i in items]
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        return items
 
     async def get_muscle_load_table(
         self,
@@ -201,7 +209,7 @@ class AnalyticsService:
         date_from: Optional[date],
         date_to: Optional[date],
         muscle_group: Optional[str],
-    ) -> Dict[str, Any]:
+    ) -> MuscleLoadTableResponse:
         effective_date_from, effective_date_to = self._resolve_date_range(date_from, date_to)
         cache_key = self._build_cache_key(
             "muscle-load-table",
@@ -214,7 +222,7 @@ class AnalyticsService:
         )
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return MuscleLoadTableResponse.model_validate(cached)
 
         total = await self.repository.count_muscle_load(
             user_id=user_id,
@@ -249,26 +257,30 @@ class AnalyticsService:
         )
         payload = model.model_dump(mode="json", by_alias=True)
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        return model
 
-    async def get_recovery_state(self, user_id: int) -> Dict[str, Any]:
+    async def get_recovery_state(self, user_id: int) -> RecoveryStateResponse:
         cache_key = self._build_cache_key("recovery-state", user_id)
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return RecoveryStateResponse.model_validate(cached)
 
         state = await self.repository.get_recovery_state(user_id)
         if not state:
             raise AnalyticsNotFoundError("Recovery state not found")
 
-        payload = RecoveryStateResponse(
+        dto = RecoveryStateResponse(
             id=state.id,
             user_id=state.user_id,
             fatigue_level=int(state.fatigue_level),
             readiness_score=float(state.readiness_score or 0),
-        ).model_dump(mode="json", by_alias=True)
-        await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        )
+        await set_cache_json(
+            cache_key,
+            dto.model_dump(mode="json", by_alias=True),
+            ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS,
+        )
+        return dto
 
     async def recalculate_recovery_state(
         self,
@@ -276,7 +288,7 @@ class AnalyticsService:
         target_date: Optional[date],
         date_from: Optional[date],
         date_to: Optional[date],
-    ) -> Dict[str, Any]:
+    ) -> RecoveryStateRecalculateResponse:
         if target_date and (date_from or date_to):
             raise AnalyticsValidationError("Use either target_date or date_from/date_to")
 
@@ -318,7 +330,7 @@ class AnalyticsService:
         await self.db.refresh(state)
         await invalidate_user_analytics_cache(user_id)
 
-        model = RecoveryStateRecalculateResponse(
+        return RecoveryStateRecalculateResponse(
             id=state.id,
             user_id=state.user_id,
             fatigue_level=int(state.fatigue_level),
@@ -327,7 +339,6 @@ class AnalyticsService:
             date_from=effective_date_from,
             date_to=effective_date_to,
         )
-        return model.model_dump(mode="json", by_alias=True)
 
     async def get_exercise_progress(
         self,
@@ -336,7 +347,7 @@ class AnalyticsService:
         period: str,
         max_exercises: int,
         max_data_points: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[ExerciseProgressResponse]:
         days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 3650}
         days = days_map.get(period, 30)
         date_from = date.today() - timedelta(days=days)
@@ -351,7 +362,7 @@ class AnalyticsService:
         )
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return TypeAdapter(list[ExerciseProgressResponse]).validate_python(cached)
 
         summary_rows = await self.repository.get_exercise_progress_summary(
             user_id=user_id,
@@ -376,29 +387,29 @@ class AnalyticsService:
             max_exercises=max_exercises,
         )
 
-        data_points_by_ex: Dict[int, List[Dict[str, Any]]] = {}
+        data_points_by_ex: dict[int, list[ExerciseProgressDataPoint]] = {}
         for row in data_points_rows:
             ex_id = int(row["exercise_id"])
-            point = {
-                "date": row["workout_date"].isoformat(),
-                "max_weight": float(row["max_weight"]) if row["max_weight"] is not None else None,
-                "reps": int(row["reps"]) if row["reps"] is not None else None,
-            }
+            point = ExerciseProgressDataPoint(
+                date=row["workout_date"],
+                max_weight=float(row["max_weight"]) if row["max_weight"] is not None else None,
+                reps=int(row["reps"]) if row["reps"] is not None else None,
+            )
             data_points_by_ex.setdefault(ex_id, []).append(point)
 
-        best_perf_by_ex: Dict[int, Dict[str, Any]] = {}
+        best_perf_by_ex: dict[int, ExerciseBestPerformance] = {}
         for row in best_perf_rows:
-            best_perf_by_ex[int(row["exercise_id"])] = {
-                "date": row["workout_date"].isoformat(),
-                "weight": float(row["weight"]) if row["weight"] is not None else None,
-                "reps": int(row["reps"]) if row["reps"] is not None else None,
-            }
+            best_perf_by_ex[int(row["exercise_id"])] = ExerciseBestPerformance(
+                date=row["workout_date"],
+                weight=float(row["weight"]) if row["weight"] is not None else None,
+                reps=int(row["reps"]) if row["reps"] is not None else None,
+            )
 
         responses: List[ExerciseProgressResponse] = []
         for row in summary_rows:
             ex_id = int(row["exercise_id"])
             data_points = data_points_by_ex.get(ex_id, [])
-            weights = [p["max_weight"] for p in data_points if p["max_weight"] is not None]
+            weights = [p.max_weight for p in data_points if p.max_weight is not None]
 
             progress_pct = None
             if len(weights) >= 2 and weights[0] > 0:
@@ -429,14 +440,14 @@ class AnalyticsService:
 
         payload = [item.model_dump(mode="json") for item in responses]
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        return responses
 
     async def get_workout_calendar(
         self,
         user_id: int,
         year: int,
         month: int,
-    ) -> Dict[str, Any]:
+    ) -> WorkoutCalendarResponse:
         first_day = date(year, month, 1)
         last_day = date(year, month, calendar.monthrange(year, month)[1])
         cache_key = self._build_cache_key(
@@ -447,7 +458,7 @@ class AnalyticsService:
         )
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return WorkoutCalendarResponse.model_validate(cached)
 
         day_stats_rows = await self.repository.get_calendar_day_stats(user_id, first_day, last_day)
         day_tags_rows = await self.repository.get_calendar_day_tags(user_id, first_day, last_day)
@@ -483,20 +494,20 @@ class AnalyticsService:
             year=year,
             month=month,
             days=days,
-            summary={
-                "total_workouts": total_workouts,
-                "total_duration": total_duration,
-                "active_days": active_days,
-                "rest_days": len(days) - active_days,
-            },
+            summary=WorkoutCalendarSummary(
+                total_workouts=total_workouts,
+                total_duration=total_duration,
+                active_days=active_days,
+                rest_days=len(days) - active_days,
+            ),
         )
         payload = response.model_dump(mode="json")
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        return response
 
-    async def export_data(self, export_request: DataExportRequest) -> Dict[str, Any]:
+    async def export_data(self, export_request: DataExportRequest) -> DataExportResponse:
         export_id = f"exp_{uuid.uuid4().hex[:12]}"
-        payload = DataExportResponse(
+        return DataExportResponse(
             export_id=export_id,
             status="pending",
             format=export_request.format,
@@ -505,12 +516,11 @@ class AnalyticsService:
             requested_at=datetime.utcnow(),
             file_size=None,
         )
-        return payload.model_dump(mode="json")
 
-    async def get_export_status(self, export_id: str) -> Dict[str, Any]:
+    async def get_export_status(self, export_id: str) -> DataExportResponse:
         raise AnalyticsNotFoundError("Export not found or expired")
 
-    async def get_analytics_summary(self, user_id: int, period: str) -> Dict[str, Any]:
+    async def get_analytics_summary(self, user_id: int, period: str) -> AnalyticsSummaryResponse:
         days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 36500}
         days = days_map.get(period, 30)
         date_from = date.today() - timedelta(days=days)
@@ -524,30 +534,30 @@ class AnalyticsService:
         )
         cached = await get_cache_json(cache_key)
         if cached is not None:
-            return cached
+            return AnalyticsSummaryResponse.model_validate(cached)
 
         summary_row = await self.repository.get_summary_totals(user_id=user_id, date_from=date_from)
         total_workouts = int(summary_row.total_workouts or 0)
 
         if total_workouts == 0:
-            empty_payload = {
-                "total_workouts": 0,
-                "total_duration": 0,
-                "total_exercises": 0,
-                "current_streak": 0,
-                "longest_streak": 0,
-                "personal_records": [],
-                "favorite_exercises": [],
-                "weekly_average": 0.0,
-                "monthly_average": 0.0,
-                "muscle_imbalance_signals": None,
-            }
+            empty = AnalyticsSummaryResponse(
+                total_workouts=0,
+                total_duration=0,
+                total_exercises=0,
+                current_streak=0,
+                longest_streak=0,
+                personal_records=[],
+                favorite_exercises=[],
+                weekly_average=0.0,
+                monthly_average=0.0,
+                muscle_imbalance_signals=None,
+            )
             await set_cache_json(
                 cache_key,
-                empty_payload,
+                empty.model_dump(mode="json"),
                 ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS,
             )
-            return empty_payload
+            return empty
 
         total_duration = int(summary_row.total_duration or 0)
         total_exercises = await self.repository.get_total_unique_exercises(user_id=user_id, date_from=date_from)
@@ -577,23 +587,26 @@ class AnalyticsService:
                     temp_streak = 1
             longest_streak = max(longest_streak, temp_streak)
 
-        favorite_exercises = await self.repository.get_favorite_exercises(
+        favorite_raw = await self.repository.get_favorite_exercises(
             user_id=user_id,
             date_from=date_from,
             limit=5,
         )
+        favorite_exercises = [FavoriteExercise.model_validate(x) for x in favorite_raw]
 
         weeks = max(1, days / 7)
         months = max(1, days / 30)
 
-        muscle_imbalance_signals = None
+        muscle_imbalance_signals: MuscleImbalanceSignalsDetail | None = None
         if muscle_signals_enabled:
             try:
-                muscle_imbalance_signals = await self.repository.get_muscle_imbalance_signals(user_id)
+                raw_signals = await self.repository.get_muscle_imbalance_signals(user_id)
+                if raw_signals:
+                    muscle_imbalance_signals = MuscleImbalanceSignalsDetail.model_validate(raw_signals)
             except SQLAlchemyError:
                 muscle_imbalance_signals = None
 
-        payload = AnalyticsSummaryResponse(
+        summary = AnalyticsSummaryResponse(
             total_workouts=total_workouts,
             total_duration=total_duration,
             total_exercises=total_exercises,
@@ -604,9 +617,13 @@ class AnalyticsService:
             weekly_average=round(total_workouts / weeks, 1),
             monthly_average=round(total_workouts / months, 1),
             muscle_imbalance_signals=muscle_imbalance_signals,
-        ).model_dump(mode="json")
-        await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
-        return payload
+        )
+        await set_cache_json(
+            cache_key,
+            summary.model_dump(mode="json"),
+            ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS,
+        )
+        return summary
 
     async def get_muscle_imbalance_signals(self, user_id: int) -> MuscleImbalanceSignalsResponse:
         muscle_signals_enabled = await is_feature_enabled(self.db, "muscle_imbalance_signals", default=False)
@@ -623,7 +640,8 @@ class AnalyticsService:
         except SQLAlchemyError as exc:
             raise AnalyticsUnavailableError("Muscle imbalance signals are temporarily unavailable") from exc
 
-        dto = MuscleImbalanceSignalsResponse(available=bool(signals), signals=signals or {})
+        detail = MuscleImbalanceSignalsDetail.model_validate(signals) if signals else None
+        dto = MuscleImbalanceSignalsResponse(available=bool(signals), signals=detail)
         await set_cache_json(
             cache_key,
             dto.model_dump(mode="json"),

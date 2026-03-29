@@ -11,6 +11,7 @@ from app.schemas.achievements import (
     AchievementLeaderboardEntry,
     AchievementLeaderboardResponse,
     AchievementListResponse,
+    AchievementProgressData,
     AchievementResponse,
     AchievementUnlockResponse,
     UserAchievementListResponse,
@@ -54,7 +55,7 @@ class AchievementsService:
                     achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
                     earned_at=ua.earned_at,
                     progress=ua.progress,
-                    progress_data=ua.progress_data,
+                    progress_data=AchievementProgressData.model_validate(ua.progress_data or {}),
                     is_completed=is_completed,
                 )
             )
@@ -84,7 +85,7 @@ class AchievementsService:
             achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
             earned_at=ua.earned_at,
             progress=ua.progress,
-            progress_data=ua.progress_data,
+            progress_data=AchievementProgressData.model_validate(ua.progress_data or {}),
             is_completed=ua.progress >= 100,
         )
 
