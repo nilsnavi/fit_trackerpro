@@ -113,6 +113,7 @@ async def test_request_logging_middleware_registered():
     """Smoke: outer logging middleware is present on the ASGI stack."""
     names = [m.cls.__name__ for m in app.user_middleware]
     assert "StructuredRequestLoggingMiddleware" in names
+    assert "SecurityHeadersMiddleware" in names
 
 
 @pytest.mark.unit
