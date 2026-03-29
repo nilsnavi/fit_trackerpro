@@ -1,6 +1,7 @@
 import { Activity, Flame, Timer, TrendingUp, ChevronRight, Clock } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useEffect, useMemo, useState } from 'react'
+import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { useNavigate } from 'react-router-dom'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
@@ -86,25 +87,30 @@ export function Home() {
         return 'Добрый вечер'
     }
 
+    const homeHeaderAvatar = useMemo(
+        () => (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-lg font-bold text-white">
+                {userPhoto ? (
+                    <img src={userPhoto} alt={userName} className="h-full w-full object-cover" />
+                ) : (
+                    userInitial
+                )}
+            </div>
+        ),
+        [userPhoto, userInitial],
+    )
+
+    useAppShellHeaderRight(homeHeaderAvatar)
+
     return (
         <div className="p-4 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {getGreeting()}, {userName}!
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                        Готов достичь своих целей сегодня?
-                    </p>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg overflow-hidden">
-                    {userPhoto ? (
-                        <img src={userPhoto} alt={userName} className="w-full h-full object-cover" />
-                    ) : (
-                        userInitial
-                    )}
-                </div>
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {getGreeting()}, {userName}!
+                </h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Готов достичь своих целей сегодня?
+                </p>
             </div>
 
             {/* Stats Grid */}

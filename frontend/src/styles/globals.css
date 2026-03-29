@@ -7,6 +7,10 @@
    ============================================ */
 
 :root {
+    /* App shell (Telegram WebApp safe areas + tab bar) */
+    --app-shell-header-inner-h: 3.5rem;
+    --app-shell-nav-h: 4rem;
+
     /* Border Radius */
     --radius: 0.75rem;
 
@@ -333,7 +337,7 @@
     }
 
     .safe-area-bottom {
-        padding-bottom: env(safe-area-inset-bottom, 20px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     .safe-area-left {
