@@ -24,6 +24,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.telemetry import init_sentry, setup_prometheus_metrics
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.request_logging import StructuredRequestLoggingMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
 from app.api.v1.openapi_tags import (
     OPENAPI_TAGS,
@@ -120,8 +121,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rate Limiting Middleware (outermost on the request path)
+# Rate Limiting Middleware
 app.add_middleware(RateLimitMiddleware)
+
+# Access / correlation logging (outermost: full duration including rate limit)
+app.add_middleware(StructuredRequestLoggingMiddleware)
 
 # Include routers
 app.include_router(system_router, prefix="/api/v1/system", tags=[TAG_SYSTEM])
