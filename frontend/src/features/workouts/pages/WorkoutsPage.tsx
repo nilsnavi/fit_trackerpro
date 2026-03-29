@@ -50,7 +50,9 @@ export function WorkoutsPage() {
     const {
         data: draftRemoteWorkout,
         isError: draftRemoteError,
-    } = useWorkoutHistoryItemQuery(draftWorkoutId ?? 0, draftWorkoutId != null)
+    } = useWorkoutHistoryItemQuery(draftWorkoutId ?? 0, draftWorkoutId != null, {
+        staleWhileEditing: draftWorkoutId != null,
+    })
 
     useEffect(() => {
         if (draftWorkoutId == null) return

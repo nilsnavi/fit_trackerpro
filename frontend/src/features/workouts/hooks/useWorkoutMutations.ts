@@ -13,6 +13,7 @@ import {
     appendCalendarWorkoutForMatchingMonth,
     buildCalendarEntryFromStartPayload,
     calendarEntryFromStartResponse,
+    completedExercisesFromTemplate,
     findTemplateInCaches,
     historyItemFromCompleteResponse,
     historyItemFromStartResponse,
@@ -166,11 +167,28 @@ export function useStartWorkoutMutation() {
             restoreSnapshotEntries(queryClient, ctx.calendarSnap)
             restoreSnapshotEntries(queryClient, ctx.historyListsSnap)
         },
-        onSuccess: (data, variables, ctx) => {
+        onSuccess: async (data, variables, ctx) => {
             if (!ctx) return
             const cal = calendarEntryFromStartResponse(data, variables)
             replaceCalendarWorkoutId(queryClient, ctx.tempId, cal)
-            const item = historyItemFromStartResponse(data, variables)
+            let item = historyItemFromStartResponse(data, variables)
+            if (variables.template_id != null) {
+                let template = findTemplateInCaches(queryClient, variables.template_id)
+                if (!template) {
+                    try {
+                        template = await queryClient.fetchQuery({
+                            queryKey: queryKeys.workouts.templatesDetail(variables.template_id),
+                            queryFn: () => workoutsApi.getTemplate(variables.template_id!),
+                            staleTime: 60_000,
+                        })
+                    } catch {
+                        // шаблон мог быть недоступен — остаётся пустой план до ручного ввода
+                    }
+                }
+                if (template) {
+                    item = { ...item, exercises: completedExercisesFromTemplate(template) }
+                }
+            }
             queryClient.setQueryData(queryKeys.workouts.historyItem(data.id), item)
             replaceHistoryListTemporalId(queryClient, ctx.tempId, item)
             trackBusinessMetric('started_workout', {
