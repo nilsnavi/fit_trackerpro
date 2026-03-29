@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
+import { offlineListQueryDefaults } from '@shared/offline/offlineQueryPersist'
 import type {
     WorkoutCompleteRequest,
     WorkoutStartRequest,
@@ -179,6 +180,7 @@ export function useStartWorkoutMutation() {
                         template = await queryClient.fetchQuery({
                             queryKey: queryKeys.workouts.templatesDetail(variables.template_id),
                             queryFn: () => workoutsApi.getTemplate(variables.template_id!),
+                            ...offlineListQueryDefaults,
                             staleTime: 60_000,
                         })
                     } catch {
