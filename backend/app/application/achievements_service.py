@@ -5,7 +5,8 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain import UserAchievement
-from app.repositories.achievements_repository import AchievementsRepository
+from app.domain.exceptions import AchievementNotFoundError
+from app.infrastructure.repositories.achievements_repository import AchievementsRepository
 from app.schemas.achievements import (
     AchievementLeaderboardEntry,
     AchievementLeaderboardResponse,
@@ -15,10 +16,6 @@ from app.schemas.achievements import (
     UserAchievementListResponse,
     UserAchievementResponse,
 )
-
-
-class AchievementNotFoundError(Exception):
-    pass
 
 
 class AchievementsService:

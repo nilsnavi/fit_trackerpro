@@ -8,7 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
-from app.domain import User, get_async_db
+from app.domain import User
+from app.domain.exceptions import (
+    ChallengeForbiddenError,
+    ChallengeNotFoundError,
+    ChallengeValidationError,
+)
+from app.infrastructure.database import get_async_db
 from app.schemas.challenges import (
     ChallengeCreate,
     ChallengeDetailResponse,
@@ -19,12 +25,7 @@ from app.schemas.challenges import (
     ChallengeMyActiveResponse,
     ChallengeResponse,
 )
-from app.services.challenges_service import (
-    ChallengeForbiddenError,
-    ChallengeNotFoundError,
-    ChallengesService,
-    ChallengeValidationError,
-)
+from app.application.challenges_service import ChallengesService
 
 router = APIRouter()
 

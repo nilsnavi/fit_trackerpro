@@ -6,7 +6,12 @@ from datetime import date, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain import Challenge
-from app.repositories.challenges_repository import ChallengesRepository
+from app.domain.exceptions import (
+    ChallengeForbiddenError,
+    ChallengeNotFoundError,
+    ChallengeValidationError,
+)
+from app.infrastructure.repositories.challenges_repository import ChallengesRepository
 from app.schemas.challenges import (
     ChallengeCreate,
     ChallengeDetailResponse,
@@ -17,18 +22,6 @@ from app.schemas.challenges import (
     ChallengeMyActiveResponse,
     ChallengeResponse,
 )
-
-
-class ChallengeNotFoundError(Exception):
-    pass
-
-
-class ChallengeValidationError(Exception):
-    pass
-
-
-class ChallengeForbiddenError(Exception):
-    pass
 
 
 class ChallengesService:

@@ -9,7 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
-from app.domain import User, get_async_db
+from app.domain import User
+from app.domain.exceptions import (
+    AnalyticsNotFoundError,
+    AnalyticsUnavailableError,
+    AnalyticsValidationError,
+)
+from app.infrastructure.database import get_async_db
 from app.schemas.analytics import (
     AnalyticsSummaryResponse,
     DataExportRequest,
@@ -24,12 +30,7 @@ from app.schemas.analytics import (
     TrainingLoadDailyTableResponse,
     WorkoutCalendarResponse,
 )
-from app.services.analytics_service import (
-    AnalyticsNotFoundError,
-    AnalyticsService,
-    AnalyticsUnavailableError,
-    AnalyticsValidationError,
-)
+from app.application.analytics_service import AnalyticsService
 from app.settings import settings
 
 router = APIRouter()

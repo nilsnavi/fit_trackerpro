@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
-from app.domain import User, get_async_db
+from app.domain import User
+from app.domain.exceptions import EmergencyNotFoundError, EmergencyValidationError
+from app.infrastructure.database import get_async_db
 from app.schemas.emergency import (
     EmergencyContactCreate,
     EmergencyContactListResponse,
@@ -21,7 +23,7 @@ from app.schemas.emergency import (
     EmergencySettingsResponse,
     EmergencyWorkoutNotifyResponse,
 )
-from app.services.emergency_service import EmergencyNotFoundError, EmergencyService, EmergencyValidationError
+from app.application.emergency_service import EmergencyService
 
 router = APIRouter()
 

@@ -7,7 +7,8 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain import DailyWellness, GlucoseLog
-from app.repositories.health_repository import HealthRepository
+from app.domain.exceptions import HealthNotFoundError
+from app.infrastructure.repositories.health_repository import HealthRepository
 from app.schemas.health import (
     DailyWellnessCreate,
     DailyWellnessResponse,
@@ -19,11 +20,7 @@ from app.schemas.health import (
     WellnessStats,
     WorkoutStats,
 )
-from app.utils.cache import invalidate_user_analytics_cache
-
-
-class HealthNotFoundError(Exception):
-    pass
+from app.infrastructure.cache import invalidate_user_analytics_cache
 
 
 class HealthService:

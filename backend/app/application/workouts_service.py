@@ -7,7 +7,8 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain import MuscleLoad, RecoveryState, TrainingLoadDaily, WorkoutLog, WorkoutTemplate
-from app.repositories.workouts_repository import WorkoutsRepository
+from app.domain.exceptions import WorkoutNotFoundError
+from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
 from app.schemas.workouts import (
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
@@ -19,11 +20,7 @@ from app.schemas.workouts import (
     WorkoutTemplateList,
     WorkoutTemplateResponse,
 )
-from app.utils.cache import invalidate_user_analytics_cache
-
-
-class WorkoutNotFoundError(Exception):
-    pass
+from app.infrastructure.cache import invalidate_user_analytics_cache
 
 
 class WorkoutsService:

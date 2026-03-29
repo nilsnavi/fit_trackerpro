@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
-from app.domain import User, get_async_db
+from app.domain import User
+from app.domain.exceptions import AchievementNotFoundError
+from app.infrastructure.database import get_async_db
 from app.schemas.achievements import (
     AchievementLeaderboardResponse,
     AchievementListResponse,
@@ -16,7 +18,7 @@ from app.schemas.achievements import (
     UserAchievementListResponse,
     UserAchievementResponse,
 )
-from app.services.achievements_service import AchievementNotFoundError, AchievementsService
+from app.application.achievements_service import AchievementsService
 
 router = APIRouter()
 

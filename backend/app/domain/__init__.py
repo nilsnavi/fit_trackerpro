@@ -1,5 +1,7 @@
 """
-Domain layer: SQLAlchemy ORM entities, database engine, and async session.
+Domain layer: ORM entities (SQLAlchemy models) and domain exceptions.
+
+Persistence (engine, sessions) lives in ``app.infrastructure.database``.
 """
 from .user import User
 from .workout_template import WorkoutTemplate
@@ -14,21 +16,7 @@ from .achievement import Achievement
 from .user_achievement import UserAchievement
 from .challenge import Challenge
 from .emergency_contact import EmergencyContact
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-
-from app.settings import settings
-from app.domain.base import Base
-
-# Database engines
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
-
-# Session makers
-AsyncSessionLocal = sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
-
-# Import all models AFTER Base is defined
+from .base import Base
 
 __all__ = [
     "Base",
@@ -46,12 +34,3 @@ __all__ = [
     "Challenge",
     "EmergencyContact",
 ]
-
-
-async def get_async_db():
-    """Dependency for getting async database session"""
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
