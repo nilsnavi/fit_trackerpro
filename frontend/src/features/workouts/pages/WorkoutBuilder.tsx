@@ -1019,9 +1019,13 @@ export const WorkoutBuilder: React.FC = () => {
                         label="Template Name *"
                         type="text"
                         value={templateName}
-                        onChange={(e) => setTemplateName(e.target.value)}
+                        onChange={(e) => {
+                            setTemplateName(e.target.value);
+                            setSaveError('');
+                        }}
                         placeholder="e.g., Upper Body Power"
-                        validationState={saveError && !templateName.trim() ? 'error' : 'default'}
+                        error={saveError === 'Template name is required' ? saveError : undefined}
+                        validationState={saveError === 'Template name is required' ? 'error' : 'default'}
                     />
 
                     {/* Visibility */}
@@ -1067,12 +1071,11 @@ export const WorkoutBuilder: React.FC = () => {
                         helperText="Separate tags with commas"
                     />
 
-                    {/* Error */}
-                    {saveError && (
-                        <div className="flex items-center gap-2 text-sm text-red-500">
-                            <AlertCircle className="w-4 h-4" />
+                    {saveError && saveError !== 'Template name is required' && (
+                        <p className="flex items-start gap-2 text-sm text-red-500" role="alert">
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
                             <span>{saveError}</span>
-                        </div>
+                        </p>
                     )}
 
                     {/* Actions */}
@@ -1080,6 +1083,7 @@ export const WorkoutBuilder: React.FC = () => {
                         <Button
                             variant="secondary"
                             fullWidth
+                            disabled={createTemplateMutation.isPending}
                             onClick={() => {
                                 setIsSaveTemplateOpen(false);
                                 setSaveError('');
@@ -1087,7 +1091,12 @@ export const WorkoutBuilder: React.FC = () => {
                         >
                             Cancel
                         </Button>
-                        <Button fullWidth onClick={handleSaveTemplate}>
+                        <Button
+                            fullWidth
+                            onClick={handleSaveTemplate}
+                            isLoading={createTemplateMutation.isPending}
+                            disabled={createTemplateMutation.isPending}
+                        >
                             Save Template
                         </Button>
                     </div>
