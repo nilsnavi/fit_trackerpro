@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { workoutsApi } from '@shared/api/domains/workoutsApi'
+import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { WorkoutModePageView } from '@/features/workouts/workoutMode/WorkoutModePageView'
 import { getWorkoutModePageConfig } from '@/features/workouts/workoutMode/workoutModePageModel'
 
@@ -9,7 +9,7 @@ export function WorkoutModePage() {
     const { mode } = useParams<{ mode: string }>()
     const navigate = useNavigate()
     const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
-    const [isStarting, setIsStarting] = useState(false)
+    const startWorkoutMutation = useStartWorkoutMutation()
 
     const config = getWorkoutModePageConfig(mode)
 
@@ -32,17 +32,14 @@ export function WorkoutModePage() {
 
     const handleStart = async () => {
         const selectedPreset = config.presets.find((preset) => preset.id === selectedPresetId) ?? config.presets[0]
-        setIsStarting(true)
         try {
-            const started = await workoutsApi.startWorkout({
+            const started = await startWorkoutMutation.mutateAsync({
                 name: `${config.title} • ${selectedPreset.label}`,
                 type: config.backendType,
             })
             navigate(`/workouts/${started.id}`)
         } catch (error) {
             console.error('Failed to start workout mode:', error)
-        } finally {
-            setIsStarting(false)
         }
     }
 
@@ -52,7 +49,7 @@ export function WorkoutModePage() {
             selectedPresetId={selectedPresetId}
             onSelectPreset={setSelectedPresetId}
             onStart={handleStart}
-            isStarting={isStarting}
+            isStarting={startWorkoutMutation.isPending}
         />
     )
 }

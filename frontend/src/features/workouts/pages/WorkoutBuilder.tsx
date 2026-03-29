@@ -39,7 +39,7 @@ import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
-import { workoutsApi } from '@shared/api/domains/workoutsApi'
+import { useCreateWorkoutTemplateMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import type { BackendWorkoutType, ExerciseInTemplate, WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
 import type { WorkoutType } from '@shared/types';
@@ -294,6 +294,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
 export const WorkoutBuilder: React.FC = () => {
     // Telegram WebApp
     const tg = useTelegramWebApp()
+    const createTemplateMutation = useCreateWorkoutTemplateMutation()
 
     // State
     const [workoutName, setWorkoutName] = useState('');
@@ -560,7 +561,7 @@ export const WorkoutBuilder: React.FC = () => {
         };
 
         try {
-            await workoutsApi.createTemplate(template);
+            await createTemplateMutation.mutateAsync(template)
 
             tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
 
