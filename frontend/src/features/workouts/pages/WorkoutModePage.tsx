@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { workoutsApi } from '@features/workouts/api/workoutsApi'
+import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { WorkoutModePageView } from '@/features/workouts/workoutMode/WorkoutModePageView'
 import { getWorkoutModePageConfig } from '@/features/workouts/workoutMode/workoutModePageModel'
 

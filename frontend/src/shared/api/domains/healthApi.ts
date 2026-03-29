@@ -10,7 +10,7 @@ import type {
     WellnessStats,
 } from '@features/health/types/metrics'
 
-export const healthMetricsApi = {
+export const healthApi = {
     getWaterGoal(): Promise<WaterGoal> {
         return api.get<WaterGoal>('/health-metrics/water/goal')
     },

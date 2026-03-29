@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
-import { workoutsApi } from '../api/workoutsApi'
+import { workoutsApi } from '@shared/api/domains/workoutsApi'
 
 const historyParams = { page: 1, page_size: 50 } as const
 
