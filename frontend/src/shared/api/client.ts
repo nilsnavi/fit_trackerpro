@@ -1,4 +1,6 @@
-import axios, { AxiosInstance } from 'axios'
+import axios, { AxiosInstance, isAxiosError } from 'axios'
+import * as Sentry from '@sentry/react'
+import { isSentryEnabled } from '@app/sentry'
 import { AppHttpError, normalizeError } from '@shared/errors'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
@@ -44,6 +46,24 @@ class ApiService {
                     console.error('API Error:', clientError)
                 } else {
                     console.error('API Error:', clientError.message, clientError.code)
+                }
+                if (
+                    isSentryEnabled() &&
+                    clientError.status != null &&
+                    clientError.status >= 500
+                ) {
+                    const captured =
+                        isAxiosError(error) && error instanceof Error
+                            ? error
+                            : new Error(clientError.message || 'API request failed')
+                    Sentry.captureException(captured, {
+                        tags: { source: 'api_client' },
+                        extra: {
+                            status: clientError.status,
+                            code: clientError.code,
+                            requestUrl: clientError.requestUrl,
+                        },
+                    })
                 }
                 return Promise.reject(new AppHttpError(clientError))
             }
