@@ -35,22 +35,38 @@
   - подтверждено, что возврат схемы/данных необходим и безопасен.
 - Для ручного запуска через `workflow_dispatch` доступен флаг `rollback_restore_db=true`.
 
-## Частичная реализация в репозитории
+## Файлы метаданных на сервере (`~/fittracker-pro`)
+
+| Файл | Когда пишется | Содержимое |
+|------|----------------|------------|
+| `.rollback-meta.env` | В начале каждого деплоя из `deploy.yml` | `PREVIOUS_IMAGE_TAG`, `TARGET_IMAGE_TAG`, `DEPLOY_STARTED_AT`, `DB_BACKUP_PATH` |
+| `.last-stable-deploy.env` | После **успешного** deploy **и** smoke (`record-stable` job) | `LAST_STABLE_IMAGE_TAG`, `LAST_STABLE_PREVIOUS_TAG`, `LAST_STABLE_RECORDED_AT` |
+
+`PREVIOUS_IMAGE_TAG` — это тег, который **уже крутился** до текущей попытки выката; его же использует авто-rollback при падении deploy или smoke.
+
+## Автоматический rollback (`deploy.yml`)
 
 Реализовано в `.github/workflows/deploy.yml`:
 
-- новый input `rollback_restore_db` для `workflow_dispatch`;
-- сохранение rollback-метаданных в `.rollback-meta.env`;
-- детерминированный откат на `PREVIOUS_IMAGE_TAG`;
-- post-rollback health checks;
-- восстановление БД переведено в опциональный режим.
+- input `rollback_restore_db` только для `workflow_dispatch` (при откате после сбоя; для события `release` восстановление БД из бэкапа не включается автоматически);
+- сохранение метаданных в `.rollback-meta.env`;
+- откат `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG`, `pull` backend/frontend, `up -d`, health checks на хосте;
+- после успешного smoke — запись снимка стабильных тегов в `.last-stable-deploy.env`.
 
-## Ручной runbook (если automation недоступна)
+## Ручной rollback workflow (GitHub Actions)
+
+Отдельный workflow: `.github/workflows/rollback-production.yml` (только **workflow_dispatch**).
+
+1. В поле **confirm** введите ровно `ROLLBACK` — иначе запуск будет отклонён отдельной job.
+2. **rollback_image_tag** — пусто: берётся `PREVIOUS_IMAGE_TAG` из `.rollback-meta.env`, иначе (если пусто) `LAST_STABLE_PREVIOUS_TAG` из `.last-stable-deploy.env`; либо укажите тег явно.
+3. **rollback_restore_db** — по умолчанию выключено; включайте только при осознанной необходимости восстановить дамп из `DB_BACKUP_PATH` в `.rollback-meta.env`.
+
+## Ручной runbook по SSH (если CI недоступен)
 
 ```bash
 cd ~/fittracker-pro
 source .rollback-meta.env
-sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
+sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${PREVIOUS_IMAGE_TAG}|" .env
 docker-compose -f docker-compose.prod.yml pull backend frontend
 docker-compose -f docker-compose.prod.yml up -d
 ```
@@ -64,7 +80,7 @@ docker exec -i fittracker-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < 
 
 ## Ограничения и дальнейшие шаги
 
-- Это **частичная** реализация: rollback не делает автоматического rollback Alembic-миграций.
+- Откат образов **не** откатывает схему БД Alembic автоматически.
 - Для полного сценария стоит добавить:
   - миграционную политику "expand/contract" для backward-compatible релизов;
   - canary/blue-green (с переключением трафика);

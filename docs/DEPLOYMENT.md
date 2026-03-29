@@ -114,8 +114,11 @@ Workflow: `.github/workflows/deploy.yml`. Image builds: `.github/workflows/build
 6. `docker-compose pull`, `run --rm backend alembic upgrade head`, `up -d`, `docker image prune -f`
 7. On-server checks: `http://localhost:8000/api/v1/system/health`, `/api/v1/system/version`, `http://localhost/`
 8. **Post-deploy smoke** job (from the runner): uses `VITE_API_URL` to hit public API URLs with retries
-9. **Rollback on failure** if deploy or smoke failed: restore `IMAGE_TAG` to `PREVIOUS_IMAGE_TAG` (only if a previous tag was recorded before deploy; first deploy on a clean server has no previous tag), `pull` backend/frontend, `up -d`; optional DB restore only when manual run sets `rollback_restore_db=true`
-10. **Notify**: Slack if `SLACK_WEBHOOK_URL` is set
+9. **Record last stable tags** after successful deploy and smoke: writes `~/fittracker-pro/.last-stable-deploy.env` (snapshot for manual rollback)
+10. **Rollback on failure** if deploy or smoke failed: restore `IMAGE_TAG` to `PREVIOUS_IMAGE_TAG` (only if a previous tag was recorded before deploy; first deploy on a clean server has no previous tag), `pull` backend/frontend, `up -d`; optional DB restore only when manual `workflow_dispatch` sets `rollback_restore_db=true`
+11. **Notify**: Slack if `SLACK_WEBHOOK_URL` is set
+
+**Manual rollback only** (no new deploy): workflow `.github/workflows/rollback-production.yml` — see `docs/ROLLBACK_STRATEGY.md`.
 
 The **Environment** dropdown on `workflow_dispatch` (production / staging) is not referenced in the workflow YAML today; the target remains `DEPLOY_HOST` + `~/fittracker-pro`.
 
@@ -134,11 +137,11 @@ docker-compose -f docker-compose.prod.yml logs -f backend
 ```bash
 cd ~/fittracker-pro
 source .rollback-meta.env
-sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
+sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${PREVIOUS_IMAGE_TAG}|" .env
 docker-compose -f docker-compose.prod.yml pull backend frontend
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
 By default, keep DB as-is. Restore DB from backup only for migration-related incidents.
 
-For the current P1-safe rollback workflow (previous image tag pinning, optional DB restore, and post-rollback health checks), see `docs/ROLLBACK_STRATEGY.md`.
+For rollback automation (`deploy.yml` auto-rollback, `rollback-production.yml` manual), metadata files, and DB policy, see `docs/ROLLBACK_STRATEGY.md`.
