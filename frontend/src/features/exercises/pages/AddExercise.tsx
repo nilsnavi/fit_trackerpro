@@ -147,6 +147,9 @@ export const AddExercise: React.FC = () => {
     const [submitError, setSubmitError] = useState<string | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+    const categorySelectRef = useRef<HTMLSelectElement>(null);
+    const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Setup Telegram back button
     useEffect(() => {
@@ -220,10 +223,12 @@ export const AddExercise: React.FC = () => {
     };
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSubmitError(null);
         setFormData(prev => ({ ...prev, name: e.target.value }));
     };
 
     const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSubmitError(null);
         const category = e.target.value as ExerciseCategory;
         setFormData(prev => ({
             ...prev,
@@ -233,10 +238,12 @@ export const AddExercise: React.FC = () => {
     };
 
     const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setSubmitError(null);
         setFormData(prev => ({ ...prev, description: e.target.value }));
     };
 
     const handleEquipmentToggle = (equipment: EquipmentType) => {
+        setSubmitError(null);
         tg.hapticFeedback({ type: 'selection' })
         setFormData(prev => ({
             ...prev,
@@ -248,6 +255,7 @@ export const AddExercise: React.FC = () => {
     };
 
     const handleMuscleToggle = (muscle: string) => {
+        setSubmitError(null);
         tg.hapticFeedback({ type: 'selection' })
         setFormData(prev => ({
             ...prev,
@@ -278,6 +286,7 @@ export const AddExercise: React.FC = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setSubmitError(null);
         setTouched(prev => ({ ...prev, media: true }));
 
         // Validate file
@@ -333,6 +342,11 @@ export const AddExercise: React.FC = () => {
         });
 
         if (!isFormValid()) {
+            requestAnimationFrame(() => {
+                if (validateName(formData.name)) nameInputRef.current?.focus();
+                else if (validateCategory(formData.category)) categorySelectRef.current?.focus();
+                else if (validateDescription(formData.description)) descriptionTextareaRef.current?.focus();
+            });
             return;
         }
 
@@ -439,6 +453,7 @@ export const AddExercise: React.FC = () => {
                 {/* Name Field */}
                 <div>
                     <Input
+                        ref={nameInputRef}
                         label="Название упражнения"
                         placeholder="Например: Жим лёжа"
                         value={formData.name}
@@ -459,6 +474,7 @@ export const AddExercise: React.FC = () => {
                         Категория <span className="text-red-500">*</span>
                     </label>
                     <select
+                        ref={categorySelectRef}
                         value={formData.category}
                         onChange={handleCategoryChange}
                         onBlur={() => handleFieldBlur('category')}
@@ -492,6 +508,7 @@ export const AddExercise: React.FC = () => {
                         Описание техники <span className="text-red-500">*</span>
                     </label>
                     <textarea
+                        ref={descriptionTextareaRef}
                         value={formData.description}
                         onChange={handleDescriptionChange}
                         onBlur={() => handleFieldBlur('description')}
@@ -517,10 +534,12 @@ export const AddExercise: React.FC = () => {
                         )}>
                             {formData.description.length}/20 мин. символов
                         </p>
-                        {touched.description && errors.description && (
-                            <p className="text-xs text-red-500">{errors.description}</p>
-                        )}
                     </div>
+                    {touched.description && errors.description && (
+                        <p className="text-sm text-red-500 mt-1.5" role="alert">
+                            {errors.description}
+                        </p>
+                    )}
                 </div>
 
                 {/* Equipment Field */}
@@ -778,8 +797,12 @@ export const AddExercise: React.FC = () => {
 
                 {/* Submit Error */}
                 {submitError && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                        <p className="text-sm text-red-500">{submitError}</p>
+                    <div
+                        className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl"
+                        role="alert"
+                        aria-live="polite"
+                    >
+                        <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
                     </div>
                 )}
 
@@ -789,10 +812,11 @@ export const AddExercise: React.FC = () => {
                     variant="primary"
                     size="lg"
                     fullWidth
-                    disabled={!isFormValid() || isSubmitting}
+                    disabled={isSubmitting}
                     isLoading={isSubmitting}
+                    haptic={false}
                 >
-                    {isSubmitting ? 'Отправка...' : 'Отправить на модерацию'}
+                    {isSubmitting ? 'Сохранение…' : 'Отправить на модерацию'}
                 </Button>
             </form>
 

@@ -246,7 +246,8 @@ const ExerciseSelector: React.FC<{
     exercises: Exercise[];
     selected: Exercise | null;
     onChange: (exercise: Exercise | null) => void;
-}> = ({ exercises, selected, onChange }) => {
+    error?: string;
+}> = ({ exercises, selected, onChange, error }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
 
@@ -259,10 +260,13 @@ const ExerciseSelector: React.FC<{
     return (
         <div className="relative">
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
+                aria-invalid={!!error}
                 className={cn(
                     'w-full flex items-center justify-between',
-                    'p-3 rounded-xl border border-border',
+                    'p-3 rounded-xl border',
+                    error ? 'border-danger' : 'border-border',
                     'bg-telegram-bg hover:bg-telegram-secondary-bg',
                     'transition-colors duration-200'
                 )}
@@ -326,6 +330,11 @@ const ExerciseSelector: React.FC<{
                         </div>
                     </div>
                 </>
+            )}
+            {error && (
+                <p className="text-sm text-danger mt-1.5" role="alert">
+                    {error}
+                </p>
             )}
         </div>
     );
@@ -405,7 +414,8 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(initialExercise || null);
 
     // UI state
-    const [error, setError] = useState<string | null>(null);
+    const [saveAttempted, setSaveAttempted] = useState(false);
+    const [exerciseError, setExerciseError] = useState<string | null>(null);
     const [showHistory, setShowHistory] = useState(false);
     const [showFormulaInfo, setShowFormulaInfo] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -429,21 +439,35 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
     const parsedWeight = parseFloat(weight);
     const parsedReps = parseInt(reps, 10);
 
-    // Validate inputs
+    const weightError = useMemo(() => {
+        if (!weight.trim()) return saveAttempted ? 'Введите вес' : undefined;
+        if (isNaN(parsedWeight) || parsedWeight <= 0) return 'Введите корректный вес';
+        if (parsedWeight > 500) return 'Вес слишком большой';
+        return undefined;
+    }, [weight, parsedWeight, saveAttempted]);
+
+    const repsError = useMemo(() => {
+        if (!reps.trim()) return saveAttempted ? 'Введите количество повторений' : undefined;
+        if (isNaN(parsedReps) || parsedReps < 2) return 'Минимум 2 повторения';
+        if (parsedReps > 10) return 'Максимум 10 повторений';
+        return undefined;
+    }, [reps, parsedReps, saveAttempted]);
+
+    // Validate inputs (для расчёта результата)
     const validation = useMemo(() => {
         if (isNaN(parsedWeight) || parsedWeight <= 0) {
-            return { valid: false, error: 'Введите вес' };
+            return { valid: false };
         }
         if (parsedWeight > 500) {
-            return { valid: false, error: 'Вес слишком большой' };
+            return { valid: false };
         }
         if (isNaN(parsedReps) || parsedReps < 2) {
-            return { valid: false, error: 'Минимум 2 повторения' };
+            return { valid: false };
         }
         if (parsedReps > 10) {
-            return { valid: false, error: 'Максимум 10 повторений' };
+            return { valid: false };
         }
-        return { valid: true, error: null };
+        return { valid: true };
     }, [parsedWeight, parsedReps]);
 
     // Calculate 1RM
@@ -454,8 +478,15 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
 
     // Save to history
     const handleSave = useCallback(() => {
-        if (!result || !selectedExercise) {
-            setError('Выберите упражнение для сохранения');
+        setSaveAttempted(true);
+        setExerciseError(null);
+
+        if (!result) {
+            return;
+        }
+
+        if (!selectedExercise) {
+            setExerciseError('Выберите упражнение для сохранения');
             return;
         }
 
@@ -512,7 +543,8 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
         setWeight('');
         setReps('');
         setSelectedExercise(null);
-        setError(null);
+        setExerciseError(null);
+        setSaveAttempted(false);
     }, []);
 
     return (
@@ -583,7 +615,11 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
                     <ExerciseSelector
                         exercises={MOCK_EXERCISES}
                         selected={selectedExercise}
-                        onChange={setSelectedExercise}
+                        onChange={(ex) => {
+                            setSelectedExercise(ex);
+                            setExerciseError(null);
+                        }}
+                        error={exerciseError ?? undefined}
                     />
                 </div>
 
@@ -595,10 +631,11 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
                     value={weight}
                     onChange={(e) => {
                         setWeight(e.target.value);
-                        setError(null);
+                        setExerciseError(null);
                     }}
-                    validationState={weight && (isNaN(parsedWeight) || parsedWeight <= 0) ? 'error' : 'default'}
-                    helperText={weight && !isNaN(parsedWeight) && parsedWeight > 0 ? undefined : 'Введите вес в кг'}
+                    validationState={weightError ? 'error' : 'default'}
+                    error={weightError}
+                    helperText={!weightError && !weight.trim() ? 'Введите вес в кг' : undefined}
                 />
 
                 {/* Reps Input */}
@@ -610,18 +647,10 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
                         value={reps}
                         onChange={(e) => {
                             setReps(e.target.value);
-                            setError(null);
+                            setExerciseError(null);
                         }}
-                        validationState={
-                            reps && (isNaN(parsedReps) || parsedReps < 2 || parsedReps > 10)
-                                ? 'error'
-                                : 'default'
-                        }
-                        error={
-                            reps && (isNaN(parsedReps) || parsedReps < 2 || parsedReps > 10)
-                                ? 'Допустимо: 2-10 повторений'
-                                : undefined
-                        }
+                        validationState={repsError ? 'error' : 'default'}
+                        error={repsError}
                     />
                     {/* Quick Rep Buttons */}
                     <div className="mt-2">
@@ -631,20 +660,16 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
                                     key={r}
                                     label={`${r} повт.`}
                                     active={parsedReps === r}
-                                    onClick={() => setReps(r.toString())}
+                                    onClick={() => {
+                                        setReps(r.toString());
+                                        setExerciseError(null);
+                                    }}
                                     size="sm"
                                 />
                             ))}
                         </ChipGroup>
                     </div>
                 </div>
-
-                {/* Error Message */}
-                {error && (
-                    <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-sm text-danger">
-                        {error}
-                    </div>
-                )}
 
                 {/* Success Message */}
                 {saveSuccess && (
@@ -684,7 +709,6 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
                     variant="primary"
                     onClick={handleSave}
                     fullWidth
-                    disabled={!result || !selectedExercise}
                     leftIcon={<Save className="w-4 h-4" />}
                 >
                     Сохранить

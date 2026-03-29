@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from '@shared/ui/Modal';
 import { Button } from '@shared/ui/Button';
 import { useTelegram } from '@shared/hooks/useTelegram';
@@ -283,7 +283,7 @@ const QuickStats: React.FC<QuickStatsProps> = ({ stats, recentReadings }) => {
 interface GlucoseInputModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (reading: Omit<GlucoseReading, 'id' | 'user_id' | 'created_at'>) => void;
+    onSave: (reading: Omit<GlucoseReading, 'id' | 'user_id' | 'created_at'>) => void | Promise<void>;
     workoutId?: number | null;
     defaultType?: MeasurementType;
 }
@@ -300,37 +300,55 @@ const GlucoseInputModal: React.FC<GlucoseInputModalProps> = ({
     const [unit, setUnit] = useState<GlucoseUnit>('mmol');
     const [measurementType, setMeasurementType] = useState<MeasurementType>(defaultType);
     const [notes, setNotes] = useState('');
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const numericValue = parseFloat(value) || 0;
     const status = numericValue > 0 ? getGlucoseClinicalStatus(numericValue, unit) : null;
     const recommendation = status ? RECOMMENDATIONS[status] : null;
 
+    useEffect(() => {
+        if (isOpen) {
+            setSaveError(null);
+            setIsSaving(false);
+        }
+    }, [isOpen]);
+
     const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
+        setSaveError(null);
         // Allow only numbers and one decimal point
         if (/^\d*\.?\d*$/.test(val) && val.length <= 5) {
             setValue(val);
         }
     };
 
-    const handleSave = () => {
-        if (numericValue <= 0) return;
+    const handleSave = async () => {
+        if (numericValue <= 0 || isSaving) return;
 
-        hapticFeedback?.success();
-
-        onSave({
-            value: numericValue,
-            unit,
-            measurement_type: measurementType,
-            recorded_at: new Date().toISOString(),
-            workout_id: workoutId || null,
-            notes: notes || undefined,
-        });
-
-        // Reset form
-        setValue('');
-        setNotes('');
-        onClose();
+        setSaveError(null);
+        setIsSaving(true);
+        try {
+            await Promise.resolve(
+                onSave({
+                    value: numericValue,
+                    unit,
+                    measurement_type: measurementType,
+                    recorded_at: new Date().toISOString(),
+                    workout_id: workoutId || null,
+                    notes: notes || undefined,
+                })
+            );
+            hapticFeedback?.success();
+            setValue('');
+            setNotes('');
+            onClose();
+        } catch {
+            setSaveError('Не удалось сохранить замер. Попробуйте ещё раз.');
+            hapticFeedback?.error();
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleUnitToggle = () => {
@@ -350,9 +368,12 @@ const GlucoseInputModal: React.FC<GlucoseInputModalProps> = ({
                 <div className="flex justify-center">
                     <div className="inline-flex bg-telegram-secondary-bg rounded-xl p-1">
                         <button
-                            onClick={() => unit !== 'mmol' && handleUnitToggle()}
+                            type="button"
+                            onClick={() => unit !== 'mmol' && !isSaving && handleUnitToggle()}
+                            disabled={isSaving}
                             className={cn(
                                 'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                                'disabled:opacity-50 disabled:cursor-not-allowed',
                                 unit === 'mmol'
                                     ? 'bg-telegram-button text-telegram-button-text'
                                     : 'text-telegram-hint hover:text-telegram-text'
@@ -361,9 +382,12 @@ const GlucoseInputModal: React.FC<GlucoseInputModalProps> = ({
                             ммоль/л
                         </button>
                         <button
-                            onClick={() => unit !== 'mgdl' && handleUnitToggle()}
+                            type="button"
+                            onClick={() => unit !== 'mgdl' && !isSaving && handleUnitToggle()}
+                            disabled={isSaving}
                             className={cn(
                                 'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                                'disabled:opacity-50 disabled:cursor-not-allowed',
                                 unit === 'mgdl'
                                     ? 'bg-telegram-button text-telegram-button-text'
                                     : 'text-telegram-hint hover:text-telegram-text'
@@ -380,13 +404,16 @@ const GlucoseInputModal: React.FC<GlucoseInputModalProps> = ({
                     <div className="grid grid-cols-3 gap-2">
                         {(Object.keys(MEASUREMENT_TYPE_LABELS) as MeasurementType[]).map((type) => (
                             <button
+                                type="button"
                                 key={type}
+                                disabled={isSaving}
                                 onClick={() => {
                                     setMeasurementType(type);
                                     hapticFeedback?.light();
                                 }}
                                 className={cn(
                                     'py-2 px-3 rounded-xl text-xs font-medium transition-all',
+                                    'disabled:opacity-50 disabled:cursor-not-allowed',
                                     measurementType === type
                                         ? 'bg-telegram-button text-telegram-button-text'
                                         : 'bg-telegram-secondary-bg text-telegram-hint hover:text-telegram-text'
@@ -417,6 +444,7 @@ const GlucoseInputModal: React.FC<GlucoseInputModalProps> = ({
                                     : 'border-transparent focus:border-telegram-button'
                             )}
                             autoFocus
+                            disabled={isSaving}
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-telegram-hint text-sm">
                             {unit === 'mmol' ? 'ммоль/л' : 'мг/дл'}
@@ -465,17 +493,26 @@ const GlucoseInputModal: React.FC<GlucoseInputModalProps> = ({
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Например: чувствовал головокружение..."
-                        className="w-full px-4 py-3 rounded-xl bg-telegram-secondary-bg text-telegram-text text-sm resize-none outline-none focus:ring-2 focus:ring-telegram-button/30"
+                        className="w-full px-4 py-3 rounded-xl bg-telegram-secondary-bg text-telegram-text text-sm resize-none outline-none focus:ring-2 focus:ring-telegram-button/30 disabled:opacity-50 disabled:cursor-not-allowed"
                         rows={2}
+                        disabled={isSaving}
                     />
                 </div>
 
+                {saveError && (
+                    <p className="text-sm text-danger text-center" role="alert">
+                        {saveError}
+                    </p>
+                )}
+
                 {/* Save Button */}
                 <Button
-                    onClick={handleSave}
-                    disabled={numericValue <= 0}
+                    onClick={() => void handleSave()}
+                    disabled={numericValue <= 0 || isSaving}
+                    isLoading={isSaving}
                     className="w-full"
                     size="lg"
+                    haptic={false}
                 >
                     Сохранить
                 </Button>
