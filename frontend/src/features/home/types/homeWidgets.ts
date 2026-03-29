@@ -1,29 +1,14 @@
-export interface GlucoseData {
-    value: number
-    unit: string
-    status: 'normal' | 'high' | 'low' | 'critical'
-    recorded_at: string
-}
+/** Обратная совместимость: типы дашборда перенесены в @shared/types/homeDashboard. */
 
-export interface WellnessData {
-    score: number
-    mood: 'great' | 'good' | 'okay' | 'bad' | 'terrible'
-    note?: string
-    recorded_at: string
-}
+export type {
+    GlucoseData,
+    GlucoseWidgetStatus,
+    WellnessData,
+    WellnessWidgetMood,
+    WaterData,
+    HomeWorkoutTemplate,
+    HomeWorkoutCardType,
+} from '@shared/types'
 
-export interface WaterData {
-    current: number
-    goal: number
-    unit: string
-}
-
-export interface WorkoutTemplate {
-    id: string
-    name: string
-    type: 'strength' | 'cardio' | 'yoga' | 'functional' | 'custom'
-    exerciseCount: number
-    lastWorkout?: string
-    color: string
-    icon: string
-}
+/** Прежнее имя карточки тренировки на главной. */
+export type { HomeWorkoutTemplate as WorkoutTemplate } from '@shared/types'

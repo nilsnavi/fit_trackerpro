@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { WaterData, WorkoutTemplate } from '@features/home/types/homeWidgets'
+import type { HomeWorkoutTemplate, WaterData } from '@shared/types'
 
-export type { GlucoseData, WellnessData, WaterData, WorkoutTemplate } from '@features/home/types/homeWidgets'
+export type { GlucoseData, HomeWorkoutTemplate, WellnessData, WaterData } from '@shared/types'
+/** @deprecated Используйте HomeWorkoutTemplate */
+export type { HomeWorkoutTemplate as WorkoutTemplate } from '@shared/types'
 
 export type AnalyticsRange = '7d' | '30d' | '90d' | '1y'
 
@@ -10,7 +12,7 @@ interface HomeState {
     userName: string
     avatarUrl?: string
     water: WaterData
-    workoutTemplates: WorkoutTemplate[]
+    workoutTemplates: HomeWorkoutTemplate[]
 }
 
 interface ExerciseCatalogState {
@@ -25,7 +27,7 @@ interface UiState {
     setHomeAvatarUrl: (url: string | undefined) => void
     setHomeWater: (data: WaterData) => void
     addHomeWater: (amount: number) => void
-    setHomeWorkoutTemplates: (templates: WorkoutTemplate[]) => void
+    setHomeWorkoutTemplates: (templates: HomeWorkoutTemplate[]) => void
 
     achievementsShowOnlyUnlocked: boolean
     setAchievementsShowOnlyUnlocked: (showOnlyUnlocked: boolean) => void
@@ -45,7 +47,7 @@ interface UiState {
     resetExerciseCatalog: () => void
 }
 
-const defaultWorkoutTemplates: WorkoutTemplate[] = [
+const defaultWorkoutTemplates: HomeWorkoutTemplate[] = [
     {
         id: 'strength-1',
         name: 'Силовая 1',
@@ -179,7 +181,7 @@ export const useUiStore = create<UiState>()(
                             avatarUrl: p.avatarUrl as string | undefined,
                             water: (p.water as WaterData) ?? defaultHome.water,
                             workoutTemplates:
-                                (p.workoutTemplates as WorkoutTemplate[]) ??
+                                (p.workoutTemplates as HomeWorkoutTemplate[]) ??
                                 defaultHome.workoutTemplates,
                         },
                     }

@@ -5,11 +5,10 @@ export { WellnessCheckin, WellnessCompactWidget, useWellnessForWorkout } from '.
 export type {
     WellnessEntry,
     WellnessStats,
-    PainZone,
     PainZones,
-    WorkoutRecommendation,
     WellnessCheckinProps
 } from './WellnessCheckin';
+export type { PainZone, WorkoutRecommendation } from '@features/health/types/wellnessUi';
 
 export { WaterTracker, WaterCompactWidget } from './WaterTracker';
 export type {

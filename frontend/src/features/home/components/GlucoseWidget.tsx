@@ -1,6 +1,6 @@
 import { Droplets, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import type { GlucoseData } from '@features/home/types/homeWidgets'
+import type { GlucoseData } from '@shared/types'
 
 interface GlucoseWidgetProps {
     data: GlucoseData | null

@@ -3,24 +3,10 @@ import { cn } from '@shared/lib/cn';
 import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import { Modal } from '@shared/ui/Modal';
+import type { CalendarDayData, CalendarMonthStats } from '@features/workouts/types/calendarPage';
 import type { CalendarWorkout } from '@features/workouts/types/workouts';
 import { WORKOUT_TYPE_LABELS } from '@/features/workouts/config/workoutTypeConfigs';
 import { useWorkoutCalendarQuery } from '@features/workouts/hooks/useWorkoutCalendarQuery';
-
-interface DayData {
-    date: Date;
-    workouts: CalendarWorkout[];
-    isCurrentMonth: boolean;
-    isToday: boolean;
-}
-
-interface MonthStats {
-    totalWorkouts: number;
-    completedWorkouts: number;
-    currentStreak: number;
-    volumeChange: number;
-    totalDuration: number;
-}
 
 // Constants
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -51,13 +37,13 @@ const getEndOfMonth = (date: Date): Date => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 };
 
-const getCalendarDays = (currentMonth: Date): DayData[] => {
+const getCalendarDays = (currentMonth: Date): CalendarDayData[] => {
     const startOfMonth = getStartOfMonth(currentMonth);
     const endOfMonth = getEndOfMonth(currentMonth);
     const startDay = startOfMonth.getDay() || 7; // 1 = Monday, 7 = Sunday
     const daysInMonth = endOfMonth.getDate();
 
-    const days: DayData[] = [];
+    const days: CalendarDayData[] = [];
     const today = new Date();
 
     // Previous month days
@@ -171,8 +157,8 @@ const ColorLegend: React.FC = () => {
 };
 
 const CalendarGrid: React.FC<{
-    days: DayData[];
-    onDayClick: (day: DayData) => void;
+    days: CalendarDayData[];
+    onDayClick: (day: CalendarDayData) => void;
 }> = ({ days, onDayClick }) => {
     return (
         <div className="bg-telegram-secondary-bg rounded-2xl p-3">
@@ -236,7 +222,7 @@ const CalendarGrid: React.FC<{
     );
 };
 
-const MonthStats: React.FC<{ stats: MonthStats }> = ({ stats }) => {
+const MonthStats: React.FC<{ stats: CalendarMonthStats }> = ({ stats }) => {
     return (
         <div className="grid grid-cols-3 gap-3">
             <Card variant="info" className="text-center">
@@ -269,7 +255,7 @@ const MonthStats: React.FC<{ stats: MonthStats }> = ({ stats }) => {
 const DayDetailSheet: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    day: DayData | null;
+    day: CalendarDayData | null;
     onStartWorkout: (workoutId: number) => void;
     onAddWorkout: (date: Date) => void;
 }> = ({ isOpen, onClose, day, onStartWorkout, onAddWorkout }) => {
@@ -395,7 +381,7 @@ const DayDetailSheet: React.FC<{
 // Main component
 export const Calendar: React.FC = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
+    const [selectedDay, setSelectedDay] = useState<CalendarDayData | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     const calendarYear = currentMonth.getFullYear();
@@ -407,7 +393,7 @@ export const Calendar: React.FC = () => {
         refetch,
     } = useWorkoutCalendarQuery(calendarYear, calendarMonthIndex);
 
-    const stats = useMemo((): MonthStats => {
+    const stats = useMemo((): CalendarMonthStats => {
         const completed = workouts.filter((w) => w.status === 'completed').length;
         const totalDuration = workouts
             .filter((w) => w.status === 'completed')
@@ -450,7 +436,7 @@ export const Calendar: React.FC = () => {
         }
     }, [calendarDays]);
 
-    const handleDayClick = useCallback((day: DayData) => {
+    const handleDayClick = useCallback((day: CalendarDayData) => {
         setSelectedDay(day);
         setIsSheetOpen(true);
     }, []);

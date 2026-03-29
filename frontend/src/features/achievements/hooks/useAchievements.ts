@@ -17,7 +17,7 @@ import type {
     AchievementUnlockData,
     UserAchievement,
     UserAchievementStats,
-} from '@features/achievements/components'
+} from '@features/achievements/types'
 
 export interface UseAchievementsReturn {
     achievements: Achievement[]

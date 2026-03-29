@@ -42,41 +42,12 @@ import { Modal } from '@shared/ui/Modal';
 import { useCreateWorkoutTemplateMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import type { BackendWorkoutType, ExerciseInTemplate, WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
+import type { WorkoutBlock, WorkoutBlockConfig, WorkoutBuilderExercise } from '@features/workouts/types/workoutBuilder';
 import type { WorkoutType } from '@shared/types';
 import {
     WORKOUT_FILTER_TYPE_ORDER,
     WORKOUT_LIST_TYPE_CONFIG,
 } from '@/features/workouts/config/workoutTypeConfigs';
-
-// ============================================
-// Types
-// ============================================
-
-interface Exercise {
-    id: string;
-    name: string;
-    category: string;
-    muscleGroups?: string[];
-}
-
-interface WorkoutBlock {
-    id: string;
-    type: 'strength' | 'cardio' | 'timer' | 'note';
-    exercise?: Exercise;
-    config?: BlockConfig;
-    order: number;
-}
-
-interface BlockConfig {
-    sets?: number;
-    reps?: number;
-    weight?: number;
-    duration?: number;
-    restSeconds?: number;
-    note?: string;
-    distance?: number;
-    speed?: number;
-}
 
 const mapWorkoutTypeToBackend = (types: WorkoutType[]): BackendWorkoutType => {
     const normalized = types.filter((type) => type === 'cardio' || type === 'strength' || type === 'flexibility');
@@ -93,7 +64,7 @@ const toExerciseId = (id: string, fallbackIndex: number): number => {
 
 const buildTemplateExercises = (blocks: WorkoutBlock[]): ExerciseInTemplate[] => (
     blocks
-        .filter((block): block is WorkoutBlock & { exercise: Exercise } =>
+        .filter((block): block is WorkoutBlock & { exercise: WorkoutBuilderExercise } =>
             (block.type === 'strength' || block.type === 'cardio') && Boolean(block.exercise)
         )
         .map((block, index) => {
@@ -117,7 +88,7 @@ const buildTemplateExercises = (blocks: WorkoutBlock[]): ExerciseInTemplate[] =>
 // Mock Data
 // ============================================
 
-const mockExercises: Exercise[] = [
+const mockExercises: WorkoutBuilderExercise[] = [
     { id: '1', name: 'Push-ups', category: 'strength', muscleGroups: ['chest', 'triceps'] },
     { id: '2', name: 'Squats', category: 'strength', muscleGroups: ['legs', 'glutes'] },
     { id: '3', name: 'Deadlift', category: 'strength', muscleGroups: ['back', 'legs'] },
@@ -314,10 +285,10 @@ export const WorkoutBuilder: React.FC = () => {
     // Exercise selector state
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
-    const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+    const [selectedExercise, setSelectedExercise] = useState<WorkoutBuilderExercise | null>(null);
 
     // Config state
-    const [config, setConfig] = useState<BlockConfig>({});
+    const [config, setConfig] = useState<WorkoutBlockConfig>({});
 
     // Save template state
     const [templateName, setTemplateName] = useState('');
@@ -446,7 +417,7 @@ export const WorkoutBuilder: React.FC = () => {
         }
     };
 
-    const handleExerciseSelect = (exercise: Exercise) => {
+    const handleExerciseSelect = (exercise: WorkoutBuilderExercise) => {
         tg.hapticFeedback({ type: 'selection' })
         setSelectedExercise(exercise);
         setConfig({

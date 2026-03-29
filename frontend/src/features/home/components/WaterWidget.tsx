@@ -1,6 +1,6 @@
 import { GlassWater, Plus } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import type { WaterData } from '@features/home/types/homeWidgets'
+import type { WaterData } from '@shared/types'
 
 interface WaterWidgetProps {
     data: WaterData
