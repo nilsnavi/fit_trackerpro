@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
 import { Input } from '@shared/ui/Input';
 import { Button } from '@shared/ui/Button';
 import { Chip } from '@shared/ui/Chip';
@@ -992,6 +994,22 @@ export const Catalog: React.FC = () => {
         navigate('/exercises/add');
     }, [navigate, tg]);
 
+    const catalogHeaderActions = useMemo(
+        () => (
+            <button
+                type="button"
+                onClick={handleAddExercise}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-transform active:scale-95"
+                aria-label="Новое упражнение"
+            >
+                <Plus className="h-5 w-5" aria-hidden />
+            </button>
+        ),
+        [handleAddExercise],
+    );
+
+    useAppShellHeaderRight(catalogHeaderActions);
+
     const activeFiltersCount =
         filters.equipment.length +
         filters.risks.length +
@@ -999,12 +1017,11 @@ export const Catalog: React.FC = () => {
         (filters.categories.length > 0 && !filters.categories.includes('all') ? filters.categories.length : 0);
 
     return (
-        <div className="min-h-screen bg-telegram-bg pb-24">
+        <div className="bg-telegram-bg">
             {/* Header */}
             <div className="sticky top-0 z-20 bg-telegram-bg/95 backdrop-blur-sm border-b border-border">
                 <div className="px-4 py-3">
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white">Каталог упражнений</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                         {isLoading ? 'Загрузка…' : `${filteredExercises.length} упражнений`}
                     </p>
                 </div>

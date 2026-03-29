@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
     Plus,
@@ -30,6 +30,7 @@ import type { BackendWorkoutType } from '@features/workouts/types/workouts'
 import { getErrorMessage } from '@shared/errors'
 import { WorkoutsHistoryBlockSkeleton } from '@shared/ui/page-skeletons'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
+import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 
 const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
     cardio: 'Кардио',
@@ -114,16 +115,41 @@ export function WorkoutsPage() {
         setSelectedType(type)
     }
 
-    // Handle add new workout
-    const handleAddWorkout = () => {
+    const handleAddWorkout = useCallback(() => {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         navigate('/workouts/builder')
-    }
+    }, [tg, navigate])
 
-    const handleOpenCalendar = () => {
+    const handleOpenCalendar = useCallback(() => {
         tg.hapticFeedback({ type: 'selection' })
         navigate('/workouts/calendar')
-    }
+    }, [tg, navigate])
+
+    const headerActions = useMemo(
+        () => (
+            <div className="flex shrink-0 items-center gap-2">
+                <button
+                    type="button"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-white"
+                    onClick={handleOpenCalendar}
+                    aria-label="Календарь тренировок"
+                >
+                    <CalendarDays className="h-5 w-5" />
+                </button>
+                <button
+                    type="button"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-transform active:scale-95"
+                    onClick={handleAddWorkout}
+                    aria-label="Новая тренировка"
+                >
+                    <Plus className="h-5 w-5" />
+                </button>
+            </div>
+        ),
+        [handleOpenCalendar, handleAddWorkout],
+    )
+
+    useAppShellHeaderRight(headerActions)
 
     const handleOpenMode = (mode: WorkoutMode) => {
         tg.hapticFeedback({ type: 'selection' })
@@ -154,29 +180,6 @@ export function WorkoutsPage() {
 
     return (
         <div className="p-4 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Тренировки</h1>
-                <div className="flex shrink-0 items-center gap-2">
-                    <button
-                        type="button"
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-white"
-                        onClick={handleOpenCalendar}
-                        aria-label="Календарь тренировок"
-                    >
-                        <CalendarDays className="h-5 w-5" />
-                    </button>
-                    <button
-                        type="button"
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-transform active:scale-95"
-                        onClick={handleAddWorkout}
-                        aria-label="Новая тренировка"
-                    >
-                        <Plus className="h-5 w-5" />
-                    </button>
-                </div>
-            </div>
-
             {draftWorkoutId != null && (
                 <button
                     type="button"

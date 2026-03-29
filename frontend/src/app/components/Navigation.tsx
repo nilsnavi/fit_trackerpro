@@ -28,7 +28,7 @@ export function Navigation() {
             )}
             aria-label="Основная навигация"
         >
-            <div className="flex h-16 items-center justify-around">
+            <div className="flex h-[var(--app-shell-nav-h)] items-center justify-around">
                 {navItems.map(({ path, icon: Icon, label }) => (
                     <NavLink
                         key={path}
@@ -36,7 +36,7 @@ export function Navigation() {
                         onClick={handleNavClick}
                         className={({ isActive }) =>
                             cn(
-                                'flex h-full w-full flex-col items-center justify-center transition-colors',
+                                'flex h-full w-full flex-col items-center justify-center touch-manipulation transition-colors',
                                 isActive
                                     ? 'text-primary'
                                     : 'text-telegram-hint hover:text-telegram-text'

@@ -465,11 +465,9 @@ export const Calendar: React.FC = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-telegram-bg pb-20">
-            {/* Header */}
-            <div className="sticky-top bg-telegram-bg/95 backdrop-blur-sm border-b border-border z-10">
+        <div className="bg-telegram-bg">
+            <div className="sticky-top z-10 border-b border-border bg-telegram-bg/95 backdrop-blur-sm">
                 <div className="px-4 py-4">
-                    <h1 className="text-2xl font-bold text-telegram-text mb-4">Календарь</h1>
                     <MonthNavigator
                         currentMonth={currentMonth}
                         onPrevMonth={handlePrevMonth}

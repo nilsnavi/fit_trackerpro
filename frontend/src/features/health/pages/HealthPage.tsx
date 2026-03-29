@@ -50,11 +50,7 @@ export function HealthPage() {
 
     return (
         <div className="p-4 space-y-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Показатели здоровья</h1>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Отслеживайте свою статистику</p>
-            </div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Отслеживайте свою статистику</p>
 
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 gap-3">

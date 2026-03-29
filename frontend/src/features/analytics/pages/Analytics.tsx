@@ -45,6 +45,7 @@ import { OneRMCalculator } from '@features/analytics/components';
 import { useTelegramWebApp, UseTelegramWebAppReturn } from '@shared/hooks/useTelegramWebApp';
 import { trackBusinessMetric } from '@shared/lib/businessMetrics';
 import { AnalyticsPageSkeleton } from '@shared/ui/page-skeletons';
+import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
 
 // ============================================
 // Types
@@ -803,22 +804,24 @@ const Analytics: React.FC = () => {
     // Colors for chart lines
     const lineColors = ['#2481cc', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
 
+    const analyticsHeaderExport = useMemo(
+        () =>
+            activeTab === 'chart' ? (
+                <ExportMenu data={chartData} selectedExercises={selectedExercises} tg={tg} />
+            ) : null,
+        [activeTab, chartData, selectedExercises, tg],
+    );
+
+    useAppShellHeaderRight(analyticsHeaderExport);
+
     if (isAnalyticsPending) {
         return <AnalyticsPageSkeleton />;
     }
 
     return (
-        <div className="min-h-screen bg-telegram-bg pb-20">
-            {/* Header */}
+        <div className="bg-telegram-bg">
             <div className="sticky top-0 z-10 bg-telegram-bg/95 backdrop-blur-sm border-b border-border">
                 <div className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-3">
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Аналитика</h1>
-                        {activeTab === 'chart' && (
-                            <ExportMenu data={chartData} selectedExercises={selectedExercises} tg={tg} />
-                        )}
-                    </div>
-                    {/* Tab Switcher */}
                     <ChipGroup>
                         <Chip
                             label="Прогресс"
