@@ -9,17 +9,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.core.config import settings
-from app.core.security import verify_token
-
-
-def _user_id_from_authorization(request: Request) -> int | None:
-    auth = request.headers.get("authorization")
-    if not auth or not auth.lower().startswith("bearer "):
-        return None
-    token = auth[7:].strip()
-    if not token:
-        return None
-    return verify_token(token)
+from app.core.request_identity import user_id_from_authorization_header
 
 
 class SentryUserContextMiddleware(BaseHTTPMiddleware):
@@ -29,7 +19,7 @@ class SentryUserContextMiddleware(BaseHTTPMiddleware):
         if not settings.SENTRY_DSN:
             return await call_next(request)
 
-        user_id = _user_id_from_authorization(request)
+        user_id = user_id_from_authorization_header(request)
         with sentry_sdk.configure_scope() as scope:
             scope.set_user({"id": str(user_id)} if user_id is not None else None)
             return await call_next(request)
