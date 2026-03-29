@@ -32,7 +32,6 @@ def _display_name(user: User) -> str:
 
 class EmergencyService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = EmergencyRepository(db)
 
     async def get_contacts(self, user_id: int) -> EmergencyContactListResponse:
@@ -58,9 +57,7 @@ class EmergencyService:
             notify_on_emergency=data.notify_on_emergency,
             priority=data.priority,
         )
-        self.db.add(contact)
-        await self.db.commit()
-        await self.db.refresh(contact)
+        contact = await self.repository.create_contact(contact)
         return EmergencyContactResponse.model_validate(contact, from_attributes=True)
 
     async def get_contact(self, user_id: int, contact_id: int) -> EmergencyContactResponse:
@@ -77,16 +74,14 @@ class EmergencyService:
             raise EmergencyNotFoundError("Emergency contact not found")
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(contact, field, value)
-        await self.db.commit()
-        await self.db.refresh(contact)
+        contact = await self.repository.update_contact(contact)
         return EmergencyContactResponse.model_validate(contact, from_attributes=True)
 
     async def delete_contact(self, user_id: int, contact_id: int) -> None:
         contact = await self.repository.get_contact(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise EmergencyNotFoundError("Emergency contact not found")
-        await self.db.delete(contact)
-        await self.db.commit()
+        await self.repository.delete_contact(contact)
 
     async def send_emergency_notification(
         self,

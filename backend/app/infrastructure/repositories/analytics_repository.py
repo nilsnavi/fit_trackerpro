@@ -5,18 +5,16 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import Integer, and_, cast, desc, func, literal, or_, select, text, true
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
 from app.domain.training_load_daily import TrainingLoadDaily
 from app.domain.workout_log import WorkoutLog
+from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
-class AnalyticsRepository:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+class AnalyticsRepository(SQLAlchemyRepository):
 
     async def list_training_load_daily(
         self,
@@ -205,7 +203,12 @@ class AnalyticsRepository:
             fatigue_level=fatigue_level,
             readiness_score=score,
         )
-        self.db.add(state)
+        self.add(state)
+        return state
+
+    async def commit_recovery_state_recalculation(self, state: RecoveryState) -> RecoveryState:
+        await self.commit()
+        await self.refresh(state)
         return state
 
     async def get_exercise_progress_summary(

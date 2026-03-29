@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.domain.exercise import Exercise
+from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
-class ExercisesRepository:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+class ExercisesRepository(SQLAlchemyRepository):
 
     def _base_filtered_query(
         self,
@@ -76,3 +73,23 @@ class ExercisesRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    async def create_exercise(self, exercise: Exercise) -> Exercise:
+        self.add(exercise)
+        await self.commit()
+        await self.refresh(exercise)
+        return exercise
+
+    async def update_exercise(self, exercise: Exercise) -> Exercise:
+        await self.commit()
+        await self.refresh(exercise)
+        return exercise
+
+    async def delete_exercise(self, exercise: Exercise) -> None:
+        await self.delete(exercise)
+        await self.commit()
+
+    async def approve_exercise(self, exercise: Exercise) -> Exercise:
+        await self.commit()
+        await self.refresh(exercise)
+        return exercise

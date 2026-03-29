@@ -42,12 +42,11 @@ from app.infrastructure.cache import (
     set_cache_json,
 )
 from app.settings import settings
-from app.infrastructure.feature_flags import is_feature_enabled
+from app.infrastructure.repositories.feature_flags_repository import FeatureFlagsRepository
 
 
 class AnalyticsService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = AnalyticsRepository(db)
 
     @staticmethod
@@ -326,8 +325,7 @@ class AnalyticsService:
             fatigue_level=fatigue_level,
             readiness_score=readiness_score,
         )
-        await self.db.commit()
-        await self.db.refresh(state)
+        state = await self.repository.commit_recovery_state_recalculation(state)
         await invalidate_user_analytics_cache(user_id)
 
         return RecoveryStateRecalculateResponse(
@@ -527,7 +525,9 @@ class AnalyticsService:
         days = days_map.get(period, 30)
         date_from = date.today() - timedelta(days=days)
 
-        muscle_signals_enabled = await is_feature_enabled(self.db, "muscle_imbalance_signals", default=False)
+        muscle_signals_enabled = await FeatureFlagsRepository(self.repository.db).is_enabled(
+            "muscle_imbalance_signals", default=False
+        )
         cache_key = self._build_cache_key(
             "summary",
             user_id,
@@ -628,7 +628,9 @@ class AnalyticsService:
         return summary
 
     async def get_muscle_imbalance_signals(self, user_id: int) -> MuscleImbalanceSignalsResponse:
-        muscle_signals_enabled = await is_feature_enabled(self.db, "muscle_imbalance_signals", default=False)
+        muscle_signals_enabled = await FeatureFlagsRepository(self.repository.db).is_enabled(
+            "muscle_imbalance_signals", default=False
+        )
         if not muscle_signals_enabled:
             raise AnalyticsNotFoundError("Muscle imbalance signals are disabled")
 

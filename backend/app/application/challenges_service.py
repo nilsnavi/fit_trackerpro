@@ -27,7 +27,6 @@ from app.schemas.challenges import (
 
 class ChallengesService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = ChallengesRepository(db)
 
     @staticmethod
@@ -141,9 +140,7 @@ class ChallengesService:
             banner_url=data.banner_url,
             status=challenge_status,
         )
-        self.db.add(challenge)
-        await self.db.commit()
-        await self.db.refresh(challenge)
+        challenge = await self.repository.create_challenge(challenge)
 
         return ChallengeResponse(
             id=challenge.id,

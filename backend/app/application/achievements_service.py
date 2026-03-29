@@ -4,7 +4,6 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.user_achievement import UserAchievement
 from app.domain.exceptions import AchievementNotFoundError
 from app.infrastructure.repositories.achievements_repository import AchievementsRepository
 from app.schemas.achievements import (
@@ -21,7 +20,6 @@ from app.schemas.achievements import (
 
 class AchievementsService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = AchievementsRepository(db)
 
     async def get_achievements(self, category: str | None) -> AchievementListResponse:
@@ -107,19 +105,12 @@ class AchievementsService:
                 message="Achievement already unlocked",
             )
 
-        if existing:
-            existing.progress = 100
-            existing.earned_at = datetime.utcnow()
-        else:
-            self.db.add(
-                UserAchievement(
-                    user_id=user_id,
-                    achievement_id=achievement_id,
-                    progress=100,
-                    earned_at=datetime.utcnow(),
-                )
-            )
-        await self.db.commit()
+        await self.repository.complete_user_achievement(
+            user_id=user_id,
+            achievement_id=achievement_id,
+            existing=existing,
+            earned_at=datetime.utcnow(),
+        )
 
         total_points = await self.repository.get_user_total_points(user_id=user_id)
         return AchievementUnlockResponse(
