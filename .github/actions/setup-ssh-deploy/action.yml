@@ -1,0 +1,24 @@
+name: Setup SSH for deploy
+description: Configure ssh-agent and known_hosts for remote deployment
+
+inputs:
+  ssh-private-key:
+    description: SSH private key for the deploy user
+    required: true
+  deploy-host:
+    description: Hostname or IP of the deploy server
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup SSH agent
+      uses: webfactory/ssh-agent@v0.10.0
+      with:
+        ssh-private-key: ${{ inputs.ssh-private-key }}
+
+    - name: Add host to known hosts
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H "${{ inputs.deploy-host }}" >> ~/.ssh/known_hosts
