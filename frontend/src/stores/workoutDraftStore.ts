@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { WorkoutMode } from '@features/workouts/config/workoutTypeConfigs'
 
+/** Локальный выбор режима/пресета в мастере конструктора (не шаблоны с API — они в `useWorkoutTemplatesQuery`). */
 interface WorkoutDraftState {
     selectedMode: WorkoutMode | null
     selectedPresetId: string | null

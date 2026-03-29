@@ -43,4 +43,7 @@ export const queryKeys = {
         list: (params: { page: number; page_size: number; status: string }) =>
             ['exercises', 'list', params] as const,
     },
+    analytics: {
+        dashboard: ['analytics', 'dashboard'] as const,
+    },
 } as const

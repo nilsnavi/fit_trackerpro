@@ -46,6 +46,7 @@ import { useTelegramWebApp, UseTelegramWebAppReturn } from '@shared/hooks/useTel
 import { trackBusinessMetric } from '@shared/lib/businessMetrics';
 import { AnalyticsPageSkeleton } from '@shared/ui/page-skeletons';
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
+import { queryKeys } from '@shared/api/queryKeys';
 
 // ============================================
 // Types
@@ -676,7 +677,7 @@ const Analytics: React.FC = () => {
     };
 
     const { data: analyticsData, isPending: isAnalyticsPending } = useQuery({
-        queryKey: ['analytics', 'dashboard'],
+        queryKey: queryKeys.analytics.dashboard,
         queryFn: async () => ({
             workouts: generateMockWorkouts(),
             exercises: MOCK_EXERCISES,

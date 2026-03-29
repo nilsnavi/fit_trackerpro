@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
+import { useWorkoutSessionDraftStore } from '@/state/local'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
 import { ArrowLeft, CalendarDays, Clock3, MessageSquare, Tags } from 'lucide-react'

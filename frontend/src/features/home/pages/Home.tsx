@@ -1,6 +1,6 @@
 import { Activity, Flame, Timer, TrendingUp, ChevronRight, Clock } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { useNavigate } from 'react-router-dom'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
@@ -8,31 +8,51 @@ import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import { getWorkoutListTypeConfig } from '@features/workouts/config/workoutTypeConfigs'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { WorkoutsHistoryBlockSkeleton } from '@shared/ui/page-skeletons'
+import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery'
+import { useUserStatsQuery } from '@features/profile/hooks/useUserStatsQuery'
+import { useAddWaterEntryMutation } from '@features/health/hooks/useHealthQueries'
+import { useHomeWaterQuery, useHomeWorkoutTemplatesQuery } from '@features/home/hooks'
+import { WaterWidget, WorkoutCard } from '@features/home/components'
 
-interface UserStats {
+interface DashboardStats {
     calories: number
     workouts: number
-    activity: number
-    progress: number
+    activityMinutes: number
+    streakDays: number
 }
 
-const defaultStats: UserStats = {
-    calories: 2450,
-    workouts: 5,
-    activity: 45,
-    progress: 12
+const defaultStats: DashboardStats = {
+    calories: 0,
+    workouts: 0,
+    activityMinutes: 0,
+    streakDays: 0,
 }
 
 export function Home() {
     const tg = useTelegramWebApp()
     const navigate = useNavigate()
-    const [stats] = useState<UserStats>(defaultStats)
+    const { data: profile } = useCurrentUserQuery()
+    const { data: userStats } = useUserStatsQuery()
+    const { data: waterData } = useHomeWaterQuery()
+    const { templates, isPending: templatesLoading } = useHomeWorkoutTemplatesQuery()
+    const addWater = useAddWaterEntryMutation()
+
     const { data: workoutHistory, isLoading: historyLoading } = useWorkoutHistoryQuery()
 
     const recentWorkouts = useMemo(() => {
         const items = (workoutHistory?.items ?? []).map(toWorkoutListItem).slice(0, 3)
         return items
     }, [workoutHistory])
+
+    const stats = useMemo((): DashboardStats => {
+        if (!userStats) return defaultStats
+        return {
+            calories: Math.round(userStats.total_calories ?? 0),
+            workouts: userStats.total_workouts ?? 0,
+            activityMinutes: Math.round(userStats.total_duration ?? 0),
+            streakDays: userStats.current_streak ?? 0,
+        }
+    }, [userStats])
 
     const formatRecentDate = (isoDate: string) => {
         const d = new Date(isoDate)
@@ -45,15 +65,17 @@ export function Home() {
         return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
     }
 
-    // Get user name from Telegram or use default
-    const userName = tg.user?.first_name || tg.user?.username || 'Атлет'
+    const userName =
+        profile?.first_name ||
+        profile?.username ||
+        tg.user?.first_name ||
+        tg.user?.username ||
+        'Атлет'
     const userInitial = userName?.[0]?.toUpperCase() || 'F'
     const userPhoto = tg.user?.photo_url
 
-    // Initialize and sync with Telegram on mount
     useEffect(() => {
         if (tg.isTelegram) {
-            // Set up main button for quick workout start
             tg.showMainButton('Начать тренировку', () => {
                 tg.hapticFeedback({ type: 'impact', style: 'medium' })
                 navigate('/workouts/builder')
@@ -65,7 +87,6 @@ export function Home() {
         }
     }, [tg.isTelegram, navigate, tg.showMainButton, tg.hideMainButton])
 
-    // Handle quick action with haptic feedback
     const handleQuickAction = (action: string) => {
         tg.hapticFeedback({ type: 'impact', style: 'light' })
 
@@ -79,7 +100,22 @@ export function Home() {
         }
     }
 
-    // Get greeting based on time of day
+    const handleAddWater = (amount: number) => {
+        void addWater.mutateAsync({
+            amount,
+            recorded_at: new Date().toISOString(),
+        })
+    }
+
+    const handleTemplateStart = (id: string) => {
+        tg.hapticFeedback({ type: 'selection' })
+        if (id === 'custom') {
+            navigate('/workouts/builder')
+            return
+        }
+        navigate(`/workouts/builder?templateId=${encodeURIComponent(id)}`)
+    }
+
     const getGreeting = () => {
         const hour = new Date().getHours()
         if (hour < 12) return 'Доброе утро'
@@ -97,13 +133,13 @@ export function Home() {
                 )}
             </div>
         ),
-        [userPhoto, userInitial],
+        [userPhoto, userInitial, userName],
     )
 
     useAppShellHeaderRight(homeHeaderAvatar)
 
     return (
-        <div className="p-4 space-y-6">
+        <div className="space-y-6 p-4">
             <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                     {getGreeting()}, {userName}!
@@ -113,48 +149,80 @@ export function Home() {
                 </p>
             </div>
 
-            {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Flame className="w-5 h-5 text-orange-500" />
+                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                    <div className="mb-2 flex items-center gap-2">
+                        <Flame className="h-5 w-5 text-orange-500" />
                         <span className="text-sm text-gray-500 dark:text-gray-400">Калории</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.calories.toLocaleString()}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">ккал</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {stats.calories.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">ккал всего</div>
                 </div>
-                <div className="bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Timer className="w-5 h-5 text-blue-500" />
+                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                    <div className="mb-2 flex items-center gap-2">
+                        <Timer className="h-5 w-5 text-blue-500" />
                         <span className="text-sm text-gray-500 dark:text-gray-400">Тренировки</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.workouts}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">на этой неделе</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">всего</div>
                 </div>
-                <div className="bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Activity className="w-5 h-5 text-green-500" />
+                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                    <div className="mb-2 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-green-500" />
                         <span className="text-sm text-gray-500 dark:text-gray-400">Активность</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activity}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">минут</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activityMinutes}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">минут всего</div>
                 </div>
-                <div className="bg-gray-50 dark:bg-neutral-800 p-4 rounded-xl transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="w-5 h-5 text-purple-500" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Прогресс</span>
+                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                    <div className="mb-2 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-purple-500" />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Серия</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">+{stats.progress}%</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">к прошлой неделе</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.streakDays}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">дней подряд</div>
                 </div>
             </div>
 
-            {/* Recent Workouts */}
+            {(waterData || templatesLoading || templates.length > 0) && (
+                <div className="space-y-3">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Сегодня и программы</h2>
+                    <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                        {waterData && (
+                            <WaterWidget
+                                data={waterData}
+                                onAddWater={handleAddWater}
+                                onClick={() => navigate('/health')}
+                            />
+                        )}
+                        {templatesLoading
+                            ? Array.from({ length: 3 }).map((_, i) => (
+                                  <div
+                                      key={`sk-${i}`}
+                                      className="h-44 w-40 shrink-0 animate-pulse rounded-2xl bg-gray-100 dark:bg-neutral-800"
+                                  />
+                              ))
+                            : templates.map((template) => (
+                                  <div key={template.id} className="w-40 shrink-0">
+                                      <WorkoutCard
+                                          template={template}
+                                          onStart={handleTemplateStart}
+                                          onClick={() => handleTemplateStart(template.id)}
+                                      />
+                                  </div>
+                              ))}
+                    </div>
+                </div>
+            )}
+
             <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="mb-3 flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Недавние тренировки</h2>
                     <button
-                        className="text-primary text-sm"
+                        type="button"
+                        className="text-sm text-primary"
                         onClick={() => {
                             tg.hapticFeedback({ type: 'selection' })
                             navigate('/workouts')
@@ -198,7 +266,7 @@ export function Home() {
                                             navigate(`/workouts/${workout.id}`)
                                         }
                                     }}
-                                    className="bg-gray-50 dark:bg-neutral-800 flex cursor-pointer items-center gap-3 rounded-xl p-4 transition-colors active:scale-[0.98]"
+                                    className="flex cursor-pointer items-center gap-3 rounded-xl bg-gray-50 p-4 transition-colors active:scale-[0.98] dark:bg-neutral-800"
                                     onClick={() => {
                                         tg.hapticFeedback({ type: 'impact', style: 'light' })
                                         navigate(`/workouts/${workout.id}`)
@@ -217,11 +285,7 @@ export function Home() {
                                                 <Clock className="h-3 w-3" />
                                                 {workout.duration} мин
                                             </span>
-                                            {showCals && (
-                                                <span>
-                                                    {workout.calories} ккал
-                                                </span>
-                                            )}
+                                            {showCals && <span>{workout.calories} ккал</span>}
                                         </div>
                                     </div>
                                     <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
@@ -232,30 +296,30 @@ export function Home() {
                 )}
             </div>
 
-            {/* Quick Actions */}
             <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Быстрые действия</h2>
+                <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Быстрые действия</h2>
                 <div className="grid grid-cols-2 gap-3">
                     <button
-                        className="bg-primary text-white flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium active:scale-[0.98] transition-transform"
+                        type="button"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-medium text-white transition-transform active:scale-[0.98]"
                         onClick={() => handleQuickAction('workout')}
                     >
-                        <Activity className="w-5 h-5" />
+                        <Activity className="h-5 w-5" />
                         Записать тренировку
                     </button>
                     <button
-                        className="bg-gray-100 dark:bg-neutral-700 text-gray-900 dark:text-white flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-colors active:scale-[0.98]"
+                        type="button"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors active:scale-[0.98] dark:bg-neutral-700 dark:text-white"
                         onClick={() => handleQuickAction('metric')}
                     >
-                        <TrendingUp className="w-5 h-5" />
+                        <TrendingUp className="h-5 w-5" />
                         Записать метрику
                     </button>
                 </div>
             </div>
 
-            {/* Telegram Platform Info */}
             {tg.isTelegram && (
-                <div className="text-center text-xs text-gray-400 dark:text-gray-500 pt-4">
+                <div className="pt-4 text-center text-xs text-gray-400 dark:text-gray-500">
                     Telegram WebApp v{tg.webApp?.version} • {tg.webApp?.platform}
                 </div>
             )}

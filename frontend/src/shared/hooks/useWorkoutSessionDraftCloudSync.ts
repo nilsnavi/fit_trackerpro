@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useTelegramContext } from '@app/providers/TelegramProvider'
-import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
+import { useWorkoutSessionDraftStore } from '@/state/local'
 import {
     WORKOUT_SESSION_DRAFT_CLOUD_KEY,
     parseWorkoutSessionDraftBlob,
