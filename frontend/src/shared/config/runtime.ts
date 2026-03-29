@@ -1,5 +1,5 @@
 /**
- * Runtime config from `public/config.js` (Docker: generated via envsubst from `config.template.js`).
+ * Runtime config from `public/config.js` (Docker: `startup.sh` writes `config.js` from `config.template.js` before nginx).
  * In local dev, `public/config.js` may leave values empty so Vite `import.meta.env` applies.
  */
 
