@@ -89,10 +89,8 @@ async def send_emergency_notification(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = EmergencyService(db)
-    user_name = current_user.first_name or current_user.username or "User"
     return await service.send_emergency_notification(
-        user_id=current_user.id,
-        user_name=user_name,
+        user=current_user,
         notify_data=notify_data,
     )
 
@@ -105,10 +103,9 @@ async def notify_workout_start(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = EmergencyService(db)
-    user_name = current_user.first_name or current_user.username or "User"
     return await service.notify_workout_start(
-        user_id=current_user.id,
-        user_name=user_name,
+        user=current_user,
+        workout_id=workout_id,
         estimated_duration=estimated_duration,
     )
 
@@ -122,10 +119,9 @@ async def notify_workout_end(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = EmergencyService(db)
-    user_name = current_user.first_name or current_user.username or "User"
     return await service.notify_workout_end(
-        user_id=current_user.id,
-        user_name=user_name,
+        user=current_user,
+        workout_id=workout_id,
         duration=duration,
         completed_successfully=completed_successfully,
     )

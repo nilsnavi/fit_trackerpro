@@ -505,7 +505,8 @@ class AnalyticsService:
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
         return response
 
-    async def export_data(self, export_request: DataExportRequest) -> DataExportResponse:
+    async def export_data(self, user_id: int, export_request: DataExportRequest) -> DataExportResponse:
+        _ = user_id
         export_id = f"exp_{uuid.uuid4().hex[:12]}"
         return DataExportResponse(
             export_id=export_id,
@@ -517,7 +518,8 @@ class AnalyticsService:
             file_size=None,
         )
 
-    async def get_export_status(self, export_id: str) -> DataExportResponse:
+    async def get_export_status(self, user_id: int, export_id: str) -> DataExportResponse:
+        _ = user_id
         raise AnalyticsNotFoundError("Export not found or expired")
 
     async def get_analytics_summary(self, user_id: int, period: str) -> AnalyticsSummaryResponse:

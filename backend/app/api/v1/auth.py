@@ -16,7 +16,6 @@ from app.schemas.auth import (
     TelegramAuthRequest,
     UserProfileResponse,
     UserProfileUpdate,
-    user_profile_from_db,
 )
 from app.application.auth_service import AuthService
 
@@ -34,7 +33,7 @@ async def authenticate_telegram(
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    return user_profile_from_db(current_user)
+    return AuthService.get_profile(current_user)
 
 
 @router.put("/me", response_model=UserProfileResponse)

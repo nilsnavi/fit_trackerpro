@@ -95,3 +95,11 @@ class ChallengeForbiddenError(DomainError):
     code = "challenge_forbidden"
     http_status = 403
     default_message = "Forbidden"
+
+
+class NotImplementedFeatureError(DomainError):
+    """Feature exists in API but is not implemented yet."""
+
+    code = "not_implemented"
+    http_status = 501
+    default_message = "This feature is not implemented yet"
