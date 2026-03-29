@@ -72,8 +72,8 @@ jobs:
           TELEGRAM_WEBAPP_URL=${{ secrets.TELEGRAM_WEBAPP_URL }}
           ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
           SENTRY_DSN=${{ secrets.SENTRY_DSN }}
-          VITE_API_URL=${{ secrets.VITE_API_URL }}
-          VITE_TELEGRAM_BOT_USERNAME=${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
+          API_URL=${{ secrets.VITE_API_URL }}
+          TELEGRAM_BOT_USERNAME=${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
           IMAGE_TAG=${{ env.DEPLOY_IMAGE_TAG }}
           GITHUB_REPOSITORY=${{ github.repository }}
           EOL

@@ -1,16 +1,15 @@
 import axios, { AxiosInstance, isAxiosError } from 'axios'
 import * as Sentry from '@sentry/react'
 import { isSentryEnabled } from '@app/sentry'
+import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, normalizeError } from '@shared/errors'
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
 class ApiService {
     private client: AxiosInstance
 
     constructor() {
         this.client = axios.create({
-            baseURL: API_BASE_URL,
+            baseURL: getPublicApiBaseUrl(),
             timeout: 10000,
             headers: {
                 'Content-Type': 'application/json',
@@ -24,6 +23,7 @@ class ApiService {
         // Request interceptor
         this.client.interceptors.request.use(
             (config) => {
+                config.baseURL = getPublicApiBaseUrl()
                 // Add auth token if available
                 const token = localStorage.getItem('auth_token')
                 if (token) {
