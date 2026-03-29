@@ -21,6 +21,7 @@
 | `docs/PRODUCTION_CHECKLIST.md` | Релизный чеклист перед/после выката | Before release, Environment and secrets, Smoke checks, Rollback readiness | Release Manager |
 | `docs/SECURITY_CHECKLIST.md` | Безопасность приложения и инфраструктуры | Transport, Auth/session security, Secrets, Containers/dependencies, Review cadence | Security Owner |
 | `docs/PROJECT_AUDIT_2026-03-26.md` | Технический аудит и план стабилизации | Findings, Priorities, Iteration plan, Quick wins | Tech Lead |
+| `docs/target-architecture.md` | Целевая архитектура после рефакторинга (to-be) | Frontend/backend structure, deploy, env, health | Tech Lead |
 | `frontend/DESIGN_SYSTEM.md` | Дизайн-система frontend и UI-паттерны | Theme setup, component classes, animations, Telegram integration | Frontend Lead |
 | `database/postgresql/PARTITIONING_POLICY.md` | Политика партиционирования БД | Triggers, rollout policy, maintenance | DB Owner |
 | `database/postgresql/migrations/README_zero_downtime_snake_case.md` | Runbook zero-downtime миграций | Phases, migration order, validation | DB Owner |

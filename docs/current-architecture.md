@@ -16,7 +16,7 @@
 - `frontend/src/main.tsx` - runtime entrypoint.
 - `frontend/src/app` - app shell, providers, router.
 - `frontend/src/pages` - page-level экраны.
-- `frontend/src/features` - доменные модули (workouts, exercises, profile, health, analytics, achievements).
+- `frontend/src/features` - доменные модули (workouts, exercises, profile, health, analytics, achievements, home, emergency).
 - `frontend/src/components` - UI и feature components.
 - `frontend/src/services` - API-клиент.
 
