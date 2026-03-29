@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Clock, Flame, ChevronRight, Play } from 'lucide-react'
+import { Plus, Clock, Flame, ChevronRight, Play, CalendarDays } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import {
     WORKOUT_FILTER_TYPE_ORDER,
@@ -136,6 +136,11 @@ export function WorkoutsPage() {
         navigate('/workouts/builder')
     }
 
+    const handleOpenCalendar = () => {
+        tg.hapticFeedback({ type: 'selection' })
+        navigate('/workouts/calendar')
+    }
+
     const handleOpenMode = (mode: WorkoutMode) => {
         tg.hapticFeedback({ type: 'selection' })
         navigate(`/workouts/mode/${mode}`)
@@ -156,14 +161,26 @@ export function WorkoutsPage() {
     return (
         <div className="p-4 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Тренировки</h1>
-                <button
-                    className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center active:scale-95 transition-transform"
-                    onClick={handleAddWorkout}
-                >
-                    <Plus className="w-5 h-5" />
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                    <button
+                        type="button"
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-white"
+                        onClick={handleOpenCalendar}
+                        aria-label="Календарь тренировок"
+                    >
+                        <CalendarDays className="h-5 w-5" />
+                    </button>
+                    <button
+                        type="button"
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-transform active:scale-95"
+                        onClick={handleAddWorkout}
+                        aria-label="Новая тренировка"
+                    >
+                        <Plus className="h-5 w-5" />
+                    </button>
+                </div>
             </div>
 
             {draftWorkoutId != null && (

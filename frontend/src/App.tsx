@@ -14,6 +14,9 @@ import AnalyticsPage from '@features/analytics/pages/AnalyticsPage'
 import { Catalog } from '@features/exercises/pages/Catalog'
 import { AddExercise } from '@features/exercises/pages/AddExercise'
 import WorkoutModePage from '@features/workouts/pages/WorkoutModePage'
+import { WorkoutEditPage } from '@features/workouts/pages/WorkoutEditPage'
+import { LoginPage } from '@features/auth/pages/LoginPage'
+import WorkoutCalendarPage from '@features/workouts/pages/Calendar'
 
 function SentryErrorFallback({
     resetError,
@@ -53,7 +56,10 @@ export default function App() {
                                     <Route path="/workouts" element={<WorkoutsPage />} />
                                     <Route path="/workouts/builder" element={<WorkoutBuilderPage />} />
                                     <Route path="/workouts/mode/:mode" element={<WorkoutModePage />} />
+                                    <Route path="/workouts/calendar" element={<WorkoutCalendarPage />} />
+                                    <Route path="/workouts/:id/edit" element={<WorkoutEditPage />} />
                                     <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+                                    <Route path="/login" element={<LoginPage />} />
                                     <Route path="/exercises" element={<Catalog />} />
                                     <Route path="/exercises/add" element={<AddExercise />} />
                                     <Route path="/health" element={<HealthPage />} />
