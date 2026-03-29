@@ -22,7 +22,7 @@ from app.api.v1.workouts import router as workouts_router
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
 from app.core.config import settings
 from app.core.logging import configure_logging
-from app.core.telemetry import init_sentry
+from app.core.telemetry import init_sentry, setup_prometheus_metrics
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
 from app.api.v1.openapi_tags import (
@@ -150,6 +150,8 @@ app.include_router(challenges_router,
                    prefix="/api/v1/challenges", tags=[TAG_CHALLENGES], deprecated=True)
 app.include_router(
     emergency_router, prefix="/api/v1/emergency", tags=[TAG_EMERGENCY], deprecated=True)
+
+setup_prometheus_metrics(app, settings)
 
 
 @app.get("/", tags=[TAG_SYSTEM])

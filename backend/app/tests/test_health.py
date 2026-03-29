@@ -68,6 +68,19 @@ async def test_system_and_health_metrics_separation_smoke():
 
 
 @pytest.mark.unit
+async def test_prometheus_metrics_endpoint():
+    """Smoke: /metrics отдаёт Prometheus text после реального запроса."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.get("/")
+        response = await client.get("/metrics")
+        assert response.status_code == 200
+        body = response.text
+        assert "http_requests_total" in body
+        assert "# HELP" in body
+
+
+@pytest.mark.unit
 async def test_system_version_contract_smoke():
     """Smoke test: system version endpoint returns expected contract."""
     transport = ASGITransport(app=app)
