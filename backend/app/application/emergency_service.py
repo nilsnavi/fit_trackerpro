@@ -5,6 +5,7 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.user import User
 from app.domain.emergency_contact import EmergencyContact
 from app.domain.exceptions import EmergencyNotFoundError, EmergencyValidationError
 from app.infrastructure.repositories.emergency_repository import EmergencyRepository
@@ -23,6 +24,10 @@ from app.schemas.emergency import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _display_name(user: User) -> str:
+    return user.first_name or user.username or "User"
 
 
 class EmergencyService:
@@ -85,10 +90,11 @@ class EmergencyService:
 
     async def send_emergency_notification(
         self,
-        user_id: int,
-        user_name: str,
+        user: User,
         notify_data: EmergencyNotifyRequest,
     ) -> EmergencyNotifyResponse:
+        user_id = user.id
+        user_name = _display_name(user)
         contacts = await self.repository.list_active_contacts_for_emergency(user_id=user_id)
         if not contacts:
             raise EmergencyValidationError("No active emergency contacts configured")
@@ -136,8 +142,14 @@ class EmergencyService:
         )
 
     async def notify_workout_start(
-        self, user_id: int, user_name: str, estimated_duration: int | None
+        self,
+        user: User,
+        workout_id: int,
+        estimated_duration: int | None,
     ) -> EmergencyWorkoutNotifyResponse:
+        _ = workout_id
+        user_id = user.id
+        user_name = _display_name(user)
         contacts = await self.repository.list_contacts_for_workout_start(user_id=user_id)
         if not contacts:
             return EmergencyWorkoutNotifyResponse(
@@ -152,8 +164,15 @@ class EmergencyService:
         )
 
     async def notify_workout_end(
-        self, user_id: int, user_name: str, duration: int, completed_successfully: bool
+        self,
+        user: User,
+        workout_id: int,
+        duration: int,
+        completed_successfully: bool,
     ) -> EmergencyWorkoutNotifyResponse:
+        _ = workout_id
+        user_id = user.id
+        user_name = _display_name(user)
         contacts = await self.repository.list_contacts_for_workout_end(user_id=user_id)
         if not contacts:
             return EmergencyWorkoutNotifyResponse(

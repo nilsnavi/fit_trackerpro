@@ -176,7 +176,10 @@ async def export_data(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    return await service.export_data(export_request=export_request)
+    return await service.export_data(
+        user_id=current_user.id,
+        export_request=export_request,
+    )
 
 
 @router.get("/export/{export_id}", response_model=DataExportResponse)
@@ -186,7 +189,10 @@ async def get_export_status(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    return await service.get_export_status(export_id=export_id)
+    return await service.get_export_status(
+        user_id=current_user.id,
+        export_id=export_id,
+    )
 
 
 @router.get("/summary", response_model=AnalyticsSummaryResponse)

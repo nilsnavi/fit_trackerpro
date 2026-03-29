@@ -27,6 +27,14 @@ class AuthService:
         self.db = db
         self.repository = AuthRepository(db)
 
+    @staticmethod
+    def get_profile(user: User) -> UserProfileResponse:
+        return user_profile_from_db(user)
+
+    async def delete_account(self, user: User) -> None:
+        await self.db.delete(user)
+        await self.db.commit()
+
     async def _get_or_create_user(self, telegram_user_data: dict) -> User:
         telegram_id = telegram_user_data["id"]
         user = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)

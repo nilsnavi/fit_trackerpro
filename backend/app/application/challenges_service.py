@@ -166,7 +166,10 @@ class ChallengesService:
             updated_at=challenge.updated_at,
         )
 
-    async def join_challenge(self, challenge_id: int, join_code: str | None) -> ChallengeJoinResponse:
+    async def join_challenge(
+        self, user_id: int, challenge_id: int, join_code: str | None
+    ) -> ChallengeJoinResponse:
+        _ = user_id
         challenge = await self.repository.get_challenge(challenge_id)
         if not challenge:
             raise ChallengeNotFoundError("Challenge not found")
@@ -185,7 +188,8 @@ class ChallengesService:
             participant_count=46,
         )
 
-    async def leave_challenge(self, challenge_id: int) -> ChallengeLeaveResponse:
+    async def leave_challenge(self, user_id: int, challenge_id: int) -> ChallengeLeaveResponse:
+        _ = user_id
         challenge = await self.repository.get_challenge(challenge_id)
         if not challenge:
             raise ChallengeNotFoundError("Challenge not found")
@@ -206,5 +210,6 @@ class ChallengesService:
             total_participants=0,
         )
 
-    async def get_my_active_challenges(self) -> ChallengeMyActiveResponse:
+    async def get_my_active_challenges(self, user_id: int) -> ChallengeMyActiveResponse:
+        _ = user_id
         return ChallengeMyActiveResponse(items=[], total=0)

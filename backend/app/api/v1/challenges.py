@@ -51,7 +51,7 @@ async def get_my_active_challenges(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    return await service.get_my_active_challenges()
+    return await service.get_my_active_challenges(user_id=current_user.id)
 
 
 @router.get("/{challenge_id}", response_model=ChallengeDetailResponse)
@@ -86,7 +86,11 @@ async def join_challenge(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    return await service.join_challenge(challenge_id=challenge_id, join_code=join_code)
+    return await service.join_challenge(
+        user_id=current_user.id,
+        challenge_id=challenge_id,
+        join_code=join_code,
+    )
 
 
 @router.post("/{challenge_id}/leave", response_model=ChallengeLeaveResponse)
@@ -96,7 +100,10 @@ async def leave_challenge(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    return await service.leave_challenge(challenge_id=challenge_id)
+    return await service.leave_challenge(
+        user_id=current_user.id,
+        challenge_id=challenge_id,
+    )
 
 
 @router.get("/{challenge_id}/leaderboard", response_model=ChallengeLeaderboardResponse)
