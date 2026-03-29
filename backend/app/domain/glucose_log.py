@@ -4,7 +4,15 @@ GlucoseLog Model
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, ForeignKey, Index, Numeric
+from sqlalchemy import (
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Numeric,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -29,9 +37,10 @@ class GlucoseLog(Base):
         index=True
     )
     workout_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workout_logs.id", ondelete="CASCADE"),
+        Integer,
         nullable=True,
-        index=True
+        index=True,
+        comment="Workout must belong to the same user (enforced by composite FK)",
     )
     value: Mapped[float] = mapped_column(
         Numeric(5, 2),
@@ -61,13 +70,24 @@ class GlucoseLog(Base):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="glucose_logs")
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="glucose_logs",
+        overlaps="workout,glucose_logs",
+    )
     workout: Mapped[Optional["WorkoutLog"]] = relationship(
         "WorkoutLog",
-        back_populates="glucose_logs"
+        back_populates="glucose_logs",
+        overlaps="user,glucose_logs",
     )
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "workout_id"],
+            ["workout_logs.user_id", "workout_logs.id"],
+            ondelete="CASCADE",
+            name="fk_glucose_logs_user_workout",
+        ),
         Index('ix_glucose_logs_user_timestamp', 'user_id', 'timestamp'),
         Index('ix_glucose_logs_measurement_type', 'measurement_type'),
     )

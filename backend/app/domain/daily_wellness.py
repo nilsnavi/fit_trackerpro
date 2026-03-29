@@ -2,9 +2,19 @@
 DailyWellness Model
 """
 from datetime import datetime, date
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, Date, JSON, ForeignKey, Index, Numeric
+from sqlalchemy import (
+    Integer,
+    String,
+    DateTime,
+    Date,
+    JSON,
+    ForeignKey,
+    Index,
+    Numeric,
+    CheckConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -83,7 +93,7 @@ class DailyWellness(Base):
         comment="Mood score 0-100"
     )
 
-    notes: Mapped[str] = mapped_column(
+    notes: Mapped[Optional[str]] = mapped_column(
         String(1000),
         nullable=True,
         comment="Additional notes"
@@ -106,6 +116,22 @@ class DailyWellness(Base):
         "User", back_populates="daily_wellness_entries")
 
     __table_args__ = (
+        CheckConstraint(
+            "sleep_score >= 0 AND sleep_score <= 100",
+            name="ck_daily_wellness_sleep_score",
+        ),
+        CheckConstraint(
+            "energy_score >= 0 AND energy_score <= 100",
+            name="ck_daily_wellness_energy_score",
+        ),
+        CheckConstraint(
+            "stress_level IS NULL OR (stress_level >= 0 AND stress_level <= 10)",
+            name="ck_daily_wellness_stress_level",
+        ),
+        CheckConstraint(
+            "mood_score IS NULL OR (mood_score >= 0 AND mood_score <= 100)",
+            name="ck_daily_wellness_mood_score",
+        ),
         Index('ix_daily_wellness_user_date', 'user_id', 'date', unique=True),
         Index('ix_daily_wellness_sleep_score', 'sleep_score'),
         Index('ix_daily_wellness_energy_score', 'energy_score'),
