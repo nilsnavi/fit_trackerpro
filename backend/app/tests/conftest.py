@@ -18,7 +18,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from typing import AsyncGenerator, Generator
 
-from app.domain import Base, get_async_db
+from app.domain import Base
+from app.infrastructure.database import get_async_db
 from app.main import app
 from app.tests.telegram_webapp import build_init_data
 from app.settings import settings

@@ -19,7 +19,7 @@ def build_init_data(
     invalid_hash: bool = False,
 ) -> str:
     """
-    Build a signed initData query string compatible with app.utils.telegram_auth.
+    Build a signed initData query string compatible with app.infrastructure.telegram_auth.
     """
     if auth_date is None:
         auth_date = int(time.time())

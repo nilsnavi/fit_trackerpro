@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.settings import settings
 from app.core.security import security, verify_token
-from app.domain import get_async_db, User
+from app.domain import User
+from app.infrastructure.database import get_async_db
 
 
 async def get_current_user_id(

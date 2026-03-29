@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.security import create_access_token, create_refresh_token, verify_token
 from app.domain import User
-from app.repositories.auth_repository import AuthRepository
+from app.domain.exceptions import AuthenticationError
+from app.infrastructure.repositories.auth_repository import AuthRepository
 from app.schemas.auth import (
     AuthResponse,
     LogoutResponse,
@@ -19,7 +19,7 @@ from app.schemas.auth import (
     user_profile_from_db,
 )
 from app.settings import settings
-from app.utils.telegram_auth import validate_and_get_user
+from app.infrastructure.telegram_auth import validate_and_get_user
 
 
 class AuthService:
@@ -55,10 +55,7 @@ class AuthService:
             max_age_seconds=300,
         )
         if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Authentication failed: {error}",
-            )
+            raise AuthenticationError(f"Authentication failed: {error}")
 
         user = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
@@ -103,10 +100,7 @@ class AuthService:
     def refresh_token(refresh_request: RefreshTokenRequest) -> RefreshTokenResponse:
         user_id = verify_token(refresh_request.refresh_token, token_type="refresh")
         if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired refresh token",
-            )
+            raise AuthenticationError("Invalid or expired refresh token")
         return RefreshTokenResponse(
             access_token=create_access_token(user_id),
             refresh_token=create_refresh_token(user_id),

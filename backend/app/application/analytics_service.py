@@ -8,7 +8,12 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories.analytics_repository import AnalyticsRepository
+from app.domain.exceptions import (
+    AnalyticsNotFoundError,
+    AnalyticsUnavailableError,
+    AnalyticsValidationError,
+)
+from app.infrastructure.repositories.analytics_repository import AnalyticsRepository
 from app.schemas.analytics import (
     AnalyticsSummaryResponse,
     CalendarDayEntry,
@@ -25,25 +30,13 @@ from app.schemas.analytics import (
     TrainingLoadDailyTableResponse,
     WorkoutCalendarResponse,
 )
-from app.utils.cache import (
+from app.infrastructure.cache import (
     get_cache_json,
     invalidate_user_analytics_cache,
     set_cache_json,
 )
 from app.settings import settings
-from app.utils.feature_flags import is_feature_enabled
-
-
-class AnalyticsValidationError(Exception):
-    pass
-
-
-class AnalyticsNotFoundError(Exception):
-    pass
-
-
-class AnalyticsUnavailableError(Exception):
-    pass
+from app.infrastructure.feature_flags import is_feature_enabled
 
 
 class AnalyticsService:

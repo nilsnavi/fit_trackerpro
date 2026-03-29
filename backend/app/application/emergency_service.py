@@ -6,7 +6,8 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain import EmergencyContact
-from app.repositories.emergency_repository import EmergencyRepository
+from app.domain.exceptions import EmergencyNotFoundError, EmergencyValidationError
+from app.infrastructure.repositories.emergency_repository import EmergencyRepository
 from app.schemas.emergency import (
     EmergencyContactCreate,
     EmergencyContactListResponse,
@@ -22,14 +23,6 @@ from app.schemas.emergency import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class EmergencyNotFoundError(Exception):
-    pass
-
-
-class EmergencyValidationError(Exception):
-    pass
 
 
 class EmergencyService:

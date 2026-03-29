@@ -3,7 +3,8 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain import Exercise
-from app.repositories.exercises_repository import ExercisesRepository
+from app.domain.exceptions import ExerciseNotFoundError
+from app.infrastructure.repositories.exercises_repository import ExercisesRepository
 from app.schemas.exercises import (
     ExerciseCategoriesResponse,
     ExerciseCreate,
@@ -13,10 +14,6 @@ from app.schemas.exercises import (
     ExerciseResponse,
     ExerciseUpdate,
 )
-
-
-class ExerciseNotFoundError(Exception):
-    pass
 
 
 class ExercisesService:
