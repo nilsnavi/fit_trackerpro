@@ -20,6 +20,7 @@
 | `docs/ROLLBACK_STRATEGY.md` | P1-стратегия безопасного отката | Trigger conditions, workflow rollback, DB restore policy, manual runbook | DevOps/SRE |
 | `docs/PRODUCTION_CHECKLIST.md` | Релизный чеклист перед/после выката | Before release, Environment and secrets, Smoke checks, Rollback readiness | Release Manager |
 | `docs/SECURITY_CHECKLIST.md` | Безопасность приложения и инфраструктуры | Transport, Auth/session security, Secrets, Containers/dependencies, Review cadence | Security Owner |
+| `docs/security/checklist.md` | Практический чеклист безопасности (RU), привязка к стеку и env | Секреты, TLS, Telegram/JWT, API-лимиты, CI, периодичность | Security Owner |
 | `docs/PROJECT_AUDIT_2026-03-26.md` | Технический аудит и план стабилизации | Findings, Priorities, Iteration plan, Quick wins | Tech Lead |
 | `docs/target-architecture.md` | Целевая архитектура после рефакторинга (to-be) | Frontend/backend structure, deploy, env, health | Tech Lead |
 | `docs/architecture/backend.md` | Слои backend, направление зависимостей, bounded contexts, правила новых модулей | Слои, Направление зависимостей, Основные bounded contexts, Правила для новых модулей | Backend Lead |
@@ -34,10 +35,10 @@
 - **Frontend:** UI/UX гайды, поведение Telegram Mini App на клиенте.
 - **Database:** migration runbooks, schema policy, compatibility notes.
 - **DevOps/SRE:** окружения, деплой, CI/CD, rollback, production checklists.
-- **Security:** security checklist, secret management, periodic review cadence.
+- **Security:** `docs/SECURITY_CHECKLIST.md`, `docs/security/checklist.md`, secret management, periodic review cadence.
 
 ## Регламент обновления документации
 
 - Обновляйте документацию в том же PR/коммите, где меняется поведение системы.
-- Минимум раз в месяц выполняйте doc-review для `docs/DEPLOYMENT.md`, `docs/ENVIRONMENT_SETUP.md`, `docs/SECURITY_CHECKLIST.md`.
+- Минимум раз в месяц выполняйте doc-review для `docs/DEPLOYMENT.md`, `docs/ENVIRONMENT_SETUP.md`, `docs/SECURITY_CHECKLIST.md`, `docs/security/checklist.md`.
 - При изменении API сначала обновляйте `README.md` (API Endpoints), затем профильные guides.
