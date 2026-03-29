@@ -2,9 +2,16 @@
 Auth Schemas
 Pydantic models for authentication endpoints
 """
-from typing import List, Optional
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Annotated, List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.enums import TokenKind, UserTheme, UserUnits
+
+# --- Response / stored profile (permissive; must accept legacy DB JSON) ---
 
 
 class UserProfileData(BaseModel):
@@ -27,26 +34,102 @@ class UserSettingsData(BaseModel):
     units: str = "metric"
 
 
+# --- Strict request bodies for PATCH / profile update ---
+
+_ShortLabel = Annotated[
+    str,
+    Field(
+        min_length=1,
+        max_length=128,
+        description="Non-empty label up to 128 characters.",
+    ),
+]
+
+
+class UserProfilePatch(BaseModel):
+    """Validated subset of profile JSON for updates (merged server-side)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    equipment: Optional[List[_ShortLabel]] = Field(
+        None,
+        max_length=50,
+        description="At most 50 equipment tags.",
+    )
+    limitations: Optional[List[_ShortLabel]] = Field(
+        None,
+        max_length=50,
+        description="At most 50 limitation tags.",
+    )
+    goals: Optional[List[_ShortLabel]] = Field(
+        None,
+        max_length=50,
+        description="At most 50 goal tags.",
+    )
+
+
+class UserSettingsPatch(BaseModel):
+    """Validated settings for partial updates."""
+
+    theme: Optional[UserTheme] = Field(
+        None,
+        description="UI theme preset.",
+    )
+    notifications: Optional[bool] = Field(
+        None,
+        description="Enable push / in-app notifications.",
+    )
+    units: Optional[UserUnits] = Field(
+        None,
+        description="Measurement system for weights and distances.",
+    )
+
+
 class TelegramAuthRequest(BaseModel):
     """Request model for Telegram authentication"""
+
     init_data: str = Field(
         ...,
+        min_length=1,
+        max_length=16384,
         description="Raw initData string from Telegram WebApp",
-        examples=["query_id=...&user={...}&auth_date=...&hash=..."]
+        examples=["query_id=...&user={...}&auth_date=...&hash=..."],
     )
 
 
 class TelegramUserData(BaseModel):
     """Telegram user data model"""
 
-    id: int = Field(..., description="Telegram user ID")
-    username: Optional[str] = Field(None, description="Username")
-    first_name: str = Field(..., description="First name")
-    last_name: Optional[str] = Field(None, description="Last name")
-    language_code: Optional[str] = Field(None, description="Language code")
+    id: int = Field(..., gt=0, le=10**12, description="Telegram user ID")
+    username: Optional[str] = Field(
+        None,
+        max_length=64,
+        description="Username",
+    )
+    first_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="First name",
+    )
+    last_name: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Last name",
+    )
+    language_code: Optional[str] = Field(
+        None,
+        min_length=2,
+        max_length=16,
+        description="BCP 47 language tag (e.g. en, ru).",
+    )
     is_premium: Optional[bool] = Field(
         None, description="Is Telegram Premium user")
-    photo_url: Optional[str] = Field(None, description="Profile photo URL")
+    photo_url: Optional[str] = Field(
+        None,
+        max_length=2048,
+        description="Profile photo URL",
+    )
     allows_write_to_pm: Optional[bool] = Field(
         None, description="Allows writing to PM")
 
@@ -54,25 +137,39 @@ class TelegramUserData(BaseModel):
 class AuthResponse(BaseModel):
     """Authentication response"""
     success: bool
-    message: str
+    message: str = Field(..., max_length=2000)
     user: Optional[TelegramUserData] = None
-    access_token: Optional[str] = None
-    token_type: str = "bearer"
+    access_token: Optional[str] = Field(None, max_length=16384)
+    token_type: str = Field(default="bearer", pattern="^(?i)bearer$")
     expires_in: Optional[int] = Field(
-        None, description="Token expiration in seconds")
+        None,
+        ge=0,
+        le=86400 * 365,
+        description="Token expiration in seconds",
+    )
 
 
 class UserProfileUpdate(BaseModel):
     """Request model for updating user profile"""
-    first_name: Optional[str] = Field(None, max_length=255)
-    last_name: Optional[str] = Field(None, max_length=255)
-    profile: Optional[UserProfileData] = Field(
+    first_name: Optional[str] = Field(
         None,
-        description="User profile data: equipment, limitations, goals"
+        min_length=1,
+        max_length=255,
+        description="Given name; omit to leave unchanged.",
     )
-    settings: Optional[UserSettingsData] = Field(
+    last_name: Optional[str] = Field(
         None,
-        description="User settings: theme, notifications, units"
+        min_length=1,
+        max_length=255,
+        description="Family name; omit to leave unchanged.",
+    )
+    profile: Optional[UserProfilePatch] = Field(
+        None,
+        description="User profile data: equipment, limitations, goals",
+    )
+    settings: Optional[UserSettingsPatch] = Field(
+        None,
+        description="User settings: theme, notifications, units",
     )
 
 
@@ -105,25 +202,38 @@ def user_profile_from_db(user) -> UserProfileResponse:
 
 class TokenPayload(BaseModel):
     """JWT token payload"""
-    sub: int = Field(..., description="User ID (subject)")
-    exp: int = Field(..., description="Expiration timestamp")
-    iat: int = Field(..., description="Issued at timestamp")
-    type: str = Field(default="access", description="Token type")
+    sub: int = Field(..., gt=0, description="User ID (subject)")
+    exp: int = Field(..., ge=0, description="Expiration timestamp")
+    iat: int = Field(..., ge=0, description="Issued at timestamp")
+    type: TokenKind = Field(
+        default=TokenKind.ACCESS,
+        description="Token type",
+    )
 
 
 class RefreshTokenRequest(BaseModel):
     """Request model for token refresh"""
-    refresh_token: str = Field(..., description="Refresh token")
+    refresh_token: str = Field(
+        ...,
+        min_length=32,
+        max_length=16384,
+        description="Opaque refresh token issued by this API.",
+    )
 
 
 class RefreshTokenResponse(BaseModel):
     """Token refresh response"""
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int = Field(..., description="Access token lifetime in seconds")
+    access_token: str = Field(..., min_length=10, max_length=16384)
+    refresh_token: str = Field(..., min_length=32, max_length=16384)
+    token_type: str = Field(default="bearer", pattern="^(?i)bearer$")
+    expires_in: int = Field(
+        ...,
+        ge=60,
+        le=86400 * 365,
+        description="Access token lifetime in seconds",
+    )
 
 
 class LogoutResponse(BaseModel):
     """Logout response"""
-    message: str = "Successfully logged out"
+    message: str = Field(default="Successfully logged out", max_length=500)

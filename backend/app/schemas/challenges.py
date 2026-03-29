@@ -2,9 +2,14 @@
 Challenges Schemas
 Pydantic models for challenges endpoints
 """
-from typing import Optional, List
-from datetime import datetime, date
-from pydantic import BaseModel, Field
+from __future__ import annotations
+
+from datetime import date, datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, model_validator
+
+from app.schemas.enums import ChallengeType
 
 
 class ChallengeListFilters(BaseModel):
@@ -17,36 +22,110 @@ class ChallengeListFilters(BaseModel):
 
 class ChallengeGoal(BaseModel):
     """Challenge goal criteria"""
-    type: str = Field(...,
-                      description="Goal type: count, duration, distance, etc.")
-    target: float = Field(..., description="Target value to achieve")
-    unit: str = Field(..., description="Unit of measurement")
-    description: Optional[str] = None
+    type: str = Field(
+        ...,
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z][a-z0-9_]*$",
+        description="Goal discriminator, e.g. count, duration, distance.",
+    )
+    target: float = Field(
+        ...,
+        gt=0,
+        le=1e12,
+        description="Target value to achieve (must be positive).",
+    )
+    unit: str = Field(
+        ...,
+        min_length=1,
+        max_length=32,
+        description="Unit of measurement (e.g. kg, km, kcal).",
+    )
+    description: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Optional human-readable goal text.",
+    )
 
 
 class ChallengeRules(BaseModel):
     """Challenge rules"""
-    min_workouts_per_week: Optional[int] = None
-    max_workouts_per_day: Optional[int] = None
-    allowed_workout_types: Optional[List[str]] = None
-    excluded_exercises: Optional[List[int]] = None
+    min_workouts_per_week: Optional[int] = Field(
+        None,
+        ge=0,
+        le=21,
+        description="Minimum weekly workouts (0–21).",
+    )
+    max_workouts_per_day: Optional[int] = Field(
+        None,
+        ge=0,
+        le=24,
+        description="Cap on workouts per day.",
+    )
+    allowed_workout_types: Optional[List[str]] = Field(
+        None,
+        max_length=20,
+        description="Allowed workout types; each entry up to 32 chars.",
+    )
+    excluded_exercises: Optional[List[int]] = Field(
+        None,
+        max_length=500,
+        description="Exercise IDs to exclude from the challenge.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_workout_lists(self) -> ChallengeRules:
+        if self.allowed_workout_types:
+            for t in self.allowed_workout_types:
+                if len(t) > 32:
+                    raise ValueError(
+                        "Each allowed_workout_types entry must be at most 32 characters."
+                    )
+        if self.excluded_exercises:
+            for eid in self.excluded_exercises:
+                if eid < 1:
+                    raise ValueError("excluded_exercises IDs must be positive integers.")
+        return self
 
 
 class ChallengeCreate(BaseModel):
     """Request model for creating challenge"""
-    name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=2000)
-    type: str = Field(
+    name: str = Field(
         ...,
-        pattern="^(workout_count|duration|calories|distance|custom)$"
+        min_length=1,
+        max_length=255,
+        description="Challenge title.",
+    )
+    description: Optional[str] = Field(
+        None,
+        max_length=2000,
+    )
+    type: ChallengeType = Field(
+        ...,
+        description="Challenge scoring mode.",
     )
     goal: ChallengeGoal
     start_date: date
     end_date: date
     is_public: bool = False
-    max_participants: int = Field(default=0, ge=0, description="0 = unlimited")
+    max_participants: int = Field(
+        default=0,
+        ge=0,
+        le=1_000_000,
+        description="0 = unlimited participants.",
+    )
     rules: ChallengeRules = Field(default_factory=ChallengeRules)
-    banner_url: Optional[str] = Field(None, max_length=500)
+    banner_url: Optional[str] = Field(
+        None,
+        max_length=2000,
+        description="URL to banner image.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_date_range(self) -> ChallengeCreate:
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date.")
+        return self
 
 
 class ChallengeParticipant(BaseModel):
@@ -103,7 +182,7 @@ class ChallengeJoinResponse(BaseModel):
     success: bool
     challenge_id: int
     joined_at: datetime
-    message: str
+    message: str = Field(..., max_length=2000)
     participant_count: int
 
 
@@ -111,7 +190,7 @@ class ChallengeLeaveResponse(BaseModel):
     """Challenge leave response"""
     success: bool
     challenge_id: int
-    message: str
+    message: str = Field(..., max_length=2000)
 
 
 class ChallengeMyActiveResponse(BaseModel):
@@ -122,9 +201,22 @@ class ChallengeMyActiveResponse(BaseModel):
 
 class ChallengeProgressUpdate(BaseModel):
     """Request model for updating challenge progress"""
-    progress: float = Field(..., ge=0)
-    workout_id: Optional[int] = None
-    notes: Optional[str] = None
+    progress: float = Field(
+        ...,
+        ge=0,
+        le=1e15,
+        description="Non-negative progress value in challenge units.",
+    )
+    workout_id: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Related workout, if any.",
+    )
+    notes: Optional[str] = Field(
+        None,
+        max_length=2000,
+        description="Optional note for this progress update.",
+    )
 
 
 class ChallengeLeaderboardEntry(BaseModel):

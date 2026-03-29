@@ -5,14 +5,31 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class UserCreate(BaseModel):
-    telegram_id: int
-    username: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    telegram_id: int = Field(
+        ...,
+        gt=0,
+        le=10**12,
+        description="Telegram user ID (positive integer).",
+    )
+    username: Optional[str] = Field(
+        None,
+        max_length=64,
+        description="Telegram @username without the leading @.",
+    )
+    first_name: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Given name.",
+    )
+    last_name: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Family name.",
+    )
 
 
 class UserResponse(BaseModel):
