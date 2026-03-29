@@ -122,6 +122,8 @@ app = FastAPI(
     ## Rate Limiting
     API has rate limiting enabled. Tiers: default (read), auth, system, write, plus
     stricter policies for Telegram login, analytics export, and emergency notify.
+    Limits apply per Telegram user when a valid access token, refresh token (on ``/auth/refresh``),
+    or validated WebApp initData (on Telegram login) is present; otherwise per client IP.
     Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``, ``X-RateLimit-Reset``,
     ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and matching ``RateLimit-*`` headers.
     """,

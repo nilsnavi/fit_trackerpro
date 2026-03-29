@@ -14,6 +14,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.api.v1.registration import API_V1_PREFIX
+from app.core.request_identity import (
+    path_needs_body_for_rate_limit_identity,
+    telegram_user_id_from_body_for_rate_limit,
+    user_id_from_authorization_header,
+)
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -82,7 +87,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Rate limiting middleware using Redis
 
-    Tracks request counts per IP address (or forwarded client), per policy and path.
+    Counts requests per policy and path. The key is a valid JWT ``sub`` (Telegram user id)
+    when present, else Telegram user id from validated initData / refresh token body on auth
+    routes, else client IP (or ``X-Forwarded-For`` first hop).
     """
 
     def __init__(self, app):
@@ -230,7 +237,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         }:
             return await call_next(request)
 
-        identifier = self._get_identifier(request)
+        identifier = await self._resolve_identifier(request, path, method)
         policy, limit, window = self._resolve_policy(path, method)
 
         redis_client = getattr(request.app.state, "redis_rate_limit", None)
@@ -268,13 +275,26 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response.headers[k] = v
         return response
 
-    def _get_identifier(self, request: Request) -> str:
-        """Get identifier for rate limiting"""
+    def _get_ip_identifier(self, request: Request) -> str:
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return forwarded.split(",")[0].strip()
 
         return request.client.host if request.client else "unknown"
+
+    async def _resolve_identifier(self, request: Request, path: str, method: str) -> str:
+        """Prefer per-user (JWT or validated Telegram identity); otherwise IP."""
+        uid = user_id_from_authorization_header(request)
+        if uid is not None:
+            return f"u:{uid}"
+
+        if path_needs_body_for_rate_limit_identity(path, method):
+            body = await request.body()
+            uid = telegram_user_id_from_body_for_rate_limit(path, method, body)
+            if uid is not None:
+                return f"u:{uid}"
+
+        return self._get_ip_identifier(request)
 
 
 def rate_limit(
