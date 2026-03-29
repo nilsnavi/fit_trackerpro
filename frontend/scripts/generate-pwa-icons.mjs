@@ -9,6 +9,18 @@ const iconsDir = join(__dirname, '..', 'public', 'icons')
 
 const BRAND = { r: 0x24, g: 0x81, b: 0xcc }
 
+/** Sizes for favicon / browser tab */
+const FAVICON_SIZES = [16, 32]
+
+/**
+ * PNG icons for manifest `purpose: any` and shortcuts.
+ * Covers common Android / Chrome install + launcher densities.
+ */
+const APP_ICON_SIZES = [48, 72, 96, 128, 144, 152, 192, 384, 512]
+
+/** Maskable icons (safe zone ~80% center) */
+const MASKABLE_SIZES = [192, 512]
+
 function fillSolid(png) {
   const { width: w, height: h, data } = png
   const { r, g, b } = BRAND
@@ -63,8 +75,16 @@ async function writeIcon(filename, size, mode) {
   console.log('wrote', full)
 }
 
-await writeIcon('icon-192.png', 192, 'solid')
-await writeIcon('icon-512.png', 512, 'solid')
-await writeIcon('icon-maskable-192.png', 192, 'maskable')
-await writeIcon('icon-maskable-512.png', 512, 'maskable')
+for (const s of FAVICON_SIZES) {
+  await writeIcon(`favicon-${s}.png`, s, 'solid')
+}
+
+for (const s of APP_ICON_SIZES) {
+  await writeIcon(`icon-${s}.png`, s, 'solid')
+}
+
+for (const s of MASKABLE_SIZES) {
+  await writeIcon(`icon-maskable-${s}.png`, s, 'maskable')
+}
+
 await writeIcon('apple-touch-icon-180.png', 180, 'solid')
