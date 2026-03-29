@@ -2,7 +2,7 @@
 WorkoutTemplate Model
 """
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Integer, String, DateTime, JSON, Boolean, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship

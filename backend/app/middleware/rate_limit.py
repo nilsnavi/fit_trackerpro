@@ -259,18 +259,15 @@ def rate_limit(
             if not request:
                 return await func(*args, **kwargs)
 
-            # Generate key
+            # Placeholder: derive rate-limit key (middleware enforces limits today).
             if key_func:
-                key = key_func(request)
+                _ = key_func(request)
             else:
                 forwarded = request.headers.get("X-Forwarded-For")
                 if forwarded:
-                    key = forwarded.split(",")[0].strip()
+                    _ = forwarded.split(",")[0].strip()
                 else:
-                    key = request.client.host if request.client else "unknown"
-
-            # Check rate limit (simplified - in production use Redis)
-            # This is a placeholder for the actual implementation
+                    _ = request.client.host if request.client else "unknown"
 
             return await func(*args, **kwargs)
 

@@ -14,7 +14,6 @@ from .achievement import Achievement
 from .user_achievement import UserAchievement
 from .challenge import Challenge
 from .emergency_contact import EmergencyContact
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
