@@ -6,7 +6,11 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import MuscleLoad, RecoveryState, TrainingLoadDaily, WorkoutLog, WorkoutTemplate
+from app.domain.muscle_load import MuscleLoad
+from app.domain.recovery_state import RecoveryState
+from app.domain.training_load_daily import TrainingLoadDaily
+from app.domain.workout_log import WorkoutLog
+from app.domain.workout_template import WorkoutTemplate
 from app.domain.exceptions import WorkoutNotFoundError
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
 from app.schemas.workouts import (

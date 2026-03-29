@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import EmergencyContact
+from app.domain.emergency_contact import EmergencyContact
 
 
 class EmergencyRepository:

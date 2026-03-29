@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
-from app.domain import User
+from app.domain.user import User
 from app.domain.exceptions import AuthenticationError
 from app.infrastructure.database import get_async_db
 from app.schemas.auth import (

@@ -7,7 +7,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy import pool
 from logging.config import fileConfig
 import asyncio
-from app.domain import Base
+from app.domain.base import Base
+import app.domain.registry  # noqa: F401 — register all models for autogenerate
 from app.settings import settings
 import sys
 import os

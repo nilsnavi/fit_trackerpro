@@ -4,7 +4,7 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import UserAchievement
+from app.domain.user_achievement import UserAchievement
 from app.domain.exceptions import AchievementNotFoundError
 from app.infrastructure.repositories.achievements_repository import AchievementsRepository
 from app.schemas.achievements import (

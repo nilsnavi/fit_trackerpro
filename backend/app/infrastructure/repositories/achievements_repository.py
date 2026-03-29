@@ -3,7 +3,9 @@ from __future__ import annotations
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import Achievement, User, UserAchievement
+from app.domain.achievement import Achievement
+from app.domain.user import User
+from app.domain.user_achievement import UserAchievement
 
 
 class AchievementsRepository:
