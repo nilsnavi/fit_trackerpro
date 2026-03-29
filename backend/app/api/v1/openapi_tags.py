@@ -32,11 +32,11 @@ OPENAPI_TAGS: list[dict[str, Any]] = [
     },
     {
         "name": TAG_AUTHENTICATION,
-        "description": "Registration, login, refresh, and JWT access tokens.",
+        "description": "Public: Telegram login and token refresh. Protected: profile, logout (Bearer).",
     },
     {
         "name": TAG_USERS,
-        "description": "User profile, preferences, and account-related operations.",
+        "description": "Public: create user, get by id. Protected: ``/me`` account and profile (Bearer).",
     },
     {
         "name": TAG_WORKOUTS,

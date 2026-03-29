@@ -1,6 +1,11 @@
 """
-Authentication Middleware
-JWT token handling and user authentication dependencies
+JWT authentication dependencies (FastAPI ``Depends``).
+
+Used by route handlers and by ``app.api.deps.auth.ROUTER_DEPENDENCIES_AUTHENTICATED`` for
+mount-level guards. There is no global auth middleware: public vs protected routes are
+declared in ``app.api.v1.registration`` (system, login, refresh, public user create/lookup
+are unauthenticated; everything else under ``/api/v1`` that is mounted with
+``ROUTER_DEPENDENCIES_AUTHENTICATED`` requires a Bearer access token).
 """
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
