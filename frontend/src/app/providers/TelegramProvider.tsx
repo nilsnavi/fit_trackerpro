@@ -1,4 +1,5 @@
 import { PropsWithChildren, createContext, useContext, useEffect, useMemo } from 'react'
+import { setSentryClientContext } from '@app/sentry'
 import { UseTelegramWebAppReturn, useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 
 const TelegramContext = createContext<UseTelegramWebAppReturn | null>(null)
@@ -22,12 +23,20 @@ export function TelegramProvider({ children }: PropsWithChildren) {
 
     const {
         isTelegram,
+        user,
         init,
         expand,
         enableClosingConfirmation,
         setHeaderColor,
         setBackgroundColor,
     } = telegram
+
+    useEffect(() => {
+        setSentryClientContext({
+            isTelegram,
+            telegramUserId: user?.id,
+        })
+    }, [isTelegram, user?.id])
 
     useEffect(() => {
         if (!isTelegram) {

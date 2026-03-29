@@ -5,6 +5,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -23,6 +24,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.telemetry import init_sentry
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.sentry_scope import SentryUserContextMiddleware
 from app.api.v1.openapi_tags import (
     OPENAPI_TAGS,
     TAG_ACHIEVEMENTS,
@@ -106,6 +108,9 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
+# Middleware order: first registered = innermost (closest to routes).
+app.add_middleware(SentryUserContextMiddleware)
+
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
@@ -115,7 +120,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rate Limiting Middleware
+# Rate Limiting Middleware (outermost on the request path)
 app.add_middleware(RateLimitMiddleware)
 
 # Include routers
@@ -170,6 +175,7 @@ async def telegram_webhook(request: Request):
         return Response(status_code=200)
     except Exception as e:
         logger.error(f"Error processing webhook update: {e}")
+        sentry_sdk.capture_exception(e)
         return Response(status_code=500)
 
 
