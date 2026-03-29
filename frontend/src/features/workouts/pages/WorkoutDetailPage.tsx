@@ -1,11 +1,16 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
 import { ArrowLeft, CalendarDays, Clock3, MessageSquare, Tags } from 'lucide-react'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
+import { useOptimisticWorkoutSession } from '@features/workouts/hooks/useOptimisticWorkoutSession'
+import { useCompleteWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { getErrorMessage } from '@shared/errors'
+import { queryKeys } from '@shared/api/queryKeys'
+import type { WorkoutCompleteRequest, WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
 const formatDate = (value: string): string => {
     const date = new Date(value)
@@ -31,9 +36,16 @@ const formatSetValue = (value?: number, unit?: string): string => {
     return unit ? `${value} ${unit}` : `${value}`
 }
 
+function parseOptionalNumber(raw: string): number | undefined {
+    if (raw.trim() === '') return undefined
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : undefined
+}
+
 export function WorkoutDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const tg = useTelegramWebApp()
     const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
     const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
@@ -47,13 +59,32 @@ export function WorkoutDetailPage() {
         isFetching,
         isError,
         error: queryError,
-    } = useWorkoutHistoryItemQuery(workoutId, isValidWorkoutId)
+    } = useWorkoutHistoryItemQuery(workoutId, isValidWorkoutId, {
+        staleWhileEditing: draftWorkoutId === workoutId && isValidWorkoutId,
+    })
+
+    const [durationMinutes, setDurationMinutes] = useState(45)
+    const [sessionError, setSessionError] = useState<string | null>(null)
+
+    const isActiveDraft =
+        workout != null &&
+        draftWorkoutId === workout.id &&
+        (workout.duration == null || workout.duration <= 0)
+
+    const { updateSet, updateSessionFields } = useOptimisticWorkoutSession(workoutId, Boolean(isActiveDraft))
+
+    const completeMutation = useCompleteWorkoutMutation()
 
     useEffect(() => {
         if (!workout || workout.id !== draftWorkoutId) return
         const d = workout.duration
         if (typeof d === 'number' && d > 0) clearWorkoutSessionDraft()
     }, [workout, draftWorkoutId, clearWorkoutSessionDraft])
+
+    useEffect(() => {
+        setSessionError(null)
+        setDurationMinutes(45)
+    }, [workoutId])
 
     useEffect(() => {
         if (tg.isTelegram) {
@@ -84,15 +115,49 @@ export function WorkoutDetailPage() {
         ), 0)
     }, [workout])
 
-    const isActiveDraft =
-        workout != null &&
-        draftWorkoutId === workout.id &&
-        (workout.duration == null || workout.duration <= 0)
-
     const handleAbandonDraft = () => {
         abandonWorkoutSessionDraft()
         navigate('/workouts')
     }
+
+    const handleCompleteSession = () => {
+        setSessionError(null)
+        const current = queryClient.getQueryData<WorkoutHistoryItem>(queryKeys.workouts.historyItem(workoutId))
+        if (!current) {
+            setSessionError('Нет данных тренировки')
+            return
+        }
+        if (durationMinutes < 1 || durationMinutes > 1440) {
+            setSessionError('Укажите длительность от 1 до 1440 минут')
+            return
+        }
+        if (current.exercises.length === 0) {
+            setSessionError('Добавьте упражнения (например, начните тренировку с сохранённого шаблона)')
+            return
+        }
+        const hasCompletedSet = current.exercises.some((ex) =>
+            ex.sets_completed.some((s) => s.completed),
+        )
+        if (!hasCompletedSet) {
+            setSessionError('Отметьте хотя бы один выполненный подход')
+            return
+        }
+
+        const payload: WorkoutCompleteRequest = {
+            duration: durationMinutes,
+            exercises: current.exercises,
+            comments: current.comments,
+            tags: current.tags ?? [],
+            glucose_before: current.glucose_before,
+            glucose_after: current.glucose_after,
+        }
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
+        completeMutation.mutate({ workoutId, payload })
+    }
+
+    const displayDurationLabel = isActiveDraft
+        ? formatDurationMinutes(durationMinutes)
+        : formatDurationMinutes(workout?.duration)
 
     return (
         <div className="p-4 space-y-4">
@@ -119,8 +184,8 @@ export function WorkoutDetailPage() {
                     {isActiveDraft && (
                         <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/50 dark:bg-amber-950/40 p-4 space-y-3">
                             <p className="text-sm text-gray-800 dark:text-amber-100/90">
-                                Тренировка ещё не завершена. Можно отменить черновик, если вы не планируете её
-                                сохранять.
+                                Тренировка ещё не завершена. Подходы и поля ниже сохраняются на устройстве мгновенно;
+                                сервер получит данные при нажатии «Завершить».
                             </p>
                             <Button
                                 type="button"
@@ -146,7 +211,7 @@ export function WorkoutDetailPage() {
                                     <span>Длительность</span>
                                 </div>
                                 <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-                                    {formatDurationMinutes(workout.duration)}
+                                    {displayDurationLabel}
                                 </div>
                             </div>
                             <div className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2">
@@ -163,10 +228,42 @@ export function WorkoutDetailPage() {
                             </div>
                         </div>
 
-                        {workout.comments && (
+                        {isActiveDraft && (
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    Длительность (мин)
+                                </label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={1440}
+                                    value={durationMinutes}
+                                    onChange={(e) => {
+                                        const v = Number(e.target.value)
+                                        if (Number.isFinite(v)) setDurationMinutes(v)
+                                    }}
+                                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-white"
+                                />
+                            </div>
+                        )}
+
+                        {workout.comments && !isActiveDraft && (
                             <div className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                                 <MessageSquare className="w-4 h-4 mt-0.5" />
                                 <span>{workout.comments}</span>
+                            </div>
+                        )}
+                        {isActiveDraft && (
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    Комментарий (в т.ч. название сессии)
+                                </label>
+                                <textarea
+                                    value={workout.comments ?? ''}
+                                    onChange={(e) => updateSessionFields({ comments: e.target.value || undefined })}
+                                    rows={2}
+                                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-white"
+                                />
                             </div>
                         )}
                         {workout.tags.length > 0 && (
@@ -177,8 +274,28 @@ export function WorkoutDetailPage() {
                         )}
                     </div>
 
+                    {sessionError && (
+                        <p className="text-sm text-red-500 dark:text-red-400">{sessionError}</p>
+                    )}
+                    {completeMutation.isError && (
+                        <p className="text-sm text-red-500 dark:text-red-400">
+                            {getErrorMessage(completeMutation.error)}
+                        </p>
+                    )}
+
+                    {isActiveDraft && (
+                        <Button
+                            type="button"
+                            className="w-full"
+                            disabled={completeMutation.isPending}
+                            onClick={handleCompleteSession}
+                        >
+                            {completeMutation.isPending ? 'Сохранение…' : 'Завершить тренировку'}
+                        </Button>
+                    )}
+
                     <div className="space-y-3">
-                        {workout.exercises.map((exercise) => (
+                        {workout.exercises.map((exercise, exerciseIndex) => (
                             <div
                                 key={`${exercise.exercise_id}-${exercise.name}`}
                                 className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4"
@@ -198,32 +315,84 @@ export function WorkoutDetailPage() {
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="font-medium">Подход {set.set_number}</span>
-                                                <span
-                                                    className={`px-2 py-0.5 rounded-full text-xs ${set.completed
-                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                                                        : 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'
-                                                        }`}
-                                                >
-                                                    {set.completed ? 'Выполнен' : 'Не выполнен'}
-                                                </span>
+                                                {isActiveDraft ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            tg.hapticFeedback({ type: 'selection' })
+                                                            updateSet(exerciseIndex, set.set_number, {
+                                                                completed: !set.completed,
+                                                            })
+                                                        }}
+                                                        className={`px-2 py-0.5 rounded-full text-xs transition-colors ${set.completed
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                                            : 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'
+                                                            }`}
+                                                    >
+                                                        {set.completed ? 'Выполнен' : 'Отметить'}
+                                                    </button>
+                                                ) : (
+                                                    <span
+                                                        className={`px-2 py-0.5 rounded-full text-xs ${set.completed
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                                            : 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'
+                                                            }`}
+                                                    >
+                                                        {set.completed ? 'Выполнен' : 'Не выполнен'}
+                                                    </span>
+                                                )}
                                             </div>
-                                            <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
-                                                    Повторы: {formatSetValue(set.reps, 'повт')}
-                                                </span>
-                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
-                                                    Вес: {formatSetValue(set.weight, 'кг')}
-                                                </span>
-                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
-                                                    RPE: {formatSetValue(set.rpe)}
-                                                </span>
-                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
-                                                    RIR: {formatSetValue(set.rir)}
-                                                </span>
-                                                <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
-                                                    Время: {formatSetValue(set.duration, 'сек')}
-                                                </span>
-                                            </div>
+                                            {isActiveDraft ? (
+                                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                                    <label className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Повторы
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            value={set.reps ?? ''}
+                                                            onChange={(e) =>
+                                                                updateSet(exerciseIndex, set.set_number, {
+                                                                    reps: parseOptionalNumber(e.target.value),
+                                                                })
+                                                            }
+                                                            className="mt-0.5 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm dark:border-neutral-600 dark:bg-neutral-900"
+                                                        />
+                                                    </label>
+                                                    <label className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Вес (кг)
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            step="0.5"
+                                                            value={set.weight ?? ''}
+                                                            onChange={(e) =>
+                                                                updateSet(exerciseIndex, set.set_number, {
+                                                                    weight: parseOptionalNumber(e.target.value),
+                                                                })
+                                                            }
+                                                            className="mt-0.5 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm dark:border-neutral-600 dark:bg-neutral-900"
+                                                        />
+                                                    </label>
+                                                </div>
+                                            ) : (
+                                                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                        Повторы: {formatSetValue(set.reps, 'повт')}
+                                                    </span>
+                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                        Вес: {formatSetValue(set.weight, 'кг')}
+                                                    </span>
+                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                        RPE: {formatSetValue(set.rpe)}
+                                                    </span>
+                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                        RIR: {formatSetValue(set.rir)}
+                                                    </span>
+                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                        Время: {formatSetValue(set.duration, 'сек')}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

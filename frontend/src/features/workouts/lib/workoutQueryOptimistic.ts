@@ -2,6 +2,8 @@ import type { QueryClient, QueryKey } from '@tanstack/react-query'
 import type { WorkoutType } from '@shared/types'
 import type {
     CalendarWorkout,
+    CompletedExercise,
+    CompletedSet,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
@@ -94,6 +96,50 @@ export function calendarEntryFromStartResponse(
         duration_minutes: 0,
         scheduled_at: scheduledAt,
     }
+}
+
+/** План подходов из шаблона для активной сессии (кэш до POST /complete). */
+export function completedExercisesFromTemplate(template: WorkoutTemplateResponse): CompletedExercise[] {
+    return template.exercises.map((ex) => ({
+        exercise_id: ex.exercise_id,
+        name: ex.name,
+        notes: ex.notes,
+        sets_completed: Array.from({ length: ex.sets }, (_, i) => ({
+            set_number: i + 1,
+            reps: ex.reps,
+            weight: ex.weight,
+            duration: ex.duration,
+            completed: false,
+        })),
+    }))
+}
+
+export function updateSetInHistoryItem(
+    item: WorkoutHistoryItem,
+    exerciseIndex: number,
+    setNumber: number,
+    patch: Partial<CompletedSet>,
+): WorkoutHistoryItem {
+    if (exerciseIndex < 0 || exerciseIndex >= item.exercises.length) return item
+    const exercises = item.exercises.map((ex, i) => {
+        if (i !== exerciseIndex) return ex
+        const sets_completed = ex.sets_completed.map((s) =>
+            s.set_number === setNumber ? { ...s, ...patch } : s,
+        )
+        return { ...ex, sets_completed }
+    })
+    return { ...item, exercises }
+}
+
+export type WorkoutHistoryItemSessionPatch = Partial<
+    Pick<WorkoutHistoryItem, 'duration' | 'comments' | 'tags' | 'glucose_before' | 'glucose_after'>
+>
+
+export function patchHistoryItemSessionFields(
+    item: WorkoutHistoryItem,
+    patch: WorkoutHistoryItemSessionPatch,
+): WorkoutHistoryItem {
+    return { ...item, ...patch }
 }
 
 export function historyItemFromStartResponse(

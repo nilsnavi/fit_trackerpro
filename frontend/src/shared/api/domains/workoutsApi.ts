@@ -38,6 +38,10 @@ export const workoutsApi = {
         return api.get<WorkoutTemplateListResponse>('/workouts/templates', params)
     },
 
+    getTemplate(templateId: number): Promise<WorkoutTemplateResponse> {
+        return api.get<WorkoutTemplateResponse>(`/workouts/templates/${templateId}`)
+    },
+
     createTemplate(payload: WorkoutTemplateCreateRequest): Promise<WorkoutTemplateResponse> {
         return api.post<WorkoutTemplateResponse>('/workouts/templates', payload)
     },
