@@ -4,7 +4,7 @@ import { EXERCISES_CATALOG_LIST_PARAMS } from '@features/exercises/constants/cat
 import { exercisesApi } from '@shared/api/domains/exercisesApi'
 import { mapApiExerciseToCatalog } from '@features/exercises/lib/mapApiExerciseToCatalog'
 import type { Exercise } from '@features/exercises/types/catalogUi'
-import { OFFLINE_QUERY_CACHE_MAX_AGE_MS } from '@shared/offline/offlineQueryPersist'
+import { offlineListQueryDefaults } from '@shared/offline/offlineQueryPersist'
 
 export function useExercisesCatalogQuery() {
     return useQuery({
@@ -13,13 +13,6 @@ export function useExercisesCatalogQuery() {
             const res = await exercisesApi.list({ ...EXERCISES_CATALOG_LIST_PARAMS })
             return res.items.map(mapApiExerciseToCatalog)
         },
-        networkMode: 'offlineFirst',
-        gcTime: OFFLINE_QUERY_CACHE_MAX_AGE_MS,
-        retry: (failureCount) => {
-            if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                return false
-            }
-            return failureCount < 1
-        },
+        ...offlineListQueryDefaults,
     })
 }

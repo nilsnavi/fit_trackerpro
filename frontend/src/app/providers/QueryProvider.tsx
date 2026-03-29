@@ -7,7 +7,7 @@ import {
     shouldDehydrateOfflineQuery,
 } from '@shared/offline/offlineQueryPersist'
 
-/** Корневой клиент TanStack Query; офлайн — last-known для каталога (см. offlineQueryPersist). */
+/** Корневой клиент TanStack Query; офлайн — last-known для каталога, истории и шаблонов (см. offlineQueryPersist). */
 export function QueryProvider({ children }: PropsWithChildren) {
     const [queryClient] = useState(
         () =>
