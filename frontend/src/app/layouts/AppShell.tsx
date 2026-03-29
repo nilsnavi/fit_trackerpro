@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { ConnectivitySyncBar } from '@app/components/ConnectivitySyncBar'
 import { Navigation } from '@app/components/Navigation'
 import { useTelegramContext } from '../providers/TelegramProvider'
 import { useWorkoutSessionDraftCloudSync } from '@shared/hooks/useWorkoutSessionDraftCloudSync'
@@ -22,6 +23,7 @@ export function AppShell() {
                 data-telegram={isTelegram ? 'true' : 'false'}
             >
                 <AppShellHeader />
+                <ConnectivitySyncBar />
                 <main
                     className={cn(
                         'app-shell-main min-h-0 flex-1 overflow-x-hidden overflow-y-auto',
