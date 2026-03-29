@@ -251,6 +251,45 @@ jobs:
           # Domain endpoint can be auth-protected in production, so 401/403 is acceptable.
           smoke_check "protected API route /workouts/templates" "${DOMAIN_URL}" "200 401 403"
 
+  record-stable:
+    name: Record last stable image tags
+    runs-on: ubuntu-latest
+    needs: [deploy, smoke]
+    if: ${{ needs.deploy.result == 'success' && needs.smoke.result == 'success' }}
+    environment: production
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add host to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Write .last-stable-deploy.env on server
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -Eeuo pipefail
+            cd ~/fittracker-pro || exit 1
+            if [ ! -f .rollback-meta.env ]; then
+              echo "Warning: .rollback-meta.env missing — skipping last-stable snapshot"
+              exit 0
+            fi
+            set -a
+            # shellcheck disable=SC1091
+            source .rollback-meta.env
+            set +a
+            {
+              echo "LAST_STABLE_IMAGE_TAG=${TARGET_IMAGE_TAG:-}"
+              echo "LAST_STABLE_PREVIOUS_TAG=${PREVIOUS_IMAGE_TAG:-}"
+              echo "LAST_STABLE_RECORDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            } > .last-stable-deploy.env
+            echo "Recorded last successful deploy tags in .last-stable-deploy.env"
+          EOF
+
   rollback:
     name: Rollback on Failure
     runs-on: ubuntu-latest
@@ -282,7 +321,7 @@ jobs:
             fi
 
             if [ -f .env ]; then
-              sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
+              sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${PREVIOUS_IMAGE_TAG}|" .env
             else
               echo "IMAGE_TAG=${PREVIOUS_IMAGE_TAG}" > .env
               echo "GITHUB_REPOSITORY=${{ github.repository }}" >> .env
@@ -292,7 +331,7 @@ jobs:
             docker-compose -f docker-compose.prod.yml pull backend frontend
             docker-compose -f docker-compose.prod.yml up -d
 
-            if [ "${{ inputs.rollback_restore_db || 'false' }}" = "true" ]; then
+            if [ "${{ github.event_name == 'workflow_dispatch' && inputs.rollback_restore_db == true }}" = "true" ]; then
               if [ -n "${DB_BACKUP_PATH}" ] && [ -f "${DB_BACKUP_PATH}" ]; then
                 echo "Restoring DB from pre-deploy backup: ${DB_BACKUP_PATH}"
                 docker-compose -f docker-compose.prod.yml up -d postgres
@@ -316,7 +355,7 @@ jobs:
   notify:
     name: Notify Deployment Result
     runs-on: ubuntu-latest
-    needs: [deploy, smoke, rollback]
+    needs: [deploy, smoke, rollback, record-stable]
     if: ${{ always() }}
 
     steps:

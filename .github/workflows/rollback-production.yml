@@ -1,0 +1,134 @@
+# Manual production rollback: restore IMAGE_TAG to previous stable (from server metadata)
+# or an explicitly provided tag, then pull + up + health checks.
+name: Rollback Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollback_image_tag:
+        description: "Explicit image tag (empty = PREVIOUS_IMAGE_TAG from .rollback-meta.env, else LAST_STABLE_PREVIOUS_TAG from .last-stable-deploy.env)"
+        required: false
+        default: ""
+        type: string
+      rollback_restore_db:
+        description: "Restore DB from backup path in .rollback-meta.env (only when migration/data corruption requires it)"
+        required: false
+        default: false
+        type: boolean
+      confirm:
+        description: "Type ROLLBACK to confirm (prevents accidental runs)"
+        required: true
+        type: string
+
+jobs:
+  reject-bad-confirm:
+    name: Confirm required
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm != 'ROLLBACK' }}
+    steps:
+      - name: Fail
+        run: |
+          echo "::error::confirm must be exactly ROLLBACK (got different input)."
+          exit 1
+
+  rollback:
+    name: Rollback on server
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'ROLLBACK' }}
+    environment: production
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add host to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Rollback deployment
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -Eeuo pipefail
+            cd ~/fittracker-pro || exit 1
+
+            PREVIOUS_IMAGE_TAG=""
+            TARGET_IMAGE_TAG=""
+            DB_BACKUP_PATH=""
+            LAST_STABLE_PREVIOUS_TAG=""
+
+            if [ -f .rollback-meta.env ]; then
+              set -a
+              # shellcheck disable=SC1091
+              source .rollback-meta.env
+              set +a
+            fi
+
+            if [ -f .last-stable-deploy.env ]; then
+              set -a
+              # shellcheck disable=SC1091
+              source .last-stable-deploy.env
+              set +a
+            fi
+
+            MANUAL_TAG='${{ github.event.inputs.rollback_image_tag }}'
+            if [ -n "${MANUAL_TAG}" ]; then
+              ROLLBACK_TAG="${MANUAL_TAG}"
+              echo "Using explicit rollback tag from workflow: ${ROLLBACK_TAG}"
+            elif [ -n "${PREVIOUS_IMAGE_TAG}" ]; then
+              ROLLBACK_TAG="${PREVIOUS_IMAGE_TAG}"
+              echo "Using PREVIOUS_IMAGE_TAG from .rollback-meta.env: ${ROLLBACK_TAG}"
+            elif [ -n "${LAST_STABLE_PREVIOUS_TAG}" ]; then
+              ROLLBACK_TAG="${LAST_STABLE_PREVIOUS_TAG}"
+              echo "Using LAST_STABLE_PREVIOUS_TAG from .last-stable-deploy.env: ${ROLLBACK_TAG}"
+            else
+              echo "Error: no rollback tag — set rollback_image_tag in workflow, or deploy once so .rollback-meta.env exists."
+              exit 1
+            fi
+
+            if [ ! -f .env ]; then
+              echo "Error: .env missing in deploy directory — cannot update IMAGE_TAG."
+              exit 1
+            fi
+
+            if ! grep -qE '^IMAGE_TAG=' .env; then
+              echo "IMAGE_TAG=${ROLLBACK_TAG}" >> .env
+            else
+              sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${ROLLBACK_TAG}|" .env
+            fi
+
+            echo "Rolling back to image tag: ${ROLLBACK_TAG}"
+            docker-compose -f docker-compose.prod.yml pull backend frontend
+            docker-compose -f docker-compose.prod.yml up -d
+
+            if [ "${{ github.event.inputs.rollback_restore_db }}" = "true" ]; then
+              if [ -n "${DB_BACKUP_PATH}" ] && [ -f "${DB_BACKUP_PATH}" ]; then
+                echo "Restoring DB from backup: ${DB_BACKUP_PATH}"
+                docker-compose -f docker-compose.prod.yml up -d postgres
+                sleep 8
+                docker exec -i fittracker-postgres psql -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} < "${DB_BACKUP_PATH}"
+              else
+                echo "rollback_restore_db=true but DB_BACKUP_PATH missing or file not found: ${DB_BACKUP_PATH:-}"
+                exit 1
+              fi
+            else
+              echo "DB restore skipped (rollback_restore_db=false)"
+            fi
+
+            sleep 15
+            curl -fsS http://localhost:8000/health > /dev/null
+            curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
+            curl -fsS http://localhost/ > /dev/null
+            echo "Manual rollback completed and host health checks passed."
+          EOF
+
+      - name: Notify Slack
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "FitTracker Pro manual rollback completed (see Actions log for tag source)."
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

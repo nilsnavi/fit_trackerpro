@@ -8,6 +8,7 @@
 |-----|-------------------|
 | Сборка и публикация образов в GHCR | `.github/workflows/build.yml` |
 | Деплой на сервер, смоук, авто-rollback, уведомления | `.github/workflows/deploy.yml` |
+| Ручной откат production (без деплоя; в confirm — `ROLLBACK`) | `.github/workflows/rollback-production.yml` |
 | Имена образов и runtime-сеть | `docker-compose.prod.yml` |
 | Развёртывание с нуля (bootstrap, секреты, nginx/ssl) | `docs/DEPLOYMENT.md` |
 | Детали отката и политика БД | `docs/ROLLBACK_STRATEGY.md` |
@@ -43,8 +44,9 @@ Production — **image-based**: на сервере не делают `git pull`
 
 1. **Deploy** — SSH на сервер, синхронизация `docker-compose.prod.yml` и `nginx/nginx.conf`, перезапись корневого `.env` из GitHub Secrets, запись `.rollback-meta.env` (в т.ч. `PREVIOUS_IMAGE_TAG`, путь бэкапа БД), `pg_dump` в `backups/`, `docker-compose pull`, `run --rm backend alembic upgrade head`, `up -d`, `docker image prune -f`, проверки с хоста: `http://localhost:8000/api/v1/system/health`, `/api/v1/system/version`, `http://localhost/`.
 2. **Post-deploy Smoke** — с раннера GitHub, по `secrets.VITE_API_URL`: корень API, `/system/health`, проба доменного эндпоинта (допускаются `401/403` если включена авторизация).
-3. **Rollback on Failure** — выполняется, если упал **deploy** или **smoke**: откат `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG` (если до деплоя в `.env` уже был сохранён тег; иначе job завершится ошибкой — типично для **первого** деплоя на чистый сервер), `pull backend frontend`, `up -d`, опционально восстановление БД из бэкапа только если при ручном запуске был включён **`rollback_restore_db`**.
-4. **Notify** — Slack (успех / ошибка), если задан `SLACK_WEBHOOK_URL`.
+3. **Record stable** — при успехе deploy и smoke пишется `.last-stable-deploy.env` (для ручного отката и аудита).
+4. **Rollback on Failure** — выполняется, если упал **deploy** или **smoke**: откат `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG` (если до деплоя в `.env` уже был сохранён тег; иначе job завершится ошибкой — типично для **первого** деплоя на чистый сервер), `pull backend frontend`, `up -d`, опционально восстановление БД из бэкапа только если при ручном запуске был включён **`rollback_restore_db`**.
+5. **Notify** — Slack (успех / ошибка), если задан `SLACK_WEBHOOK_URL`.
 
 При падении миграций удалённый скрипт завершится с ошибкой → сработает rollback-job (при успешном SSH).
 
@@ -90,7 +92,7 @@ curl -fsS http://localhost/
 ```bash
 cd ~/fittracker-pro
 source .rollback-meta.env
-sed -i -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREVIOUS_IMAGE_TAG}/" .env
+sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${PREVIOUS_IMAGE_TAG}|" .env
 docker-compose -f docker-compose.prod.yml pull backend frontend
 docker-compose -f docker-compose.prod.yml up -d
 ```
