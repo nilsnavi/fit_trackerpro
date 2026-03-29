@@ -1,5 +1,5 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
 import { initSentry } from './app/sentry'
 import { QueryProvider } from './app/providers/QueryProvider'
 import App from './App'
@@ -7,10 +7,15 @@ import './styles/globals.css'
 
 initSentry()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
+const rootElement = document.getElementById('root')
+if (!rootElement) {
+    throw new Error('Root element "#root" not found')
+}
+
+createRoot(rootElement).render(
+    <StrictMode>
         <QueryProvider>
             <App />
         </QueryProvider>
-    </React.StrictMode>,
+    </StrictMode>,
 )
