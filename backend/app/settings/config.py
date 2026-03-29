@@ -19,7 +19,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Final, List, Self
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import AliasChoices, Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Backend root (directory containing `.env`)
@@ -126,7 +126,69 @@ class Settings(BaseSettings):
     # --- Optional: uploads & rate limiting ---
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
-    RATE_LIMIT_PER_MINUTE: int = 60
+
+    # Tiered HTTP rate limits (see ``RateLimitMiddleware``). ``RATE_LIMIT_PER_MINUTE`` remains a
+    # supported env alias for the default (read) tier requests per window.
+    RATE_LIMIT_DEFAULT_WINDOW_SECONDS: Annotated[
+        int,
+        Field(description="Sliding window length for the default (read) tier.", ge=1),
+    ] = 60
+    RATE_LIMIT_DEFAULT_REQUESTS: int = Field(
+        default=60,
+        ge=1,
+        validation_alias=AliasChoices("RATE_LIMIT_DEFAULT_REQUESTS", "RATE_LIMIT_PER_MINUTE"),
+        description="Max requests per window for general read traffic (GET, HEAD, OPTIONS).",
+    )
+
+    RATE_LIMIT_AUTH_WINDOW_SECONDS: Annotated[
+        int, Field(description="Window for auth routes (login, refresh, logout, /me).", ge=1)
+    ] = 60
+    RATE_LIMIT_AUTH_REQUESTS: Annotated[
+        int, Field(description="Max requests per window for auth routes.", ge=1)
+    ] = 10
+
+    RATE_LIMIT_AUTH_STRICT_WINDOW_SECONDS: Annotated[
+        int, Field(description="Window for Telegram login (strictest auth tier).", ge=1)
+    ] = 60
+    RATE_LIMIT_AUTH_STRICT_REQUESTS: Annotated[
+        int, Field(description="Max requests per window for POST /telegram.", ge=1)
+    ] = 5
+
+    RATE_LIMIT_SYSTEM_WINDOW_SECONDS: Annotated[
+        int, Field(description="Window for /api/v1/system/* (excluding skipped probes).", ge=1)
+    ] = 60
+    RATE_LIMIT_SYSTEM_REQUESTS: Annotated[
+        int, Field(description="Max requests per window for system routes.", ge=1)
+    ] = 30
+
+    RATE_LIMIT_WRITE_WINDOW_SECONDS: Annotated[
+        int,
+        Field(
+            description="Window for mutating methods (POST/PUT/PATCH/DELETE) outside auth/system.",
+            ge=1,
+        ),
+    ] = 60
+    RATE_LIMIT_WRITE_REQUESTS: Annotated[
+        int,
+        Field(
+            description="Max requests per window for write traffic (non-auth, non-system API).",
+            ge=1,
+        ),
+    ] = 40
+
+    RATE_LIMIT_EXPORT_WINDOW_SECONDS: Annotated[
+        int, Field(description="Window for analytics export endpoint.", ge=1)
+    ] = 3600
+    RATE_LIMIT_EXPORT_REQUESTS: Annotated[
+        int, Field(description="Max export requests per window.", ge=1)
+    ] = 5
+
+    RATE_LIMIT_EMERGENCY_NOTIFY_WINDOW_SECONDS: Annotated[
+        int, Field(description="Window for emergency notify endpoints.", ge=1)
+    ] = 60
+    RATE_LIMIT_EMERGENCY_NOTIFY_REQUESTS: Annotated[
+        int, Field(description="Max emergency notify requests per window.", ge=1)
+    ] = 20
 
     # --- Optional: logging ---
     LOG_LEVEL: str = "INFO"
