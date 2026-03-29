@@ -1,9 +1,12 @@
 import { api } from '@shared/api/client'
 import type {
     WorkoutTemplateCreateRequest,
+    WorkoutTemplateResponse,
+    WorkoutTemplateListResponse,
     WorkoutStartRequest,
     WorkoutStartResponse,
     WorkoutCompleteRequest,
+    WorkoutCompleteResponse,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
     CalendarWorkout,
@@ -27,15 +30,36 @@ export const workoutsApi = {
         return api.get<CalendarWorkout[]>('/workouts/calendar', params)
     },
 
-    createTemplate(payload: WorkoutTemplateCreateRequest) {
-        return api.post('/workouts/templates', payload)
+    getTemplates(params?: {
+        page?: number
+        page_size?: number
+        template_type?: string
+    }): Promise<WorkoutTemplateListResponse> {
+        return api.get<WorkoutTemplateListResponse>('/workouts/templates', params)
+    },
+
+    createTemplate(payload: WorkoutTemplateCreateRequest): Promise<WorkoutTemplateResponse> {
+        return api.post<WorkoutTemplateResponse>('/workouts/templates', payload)
+    },
+
+    updateTemplate(
+        templateId: number,
+        payload: WorkoutTemplateCreateRequest,
+    ): Promise<WorkoutTemplateResponse> {
+        return api.put<WorkoutTemplateResponse>(`/workouts/templates/${templateId}`, payload)
     },
 
     startWorkout(payload: WorkoutStartRequest): Promise<WorkoutStartResponse> {
         return api.post<WorkoutStartResponse>('/workouts/start', payload)
     },
 
-    completeWorkout(workoutId: number, payload: WorkoutCompleteRequest) {
-        return api.post(`/workouts/complete?workout_id=${workoutId}`, payload)
+    completeWorkout(
+        workoutId: number,
+        payload: WorkoutCompleteRequest,
+    ): Promise<WorkoutCompleteResponse> {
+        return api.post<WorkoutCompleteResponse>(
+            `/workouts/complete?workout_id=${workoutId}`,
+            payload,
+        )
     },
 }

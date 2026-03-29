@@ -22,6 +22,8 @@ export const queryKeys = {
             ['workouts', 'history', params] as const,
         historyItem: (workoutId: number) => ['workouts', 'history', 'item', workoutId] as const,
         calendar: (year: number, month: number) => ['workouts', 'calendar', year, month] as const,
+        templatesList: (params: { page: number; page_size: number; template_type?: string }) =>
+            ['workouts', 'templates', 'list', params] as const,
     },
     health: {
         waterGoal: ['health', 'water', 'goal'] as const,

@@ -21,6 +21,25 @@ export interface WorkoutTemplateCreateRequest {
     is_public: boolean
 }
 
+/** Ответ API `POST/PUT /workouts/templates` */
+export interface WorkoutTemplateResponse {
+    id: number
+    user_id: number
+    name: string
+    type: BackendWorkoutType
+    exercises: ExerciseInTemplate[]
+    is_public: boolean
+    created_at: string
+    updated_at: string
+}
+
+export interface WorkoutTemplateListResponse {
+    items: WorkoutTemplateResponse[]
+    total: number
+    page: number
+    page_size: number
+}
+
 export interface CompletedSet {
     set_number: number
     reps?: number
@@ -61,6 +80,21 @@ export interface WorkoutCompleteRequest {
     tags: string[]
     glucose_before?: number
     glucose_after?: number
+}
+
+export interface WorkoutCompleteResponse {
+    id: number
+    user_id: number
+    template_id?: number
+    date: string
+    duration: number
+    exercises: CompletedExercise[]
+    comments?: string
+    tags: string[]
+    glucose_before?: number
+    glucose_after?: number
+    completed_at: string
+    message: string
 }
 
 export interface WorkoutHistoryItem {

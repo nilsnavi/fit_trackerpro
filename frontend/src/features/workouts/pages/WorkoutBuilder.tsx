@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     DndContext,
     closestCenter,
@@ -40,6 +41,9 @@ import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
 import { useCreateWorkoutTemplateMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import { queryKeys } from '@shared/api/queryKeys';
+import { workoutsApi } from '@shared/api/domains/workoutsApi';
+import { workoutTemplatesDefaultListParams } from '@features/workouts/lib/workoutQueryOptimistic';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import type { BackendWorkoutType, ExerciseInTemplate, WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
 import type { WorkoutBlock, WorkoutBlockConfig, WorkoutBuilderExercise } from '@features/workouts/types/workoutBuilder';
@@ -265,7 +269,15 @@ const SortableItem: React.FC<SortableItemProps> = ({
 export const WorkoutBuilder: React.FC = () => {
     // Telegram WebApp
     const tg = useTelegramWebApp()
+    const queryClient = useQueryClient()
     const createTemplateMutation = useCreateWorkoutTemplateMutation()
+
+    useEffect(() => {
+        void queryClient.prefetchQuery({
+            queryKey: queryKeys.workouts.templatesList(workoutTemplatesDefaultListParams),
+            queryFn: () => workoutsApi.getTemplates(workoutTemplatesDefaultListParams),
+        })
+    }, [queryClient])
 
     // State
     const [workoutName, setWorkoutName] = useState('');
