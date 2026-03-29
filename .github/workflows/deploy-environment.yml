@@ -24,8 +24,88 @@ env:
   DEPLOY_DIR: ~/fittracker-pro
 
 jobs:
+  # Fail fast before SSH: required secrets, compose interpolation, nginx syntax.
+  pre-deploy-validate:
+    name: "Stage: pre-deploy validation (${{ inputs.deploy_environment }})"
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.deploy_environment }}
+    env:
+      DEPLOY_IMAGE_TAG: ${{ inputs.image_tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets and image tag
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBAPP_URL: ${{ secrets.TELEGRAM_WEBAPP_URL }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_TELEGRAM_BOT_USERNAME: ${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -Eeuo pipefail
+          missing=0
+          for name in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB SECRET_KEY TELEGRAM_BOT_TOKEN TELEGRAM_WEBAPP_URL ALLOWED_ORIGINS VITE_API_URL VITE_TELEGRAM_BOT_USERNAME SSH_PRIVATE_KEY DEPLOY_HOST DEPLOY_USER; do
+            eval "val=\${$name:-}"
+            if [ -z "${val}" ]; then
+              echo "::error::Required secret or configuration ${name} is empty (set it in GitHub Environment: ${{ inputs.deploy_environment }})"
+              missing=1
+            fi
+          done
+          if [ -z "${DEPLOY_IMAGE_TAG:-}" ] || [ "${DEPLOY_IMAGE_TAG}" = "latest" ]; then
+            echo "::error::IMAGE_TAG must be non-empty and must not be 'latest' (got: '${DEPLOY_IMAGE_TAG:-}')"
+            missing=1
+          fi
+          if [ "${missing}" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Required secrets and IMAGE_TAG are present."
+
+      - name: Render docker compose (prod)
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBAPP_URL: ${{ secrets.TELEGRAM_WEBAPP_URL }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          API_URL: ${{ secrets.VITE_API_URL }}
+          TELEGRAM_BOT_USERNAME: ${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
+        run: |
+          set -Eeuo pipefail
+          docker compose -f docker-compose.prod.yml config --quiet
+          echo "docker-compose.prod.yml renders successfully."
+
+      - name: Validate nginx configuration syntax
+        run: |
+          set -Eeuo pipefail
+          mkdir -p /tmp/nginx-predeploy-ssl
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -keyout /tmp/nginx-predeploy-ssl/privkey.pem \
+            -out /tmp/nginx-predeploy-ssl/fullchain.pem \
+            -subj "/CN=localhost"
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "/tmp/nginx-predeploy-ssl:/etc/nginx/ssl:ro" \
+            nginx:alpine@sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203cd34cf6d1 \
+            nginx -t
+          echo "nginx.conf is syntactically valid."
+
   migrate:
     name: "Stage: migrate (${{ inputs.deploy_environment }})"
+    needs: [pre-deploy-validate]
     runs-on: ubuntu-latest
     environment: ${{ inputs.deploy_environment }}
     env:
@@ -337,12 +417,12 @@ jobs:
   notify:
     name: Notify Deployment Result (${{ inputs.deploy_environment }})
     runs-on: ubuntu-latest
-    needs: [migrate, deploy, verify, rollback, record-stable]
+    needs: [pre-deploy-validate, migrate, deploy, verify, rollback, record-stable]
     if: ${{ always() }}
 
     steps:
       - name: Notify on success
-        if: ${{ needs.deploy.result == 'success' && needs.verify.result == 'success' }}
+        if: ${{ needs.pre-deploy-validate.result == 'success' && needs.deploy.result == 'success' && needs.verify.result == 'success' }}
         uses: 8398a7/action-slack@v3
         with:
           status: success
@@ -351,7 +431,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify on failure
-        if: ${{ needs.migrate.result == 'failure' || needs.deploy.result == 'failure' || needs.verify.result == 'failure' || needs.rollback.result == 'failure' }}
+        if: ${{ needs.pre-deploy-validate.result == 'failure' || needs.migrate.result == 'failure' || needs.deploy.result == 'failure' || needs.verify.result == 'failure' || needs.rollback.result == 'failure' }}
         uses: 8398a7/action-slack@v3
         with:
           status: failure

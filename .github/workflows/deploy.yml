@@ -1,6 +1,6 @@
 # Production / staging deploy — explicit stages (DAG via needs:):
 #   resolve-tag → build (release) or skip build (manual)
-#   deploy-pipeline (reusable) → migrate → deploy → verify → record-stable | rollback → notify
+#   deploy-pipeline (reusable) → pre-deploy-validate → migrate → deploy → verify → record-stable | rollback → notify
 #
 # Staging and production share the same job graph via reusable workflow deploy-environment.yml;
 # GitHub Environment (staging vs production) is selected per run (release → production).
