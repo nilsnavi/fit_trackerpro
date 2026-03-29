@@ -39,7 +39,7 @@ import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
-import { workoutsApi } from '@features/workouts/api/workoutsApi';
+import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import type { BackendWorkoutType, ExerciseInTemplate, WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
 import type { WorkoutType } from '@shared/types';

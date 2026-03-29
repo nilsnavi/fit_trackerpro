@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
 import { EXERCISES_CATALOG_LIST_PARAMS } from '@features/exercises/constants/catalogQueryParams'
-import { exercisesApi } from '@features/exercises/api/exercisesApi'
+import { exercisesApi } from '@shared/api/domains/exercisesApi'
 
 export function useCreateCustomExerciseMutation() {
     const queryClient = useQueryClient()

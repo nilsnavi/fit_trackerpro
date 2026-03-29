@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, Clock3, MessageSquare, Tags } from 'lucide-react'
-import { workoutsApi } from '@features/workouts/api/workoutsApi'
+import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { getErrorMessage } from '@shared/errors'

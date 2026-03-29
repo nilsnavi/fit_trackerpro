@@ -10,7 +10,7 @@ import {
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { queryKeys } from '@shared/api/queryKeys'
 import { authApi } from '@features/profile/api/authApi'
-import { usersApi } from '@features/profile/api/usersApi'
+import { usersApi } from '@shared/api/domains/usersApi'
 import type {
     CoachAccess,
     UserProfile,

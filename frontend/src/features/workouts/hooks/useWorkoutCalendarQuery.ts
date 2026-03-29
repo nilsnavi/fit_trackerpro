@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
-import { workoutsApi } from '../api/workoutsApi'
+import { workoutsApi } from '@shared/api/domains/workoutsApi'
 
 /** @param monthIndex 0-based month (Date.getMonth()) */
 export function useWorkoutCalendarQuery(year: number, monthIndex: number) {
