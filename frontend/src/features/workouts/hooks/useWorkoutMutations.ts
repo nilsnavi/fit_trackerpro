@@ -7,6 +7,7 @@ import type {
     WorkoutTemplateCreateRequest,
     WorkoutHistoryItem,
 } from '@features/workouts/types/workouts'
+import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
 import {
     appendCalendarWorkoutForMatchingMonth,
     buildCalendarEntryFromStartPayload,
@@ -214,6 +215,10 @@ export function useCompleteWorkoutMutation() {
             queryClient.setQueryData(ctx.detailKey, ctx.previousDetail)
         },
         onSuccess: (data, variables) => {
+            const activeDraftId = useWorkoutSessionDraftStore.getState().workoutId
+            if (activeDraftId === data.id) {
+                useWorkoutSessionDraftStore.getState().clearDraft()
+            }
             const item = historyItemFromCompleteResponse(data)
             queryClient.setQueryData(queryKeys.workouts.historyItem(data.id), item)
             replaceHistoryListTemporalId(queryClient, data.id, item)

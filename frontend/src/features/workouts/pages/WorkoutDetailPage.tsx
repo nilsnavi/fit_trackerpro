@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, Clock3, MessageSquare, Tags } from 'lucide-react'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
@@ -33,6 +34,8 @@ export function WorkoutDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
     const tg = useTelegramWebApp()
+    const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
+    const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
 
     const workoutId = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId = Number.isFinite(workoutId)
@@ -43,6 +46,12 @@ export function WorkoutDetailPage() {
         isError,
         error: queryError,
     } = useWorkoutHistoryItemQuery(workoutId, isValidWorkoutId)
+
+    useEffect(() => {
+        if (!workout || workout.id !== draftWorkoutId) return
+        const d = workout.duration
+        if (typeof d === 'number' && d > 0) clearWorkoutSessionDraft()
+    }, [workout, draftWorkoutId, clearWorkoutSessionDraft])
 
     useEffect(() => {
         if (tg.isTelegram) {
