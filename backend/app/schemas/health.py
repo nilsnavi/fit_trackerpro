@@ -2,24 +2,42 @@
 Health Schemas
 Pydantic models for health tracking endpoints
 """
-from typing import Optional, List
-from datetime import datetime, date
+from __future__ import annotations
+
+from datetime import date, datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
+
+from app.schemas.enums import GlucoseMeasurementType, HealthDashboardPeriod
 
 
 class GlucoseLogCreate(BaseModel):
     """Request model for creating glucose log"""
-    value: float = Field(..., ge=2.0, le=30.0,
-                         description="Blood glucose in mmol/L")
-    measurement_type: str = Field(
+    value: float = Field(
         ...,
-        pattern="^(fasting|pre_workout|post_workout|random|bedtime)$"
+        ge=2.0,
+        le=30.0,
+        description="Blood glucose in mmol/L (clinical range enforced).",
+    )
+    measurement_type: GlucoseMeasurementType = Field(
+        ...,
+        description="When or how the reading was taken.",
     )
     timestamp: Optional[datetime] = Field(
-        None, description="Measurement time (default: now)")
-    notes: Optional[str] = Field(None, max_length=500)
+        None,
+        description="Measurement time (default: now)",
+    )
+    notes: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="Optional note (max 500 characters).",
+    )
     workout_id: Optional[int] = Field(
-        None, description="Associated workout ID")
+        None,
+        ge=1,
+        description="Associated workout ID",
+    )
 
 
 class GlucoseLogResponse(BaseModel):
@@ -65,15 +83,42 @@ class PainZones(BaseModel):
 class DailyWellnessCreate(BaseModel):
     """Request model for creating daily wellness entry"""
     date: date
-    sleep_score: int = Field(..., ge=0, le=100,
-                             description="Sleep quality 0-100")
-    sleep_hours: Optional[float] = Field(None, ge=0, le=24)
-    energy_score: int = Field(..., ge=0, le=100,
-                              description="Energy level 0-100")
+    sleep_score: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Sleep quality 0-100",
+    )
+    sleep_hours: Optional[float] = Field(
+        None,
+        ge=0,
+        le=24,
+        description="Hours slept (0-24).",
+    )
+    energy_score: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Energy level 0-100",
+    )
     pain_zones: PainZones = Field(default_factory=PainZones)
-    stress_level: Optional[int] = Field(None, ge=0, le=10)
-    mood_score: Optional[int] = Field(None, ge=0, le=100)
-    notes: Optional[str] = Field(None, max_length=1000)
+    stress_level: Optional[int] = Field(
+        None,
+        ge=0,
+        le=10,
+        description="Stress 0-10.",
+    )
+    mood_score: Optional[int] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Mood 0-100.",
+    )
+    notes: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Optional journal text.",
+    )
 
 
 class DailyWellnessResponse(BaseModel):
@@ -124,7 +169,10 @@ class WellnessStats(BaseModel):
 
 class HealthStatsResponse(BaseModel):
     """Health statistics response"""
-    period: str = Field(default="30d")
+    period: HealthDashboardPeriod = Field(
+        default=HealthDashboardPeriod.THIRTY_D,
+        description="Aggregation window for dashboard stats.",
+    )
     glucose: Optional[GlucoseStats]
     workouts: WorkoutStats
     wellness: WellnessStats

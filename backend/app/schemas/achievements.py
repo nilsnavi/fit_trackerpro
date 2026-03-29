@@ -2,8 +2,11 @@
 Achievements Schemas
 Pydantic models for achievements endpoints
 """
-from typing import Optional, List
+from __future__ import annotations
+
 from datetime import datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -76,10 +79,32 @@ class UserAchievementListResponse(BaseModel):
     recent_achievements: List[UserAchievementResponse]
 
 
+class AchievementProgressPatch(BaseModel):
+    """Validated progress_data payload for PATCH requests."""
+
+    model_config = ConfigDict(extra="allow")
+
+    current: Optional[int] = Field(
+        None,
+        ge=0,
+        le=2_000_000_000,
+    )
+    target: Optional[int] = Field(
+        None,
+        ge=0,
+        le=2_000_000_000,
+    )
+
+
 class AchievementProgressUpdate(BaseModel):
     """Request model for updating achievement progress"""
-    progress: int = Field(..., ge=0)
-    progress_data: Optional[AchievementProgressData] = None
+    progress: int = Field(
+        ...,
+        ge=0,
+        le=2_000_000_000,
+        description="Absolute progress value (non-negative).",
+    )
+    progress_data: Optional[AchievementProgressPatch] = None
 
 
 class AchievementUnlockResponse(BaseModel):
@@ -88,7 +113,7 @@ class AchievementUnlockResponse(BaseModel):
     achievement: Optional[AchievementResponse]
     points_earned: int
     new_total_points: int
-    message: str
+    message: str = Field(..., max_length=2000)
 
 
 class AchievementLeaderboardEntry(BaseModel):

@@ -2,40 +2,92 @@
 Workouts Schemas
 Pydantic models for workout endpoints
 """
-from typing import Optional, List
-from datetime import datetime, date
+from __future__ import annotations
+
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Annotated, List, Optional
+
 from pydantic import BaseModel, Field
+
+from app.schemas.enums import WorkoutSessionType, WorkoutTemplateType
 
 
 class ExerciseInTemplate(BaseModel):
     """Exercise within a workout template"""
-    exercise_id: int = Field(..., description="Exercise ID")
-    name: str = Field(..., description="Exercise name")
-    sets: int = Field(default=3, ge=1, le=20, description="Number of sets")
-    reps: Optional[int] = Field(None, ge=1, le=100, description="Reps per set")
+    exercise_id: int = Field(
+        ...,
+        ge=1,
+        description="Exercise ID",
+    )
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Exercise name",
+    )
+    sets: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Number of sets",
+    )
+    reps: Optional[int] = Field(
+        None,
+        ge=1,
+        le=1000,
+        description="Reps per set",
+    )
     duration: Optional[int] = Field(
-        None, ge=1, description="Duration in seconds")
-    rest_seconds: int = Field(default=60, ge=0, le=600,
-                              description="Rest between sets")
-    weight: Optional[float] = Field(None, ge=0, description="Weight in kg")
-    notes: Optional[str] = Field(None, max_length=500)
+        None,
+        ge=1,
+        le=86400,
+        description="Duration in seconds (max 24h)",
+    )
+    rest_seconds: int = Field(
+        default=60,
+        ge=0,
+        le=600,
+        description="Rest between sets",
+    )
+    weight: Optional[float] = Field(
+        None,
+        ge=0,
+        le=2000,
+        description="Weight in kg",
+    )
+    notes: Optional[str] = Field(
+        None,
+        max_length=500,
+    )
 
 
 class CompletedSet(BaseModel):
     """Completed set data"""
-    set_number: int = Field(..., ge=1)
-    reps: Optional[int] = Field(None, ge=0)
-    weight: Optional[float] = Field(None, ge=0)
+    set_number: int = Field(
+        ...,
+        ge=1,
+        le=1000,
+        description="1-based set index within the exercise.",
+    )
+    reps: Optional[int] = Field(
+        None,
+        ge=0,
+        le=10000,
+    )
+    weight: Optional[float] = Field(
+        None,
+        ge=0,
+        le=2000,
+    )
     rpe: Optional[Decimal] = Field(
         None,
         ge=0,
         le=10,
         max_digits=3,
         decimal_places=1,
-        description="Rate of Perceived Exertion",
+        description="Rate of Perceived Exertion (0-10).",
     )
-    # RIR is a complement to RPE and is consumed by AI analytics.
     rir: Optional[Decimal] = Field(
         None,
         ge=0,
@@ -45,23 +97,54 @@ class CompletedSet(BaseModel):
         description="Reps in Reserve",
     )
     duration: Optional[int] = Field(
-        None, ge=0, description="Duration in seconds")
+        None,
+        ge=0,
+        le=86400,
+        description="Duration in seconds",
+    )
     completed: bool = Field(default=True)
 
 
 class CompletedExercise(BaseModel):
     """Completed exercise data"""
-    exercise_id: int
-    name: str
-    sets_completed: List[CompletedSet]
-    notes: Optional[str] = None
+    exercise_id: int = Field(..., ge=1)
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+    )
+    sets_completed: List[CompletedSet] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Recorded sets (max 100 per exercise).",
+    )
+    notes: Optional[str] = Field(
+        None,
+        max_length=1000,
+    )
+
+
+_Tag = Annotated[str, Field(min_length=1, max_length=64)]
 
 
 class WorkoutTemplateCreate(BaseModel):
     """Request model for creating workout template"""
-    name: str = Field(..., min_length=1, max_length=255)
-    type: str = Field(..., pattern="^(cardio|strength|flexibility|mixed)$")
-    exercises: List[ExerciseInTemplate] = Field(..., min_length=1)
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+    )
+    type: WorkoutTemplateType = Field(
+        ...,
+        description="Template category.",
+    )
+    exercises: List[ExerciseInTemplate] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="At least one exercise; at most 100.",
+    )
     is_public: bool = Field(default=False)
 
 
@@ -89,11 +172,20 @@ class WorkoutTemplateList(BaseModel):
 class WorkoutStartRequest(BaseModel):
     """Request model for starting a workout"""
     template_id: Optional[int] = Field(
-        None, description="Template ID if using template")
+        None,
+        ge=1,
+        description="Template ID if using template",
+    )
     name: Optional[str] = Field(
-        None, max_length=255, description="Custom workout name")
-    type: str = Field(default="custom",
-                      pattern="^(cardio|strength|flexibility|mixed|custom)$")
+        None,
+        min_length=1,
+        max_length=255,
+        description="Custom workout name",
+    )
+    type: WorkoutSessionType = Field(
+        default=WorkoutSessionType.CUSTOM,
+        description="Workout category for ad-hoc sessions.",
+    )
 
 
 class WorkoutStartResponse(BaseModel):
@@ -105,17 +197,47 @@ class WorkoutStartResponse(BaseModel):
     date: date
     start_time: datetime
     status: str = "in_progress"
-    message: str = "Workout started successfully"
+    message: str = Field(
+        default="Workout started successfully",
+        max_length=500,
+    )
 
 
 class WorkoutCompleteRequest(BaseModel):
     """Request model for completing a workout"""
-    duration: int = Field(..., ge=1, description="Duration in minutes")
-    exercises: List[CompletedExercise] = Field(..., min_length=1)
-    comments: Optional[str] = Field(None, max_length=1000)
-    tags: List[str] = Field(default_factory=list)
-    glucose_before: Optional[float] = Field(None, ge=2.0, le=30.0)
-    glucose_after: Optional[float] = Field(None, ge=2.0, le=30.0)
+    duration: int = Field(
+        ...,
+        ge=1,
+        le=1440,
+        description="Duration in minutes (max 24 hours).",
+    )
+    exercises: List[CompletedExercise] = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Completed exercises (max 200 per workout).",
+    )
+    comments: Optional[str] = Field(
+        None,
+        max_length=1000,
+    )
+    tags: List[_Tag] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Workout tags (max 50, each up to 64 chars).",
+    )
+    glucose_before: Optional[float] = Field(
+        None,
+        ge=2.0,
+        le=30.0,
+        description="Glucose before workout (mmol/L).",
+    )
+    glucose_after: Optional[float] = Field(
+        None,
+        ge=2.0,
+        le=30.0,
+        description="Glucose after workout (mmol/L).",
+    )
 
 
 class WorkoutCompleteResponse(BaseModel):
@@ -132,7 +254,10 @@ class WorkoutCompleteResponse(BaseModel):
     glucose_before: Optional[float]
     glucose_after: Optional[float]
     completed_at: datetime
-    message: str = "Workout completed successfully"
+    message: str = Field(
+        default="Workout completed successfully",
+        max_length=500,
+    )
 
 
 class WorkoutHistoryItem(BaseModel):

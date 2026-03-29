@@ -2,9 +2,15 @@
 Analytics Schemas
 Pydantic models for analytics endpoints
 """
-from typing import Optional, List, Any
-from datetime import datetime, date
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from __future__ import annotations
+
+from typing import Any, List, Optional
+
+from datetime import date, datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.schemas.enums import DataExportStatus, ExportFormat
 
 
 class ExerciseProgressData(BaseModel):
@@ -79,19 +85,38 @@ class WorkoutCalendarResponse(BaseModel):
 
 class DataExportRequest(BaseModel):
     """Request model for data export"""
-    format: str = Field(default="json", pattern="^(json|csv|xlsx)$")
-    date_from: Optional[date] = None
-    date_to: Optional[date] = None
+    format: ExportFormat = Field(
+        default=ExportFormat.JSON,
+        description="Export file format.",
+    )
+    date_from: Optional[date] = Field(
+        None,
+        description="Inclusive start date for exported rows.",
+    )
+    date_to: Optional[date] = Field(
+        None,
+        description="Inclusive end date for exported rows.",
+    )
     include_workouts: bool = True
     include_glucose: bool = True
     include_wellness: bool = True
     include_achievements: bool = True
 
+    @model_validator(mode="after")
+    def _validate_date_range(self) -> DataExportRequest:
+        if (
+            self.date_from is not None
+            and self.date_to is not None
+            and self.date_from > self.date_to
+        ):
+            raise ValueError("date_from must be on or before date_to.")
+        return self
+
 
 class DataExportResponse(BaseModel):
     """Data export response"""
-    export_id: str
-    status: str = Field(..., pattern="^(pending|processing|completed|failed)$")
+    export_id: str = Field(..., min_length=1, max_length=128)
+    status: DataExportStatus
     format: str
     download_url: Optional[str] = None
     expires_at: Optional[datetime] = None
