@@ -1,57 +1,97 @@
-"""Domain / application-level errors (no HTTP). API maps these to status codes."""
+"""Domain / application-level errors (no HTTP). Mapped by global FastAPI exception handlers."""
+
+from __future__ import annotations
+
+from typing import ClassVar
 
 
-class AuthenticationError(Exception):
+class DomainError(Exception):
+    """Base for domain errors; API maps ``code`` to HTTP status via ``http_status``."""
+
+    code: ClassVar[str] = "domain_error"
+    http_status: ClassVar[int] = 400
+    default_message: ClassVar[str] = "Request failed"
+
+    def __init__(self, message: str | None = None) -> None:
+        self.message = message if message is not None else self.default_message
+        super().__init__(self.message)
+
+
+class AuthenticationError(DomainError):
     """Invalid credentials, token, or Telegram initData."""
 
-    def __init__(self, message: str = "Authentication failed") -> None:
-        self.message = message
-        super().__init__(message)
+    code = "authentication_failed"
+    http_status = 401
+    default_message = "Authentication failed"
 
 
-class WorkoutNotFoundError(Exception):
-    pass
+class WorkoutNotFoundError(DomainError):
+    code = "workout_not_found"
+    http_status = 404
+    default_message = "Workout not found"
 
 
-class HealthNotFoundError(Exception):
-    pass
+class HealthNotFoundError(DomainError):
+    code = "health_not_found"
+    http_status = 404
+    default_message = "Resource not found"
 
 
-class AnalyticsValidationError(Exception):
-    pass
+class AnalyticsValidationError(DomainError):
+    code = "analytics_validation"
+    http_status = 400
+    default_message = "Invalid analytics request"
 
 
-class AnalyticsNotFoundError(Exception):
-    pass
+class AnalyticsNotFoundError(DomainError):
+    code = "analytics_not_found"
+    http_status = 404
+    default_message = "Resource not found"
 
 
-class AnalyticsUnavailableError(Exception):
-    pass
+class AnalyticsUnavailableError(DomainError):
+    code = "analytics_unavailable"
+    http_status = 503
+    default_message = "Analytics temporarily unavailable"
 
 
-class EmergencyNotFoundError(Exception):
-    pass
+class EmergencyNotFoundError(DomainError):
+    code = "emergency_not_found"
+    http_status = 404
+    default_message = "Emergency contact not found"
 
 
-class EmergencyValidationError(Exception):
-    pass
+class EmergencyValidationError(DomainError):
+    code = "emergency_validation"
+    http_status = 400
+    default_message = "Invalid emergency request"
 
 
-class AchievementNotFoundError(Exception):
-    pass
+class AchievementNotFoundError(DomainError):
+    code = "achievement_not_found"
+    http_status = 404
+    default_message = "Achievement not found"
 
 
-class ExerciseNotFoundError(Exception):
-    pass
+class ExerciseNotFoundError(DomainError):
+    code = "exercise_not_found"
+    http_status = 404
+    default_message = "Exercise not found"
 
 
-class ChallengeNotFoundError(Exception):
-    pass
+class ChallengeNotFoundError(DomainError):
+    code = "challenge_not_found"
+    http_status = 404
+    default_message = "Challenge not found"
 
 
-class ChallengeValidationError(Exception):
-    pass
+class ChallengeValidationError(DomainError):
+    code = "challenge_validation"
+    http_status = 400
+    default_message = "Invalid challenge request"
 
 
-class ChallengeForbiddenError(Exception):
-    pass
+class ChallengeForbiddenError(DomainError):
+    code = "challenge_forbidden"
+    http_status = 403
+    default_message = "Forbidden"

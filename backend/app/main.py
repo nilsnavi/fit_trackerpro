@@ -9,6 +9,7 @@ import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.exception_handlers import register_exception_handlers
 from app.api.v1.registration import register_v1_routes
 from app.api.v1.system import health_check_response
 from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
@@ -88,6 +89,8 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
 )
+
+register_exception_handlers(app)
 
 # Middleware order: first registered = innermost (closest to routes).
 app.add_middleware(SentryUserContextMiddleware)

@@ -2,12 +2,11 @@
 Telegram WebApp Authentication endpoints
 HTTP-only endpoints delegating business logic to services
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
 from app.domain.user import User
-from app.domain.exceptions import AuthenticationError
 from app.infrastructure.database import get_async_db
 from app.schemas.auth import (
     AuthResponse,
@@ -30,18 +29,7 @@ async def authenticate_telegram(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AuthService(db)
-    try:
-        return await service.authenticate_telegram(auth_request=auth_request)
-    except AuthenticationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=exc.message,
-        ) from exc
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(exc)}",
-        ) from exc
+    return await service.authenticate_telegram(auth_request=auth_request)
 
 
 @router.get("/me", response_model=UserProfileResponse)
@@ -61,13 +49,7 @@ async def update_user_profile(
 
 @router.post("/refresh", response_model=RefreshTokenResponse)
 async def refresh_token(refresh_request: RefreshTokenRequest):
-    try:
-        return AuthService.refresh_token(refresh_request=refresh_request)
-    except AuthenticationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=exc.message,
-        ) from exc
+    return AuthService.refresh_token(refresh_request=refresh_request)
 
 
 @router.post("/logout", response_model=LogoutResponse)
