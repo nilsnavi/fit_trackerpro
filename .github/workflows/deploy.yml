@@ -28,6 +28,8 @@ env:
   DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
   DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
   DEPLOY_DIR: ~/fittracker-pro
+  # Production public hostname (set secrets.VITE_API_URL to https://fittrackpro.ru/api/v1)
+  PRODUCTION_DOMAIN: fittrackpro.ru
 
 jobs:
   deploy:
@@ -182,9 +184,20 @@ jobs:
           API_BASE_URL: ${{ secrets.VITE_API_URL }}
         run: |
           set -Eeuo pipefail
+          echo "Production domain (reference): ${PRODUCTION_DOMAIN}"
+          if [ -z "${API_BASE_URL:-}" ]; then
+            echo "::error::VITE_API_URL secret is empty — cannot run post-deploy smoke checks."
+            exit 1
+          fi
           API_BASE_TRIMMED="${API_BASE_URL%/}"
-          BACKEND_ROOT_URL="${API_BASE_TRIMMED%/api/v1}"
-          HEALTHCHECK_URL="${API_BASE_TRIMMED}/system/health"
+          # Public site origin (SPA); API is ${API_BASE_TRIMMED} e.g. https://host/api/v1
+          FRONTEND_BASE_URL="${API_BASE_TRIMMED%/api/v1}"
+          FRONTEND_BASE_URL="${FRONTEND_BASE_URL%/}"
+
+          HEALTH_URL="${API_BASE_TRIMMED}/system/health"
+          VERSION_URL="${API_BASE_TRIMMED}/version"
+          # Nginx exposes GET /health -> same payload as system health (full stack path).
+          NGINX_HEALTH_URL="${FRONTEND_BASE_URL}/health"
           DOMAIN_URL="${API_BASE_TRIMMED}/workouts/templates?page=1&page_size=1"
 
           smoke_check() {
@@ -217,11 +230,26 @@ jobs:
             return 1
           }
 
-          # P0 minimal production smoke validation.
-          smoke_check "backend API root" "${BACKEND_ROOT_URL}" "200 301 302"
-          smoke_check "/system/health" "${HEALTHCHECK_URL}" "200"
+          # Post-deploy smoke: backend health, frontend availability, basic API connectivity.
+          # Failure of any check fails this job and triggers rollback (needs: smoke).
+
+          smoke_check "backend health (GET /api/v1/system/health)" "${HEALTH_URL}" "200"
+          curl -fsS "${HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null
+          echo "Health JSON validated: status=healthy"
+
+          smoke_check "nginx→backend health (GET /health)" "${NGINX_HEALTH_URL}" "200"
+          curl -fsS "${NGINX_HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null
+
+          smoke_check "API connectivity (GET /api/v1/system/version)" "${VERSION_URL}" "200"
+          curl -fsS "${VERSION_URL}" | jq -e '.version != null' >/dev/null
+          echo "Version JSON validated"
+
+          smoke_check "frontend (site root HTML)" "${FRONTEND_BASE_URL}/" "200"
+          curl -fsS "${FRONTEND_BASE_URL}/" | grep -qiE '<!DOCTYPE[[:space:]]+html|<html[[:space:]>]'
+          echo "Frontend HTML validated"
+
           # Domain endpoint can be auth-protected in production, so 401/403 is acceptable.
-          smoke_check "domain endpoint /workouts/templates" "${DOMAIN_URL}" "200 401 403"
+          smoke_check "protected API route /workouts/templates" "${DOMAIN_URL}" "200 401 403"
 
   rollback:
     name: Rollback on Failure

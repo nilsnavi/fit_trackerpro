@@ -7,8 +7,8 @@ set -e
 echo "🚀 Deploying FitTracker Pro..."
 
 # Configuration
-DOMAIN=${1:-"your-domain.com"}
-EMAIL=${2:-"admin@your-domain.com"}
+DOMAIN=${1:-"fittrackpro.ru"}
+EMAIL=${2:-"admin@fittrackpro.ru"}
 
 # Update system
 echo "📦 Updating system packages..."

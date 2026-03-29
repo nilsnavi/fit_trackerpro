@@ -1,73 +1,167 @@
 # Root .gitignore for FitTracker Pro
 
-# IDE
-.vscode/
+# --- IDE / editors ---
+.vscode/*
+!.vscode/extensions.json
 .idea/
+*.iml
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
 
-# OS generated files
+# --- OS ---
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 desktop.ini
+$RECYCLE.BIN/
 
-# Logs
+# --- Logs ---
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Environment files (root level)
+# --- Environment & secrets ---
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.sentryclirc
 
-# Docker (только корень; frontend/.dockerignore нужен в репозитории)
+# Docker (корневой .dockerignore не коммитим; см. также frontend/.dockerignore)
 /.dockerignore
 docker-compose.override.yml
+docker-compose.override.yaml
+*.local.yml
+*.local.yaml
 
-# Temporary files
+# --- SSL / reverse proxy (локальные копии сертификатов на машине разработчика) ---
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+nginx/logs/
+*.csr
+
+# --- Deploy / backups (pg_dump и т.п.; не трогаем *.sql в database/) ---
+backups/
+
+# --- Temporary & scratch ---
 *.tmp
 *.temp
 *.bak
 *.backup
-
-# Local development files
+*.orig
+*.rej
 *.local
 
-# Secrets (never commit)
+# --- Secrets (never commit) ---
 secrets/
 *.secret
-*.key
-*.pem
-*.cert
 
-# Database files (root level)
+# --- Database files ---
 *.db
+*.sqlite
 *.sqlite3
+dump.rdb
 
-# Misc
-.cache/
-
-# Python / тесты и линтеры (все каталоги: database/, scripts/, корень)
+# --- Python ---
 **/__pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+venv/
+.venv/
+ENV/
+env/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-.coverage
-coverage.xml
-htmlcov/
+.pyright/
 .tox/
 .hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+htmlcov/
 *.cover
 .dmypy.json
 dmypy.json
+.ipynb_checkpoints/
+*.prof
 
-# Accidental root Node/Prisma artifacts
-/node_modules/
+# --- Node / JS (monorepo + случайные артефакты в корне) ---
+node_modules/
+jspm_packages/
+web_modules/
+.pnpm-store/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.eslintcache
+.stylelintcache
+.parcel-cache
+.turbo
+.vercel
+.netlify
+.vite
+*.tsbuildinfo
+
+# Случайный npm в корне репозитория (проект: frontend/ и backend/)
 /package.json
 /package-lock.json
+
+# --- Testing / E2E ---
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+.nyc_output/
+*.lcov
+
+# --- Misc caches ---
+.cache/
+*.pid
+*.seed
+*.pid.lock

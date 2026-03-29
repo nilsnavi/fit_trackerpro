@@ -8,7 +8,7 @@ Current setup guide for FitTracker Pro Telegram authentication and Mini App laun
 2. Create a bot with `/newbot`
 3. Save the token (`TELEGRAM_BOT_TOKEN`)
 4. Open `/mybots` -> your bot -> **Bot Settings** -> **Menu Button**
-5. Set Mini App URL to your frontend domain (for example `https://fit.example.com`)
+5. Set Mini App URL to your frontend domain (for example `https://fittrackpro.ru`)
 
 ## 2) Environment variables
 
@@ -16,14 +16,14 @@ Current setup guide for FitTracker Pro Telegram authentication and Mini App laun
 
 ```env
 TELEGRAM_BOT_TOKEN=123456789:your_token
-TELEGRAM_WEBAPP_URL=https://fit.example.com
+TELEGRAM_WEBAPP_URL=https://fittrackpro.ru
 SECRET_KEY=change-me-to-strong-secret
 ```
 
 `frontend/.env`:
 
 ```env
-VITE_API_URL=https://fit.example.com/api/v1
+VITE_API_URL=https://fittrackpro.ru/api/v1
 VITE_TELEGRAM_BOT_USERNAME=your_bot_username
 ```
 
