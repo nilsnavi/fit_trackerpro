@@ -56,6 +56,16 @@ async def _get_redis_client() -> Optional[Redis]:
     return _redis_client
 
 
+async def close_cache() -> None:
+    """Close async Redis used for analytics cache (safe if never opened)."""
+    global _redis_client
+    if _redis_client is None:
+        return
+    client = _redis_client
+    _redis_client = None
+    await client.aclose()
+
+
 async def get_cache_json(key: str) -> Optional[Any]:
     """
     Read JSON payload from cache.
