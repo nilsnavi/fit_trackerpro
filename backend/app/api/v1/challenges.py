@@ -4,16 +4,11 @@ HTTP-only endpoints delegating business logic to services
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
 from app.domain.user import User
-from app.domain.exceptions import (
-    ChallengeForbiddenError,
-    ChallengeNotFoundError,
-    ChallengeValidationError,
-)
 from app.infrastructure.database import get_async_db
 from app.schemas.challenges import (
     ChallengeCreate,
@@ -30,16 +25,6 @@ from app.application.challenges_service import ChallengesService
 router = APIRouter()
 
 
-def _map_service_error(exc: Exception) -> HTTPException:
-    if isinstance(exc, ChallengeNotFoundError):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
-    if isinstance(exc, ChallengeValidationError):
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
-    if isinstance(exc, ChallengeForbiddenError):
-        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
-    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected challenges error")
-
-
 @router.get("/", response_model=ChallengeListResponse)
 async def get_challenges(
     status: Optional[str] = Query(None, pattern="^(upcoming|active|completed|cancelled)$"),
@@ -51,16 +36,13 @@ async def get_challenges(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    try:
-        return await service.get_challenges(
-            status=status,
-            challenge_type=challenge_type,
-            is_public=is_public,
-            page=page,
-            page_size=page_size,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_challenges(
+        status=status,
+        challenge_type=challenge_type,
+        is_public=is_public,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/my/active", response_model=ChallengeMyActiveResponse)
@@ -69,10 +51,7 @@ async def get_my_active_challenges(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    try:
-        return await service.get_my_active_challenges()
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_my_active_challenges()
 
 
 @router.get("/{challenge_id}", response_model=ChallengeDetailResponse)
@@ -82,10 +61,7 @@ async def get_challenge(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    try:
-        return await service.get_challenge(challenge_id=challenge_id)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_challenge(challenge_id=challenge_id)
 
 
 @router.post("/", response_model=ChallengeResponse, status_code=status.HTTP_201_CREATED)
@@ -95,14 +71,11 @@ async def create_challenge(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    try:
-        return await service.create_challenge(
-            user_id=current_user.id,
-            user_first_name=current_user.first_name,
-            data=challenge_data,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.create_challenge(
+        user_id=current_user.id,
+        user_first_name=current_user.first_name,
+        data=challenge_data,
+    )
 
 
 @router.post("/{challenge_id}/join", response_model=ChallengeJoinResponse)
@@ -113,10 +86,7 @@ async def join_challenge(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    try:
-        return await service.join_challenge(challenge_id=challenge_id, join_code=join_code)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.join_challenge(challenge_id=challenge_id, join_code=join_code)
 
 
 @router.post("/{challenge_id}/leave", response_model=ChallengeLeaveResponse)
@@ -126,10 +96,7 @@ async def leave_challenge(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    try:
-        return await service.leave_challenge(challenge_id=challenge_id)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.leave_challenge(challenge_id=challenge_id)
 
 
 @router.get("/{challenge_id}/leaderboard", response_model=ChallengeLeaderboardResponse)
@@ -140,7 +107,4 @@ async def get_challenge_leaderboard(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
-    try:
-        return await service.get_challenge_leaderboard(challenge_id=challenge_id)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_challenge_leaderboard(challenge_id=challenge_id)

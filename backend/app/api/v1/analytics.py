@@ -5,16 +5,11 @@ HTTP-only endpoints delegating business logic to services
 from datetime import date, datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user
 from app.domain.user import User
-from app.domain.exceptions import (
-    AnalyticsNotFoundError,
-    AnalyticsUnavailableError,
-    AnalyticsValidationError,
-)
 from app.infrastructure.database import get_async_db
 from app.schemas.analytics import (
     AnalyticsSummaryResponse,
@@ -36,16 +31,6 @@ from app.settings import settings
 router = APIRouter()
 
 
-def _map_service_error(exc: Exception) -> HTTPException:
-    if isinstance(exc, AnalyticsValidationError):
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
-    if isinstance(exc, AnalyticsNotFoundError):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
-    if isinstance(exc, AnalyticsUnavailableError):
-        return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
-    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected analytics error")
-
-
 @router.get("/training-load/daily", response_model=List[TrainingLoadDailyEntry])
 async def get_daily_training_load(
     date_from: Optional[date] = Query(None),
@@ -54,14 +39,11 @@ async def get_daily_training_load(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_daily_training_load(
-            user_id=current_user.id,
-            date_from=date_from,
-            date_to=date_to,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_daily_training_load(
+        user_id=current_user.id,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @router.get("/training-load/daily/table", response_model=TrainingLoadDailyTableResponse)
@@ -74,16 +56,13 @@ async def get_daily_training_load_table(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_daily_training_load_table(
-            user_id=current_user.id,
-            page=page,
-            page_size=page_size,
-            date_from=date_from,
-            date_to=date_to,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_daily_training_load_table(
+        user_id=current_user.id,
+        page=page,
+        page_size=page_size,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @router.get("/muscle-load", response_model=List[MuscleLoadEntry])
@@ -94,14 +73,11 @@ async def get_muscle_load(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_muscle_load(
-            user_id=current_user.id,
-            date_from=date_from,
-            date_to=date_to,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_muscle_load(
+        user_id=current_user.id,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @router.get("/muscle-load/table", response_model=MuscleLoadTableResponse)
@@ -115,17 +91,14 @@ async def get_muscle_load_table(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_muscle_load_table(
-            user_id=current_user.id,
-            page=page,
-            page_size=page_size,
-            date_from=date_from,
-            date_to=date_to,
-            muscle_group=muscle_group,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_muscle_load_table(
+        user_id=current_user.id,
+        page=page,
+        page_size=page_size,
+        date_from=date_from,
+        date_to=date_to,
+        muscle_group=muscle_group,
+    )
 
 
 @router.get("/recovery-state", response_model=RecoveryStateResponse)
@@ -134,10 +107,7 @@ async def get_recovery_state(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_recovery_state(user_id=current_user.id)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_recovery_state(user_id=current_user.id)
 
 
 @router.post("/recovery-state/recalculate", response_model=RecoveryStateRecalculateResponse)
@@ -149,15 +119,12 @@ async def recalculate_recovery_state(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.recalculate_recovery_state(
-            user_id=current_user.id,
-            target_date=target_date,
-            date_from=date_from,
-            date_to=date_to,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.recalculate_recovery_state(
+        user_id=current_user.id,
+        target_date=target_date,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @router.get("/progress", response_model=List[ExerciseProgressResponse])
@@ -178,16 +145,13 @@ async def get_exercise_progress(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_exercise_progress(
-            user_id=current_user.id,
-            exercise_id=exercise_id,
-            period=period,
-            max_exercises=max_exercises,
-            max_data_points=max_data_points,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_exercise_progress(
+        user_id=current_user.id,
+        exercise_id=exercise_id,
+        period=period,
+        max_exercises=max_exercises,
+        max_data_points=max_data_points,
+    )
 
 
 @router.get("/calendar", response_model=WorkoutCalendarResponse)
@@ -198,14 +162,11 @@ async def get_workout_calendar(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_workout_calendar(
-            user_id=current_user.id,
-            year=year,
-            month=month,
-        )
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_workout_calendar(
+        user_id=current_user.id,
+        year=year,
+        month=month,
+    )
 
 
 @router.post("/export", response_model=DataExportResponse)
@@ -215,10 +176,7 @@ async def export_data(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.export_data(export_request=export_request)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.export_data(export_request=export_request)
 
 
 @router.get("/export/{export_id}", response_model=DataExportResponse)
@@ -228,10 +186,7 @@ async def get_export_status(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_export_status(export_id=export_id)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_export_status(export_id=export_id)
 
 
 @router.get("/summary", response_model=AnalyticsSummaryResponse)
@@ -241,10 +196,7 @@ async def get_analytics_summary(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_analytics_summary(user_id=current_user.id, period=period)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_analytics_summary(user_id=current_user.id, period=period)
 
 
 @router.get("/muscle-signals", response_model=MuscleImbalanceSignalsResponse)
@@ -253,7 +205,4 @@ async def get_muscle_imbalance_signals(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
-    try:
-        return await service.get_muscle_imbalance_signals(user_id=current_user.id)
-    except Exception as exc:
-        raise _map_service_error(exc) from exc
+    return await service.get_muscle_imbalance_signals(user_id=current_user.id)
