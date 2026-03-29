@@ -24,6 +24,7 @@ from app.middleware.rate_limit import (
     close_rate_limit_redis_client,
     create_rate_limit_redis_client,
 )
+from app.middleware.request_correlation import RequestCorrelationMiddleware
 from app.middleware.request_logging import StructuredRequestLoggingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
@@ -152,11 +153,14 @@ app.add_middleware(
 # Rate Limiting Middleware
 app.add_middleware(RateLimitMiddleware)
 
-# Access / correlation logging (outermost: full duration including rate limit)
+# Access logging (duration includes rate limit; request id set by outer middleware)
 app.add_middleware(StructuredRequestLoggingMiddleware)
 
-# Baseline security headers on all API responses (innermost: final response envelope)
+# Baseline security headers on all API responses
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Request / correlation ID: outermost so all layers and error handlers see contextvars
+app.add_middleware(RequestCorrelationMiddleware)
 
 register_v1_routes(app)
 

@@ -10,7 +10,11 @@ from app.core.logging.context import request_id_var, user_id_var
 from app.core.logging.setup import ContextTextFormatter, JsonFormatter, RequestContextFilter
 from app.core.request_identity import user_id_from_authorization_header
 from app.main import app
-from app.middleware.request_logging import _incoming_request_id, _matched_route_template
+from app.middleware.request_correlation import (
+    incoming_request_id_header,
+    resolve_request_correlation_id,
+)
+from app.middleware.request_logging import _matched_route_template
 
 
 def _minimal_http_scope(
@@ -35,9 +39,22 @@ def _minimal_http_scope(
 @pytest.mark.unit
 def test_incoming_request_id_strips_and_rejects_blank():
     req = Request(_minimal_http_scope(headers=[(b"x-request-id", b"  abc-1  ")]))
-    assert _incoming_request_id(req) == "abc-1"
+    assert incoming_request_id_header(req) == "abc-1"
     req2 = Request(_minimal_http_scope(headers=[(b"x-request-id", b"   ")]))
-    assert _incoming_request_id(req2) is None
+    assert incoming_request_id_header(req2) is None
+
+
+@pytest.mark.unit
+def test_correlation_id_wins_over_request_id():
+    req = Request(
+        _minimal_http_scope(
+            headers=[
+                (b"x-correlation-id", b"corr-1"),
+                (b"x-request-id", b"req-1"),
+            ]
+        )
+    )
+    assert resolve_request_correlation_id(req) == "corr-1"
 
 
 @pytest.mark.unit
@@ -70,6 +87,19 @@ async def test_x_request_id_echoed(client: AsyncClient):
     response = await client.get("/", headers={"X-Request-ID": "client-trace-1"})
     assert response.status_code == 200
     assert response.headers.get("x-request-id") == "client-trace-1"
+    assert response.headers.get("x-correlation-id") == "client-trace-1"
+
+
+@pytest.mark.unit
+async def test_validation_error_envelope_includes_request_id(client: AsyncClient):
+    response = await client.post("/api/v1/users/auth/telegram", json={})
+    assert response.status_code == 422
+    data = response.json()
+    rid = response.headers.get("x-request-id")
+    assert rid
+    assert data.get("request_id") == rid
+    assert response.headers.get("x-correlation-id") == rid
+    assert data["error"]["code"] == "validation_error"
 
 
 @pytest.mark.unit
@@ -78,6 +108,7 @@ async def test_x_request_id_generated_when_absent(client: AsyncClient):
     assert response.status_code == 200
     rid = response.headers.get("x-request-id")
     assert rid is not None
+    assert response.headers.get("x-correlation-id") == rid
     uuid.UUID(rid)
 
 
@@ -114,6 +145,7 @@ async def test_request_logging_middleware_registered():
     names = [m.cls.__name__ for m in app.user_middleware]
     assert "StructuredRequestLoggingMiddleware" in names
     assert "SecurityHeadersMiddleware" in names
+    assert "RequestCorrelationMiddleware" in names
 
 
 @pytest.mark.unit
@@ -139,6 +171,10 @@ def test_json_formatter_includes_structured_fields():
     assert data["request_id"] == "r1"
     assert data["duration_ms"] == 2.5
     assert data["user_id"] is None
+    record.correlation_id = "r1"
+    line2 = fmt.format(record)
+    data2 = json.loads(line2)
+    assert data2["correlation_id"] == "r1"
 
 
 @pytest.mark.unit
@@ -158,6 +194,7 @@ def test_request_context_filter_binds_from_contextvars():
     try:
         assert flt.filter(record) is True
         assert record.request_id == "ctx-rid"
+        assert record.correlation_id == "ctx-rid"
         assert record.user_id == 99
     finally:
         user_id_var.reset(t2)

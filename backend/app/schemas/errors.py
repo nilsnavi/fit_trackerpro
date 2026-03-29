@@ -20,3 +20,7 @@ class ErrorBody(BaseModel):
 
 class ErrorEnvelope(BaseModel):
     error: ErrorBody
+    request_id: str | None = Field(
+        default=None,
+        description="Server request / correlation id (matches X-Request-ID) for support and logs",
+    )

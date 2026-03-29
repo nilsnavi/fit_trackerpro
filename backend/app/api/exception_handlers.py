@@ -13,6 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.logging.context import request_id_var
 from app.domain.exceptions import DomainError
 from app.schemas.errors import ErrorBody, ErrorEnvelope
 from app.settings import settings
@@ -45,6 +46,18 @@ def _normalize_http_detail(detail: Any) -> tuple[str, Any | None]:
     return str(detail), None
 
 
+def _merge_correlation_headers(
+    headers: dict[str, str] | None,
+    request_id: str | None,
+) -> dict[str, str] | None:
+    if not request_id:
+        return headers
+    merged = dict(headers) if headers else {}
+    merged.setdefault("X-Request-ID", request_id)
+    merged.setdefault("X-Correlation-ID", request_id)
+    return merged
+
+
 def _error_response(
     *,
     status_code: int,
@@ -53,10 +66,16 @@ def _error_response(
     details: list[dict[str, Any]] | dict[str, Any] | None = None,
     headers: dict[str, str] | None = None,
 ) -> JSONResponse:
+    rid = request_id_var.get()
     body = ErrorEnvelope(
-        error=ErrorBody(code=code, message=message, details=details)
-    ).model_dump()
-    return JSONResponse(status_code=status_code, content=body, headers=headers)
+        error=ErrorBody(code=code, message=message, details=details),
+        request_id=rid,
+    ).model_dump(exclude_none=True)
+    return JSONResponse(
+        status_code=status_code,
+        content=body,
+        headers=_merge_correlation_headers(headers, rid),
+    )
 
 
 async def domain_error_handler(request: Request, exc: DomainError) -> JSONResponse:
