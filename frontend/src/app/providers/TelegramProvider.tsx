@@ -11,11 +11,15 @@ function bootstrapTelegramWebApp(
         'init' | 'expand' | 'enableClosingConfirmation' | 'setHeaderColor' | 'setBackgroundColor'
     >,
 ) {
-    tg.init()
-    tg.expand()
-    tg.enableClosingConfirmation()
-    tg.setHeaderColor('bg_color')
-    tg.setBackgroundColor('bg_color')
+    try {
+        tg.init()
+        tg.expand()
+        tg.enableClosingConfirmation()
+        tg.setHeaderColor('bg_color')
+        tg.setBackgroundColor('bg_color')
+    } catch (e) {
+        console.warn('[Telegram] Mini App bootstrap failed', e)
+    }
 }
 
 export function TelegramProvider({ children }: PropsWithChildren) {

@@ -62,7 +62,7 @@ export function Home() {
         return () => {
             tg.hideMainButton()
         }
-    }, [tg, navigate])
+    }, [tg.isTelegram, navigate, tg.showMainButton, tg.hideMainButton])
 
     // Handle quick action with haptic feedback
     const handleQuickAction = (action: string) => {

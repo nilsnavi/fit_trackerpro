@@ -611,7 +611,7 @@ export const Achievements: React.FC<AchievementsProps> = ({
     category,
     onAchievementClick,
 }) => {
-    const { hapticFeedback } = useTelegramWebApp();
+    const { hapticFeedback, isTelegram, openTelegramLink } = useTelegramWebApp();
     const navigate = useNavigate();
 
     const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>(category || 'all');
@@ -665,16 +665,17 @@ export const Achievements: React.FC<AchievementsProps> = ({
 
     // Handle share
     const handleShare = useCallback(() => {
-        if (unlockedAchievement && typeof window !== 'undefined' && 'Telegram' in window) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const tg = (window as any).Telegram?.WebApp;
-            if (tg) {
-                const text = `🏆 Я получил достижение "${unlockedAchievement.name}" в FitTracker Pro!\n\n${unlockedAchievement.description}\n\n+${unlockedPoints} очков`;
-                tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(window.location.origin)}&text=${encodeURIComponent(text)}`);
+        if (unlockedAchievement && typeof window !== 'undefined') {
+            const text = `🏆 Я получил достижение "${unlockedAchievement.name}" в FitTracker Pro!\n\n${unlockedAchievement.description}\n\n+${unlockedPoints} очков`;
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(window.location.origin)}&text=${encodeURIComponent(text)}`;
+            if (isTelegram) {
+                openTelegramLink(shareUrl);
+            } else {
+                window.open(shareUrl, '_blank', 'noopener,noreferrer');
             }
         }
         setUnlockModalOpen(false);
-    }, [unlockedAchievement, unlockedPoints]);
+    }, [unlockedAchievement, unlockedPoints, isTelegram, openTelegramLink]);
 
     // Loading state
     if (isLoading) {

@@ -36,7 +36,7 @@ export function TelegramAuthExample() {
                 applyTheme(theme)
             }
         }
-    }, [tg])
+    }, [tg.isTelegram, tg.init, tg.getTheme])
 
     // Apply Telegram theme colors to CSS variables
     const applyTheme = (theme: ThemeParams) => {
@@ -72,8 +72,7 @@ export function TelegramAuthExample() {
         setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
 
         try {
-            // Get initData from WebApp
-            const initData = tg.webApp.initData
+            const initData = tg.initData || tg.webApp?.initData
 
             if (!initData) {
                 throw new Error('No initData available')
