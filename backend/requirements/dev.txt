@@ -1,7 +1,7 @@
 -r base.txt
 
 # Development and Testing
-pytest==8.0.0
+pytest==9.0.2
 pytest-asyncio==0.23.5
 pytest-cov==4.1.0
 pytest-mock==3.15.1
