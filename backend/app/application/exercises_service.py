@@ -9,6 +9,7 @@ from app.schemas.exercises import (
     ExerciseCategoriesResponse,
     ExerciseCreate,
     ExerciseEquipmentListResponse,
+    ExerciseListFilters,
     ExerciseListResponse,
     ExerciseMuscleGroupsResponse,
     ExerciseResponse,
@@ -52,13 +53,13 @@ class ExercisesService:
             total=total,
             page=page,
             page_size=page_size,
-            filters={
-                "category": category,
-                "muscle_group": muscle_group,
-                "equipment": equipment,
-                "search": search,
-                "status": status,
-            },
+            filters=ExerciseListFilters(
+                category=category,
+                muscle_group=muscle_group,
+                equipment=equipment,
+                search=search,
+                status=status,
+            ),
         )
 
     async def get_exercise(self, exercise_id: int) -> ExerciseResponse:

@@ -2,16 +2,29 @@
 Achievements Schemas
 Pydantic models for achievements endpoints
 """
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AchievementCondition(BaseModel):
-    """Achievement unlock condition"""
+    """Achievement unlock condition (JSONB in DB)."""
+
+    model_config = ConfigDict(extra="allow")
+
     type: str
-    value: int
+    target: int
+    count: Optional[int] = None
     description: Optional[str] = None
+
+
+class AchievementProgressData(BaseModel):
+    """Progress payload for a user achievement (JSONB)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    current: Optional[int] = None
+    target: Optional[int] = None
 
 
 class AchievementResponse(BaseModel):
@@ -22,7 +35,7 @@ class AchievementResponse(BaseModel):
     name: str
     description: str
     icon_url: Optional[str]
-    condition: Dict[str, Any]
+    condition: AchievementCondition
     points: int
     category: str
     is_hidden: bool
@@ -46,7 +59,7 @@ class UserAchievementResponse(BaseModel):
     achievement: AchievementResponse
     earned_at: datetime
     progress: int
-    progress_data: Dict[str, Any]
+    progress_data: AchievementProgressData
     is_completed: bool = Field(
         default=True,
         description="Whether achievement is fully completed"
@@ -66,7 +79,7 @@ class UserAchievementListResponse(BaseModel):
 class AchievementProgressUpdate(BaseModel):
     """Request model for updating achievement progress"""
     progress: int = Field(..., ge=0)
-    progress_data: Optional[Dict[str, Any]] = None
+    progress_data: Optional[AchievementProgressData] = None
 
 
 class AchievementUnlockResponse(BaseModel):

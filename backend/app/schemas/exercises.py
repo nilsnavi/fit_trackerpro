@@ -7,6 +7,16 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class ExerciseListFilters(BaseModel):
+    """Echo of list query parameters (for clients and OpenAPI)."""
+
+    category: Optional[str] = None
+    muscle_group: Optional[str] = None
+    equipment: Optional[str] = None
+    search: Optional[str] = None
+    status: str = "active"
+
+
 class ExerciseFilterParams(BaseModel):
     """Query parameters for exercise filtering"""
     category: Optional[str] = Field(None, description="Filter by category")
@@ -79,7 +89,7 @@ class ExerciseListResponse(BaseModel):
     total: int
     page: int
     page_size: int
-    filters: dict = Field(default_factory=dict)
+    filters: ExerciseListFilters = Field(default_factory=ExerciseListFilters)
 
 
 class ExerciseCategoryItem(BaseModel):

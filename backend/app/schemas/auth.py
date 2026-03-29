@@ -2,9 +2,29 @@
 Auth Schemas
 Pydantic models for authentication endpoints
 """
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class UserProfileData(BaseModel):
+    """User profile JSON (equipment, limitations, goals)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    equipment: List[str] = Field(default_factory=list)
+    limitations: List[str] = Field(default_factory=list)
+    goals: List[str] = Field(default_factory=list)
+
+
+class UserSettingsData(BaseModel):
+    """User settings JSON (theme, notifications, units)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    theme: str = "telegram"
+    notifications: bool = True
+    units: str = "metric"
 
 
 class TelegramAuthRequest(BaseModel):
@@ -46,11 +66,11 @@ class UserProfileUpdate(BaseModel):
     """Request model for updating user profile"""
     first_name: Optional[str] = Field(None, max_length=255)
     last_name: Optional[str] = Field(None, max_length=255)
-    profile: Optional[dict] = Field(
+    profile: Optional[UserProfileData] = Field(
         None,
         description="User profile data: equipment, limitations, goals"
     )
-    settings: Optional[dict] = Field(
+    settings: Optional[UserSettingsData] = Field(
         None,
         description="User settings: theme, notifications, units"
     )
@@ -63,8 +83,8 @@ class UserProfileResponse(BaseModel):
     telegram_id: int
     username: Optional[str]
     first_name: Optional[str]
-    profile: dict = Field(default_factory=dict)
-    settings: dict = Field(default_factory=dict)
+    profile: UserProfileData = Field(default_factory=UserProfileData)
+    settings: UserSettingsData = Field(default_factory=UserSettingsData)
     created_at: datetime
     updated_at: datetime
 
@@ -76,8 +96,8 @@ def user_profile_from_db(user) -> UserProfileResponse:
         telegram_id=user.telegram_id,
         username=user.username,
         first_name=user.first_name,
-        profile=dict(user.profile or {}),
-        settings=dict(user.settings or {}),
+        profile=UserProfileData.model_validate(user.profile or {}),
+        settings=UserSettingsData.model_validate(user.settings or {}),
         created_at=user.created_at,
         updated_at=user.updated_at,
     )

@@ -2,9 +2,17 @@
 Challenges Schemas
 Pydantic models for challenges endpoints
 """
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime, date
 from pydantic import BaseModel, Field
+
+
+class ChallengeListFilters(BaseModel):
+    """Echo of list query parameters (for clients and OpenAPI)."""
+
+    status: Optional[str] = None
+    type: Optional[str] = None
+    is_public: Optional[bool] = None
 
 
 class ChallengeGoal(BaseModel):
@@ -87,7 +95,7 @@ class ChallengeListResponse(BaseModel):
     total: int
     page: int
     page_size: int
-    filters: Dict[str, Any] = Field(default_factory=dict)
+    filters: ChallengeListFilters = Field(default_factory=ChallengeListFilters)
 
 
 class ChallengeJoinResponse(BaseModel):
