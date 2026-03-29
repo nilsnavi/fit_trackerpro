@@ -66,7 +66,13 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - SENTRY_DSN=${SENTRY_DSN}
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import json,sys,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/api/v1/system/health', timeout=5); d=json.load(r); sys.exit(0 if d.get('status')=='healthy' else 1)",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
