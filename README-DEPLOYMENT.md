@@ -25,8 +25,8 @@ Production — **image-based**: на сервере не делают `git pull`
 
 ## Когда появляются теги образов (`build.yml`)
 
-- **Push в `main`** — пушатся теги вроде `main`, `main-<sha>`, `latest` (см. `docker/metadata-action` в workflow).
-- **Публикация GitHub Release** — дополнительно семвер-теги (`v1.2.3` и т.д.) и `latest`.
+- **Push в `main`** — пушатся теги вроде `main`, `main-<sha>` (см. `docker/metadata-action` в workflow); тег **`latest` в registry не публикуется**.
+- **Публикация GitHub Release** — дополнительно семвер-теги (`v1.2.3` и т.д.).
 
 `deploy.yml` и `build.yml` оба реагируют на `release: published`. Имеет смысл **убедиться, что job «Build and Push» успешно завершился** для нужного tag (при сбое — повторить деплой через **Run workflow** с тем же `image_tag` после зелёной сборки).
 
@@ -35,7 +35,7 @@ Production — **image-based**: на сервере не делают `git pull`
 ### Триггеры
 
 1. **GitHub Release → Published** — в `.env` на сервере выставляется `IMAGE_TAG=<имя тега релиза>` (например `v1.0.0`).
-2. **Actions → Deploy to Production → Run workflow** — поле **Image tag** (`image_tag`, по умолчанию `latest`).
+2. **Actions → Deploy to Production → Run workflow** — поле **Image tag** (`image_tag`) **обязательно**: укажите тот же semver-тег или, например, `main-<sha>` из GHCR; значения `latest` и пустая строка отклоняются.
 
 Поле **Environment** в форме `workflow_dispatch` (production / staging) **в текущем YAML не используется** — фактическая цель всегда `secrets.DEPLOY_HOST` и `~/fittracker-pro`.
 
@@ -43,7 +43,7 @@ Production — **image-based**: на сервере не делают `git pull`
 
 1. **Deploy** — SSH на сервер, синхронизация `docker-compose.prod.yml` и `nginx/nginx.conf`, перезапись корневого `.env` из GitHub Secrets, запись `.rollback-meta.env` (в т.ч. `PREVIOUS_IMAGE_TAG`, путь бэкапа БД), `pg_dump` в `backups/`, `docker-compose pull`, `run --rm backend alembic upgrade head`, `up -d`, `docker image prune -f`, проверки с хоста: `http://localhost:8000/api/v1/system/health`, `/api/v1/system/version`, `http://localhost/`.
 2. **Post-deploy Smoke** — с раннера GitHub, по `secrets.VITE_API_URL`: корень API, `/system/health`, проба доменного эндпоинта (допускаются `401/403` если включена авторизация).
-3. **Rollback on Failure** — выполняется, если упал **deploy** или **smoke**: откат `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG`, `pull backend frontend`, `up -d`, опционально восстановление БД из бэкапа только если при ручном запуске был включён **`rollback_restore_db`**.
+3. **Rollback on Failure** — выполняется, если упал **deploy** или **smoke**: откат `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG` (если до деплоя в `.env` уже был сохранён тег; иначе job завершится ошибкой — типично для **первого** деплоя на чистый сервер), `pull backend frontend`, `up -d`, опционально восстановление БД из бэкапа только если при ручном запуске был включён **`rollback_restore_db`**.
 4. **Notify** — Slack (успех / ошибка), если задан `SLACK_WEBHOOK_URL`.
 
 При падении миграций удалённый скрипт завершится с ошибкой → сработает rollback-job (при успешном SSH).
@@ -111,6 +111,7 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ### Production (`docker-compose.prod.yml`)
 
+- Образы Postgres, Redis и Nginx в compose закреплены по **digest**; приложения — из GHCR по **`IMAGE_TAG`** (не `latest`).
 - Postgres/Redis без публикации наружу (внутренняя сеть).
 - Backend валидирует env при старте: длина `SECRET_KEY`, `ALLOWED_ORIGINS` без wildcard, `DEBUG=false`.
 - `DATABASE_URL` / `DATABASE_URL_SYNC` / `REDIS_URL` для контейнеров **задаются в compose**, в корневой `.env` на сервере их указывать не требуется — достаточно `POSTGRES_*` и секретов из таблицы выше.
@@ -122,5 +123,5 @@ docker-compose -f docker-compose.prod.yml up -d
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
 - `SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBAPP_URL`, `ALLOWED_ORIGINS`, `SENTRY_DSN`
 - `VITE_API_URL`, `VITE_TELEGRAM_BOT_USERNAME`
-- `IMAGE_TAG` (релизный tag или значение из ручного запуска)
+- `IMAGE_TAG` (semver при релизе или явный тег при ручном запуске, например `main-<sha>`; не `latest`)
 - `GITHUB_REPOSITORY` (owner/repo для пути образа в GHCR)

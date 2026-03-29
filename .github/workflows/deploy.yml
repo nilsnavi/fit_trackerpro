@@ -14,9 +14,8 @@ on:
           - production
           - staging
       image_tag:
-        description: "Image tag to deploy (for reproducible rollout)"
-        required: false
-        default: "latest"
+        description: "Versioned image tag to deploy (e.g. v1.2.3 or main-abc1234), never latest"
+        required: true
         type: string
       rollback_restore_db:
         description: "Restore DB from pre-deploy backup during rollback"
@@ -53,12 +52,17 @@ jobs:
       - name: Resolve deploy image tag
         run: |
           set -Eeuo pipefail
-          DEPLOY_IMAGE_TAG="latest"
+          DEPLOY_IMAGE_TAG=""
 
           if [ "${{ github.event_name }}" = "release" ]; then
             DEPLOY_IMAGE_TAG="${{ github.event.release.tag_name }}"
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             DEPLOY_IMAGE_TAG="${{ inputs.image_tag }}"
+          fi
+
+          if [ -z "${DEPLOY_IMAGE_TAG}" ] || [ "${DEPLOY_IMAGE_TAG}" = "latest" ]; then
+            echo "::error::Deploy requires a non-empty versioned tag (not 'latest'). Publish a GitHub Release or pass a tag (e.g. v1.2.3 or main-<sha>)."
+            exit 1
           fi
 
           echo "DEPLOY_IMAGE_TAG=${DEPLOY_IMAGE_TAG}" >> "$GITHUB_ENV"
@@ -80,14 +84,11 @@ jobs:
             cd ~/fittracker-pro || exit 1
             mkdir -p backups nginx/ssl nginx/logs
             
-            PREVIOUS_IMAGE_TAG="latest"
+            PREVIOUS_IMAGE_TAG=""
             if [ -f .env ]; then
               # Keep previous runtime tag to enable deterministic rollback.
               if grep -qE '^IMAGE_TAG=' .env; then
                 PREVIOUS_IMAGE_TAG="$(grep -E '^IMAGE_TAG=' .env | tail -n1 | cut -d'=' -f2-)"
-                if [ -z "${PREVIOUS_IMAGE_TAG}" ]; then
-                  PREVIOUS_IMAGE_TAG="latest"
-                fi
               fi
             fi
 
@@ -122,8 +123,8 @@ jobs:
             docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > "${DB_BACKUP_PATH}"
             echo "DB_BACKUP_PATH=${DB_BACKUP_PATH}" >> .rollback-meta.env
             
-            # Pull latest images
-            echo "Pulling latest images..."
+            # Pull images for the resolved IMAGE_TAG (infra layers + app images)
+            echo "Pulling container images..."
             docker-compose -f docker-compose.prod.yml pull
             
             # Run database migrations
@@ -240,11 +241,16 @@ jobs:
             set -Eeuo pipefail
             cd ~/fittracker-pro
             
-            PREVIOUS_IMAGE_TAG="latest"
+            PREVIOUS_IMAGE_TAG=""
             DB_BACKUP_PATH=""
             if [ -f .rollback-meta.env ]; then
               # shellcheck disable=SC1091
               source .rollback-meta.env
+            fi
+
+            if [ -z "${PREVIOUS_IMAGE_TAG}" ]; then
+              echo "Error: No previous IMAGE_TAG in .rollback-meta.env — cannot roll back app images (first deploy or missing metadata)."
+              exit 1
             fi
 
             if [ -f .env ]; then

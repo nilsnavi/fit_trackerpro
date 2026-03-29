@@ -45,7 +45,6 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix={{branch}}-
-            latest
 
       - name: Set backend build metadata
         id: backend_build
@@ -58,6 +57,7 @@ jobs:
           fi
 
       - name: Build and push Docker image
+        id: push-backend
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -75,7 +75,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}@${{ steps.push-backend.outputs.digest }}
           format: "sarif"
           output: "trivy-backend-results.sarif"
 
@@ -118,9 +118,9 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix={{branch}}-
-            latest
 
       - name: Build and push Docker image
+        id: push-frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
@@ -134,7 +134,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}@${{ steps.push-frontend.outputs.digest }}
           format: "sarif"
           output: "trivy-frontend-results.sarif"
 
