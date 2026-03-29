@@ -107,6 +107,11 @@ export class SyncQueueEngine {
         return this.items
     }
 
+    /** true, пока выполняется {@link flush} (отправка операций на сервер). */
+    isFlushActive(): boolean {
+        return this.processing
+    }
+
     pendingCount(): number {
         return this.items.filter((i) => i.status === 'pending').length
     }
@@ -155,6 +160,7 @@ export class SyncQueueEngine {
     async flush(): Promise<number> {
         if (this.processing) return 0
         this.processing = true
+        this.notify()
         let completed = 0
         try {
             // eslint-disable-next-line no-constant-condition
@@ -201,6 +207,7 @@ export class SyncQueueEngine {
             }
         } finally {
             this.processing = false
+            this.notify()
         }
         return completed
     }
