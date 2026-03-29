@@ -6,16 +6,28 @@ import logging
 import os
 import time
 import redis
-from typing import Optional, Callable
 from functools import wraps
+from typing import Callable, Optional
 
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from app.api.v1.registration import API_V1_PREFIX
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
+
+WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+# Policy tokens exposed in X-RateLimit-Policy (stable for clients)
+POLICY_DEFAULT = "default"
+POLICY_AUTH = "auth"
+POLICY_AUTH_STRICT = "auth-strict"
+POLICY_SYSTEM = "system"
+POLICY_WRITE = "write"
+POLICY_EXPORT = "export"
+POLICY_EMERGENCY_NOTIFY = "emergency-notify"
 
 
 def create_rate_limit_redis_client() -> Optional[redis.Redis]:
@@ -41,45 +53,45 @@ def close_rate_limit_redis_client(client: Optional[redis.Redis]) -> None:
         client.close()
 
 
-class RateLimitConfig:
-    """Rate limit configuration"""
-    DEFAULT_LIMIT = 100  # requests
-    DEFAULT_WINDOW = 60  # seconds
-
-    # Endpoint specific limits
-    ENDPOINT_LIMITS = {
-        # Auth endpoints
-        "/api/v1/users/auth/telegram": (5, 60),      # 5 per minute
-        "/api/v1/users/auth/refresh": (10, 60),      # 10 per minute
-        "/api/v1/users/auth/logout": (10, 60),       # 10 per minute
-        "/api/v1/auth/telegram": (5, 60),            # legacy alias
-        "/api/v1/auth/refresh": (10, 60),            # legacy alias
-        "/api/v1/auth/logout": (10, 60),             # legacy alias
-
-        # Emergency endpoints - higher limits
-        "/api/v1/system/emergency/notify": (20, 60),  # 20 per minute
-        "/api/v1/emergency/notify": (20, 60),         # legacy alias
-
-        # Export endpoints - lower limits
-        "/api/v1/analytics/export": (5, 3600),  # 5 per hour
-    }
+def _apply_rate_limit_headers(
+    headers: dict[str, str],
+    *,
+    limit: int,
+    remaining: int,
+    reset_time: int,
+    window: int,
+    policy: str,
+) -> None:
+    """Populate predictable, documented response headers (also used on 429)."""
+    slimit = str(limit)
+    srem = str(remaining)
+    sreset = str(reset_time)
+    swin = str(window)
+    headers["X-RateLimit-Limit"] = slimit
+    headers["X-RateLimit-Remaining"] = srem
+    headers["X-RateLimit-Reset"] = sreset
+    headers["X-RateLimit-Window"] = swin
+    headers["X-RateLimit-Policy"] = policy
+    # Draft / common convention mirror (same semantics as X-RateLimit-*)
+    headers["RateLimit-Limit"] = slimit
+    headers["RateLimit-Remaining"] = srem
+    headers["RateLimit-Reset"] = sreset
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Rate limiting middleware using Redis
 
-    Tracks request counts per IP address and endpoint
+    Tracks request counts per IP address (or forwarded client), per policy and path.
     """
 
     def __init__(self, app):
         super().__init__(app)
-        self.config = RateLimitConfig()
         self._memory_storage: dict = {}
 
-    def _get_key(self, identifier: str, path: str) -> str:
-        """Generate rate limit key"""
-        return f"ratelimit:{identifier}:{path}"
+    def _get_key(self, identifier: str, policy: str, path: str) -> str:
+        """Include policy so read vs write tiers do not share one counter on the same path."""
+        return f"ratelimit:{identifier}:{policy}:{path}"
 
     def _get_memory_count(self, key: str, window: int) -> int:
         """Get count from in-memory storage"""
@@ -87,15 +99,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if key not in self._memory_storage:
             self._memory_storage[key] = []
 
-        # Clean old entries
         self._memory_storage[key] = [
-            ts for ts in self._memory_storage[key]
-            if now - ts < window
+            ts for ts in self._memory_storage[key] if now - ts < window
         ]
 
         return len(self._memory_storage[key])
 
-    def _increment_memory(self, key: str, window: int):
+    def _increment_memory(self, key: str, window: int) -> None:
         """Increment count in in-memory storage"""
         now = time.time()
         if key not in self._memory_storage:
@@ -106,45 +116,36 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _check_rate_limit(
         self,
         identifier: str,
+        policy: str,
         path: str,
         limit: int,
         window: int,
         redis_client: Optional[redis.Redis],
     ) -> tuple[bool, int, int]:
         """
-        Check if request is within rate limit
+        Check if request is within rate limit.
 
         Returns:
-            Tuple of (allowed, remaining, reset_time)
+            Tuple of (allowed, remaining, reset_epoch_seconds)
         """
-        key = self._get_key(identifier, path)
+        key = self._get_key(identifier, policy, path)
 
         if redis_client:
-            # Use Redis
-            pipe = redis_client.pipeline()
             now = time.time()
-
-            # Remove old entries
+            pipe = redis_client.pipeline()
             pipe.zremrangebyscore(key, 0, now - window)
-
-            # Count current entries
             pipe.zcard(key)
+            current_count = pipe.execute()[1]
 
-            # Add current request
-            pipe.zadd(key, {str(now): now})
+            allowed = current_count < limit
+            if allowed:
+                redis_client.zadd(key, {str(now): now})
+                redis_client.expire(key, window)
 
-            # Set expiry on key
-            pipe.expire(key, window)
-
-            results = pipe.execute()
-            current_count = results[1]
-
-            allowed = current_count <= limit
-            remaining = max(0, limit - current_count)
+            remaining = max(0, limit - current_count - (1 if allowed else 0))
             reset_time = int(now + window)
 
         else:
-            # Use in-memory storage
             current_count = self._get_memory_count(key, window)
             allowed = current_count < limit
             remaining = max(0, limit - current_count - 1)
@@ -155,100 +156,131 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return allowed, remaining, reset_time
 
+    def _resolve_policy(self, path: str, method: str) -> tuple[str, int, int]:
+        """
+        Return (policy_name, max_requests, window_seconds) for this request.
+        First matching rule wins (most specific overrides first).
+        """
+        s = settings
+        export_path = f"{API_V1_PREFIX}/analytics/export"
+        emergency_notify_prefixes = (
+            f"{API_V1_PREFIX}/system/emergency/notify",
+            f"{API_V1_PREFIX}/emergency/notify",
+        )
+        auth_prefixes = (
+            f"{API_V1_PREFIX}/users/auth",
+            f"{API_V1_PREFIX}/auth",
+        )
+        system_prefix = f"{API_V1_PREFIX}/system"
+        strict_suffix = "/telegram"
+
+        if path == export_path or path.startswith(export_path + "/"):
+            return (
+                POLICY_EXPORT,
+                s.RATE_LIMIT_EXPORT_REQUESTS,
+                s.RATE_LIMIT_EXPORT_WINDOW_SECONDS,
+            )
+
+        for prefix in emergency_notify_prefixes:
+            if path == prefix or path.startswith(prefix + "/"):
+                return (
+                    POLICY_EMERGENCY_NOTIFY,
+                    s.RATE_LIMIT_EMERGENCY_NOTIFY_REQUESTS,
+                    s.RATE_LIMIT_EMERGENCY_NOTIFY_WINDOW_SECONDS,
+                )
+
+        if path.endswith(strict_suffix) and any(path.startswith(p) for p in auth_prefixes):
+            return (
+                POLICY_AUTH_STRICT,
+                s.RATE_LIMIT_AUTH_STRICT_REQUESTS,
+                s.RATE_LIMIT_AUTH_STRICT_WINDOW_SECONDS,
+            )
+
+        if any(path.startswith(p) for p in auth_prefixes):
+            return POLICY_AUTH, s.RATE_LIMIT_AUTH_REQUESTS, s.RATE_LIMIT_AUTH_WINDOW_SECONDS
+
+        if path.startswith(system_prefix):
+            return POLICY_SYSTEM, s.RATE_LIMIT_SYSTEM_REQUESTS, s.RATE_LIMIT_SYSTEM_WINDOW_SECONDS
+
+        if method in WRITE_METHODS:
+            return POLICY_WRITE, s.RATE_LIMIT_WRITE_REQUESTS, s.RATE_LIMIT_WRITE_WINDOW_SECONDS
+
+        return (
+            POLICY_DEFAULT,
+            s.RATE_LIMIT_DEFAULT_REQUESTS,
+            s.RATE_LIMIT_DEFAULT_WINDOW_SECONDS,
+        )
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """
-        Process request with rate limiting
-        """
         if os.environ.get("PYTEST_RUNNING") == "1":
             return await call_next(request)
 
-        # Skip rate limiting for certain paths
-        if request.url.path in [
+        path = request.url.path
+        method = request.method.upper()
+
+        if path in {
             "/",
             "/metrics",
             "/docs",
             "/redoc",
             "/openapi.json",
             "/health",
-            "/api/v1/system/health",
-            "/api/v1/system/version",
-        ]:
+            f"{API_V1_PREFIX}/system/health",
+            f"{API_V1_PREFIX}/system/version",
+        }:
             return await call_next(request)
 
-        # Get identifier (prefer user ID from auth, fallback to IP)
         identifier = self._get_identifier(request)
-
-        # Get rate limit for this endpoint
-        limit, window = self._get_endpoint_limit(request.url.path)
+        policy, limit, window = self._resolve_policy(path, method)
 
         redis_client = getattr(request.app.state, "redis_rate_limit", None)
 
-        # Check rate limit
         allowed, remaining, reset_time = self._check_rate_limit(
             identifier,
-            request.url.path,
+            policy,
+            path,
             limit,
             window,
             redis_client,
         )
 
+        hdrs: dict[str, str] = {}
+        _apply_rate_limit_headers(
+            hdrs,
+            limit=limit,
+            remaining=remaining,
+            reset_time=reset_time,
+            window=window,
+            policy=policy,
+        )
+
         if not allowed:
+            retry_after = max(1, reset_time - int(time.time()))
+            hdrs["Retry-After"] = str(retry_after)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Rate limit exceeded. Please try again later.",
-                headers={
-                    "X-RateLimit-Limit": str(limit),
-                    "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(reset_time),
-                    "Retry-After": str(window)
-                }
+                headers=hdrs,
             )
 
-        # Process request
         response = await call_next(request)
-
-        # Add rate limit headers
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-        response.headers["X-RateLimit-Reset"] = str(reset_time)
-
+        for k, v in hdrs.items():
+            response.headers[k] = v
         return response
 
     def _get_identifier(self, request: Request) -> str:
         """Get identifier for rate limiting"""
-        # Try to get user ID from auth header
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            # We could decode JWT here, but for simplicity use IP
-            # In production, decode JWT and use user_id
-            pass
-
-        # Fallback to IP address
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return forwarded.split(",")[0].strip()
 
         return request.client.host if request.client else "unknown"
 
-    def _get_endpoint_limit(self, path: str) -> tuple[int, int]:
-        """Get rate limit for specific endpoint"""
-        # Check exact match
-        if path in self.config.ENDPOINT_LIMITS:
-            return self.config.ENDPOINT_LIMITS[path]
-
-        # Check prefix match
-        for prefix, (limit, window) in self.config.ENDPOINT_LIMITS.items():
-            if path.startswith(prefix):
-                return limit, window
-
-        # Return default
-        return self.config.DEFAULT_LIMIT, self.config.DEFAULT_WINDOW
-
 
 def rate_limit(
     requests: int = 100,
     window: int = 60,
-    key_func: Optional[Callable] = None
+    key_func: Optional[Callable] = None,
 ):
     """
     Decorator for endpoint-specific rate limiting
@@ -264,11 +296,11 @@ def rate_limit(
         async def some_endpoint():
             pass
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            # Get request from kwargs or args
-            request = kwargs.get('request')
+            request = kwargs.get("request")
             if not request and args:
                 for arg in args:
                     if isinstance(arg, Request):
@@ -278,7 +310,6 @@ def rate_limit(
             if not request:
                 return await func(*args, **kwargs)
 
-            # Placeholder: derive rate-limit key (middleware enforces limits today).
             if key_func:
                 _ = key_func(request)
             else:
@@ -291,4 +322,5 @@ def rate_limit(
             return await func(*args, **kwargs)
 
         return wrapper
+
     return decorator
