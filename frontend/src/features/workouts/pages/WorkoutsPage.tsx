@@ -9,9 +9,9 @@ import {
     estimateCaloriesForType,
     getWorkoutListTypeConfig,
     type WorkoutMode,
-} from '@/features/workouts/config/workoutTypeConfigs'
-import { useWorkoutHistoryQuery } from '@/features/workouts/hooks/useWorkoutHistoryQuery'
-import { useWorkoutHistoryItemQuery } from '@/features/workouts/hooks/useWorkoutHistoryItemQuery'
+} from '@features/workouts/config/workoutTypeConfigs'
+import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
+import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
 import type { WorkoutType } from '@shared/types'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'

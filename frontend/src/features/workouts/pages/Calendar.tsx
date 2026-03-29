@@ -5,7 +5,7 @@ import { Card } from '@shared/ui/Card';
 import { Modal } from '@shared/ui/Modal';
 import type { CalendarDayData, CalendarMonthStats } from '@features/workouts/types/calendarPage';
 import type { CalendarWorkout } from '@features/workouts/types/workouts';
-import { WORKOUT_TYPE_LABELS } from '@/features/workouts/config/workoutTypeConfigs';
+import { WORKOUT_TYPE_LABELS } from '@features/workouts/config/workoutTypeConfigs';
 import { useWorkoutCalendarQuery } from '@features/workouts/hooks/useWorkoutCalendarQuery';
 
 // Constants
