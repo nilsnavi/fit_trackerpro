@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
 import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
-import { WorkoutModePageView } from '@/features/workouts/workoutMode/WorkoutModePageView'
-import { getWorkoutModePageConfig } from '@/features/workouts/workoutMode/workoutModePageModel'
+import { WorkoutModePageView } from '@features/workouts/workoutMode/WorkoutModePageView'
+import { getWorkoutModePageConfig } from '@features/workouts/workoutMode/workoutModePageModel'
 
 export function WorkoutModePage() {
     const { mode } = useParams<{ mode: string }>()

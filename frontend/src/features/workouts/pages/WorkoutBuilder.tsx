@@ -51,7 +51,7 @@ import type { WorkoutType } from '@shared/types';
 import {
     WORKOUT_FILTER_TYPE_ORDER,
     WORKOUT_LIST_TYPE_CONFIG,
-} from '@/features/workouts/config/workoutTypeConfigs';
+} from '@features/workouts/config/workoutTypeConfigs';
 
 const mapWorkoutTypeToBackend = (types: WorkoutType[]): BackendWorkoutType => {
     const normalized = types.filter((type) => type === 'cardio' || type === 'strength' || type === 'flexibility');

@@ -1,7 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { initSentry } from './app/sentry'
-import { QueryProvider } from './app/providers/QueryProvider'
 import App from './App'
 import './styles/globals.css'
 
@@ -14,8 +13,6 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
     <StrictMode>
-        <QueryProvider>
-            <App />
-        </QueryProvider>
+        <App />
     </StrictMode>,
 )

@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+/** Same roots as `compilerOptions.paths` in tsconfig.json */
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const srcDir = path.resolve(__dirname, 'src')
 
 export default defineConfig({
     plugins: [
@@ -8,10 +13,10 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src'),
-            '@app': path.resolve(__dirname, './src/app'),
-            '@features': path.resolve(__dirname, './src/features'),
-            '@shared': path.resolve(__dirname, './src/shared'),
+            '@': srcDir,
+            '@app': path.join(srcDir, 'app'),
+            '@features': path.join(srcDir, 'features'),
+            '@shared': path.join(srcDir, 'shared'),
         },
     },
     server: {
