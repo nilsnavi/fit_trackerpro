@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, Clock3, MessageSquare, Tags } from 'lucide-react'
-import { workoutsApi } from '@shared/api/domains/workoutsApi'
-import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
+import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { getErrorMessage } from '@shared/errors'
 
@@ -34,11 +33,16 @@ export function WorkoutDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
     const tg = useTelegramWebApp()
-    const [workout, setWorkout] = useState<WorkoutHistoryItem | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
 
     const workoutId = Number.parseInt(id ?? '', 10)
+    const isValidWorkoutId = Number.isFinite(workoutId)
+
+    const {
+        data: workout,
+        isFetching,
+        isError,
+        error: queryError,
+    } = useWorkoutHistoryItemQuery(workoutId, isValidWorkoutId)
 
     useEffect(() => {
         if (tg.isTelegram) {
@@ -49,39 +53,13 @@ export function WorkoutDetailPage() {
         }
     }, [tg, navigate])
 
-    useEffect(() => {
-        if (!Number.isFinite(workoutId)) {
-            setError('Неверный идентификатор тренировки')
-            setIsLoading(false)
-            return
-        }
+    const errorMessage = !isValidWorkoutId
+        ? 'Неверный идентификатор тренировки'
+        : isError
+            ? getErrorMessage(queryError)
+            : null
 
-        let isCancelled = false
-        const loadWorkout = async () => {
-            setIsLoading(true)
-            setError(null)
-            try {
-                const response = await workoutsApi.getHistoryItem(workoutId)
-                if (!isCancelled) {
-                    setWorkout(response)
-                }
-            } catch (loadError) {
-                console.error('Failed to load workout detail:', loadError)
-                if (!isCancelled) {
-                    setError(getErrorMessage(loadError))
-                }
-            } finally {
-                if (!isCancelled) {
-                    setIsLoading(false)
-                }
-            }
-        }
-
-        loadWorkout()
-        return () => {
-            isCancelled = true
-        }
-    }, [workoutId])
+    const isLoading = isValidWorkoutId && isFetching
 
     const exerciseCount = useMemo(
         () => workout?.exercises.length ?? 0,
@@ -111,11 +89,11 @@ export function WorkoutDetailPage() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">Загрузка...</div>
             )}
 
-            {!isLoading && error && (
-                <div className="text-sm text-red-500 dark:text-red-400">{error}</div>
+            {!isLoading && errorMessage && (
+                <div className="text-sm text-red-500 dark:text-red-400">{errorMessage}</div>
             )}
 
-            {!isLoading && !error && workout && (
+            {!isLoading && !errorMessage && workout && (
                 <>
                     <div className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 space-y-4">
                         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">

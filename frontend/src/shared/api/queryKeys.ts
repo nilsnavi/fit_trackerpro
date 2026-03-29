@@ -20,6 +20,7 @@ export const queryKeys = {
     workouts: {
         history: (params: { page: number; page_size: number }) =>
             ['workouts', 'history', params] as const,
+        historyItem: (workoutId: number) => ['workouts', 'history', 'item', workoutId] as const,
         calendar: (year: number, month: number) => ['workouts', 'calendar', year, month] as const,
     },
     health: {
