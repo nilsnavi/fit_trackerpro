@@ -1,67 +1,41 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Clock, Flame, ChevronRight, Play, CalendarDays } from 'lucide-react'
+import {
+    Plus,
+    Clock,
+    Flame,
+    ChevronRight,
+    Play,
+    CalendarDays,
+    LayoutTemplate,
+    Dumbbell,
+    Sparkles,
+} from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import {
     WORKOUT_FILTER_TYPE_ORDER,
     WORKOUT_MODE_ORDER,
     WORKOUT_TYPE_CONFIGS,
-    estimateCaloriesForType,
     getWorkoutListTypeConfig,
     type WorkoutMode,
 } from '@features/workouts/config/workoutTypeConfigs'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
+import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
+import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
+import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import type { WorkoutType } from '@shared/types'
-import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
+import type { BackendWorkoutType } from '@features/workouts/types/workouts'
 import { getErrorMessage } from '@shared/errors'
 import { WorkoutsHistoryBlockSkeleton } from '@shared/ui/page-skeletons'
+import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 
-interface WorkoutListItem {
-    id: number
-    title: string
-    type: WorkoutType
-    duration: number
-    calories: number
-    date: string
-}
-
-const detectWorkoutType = (item: WorkoutHistoryItem): WorkoutType => {
-    const tags = item.tags.map((tag) => tag.toLowerCase())
-
-    if (tags.includes('sports') || tags.includes('sport')) return 'sports'
-    if (tags.includes('cardio')) return 'cardio'
-    if (tags.includes('strength')) return 'strength'
-    if (tags.includes('flexibility') || tags.includes('yoga')) return 'flexibility'
-
-    const hasReps = item.exercises.some((exercise) =>
-        exercise.sets_completed.some((set) => typeof set.reps === 'number' && set.reps > 0)
-    )
-    const hasDurationOnly = item.exercises.some((exercise) =>
-        exercise.sets_completed.some((set) => typeof set.duration === 'number' && !set.reps)
-    )
-
-    if (hasDurationOnly && !hasReps) return 'cardio'
-    if (hasReps) return 'strength'
-
-    return 'other'
-}
-
-const toWorkoutListItem = (item: WorkoutHistoryItem): WorkoutListItem => {
-    const duration = item.duration ?? 0
-    const type = detectWorkoutType(item)
-    const firstExerciseName = item.exercises[0]?.name
-    const title = item.comments?.trim() || firstExerciseName || `Тренировка #${item.id}`
-
-    return {
-        id: item.id,
-        title,
-        type,
-        duration,
-        calories: estimateCaloriesForType(type, duration),
-        date: item.date,
-    }
+const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
+    cardio: 'Кардио',
+    strength: 'Силовая',
+    flexibility: 'Гибкость',
+    mixed: 'Смешанная',
 }
 
 export function WorkoutsPage() {
@@ -92,6 +66,15 @@ export function WorkoutsPage() {
         isLoading,
         error,
     } = useWorkoutHistoryQuery()
+
+    const {
+        data: templatesData,
+        isPending: templatesLoading,
+        error: templatesError,
+    } = useWorkoutTemplatesQuery()
+
+    const startWorkoutMutation = useStartWorkoutMutation()
+    const templates = templatesData?.items ?? []
 
     const workouts = useMemo(
         () => (workoutHistory?.items ?? []).map(toWorkoutListItem),
@@ -157,6 +140,16 @@ export function WorkoutsPage() {
         if (draftWorkoutId == null) return
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         navigate(`/workouts/${draftWorkoutId}`)
+    }
+
+    const handleStartFromTemplate = async (templateId: number) => {
+        tg.hapticFeedback({ type: 'impact', style: 'medium' })
+        try {
+            const started = await startWorkoutMutation.mutateAsync({ template_id: templateId })
+            navigate(`/workouts/${started.id}`)
+        } catch {
+            // mutation surfaces via global error handling if configured
+        }
     }
 
     return (
@@ -249,6 +242,65 @@ export function WorkoutsPage() {
                 </div>
             </div>
 
+            {/* Workout templates */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Шаблоны</h2>
+                {templatesLoading && (
+                    <div className="space-y-2">
+                        <div className="h-16 animate-pulse rounded-xl bg-gray-100 dark:bg-neutral-800" />
+                        <div className="h-16 animate-pulse rounded-xl bg-gray-100 dark:bg-neutral-800" />
+                    </div>
+                )}
+                {!templatesLoading && templatesError && (
+                    <p className="text-sm text-red-500 dark:text-red-400">{getErrorMessage(templatesError)}</p>
+                )}
+                {!templatesLoading && !templatesError && templates.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 dark:border-neutral-700 dark:bg-neutral-900/40">
+                        <SectionEmptyState
+                            icon={LayoutTemplate}
+                            compact
+                            title="Нет сохранённых шаблонов"
+                            description="Соберите план в конструкторе и сохраните его как шаблон — быстрый старт без повторной настройки."
+                            primaryAction={{
+                                label: 'Открыть конструктор',
+                                onClick: () => {
+                                    tg.hapticFeedback({ type: 'selection' })
+                                    navigate('/workouts/builder')
+                                },
+                            }}
+                        />
+                    </div>
+                )}
+                {!templatesLoading &&
+                    !templatesError &&
+                    templates.map((t) => (
+                        <div
+                            key={t.id}
+                            className="bg-gray-50 dark:bg-neutral-800 flex items-center gap-4 rounded-xl p-4 transition-colors"
+                        >
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                                <LayoutTemplate className="h-6 w-6" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="font-medium text-gray-900 dark:text-white">{t.name}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {TEMPLATE_TYPE_LABEL[t.type]} · {t.exercises.length}{' '}
+                                    {t.exercises.length === 1 ? 'упражнение' : 'упражнений'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={startWorkoutMutation.isPending}
+                                onClick={() => void handleStartFromTemplate(t.id)}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-transform active:scale-95 disabled:opacity-60"
+                                aria-label={`Начать по шаблону ${t.name}`}
+                            >
+                                <Play className="h-5 w-5" fill="currentColor" />
+                            </button>
+                        </div>
+                    ))}
+            </div>
+
             {isLoading ? (
                 <WorkoutsHistoryBlockSkeleton />
             ) : (
@@ -270,21 +322,53 @@ export function WorkoutsPage() {
                         <div className="text-xs text-gray-500 dark:text-gray-400">Ккал</div>
                     </div>
                 </div>
+                {weeklySummary.count === 0 && workouts.length === 0 && (
+                    <p className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">
+                        После первой тренировки здесь появится сводка за неделю.
+                    </p>
+                )}
             </div>
 
-            {/* Workouts List */}
+            {/* Workouts List — история */}
             <div className="space-y-3">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Недавние</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">История</h2>
                 {error && (
                     <div className="text-sm text-red-500 dark:text-red-400">
                         {getErrorMessage(error)}
                     </div>
                 )}
                 {!error && filteredWorkouts.length === 0 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {selectedType === 'all'
-                            ? 'Тренировок пока нет'
-                            : (getWorkoutListTypeConfig(selectedType).hints.emptyHistory ?? 'Нет тренировок этого типа')}
+                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 dark:border-neutral-700 dark:bg-neutral-900/40">
+                        {workouts.length === 0 ? (
+                            <SectionEmptyState
+                                icon={Dumbbell}
+                                title="История пока пустая"
+                                description="Запустите готовый режим или соберите тренировку в конструкторе — завершённые сессии появятся в этом списке."
+                                primaryAction={{
+                                    label: 'Новая тренировка',
+                                    onClick: handleAddWorkout,
+                                }}
+                                secondaryAction={{
+                                    label: 'Открыть календарь',
+                                    onClick: handleOpenCalendar,
+                                }}
+                            />
+                        ) : (
+                            <SectionEmptyState
+                                icon={Sparkles}
+                                compact
+                                title="Нет тренировок этого типа"
+                                description={
+                                    getWorkoutListTypeConfig(selectedType as WorkoutType).hints
+                                        .emptyHistory ??
+                                    'Смените фильтр или добавьте тренировку с этим типом.'
+                                }
+                                primaryAction={{
+                                    label: 'Все типы',
+                                    onClick: () => handleFilterChange('all'),
+                                }}
+                            />
+                        )}
                     </div>
                 )}
                 {!error && filteredWorkouts.map((workout) => {

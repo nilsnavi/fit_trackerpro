@@ -10,10 +10,13 @@
  * - Анимации и haptic feedback
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Trophy } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
 import { ProgressBar } from '@shared/ui/ProgressBar';
 import { Modal } from '@shared/ui/Modal';
 import { Button } from '@shared/ui/Button';
+import { SectionEmptyState } from '@shared/ui/SectionEmptyState';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import {
     useAchievementsListQuery,
@@ -539,6 +542,12 @@ export const ProfileShowcase: React.FC<ProfileShowcaseProps> = ({
                 className="mb-4"
             />
 
+            {stats.completed_count === 0 && (
+                <p className="mb-4 rounded-xl border border-dashed border-telegram-hint/25 bg-telegram-bg/30 px-3 py-3 text-center text-sm text-telegram-hint">
+                    Первые бейджи появятся после завершённых тренировок и активности в приложении.
+                </p>
+            )}
+
             {/* Rare Achievements */}
             {rareAchievements.length > 0 && (
                 <div className="mb-4">
@@ -603,6 +612,7 @@ export const Achievements: React.FC<AchievementsProps> = ({
     onAchievementClick,
 }) => {
     const { hapticFeedback } = useTelegramWebApp();
+    const navigate = useNavigate();
 
     const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>(category || 'all');
 
@@ -829,16 +839,38 @@ export const Achievements: React.FC<AchievementsProps> = ({
 
             {/* Empty State */}
             {achievements.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-20 h-20 rounded-full bg-telegram-secondary-bg flex items-center justify-center mb-4">
-                        <svg className="w-10 h-10 text-telegram-hint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                        </svg>
-                    </div>
-                    <p className="text-telegram-text font-medium mb-1">Нет достижений</p>
-                    <p className="text-sm text-telegram-hint">
-                        В этой категории пока нет доступных достижений
-                    </p>
+                <div className="rounded-2xl border border-dashed border-telegram-hint/20 bg-telegram-secondary-bg/40">
+                    <SectionEmptyState
+                        tone="telegram"
+                        icon={Trophy}
+                        title={
+                            selectedCategory === 'all'
+                                ? 'Пока нет достижений'
+                                : `В категории «${categoryConfig[selectedCategory].label}» пусто`
+                        }
+                        description={
+                            selectedCategory === 'all'
+                                ? 'Тренируйтесь, отмечайте здоровье и прогресс — награды появятся автоматически, как только вы выполните условия.'
+                                : 'Попробуйте другую категорию или откройте полный список.'
+                        }
+                        primaryAction={
+                            selectedCategory === 'all'
+                                ? {
+                                      label: 'К тренировкам',
+                                      onClick: () => {
+                                          hapticFeedback({ type: 'selection' });
+                                          navigate('/workouts');
+                                      },
+                                  }
+                                : {
+                                      label: 'Все категории',
+                                      onClick: () => {
+                                          hapticFeedback({ type: 'selection' });
+                                          setSelectedCategory('all');
+                                      },
+                                  }
+                        }
+                    />
                 </div>
             )}
 

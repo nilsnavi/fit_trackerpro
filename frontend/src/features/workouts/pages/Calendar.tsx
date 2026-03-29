@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { CalendarDays } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
 import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import { Modal } from '@shared/ui/Modal';
+import { SectionEmptyState } from '@shared/ui/SectionEmptyState';
 import type { CalendarDayData, CalendarMonthStats } from '@features/workouts/types/calendarPage';
 import type { CalendarWorkout } from '@features/workouts/types/workouts';
 import { WORKOUT_TYPE_LABELS } from '@features/workouts/config/workoutTypeConfigs';
@@ -353,26 +355,35 @@ const DayDetailSheet: React.FC<{
 
                 {/* Empty state */}
                 {day.workouts.length === 0 && (
-                    <div className="text-center py-8">
-                        <div className="text-4xl mb-3">📅</div>
-                        <div className="text-telegram-hint">Нет тренировок на этот день</div>
-                    </div>
+                    <SectionEmptyState
+                        tone="telegram"
+                        icon={CalendarDays}
+                        compact
+                        title="На этот день нет тренировок"
+                        description="Добавьте запланированную или завершённую сессию — день подсветится в календаре."
+                        primaryAction={{
+                            label: 'Добавить тренировку',
+                            onClick: () => onAddWorkout(day.date),
+                        }}
+                    />
                 )}
 
                 {/* Add workout button */}
-                <Button
-                    variant="secondary"
-                    fullWidth
-                    leftIcon={
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                    }
-                    onClick={() => onAddWorkout(day.date)}
-                >
-                    Добавить тренировку
-                </Button>
+                {day.workouts.length > 0 && (
+                    <Button
+                        variant="secondary"
+                        fullWidth
+                        leftIcon={
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                        }
+                        onClick={() => onAddWorkout(day.date)}
+                    >
+                        Добавить тренировку
+                    </Button>
+                )}
             </div>
         </Modal>
     );

@@ -89,7 +89,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# только корневой каталог сборок Python (не frontend/**/lib/)
+/lib/
 lib64/
 parts/
 sdist/

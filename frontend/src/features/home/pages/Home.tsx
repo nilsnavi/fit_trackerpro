@@ -1,6 +1,12 @@
-import { Activity, Flame, Timer, TrendingUp } from 'lucide-react'
+import { Activity, Flame, Timer, TrendingUp, ChevronRight, Clock } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
+import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
+import { getWorkoutListTypeConfig } from '@features/workouts/config/workoutTypeConfigs'
+import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
+import { WorkoutsHistoryBlockSkeleton } from '@shared/ui/page-skeletons'
 
 interface UserStats {
     calories: number
@@ -16,15 +22,27 @@ const defaultStats: UserStats = {
     progress: 12
 }
 
-const recentWorkouts = [
-    { id: 1, title: 'Утренняя пробежка', duration: '30 мин', calories: 320, date: 'Сегодня' },
-    { id: 2, title: 'Силовая тренировка', duration: '45 мин', calories: 280, date: 'Вчера' },
-    { id: 3, title: 'Йога', duration: '60 мин', calories: 180, date: '2 дня назад' },
-]
-
 export function Home() {
     const tg = useTelegramWebApp()
+    const navigate = useNavigate()
     const [stats] = useState<UserStats>(defaultStats)
+    const { data: workoutHistory, isLoading: historyLoading } = useWorkoutHistoryQuery()
+
+    const recentWorkouts = useMemo(() => {
+        const items = (workoutHistory?.items ?? []).map(toWorkoutListItem).slice(0, 3)
+        return items
+    }, [workoutHistory])
+
+    const formatRecentDate = (isoDate: string) => {
+        const d = new Date(isoDate)
+        if (Number.isNaN(d.getTime())) return ''
+        const now = new Date()
+        const dayStart = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+        const diff = dayStart(now) - dayStart(d)
+        if (diff === 0) return 'Сегодня'
+        if (diff === 86400000) return 'Вчера'
+        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    }
 
     // Get user name from Telegram or use default
     const userName = tg.user?.first_name || tg.user?.username || 'Атлет'
@@ -37,15 +55,14 @@ export function Home() {
             // Set up main button for quick workout start
             tg.showMainButton('Начать тренировку', () => {
                 tg.hapticFeedback({ type: 'impact', style: 'medium' })
-                // Navigate to workout builder
-                window.location.href = '/workouts/builder'
+                navigate('/workouts/builder')
             })
         }
 
         return () => {
             tg.hideMainButton()
         }
-    }, [tg])
+    }, [tg, navigate])
 
     // Handle quick action with haptic feedback
     const handleQuickAction = (action: string) => {
@@ -53,12 +70,10 @@ export function Home() {
 
         switch (action) {
             case 'workout':
-                // Navigate to workout
-                window.location.href = '/workouts'
+                navigate('/workouts')
                 break
             case 'metric':
-                // Navigate to health
-                window.location.href = '/health'
+                navigate('/health')
                 break
         }
     }
@@ -136,30 +151,79 @@ export function Home() {
                         className="text-primary text-sm"
                         onClick={() => {
                             tg.hapticFeedback({ type: 'selection' })
-                            window.location.href = '/workouts'
+                            navigate('/workouts')
                         }}
                     >
                         Все
                     </button>
                 </div>
-                <div className="space-y-3">
-                    {recentWorkouts.map((workout) => (
-                        <div
-                            key={workout.id}
-                            className="bg-gray-50 dark:bg-neutral-800 flex items-center justify-between p-4 rounded-xl transition-colors cursor-pointer active:scale-[0.98]"
-                            onClick={() => tg.hapticFeedback({ type: 'impact', style: 'light' })}
-                        >
-                            <div>
-                                <h3 className="font-medium text-gray-900 dark:text-white">{workout.title}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{workout.date}</p>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">{workout.duration}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{workout.calories} ккал</div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                {historyLoading ? (
+                    <WorkoutsHistoryBlockSkeleton />
+                ) : recentWorkouts.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 dark:border-neutral-700 dark:bg-neutral-900/40">
+                        <SectionEmptyState
+                            icon={Activity}
+                            compact
+                            title="Нет недавних тренировок"
+                            description="Как только вы завершите первую сессию, она появится здесь и в списке на экране «Тренировки»."
+                            primaryAction={{
+                                label: 'Перейти к тренировкам',
+                                onClick: () => {
+                                    tg.hapticFeedback({ type: 'selection' })
+                                    navigate('/workouts')
+                                },
+                            }}
+                        />
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {recentWorkouts.map((workout) => {
+                            const listCfg = getWorkoutListTypeConfig(workout.type)
+                            const TypeIcon = listCfg.icon
+                            const showCals = listCfg.ux.showCaloriesInSummary
+                            return (
+                                <div
+                                    key={workout.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault()
+                                            navigate(`/workouts/${workout.id}`)
+                                        }
+                                    }}
+                                    className="bg-gray-50 dark:bg-neutral-800 flex cursor-pointer items-center gap-3 rounded-xl p-4 transition-colors active:scale-[0.98]"
+                                    onClick={() => {
+                                        tg.hapticFeedback({ type: 'impact', style: 'light' })
+                                        navigate(`/workouts/${workout.id}`)
+                                    }}
+                                >
+                                    <div
+                                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${listCfg.listBadgeClass} text-white`}
+                                    >
+                                        <TypeIcon className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="font-medium text-gray-900 dark:text-white">{workout.title}</h3>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-gray-500 dark:text-gray-400">
+                                            <span>{formatRecentDate(workout.date)}</span>
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="h-3 w-3" />
+                                                {workout.duration} мин
+                                            </span>
+                                            {showCals && (
+                                                <span>
+                                                    {workout.calories} ккал
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* Quick Actions */}
