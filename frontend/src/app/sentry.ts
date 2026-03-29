@@ -1,13 +1,14 @@
 import * as Sentry from '@sentry/react'
 
 import packageJson from '../../package.json'
+import { getPublicApiBaseUrl } from '@shared/config/runtime'
 
 export function isSentryEnabled(): boolean {
     return Boolean(import.meta.env.VITE_SENTRY_DSN?.trim())
 }
 
 function tracePropagationTargets(): (string | RegExp)[] {
-    const raw = import.meta.env.VITE_API_URL
+    const raw = getPublicApiBaseUrl()
     if (!raw) {
         return ['localhost']
     }

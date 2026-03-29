@@ -25,15 +25,18 @@ RUN npm run build
 # Stage 2 — runtime (nginx serves prebuilt dist only; no Node in final image)
 FROM nginx:alpine AS runtime
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl gettext
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -fsS http://127.0.0.1/health || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
