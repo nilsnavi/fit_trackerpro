@@ -149,6 +149,34 @@ async def test_request_logging_middleware_registered():
 
 
 @pytest.mark.unit
+def test_json_formatter_includes_audit_fields():
+    fmt = JsonFormatter()
+    record = logging.LogRecord(
+        name="app.audit",
+        level=logging.INFO,
+        pathname="x.py",
+        lineno=1,
+        msg="audit auth.refresh",
+        args=(),
+        exc_info=None,
+    )
+    record.event = "audit"
+    record.audit_action = "auth.refresh"
+    record.audit_resource_type = None
+    record.audit_resource_id = None
+    record.audit_meta = {"k": 1}
+    record.client_ip = "127.0.0.1"
+    record.user_id = 1
+    record.telegram_id = 999
+    line = fmt.format(record)
+    data = json.loads(line)
+    assert data["audit_action"] == "auth.refresh"
+    assert data["audit_meta"] == {"k": 1}
+    assert data["client_ip"] == "127.0.0.1"
+    assert data["telegram_id"] == 999
+
+
+@pytest.mark.unit
 def test_json_formatter_includes_structured_fields():
     fmt = JsonFormatter()
     record = logging.LogRecord(

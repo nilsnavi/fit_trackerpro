@@ -4,9 +4,10 @@ HTTP-only endpoints delegating business logic to services
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import get_client_ip
 from app.middleware.auth import get_current_user
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
@@ -67,6 +68,7 @@ async def get_challenge(
 @router.post("/", response_model=ChallengeResponse, status_code=status.HTTP_201_CREATED)
 async def create_challenge(
     challenge_data: ChallengeCreate,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -75,12 +77,14 @@ async def create_challenge(
         user_id=current_user.id,
         user_first_name=current_user.first_name,
         data=challenge_data,
+        client_ip=get_client_ip(request),
     )
 
 
 @router.post("/{challenge_id}/join", response_model=ChallengeJoinResponse)
 async def join_challenge(
     challenge_id: int,
+    request: Request,
     join_code: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
@@ -90,12 +94,14 @@ async def join_challenge(
         user_id=current_user.id,
         challenge_id=challenge_id,
         join_code=join_code,
+        client_ip=get_client_ip(request),
     )
 
 
 @router.post("/{challenge_id}/leave", response_model=ChallengeLeaveResponse)
 async def leave_challenge(
     challenge_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -103,6 +109,7 @@ async def leave_challenge(
     return await service.leave_challenge(
         user_id=current_user.id,
         challenge_id=challenge_id,
+        client_ip=get_client_ip(request),
     )
 
 

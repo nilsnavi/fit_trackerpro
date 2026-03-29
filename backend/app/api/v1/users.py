@@ -1,9 +1,10 @@
 """
 User management endpoints
 """
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import get_client_ip
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.middleware.auth import get_current_user
@@ -31,24 +32,28 @@ async def get_current_user_profile(current_user: User = Depends(get_current_user
 @router.patch("/me", response_model=UserProfileResponse)
 async def patch_current_user_profile(
     profile_update: UserProfileUpdate,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
     """Partial profile update."""
     service = AuthService(db)
     return await service.update_profile(
-        current_user=current_user, profile_update=profile_update
+        current_user=current_user,
+        profile_update=profile_update,
+        client_ip=get_client_ip(request),
     )
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_current_user(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
     """Delete the authenticated user account."""
     service = AuthService(db)
-    await service.delete_account(current_user)
+    await service.delete_account(current_user, client_ip=get_client_ip(request))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
