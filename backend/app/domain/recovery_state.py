@@ -3,7 +3,7 @@ RecoveryState Model
 """
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, ForeignKey, Numeric
+from sqlalchemy import Integer, ForeignKey, Numeric, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.base import Base
@@ -41,6 +41,17 @@ class RecoveryState(Base):
     user: Mapped["User"] = relationship(
         "User",
         back_populates="recovery_state",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "fatigue_level >= 0 AND fatigue_level <= 100",
+            name="ck_recovery_state_fatigue",
+        ),
+        CheckConstraint(
+            "readiness_score >= 0 AND readiness_score <= 100",
+            name="ck_recovery_state_readiness",
+        ),
     )
 
     def __repr__(self) -> str:

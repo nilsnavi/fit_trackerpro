@@ -4,7 +4,17 @@ Challenge Model
 from datetime import datetime, date
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, Date, JSON, Boolean, ForeignKey, Index
+from sqlalchemy import (
+    Integer,
+    String,
+    DateTime,
+    Date,
+    JSON,
+    Boolean,
+    ForeignKey,
+    Index,
+    CheckConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -124,6 +134,14 @@ class Challenge(Base):
         "User", back_populates="created_challenges")
 
     __table_args__ = (
+        CheckConstraint(
+            "end_date >= start_date",
+            name="ck_challenges_date_range",
+        ),
+        CheckConstraint(
+            "max_participants >= 0",
+            name="ck_challenges_max_participants",
+        ),
         Index('ix_challenges_type', 'type'),
         Index('ix_challenges_is_public', 'is_public'),
         Index('ix_challenges_status', 'status'),

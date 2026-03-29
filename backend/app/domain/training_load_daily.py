@@ -4,7 +4,7 @@ TrainingLoadDaily Model
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, Date, ForeignKey, Index, Numeric
+from sqlalchemy import Integer, Date, ForeignKey, Index, Numeric, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.base import Base
@@ -55,6 +55,10 @@ class TrainingLoadDaily(Base):
     )
 
     __table_args__ = (
+        CheckConstraint("volume >= 0", name="ck_training_load_daily_volume"),
+        CheckConstraint(
+            "fatigue_score >= 0", name="ck_training_load_daily_fatigue"
+        ),
         Index(
             "ix_training_load_daily_user_date",
             "user_id",

@@ -4,7 +4,7 @@ WorkoutTemplate Model
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, String, DateTime, JSON, Boolean, ForeignKey, Index
+from sqlalchemy import Integer, String, DateTime, JSON, Boolean, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -68,10 +68,16 @@ class WorkoutTemplate(Base):
         "User", back_populates="workout_templates")
     workout_logs: Mapped[list["WorkoutLog"]] = relationship(
         "WorkoutLog",
-        back_populates="template"
+        back_populates="template",
+        overlaps="workout_logs",
     )
 
     __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "id",
+            name="uq_workout_templates_user_id",
+        ),
         Index('ix_workout_templates_type', 'type'),
         Index('ix_workout_templates_is_public', 'is_public'),
         Index('ix_workout_templates_created_at', 'created_at'),

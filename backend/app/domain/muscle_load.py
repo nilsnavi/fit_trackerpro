@@ -4,7 +4,7 @@ MuscleLoad Model
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, String, Date, ForeignKey, Index, Numeric
+from sqlalchemy import Integer, String, Date, ForeignKey, Index, Numeric, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.base import Base
@@ -50,6 +50,7 @@ class MuscleLoad(Base):
     )
 
     __table_args__ = (
+        CheckConstraint("load_score >= 0", name="ck_muscle_load_score"),
         Index(
             "ix_muscle_load_user_muscle_date",
             "user_id",

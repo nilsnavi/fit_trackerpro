@@ -4,7 +4,18 @@ WorkoutLog Model
 from datetime import datetime, date
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, Date, JSON, ForeignKey, Index, Numeric
+from sqlalchemy import (
+    Integer,
+    String,
+    DateTime,
+    Date,
+    JSON,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Numeric,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -30,9 +41,10 @@ class WorkoutLog(Base):
         index=True
     )
     template_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workout_templates.id", ondelete="SET NULL"),
+        Integer,
         nullable=True,
-        index=True
+        index=True,
+        comment="Template must belong to the same user (enforced by composite FK)",
     )
     date: Mapped[date] = mapped_column(
         Date,
@@ -88,19 +100,38 @@ class WorkoutLog(Base):
         nullable=False
     )
 
-    # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="workout_logs")
+    # Relationships (composite FKs share user_id; overlaps silences mapper warnings)
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="workout_logs",
+        overlaps="template,workout_logs",
+    )
     template: Mapped[Optional["WorkoutTemplate"]] = relationship(
         "WorkoutTemplate",
-        back_populates="workout_logs"
+        back_populates="workout_logs",
+        overlaps="user,workout_logs",
     )
     glucose_logs: Mapped[list["GlucoseLog"]] = relationship(
         "GlucoseLog",
         back_populates="workout",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        overlaps="glucose_logs",
     )
 
-    __table_args__ = (Index('ix_workout_logs_user_date', 'user_id', 'date'),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "id",
+            name="uq_workout_logs_user_id",
+        ),
+        ForeignKeyConstraint(
+            ["user_id", "template_id"],
+            ["workout_templates.user_id", "workout_templates.id"],
+            ondelete="SET NULL",
+            name="fk_workout_logs_user_template",
+        ),
+        Index('ix_workout_logs_user_date', 'user_id', 'date'),
+    )
 
     def __repr__(self) -> str:
         return f"<WorkoutLog(id={self.id}, user_id={self.user_id}, date={self.date})>"
