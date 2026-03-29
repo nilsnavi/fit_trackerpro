@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from sqlalchemy import desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.domain.challenge import Challenge
 from app.domain.user import User
+from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
-class ChallengesRepository:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+class ChallengesRepository(SQLAlchemyRepository):
 
     async def count_challenges(
         self,
@@ -53,3 +50,9 @@ class ChallengesRepository:
     async def get_user(self, user_id: int):
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
+
+    async def create_challenge(self, challenge: Challenge) -> Challenge:
+        self.add(challenge)
+        await self.commit()
+        await self.refresh(challenge)
+        return challenge

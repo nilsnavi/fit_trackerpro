@@ -11,8 +11,8 @@ from app.schemas.users import UserCreate, UserResponse
 
 
 class UsersService:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+    def __init__(self, _db: AsyncSession) -> None:
+        pass
 
     async def create_user(self, data: UserCreate) -> UserResponse:
         # TODO: Implement user creation logic

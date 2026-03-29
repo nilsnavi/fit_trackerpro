@@ -4,16 +4,14 @@ from datetime import date
 from typing import Optional
 
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.glucose_log import GlucoseLog
 from app.domain.workout_log import WorkoutLog
+from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
-class HealthRepository:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+class HealthRepository(SQLAlchemyRepository):
 
     async def get_workout(self, user_id: int, workout_id: int) -> Optional[WorkoutLog]:
         result = await self.db.execute(
@@ -206,3 +204,24 @@ class HealthRepository:
             )
         )
         return result.first()
+
+    async def create_glucose_log(self, log: GlucoseLog) -> GlucoseLog:
+        self.add(log)
+        await self.commit()
+        await self.refresh(log)
+        return log
+
+    async def delete_glucose_log(self, log: GlucoseLog) -> None:
+        await self.delete(log)
+        await self.commit()
+
+    async def update_wellness_entry(self, wellness: DailyWellness) -> DailyWellness:
+        await self.commit()
+        await self.refresh(wellness)
+        return wellness
+
+    async def create_wellness_entry(self, wellness: DailyWellness) -> DailyWellness:
+        self.add(wellness)
+        await self.commit()
+        await self.refresh(wellness)
+        return wellness

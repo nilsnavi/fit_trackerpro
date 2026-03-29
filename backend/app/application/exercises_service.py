@@ -19,7 +19,6 @@ from app.schemas.exercises import (
 
 class ExercisesService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = ExercisesRepository(db)
 
     async def get_exercises(
@@ -80,9 +79,7 @@ class ExercisesService:
             status="pending",
             author_user_id=user_id,
         )
-        self.db.add(exercise)
-        await self.db.commit()
-        await self.db.refresh(exercise)
+        exercise = await self.repository.create_exercise(exercise)
         return ExerciseResponse.model_validate(exercise, from_attributes=True)
 
     async def update_exercise(self, exercise_id: int, data: ExerciseUpdate) -> ExerciseResponse:
@@ -95,24 +92,21 @@ class ExercisesService:
                 exercise.risk_flags = value.model_dump()
             else:
                 setattr(exercise, field, value)
-        await self.db.commit()
-        await self.db.refresh(exercise)
+        exercise = await self.repository.update_exercise(exercise)
         return ExerciseResponse.model_validate(exercise, from_attributes=True)
 
     async def delete_exercise(self, exercise_id: int) -> None:
         exercise = await self.repository.get_exercise(exercise_id=exercise_id)
         if not exercise:
             raise ExerciseNotFoundError("Exercise not found")
-        await self.db.delete(exercise)
-        await self.db.commit()
+        await self.repository.delete_exercise(exercise)
 
     async def approve_exercise(self, exercise_id: int) -> ExerciseResponse:
         exercise = await self.repository.get_pending_exercise(exercise_id=exercise_id)
         if not exercise:
             raise ExerciseNotFoundError("Pending exercise not found")
         exercise.status = "active"
-        await self.db.commit()
-        await self.db.refresh(exercise)
+        exercise = await self.repository.approve_exercise(exercise)
         return ExerciseResponse.model_validate(exercise, from_attributes=True)
 
     @staticmethod

@@ -29,7 +29,6 @@ from app.infrastructure.cache import invalidate_user_analytics_cache
 
 class WorkoutsService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = WorkoutsRepository(db)
 
     @staticmethod
@@ -142,9 +141,7 @@ class WorkoutsService:
             exercises=[ex.model_dump() for ex in data.exercises],
             is_public=data.is_public,
         )
-        self.db.add(template)
-        await self.db.commit()
-        await self.db.refresh(template)
+        template = await self.repository.create_template(template)
         return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
 
     async def get_template(self, user_id: int, template_id: int) -> WorkoutTemplateResponse:
@@ -167,16 +164,14 @@ class WorkoutsService:
         template.type = data.type
         template.exercises = [ex.model_dump() for ex in data.exercises]
         template.is_public = data.is_public
-        await self.db.commit()
-        await self.db.refresh(template)
+        template = await self.repository.update_template(template)
         return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
 
     async def delete_template(self, user_id: int, template_id: int) -> None:
         template = await self.repository.get_template(user_id=user_id, template_id=template_id)
         if not template:
             raise WorkoutNotFoundError("Template not found")
-        await self.db.delete(template)
-        await self.db.commit()
+        await self.repository.delete_template(template)
 
     async def get_history(
         self,
@@ -220,9 +215,7 @@ class WorkoutsService:
             exercises=[],
             comments=data.name,
         )
-        self.db.add(workout)
-        await self.db.commit()
-        await self.db.refresh(workout)
+        workout = await self.repository.create_workout_log(workout)
         await invalidate_user_analytics_cache(user_id)
 
         return WorkoutStartResponse(
@@ -258,7 +251,7 @@ class WorkoutsService:
             training_load.fatigue_score = Decimal(str(fatigue_score))
             return
 
-        self.db.add(
+        self.repository.add_training_load_daily(
             TrainingLoadDaily(
                 user_id=user_id,
                 date=target_date,
@@ -305,7 +298,7 @@ class WorkoutsService:
             if row:
                 row.load_score = value
             else:
-                self.db.add(
+                self.repository.add_muscle_load(
                     MuscleLoad(
                         user_id=user_id,
                         muscle_group=group,
@@ -316,7 +309,7 @@ class WorkoutsService:
 
         for group, row in existing_by_group.items():
             if group not in new_groups:
-                await self.db.delete(row)
+                await self.repository.delete_muscle_load(row)
 
     async def _upsert_recovery_state(self, user_id: int, target_date: date) -> None:
         training = await self.repository.get_training_load(user_id=user_id, target_date=target_date)
@@ -343,7 +336,7 @@ class WorkoutsService:
             state.readiness_score = Decimal(str(readiness_score))
             return
 
-        self.db.add(
+        self.repository.add_recovery_state(
             RecoveryState(
                 user_id=user_id,
                 fatigue_level=fatigue_level,
@@ -372,8 +365,7 @@ class WorkoutsService:
         await self._upsert_muscle_load_daily(user_id=user_id, target_date=workout.date)
         await self._upsert_recovery_state(user_id=user_id, target_date=workout.date)
 
-        await self.db.commit()
-        await self.db.refresh(workout)
+        await self.repository.commit_workout_completion(workout)
         await invalidate_user_analytics_cache(user_id)
 
         return WorkoutCompleteResponse(

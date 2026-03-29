@@ -26,7 +26,6 @@ from app.infrastructure.cache import invalidate_user_analytics_cache
 
 class HealthService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = HealthRepository(db)
 
     async def create_glucose_log(self, user_id: int, data: GlucoseLogCreate) -> GlucoseLogResponse:
@@ -43,9 +42,7 @@ class HealthService:
             timestamp=data.timestamp or datetime.utcnow(),
             notes=data.notes,
         )
-        self.db.add(glucose_log)
-        await self.db.commit()
-        await self.db.refresh(glucose_log)
+        glucose_log = await self.repository.create_glucose_log(glucose_log)
         return GlucoseLogResponse.model_validate(glucose_log, from_attributes=True)
 
     async def get_glucose_history(
@@ -99,8 +96,7 @@ class HealthService:
         log = await self.repository.get_glucose_log(user_id=user_id, log_id=log_id)
         if not log:
             raise HealthNotFoundError("Glucose log not found")
-        await self.db.delete(log)
-        await self.db.commit()
+        await self.repository.delete_glucose_log(log)
 
     async def create_or_update_wellness(self, user_id: int, data: DailyWellnessCreate) -> DailyWellnessResponse:
         existing = await self.repository.get_wellness_by_date(user_id=user_id, entry_date=data.date)
@@ -112,8 +108,7 @@ class HealthService:
             existing.stress_level = data.stress_level
             existing.mood_score = data.mood_score
             existing.notes = data.notes
-            await self.db.commit()
-            await self.db.refresh(existing)
+            existing = await self.repository.update_wellness_entry(existing)
             await invalidate_user_analytics_cache(user_id)
             return DailyWellnessResponse.model_validate(existing, from_attributes=True)
 
@@ -128,9 +123,7 @@ class HealthService:
             mood_score=data.mood_score,
             notes=data.notes,
         )
-        self.db.add(wellness)
-        await self.db.commit()
-        await self.db.refresh(wellness)
+        wellness = await self.repository.create_wellness_entry(wellness)
         await invalidate_user_analytics_cache(user_id)
         return DailyWellnessResponse.model_validate(wellness, from_attributes=True)
 

@@ -4,7 +4,6 @@ from datetime import date
 from typing import List, Optional
 
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.exercise import Exercise
@@ -13,11 +12,10 @@ from app.domain.recovery_state import RecoveryState
 from app.domain.training_load_daily import TrainingLoadDaily
 from app.domain.workout_log import WorkoutLog
 from app.domain.workout_template import WorkoutTemplate
+from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
-class WorkoutsRepository:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+class WorkoutsRepository(SQLAlchemyRepository):
 
     async def count_templates(self, user_id: int, template_type: Optional[str]) -> int:
         query = select(func.count(WorkoutTemplate.id)).where(WorkoutTemplate.user_id == user_id)
@@ -159,3 +157,40 @@ class WorkoutsRepository:
             select(RecoveryState).where(RecoveryState.user_id == user_id)
         )
         return result.scalar_one_or_none()
+
+    async def create_template(self, template: WorkoutTemplate) -> WorkoutTemplate:
+        self.add(template)
+        await self.commit()
+        await self.refresh(template)
+        return template
+
+    async def update_template(self, template: WorkoutTemplate) -> WorkoutTemplate:
+        await self.commit()
+        await self.refresh(template)
+        return template
+
+    async def delete_template(self, template: WorkoutTemplate) -> None:
+        await self.delete(template)
+        await self.commit()
+
+    async def create_workout_log(self, workout: WorkoutLog) -> WorkoutLog:
+        self.add(workout)
+        await self.commit()
+        await self.refresh(workout)
+        return workout
+
+    def add_training_load_daily(self, row: TrainingLoadDaily) -> None:
+        self.add(row)
+
+    def add_muscle_load(self, row: MuscleLoad) -> None:
+        self.add(row)
+
+    async def delete_muscle_load(self, row: MuscleLoad) -> None:
+        await self.delete(row)
+
+    def add_recovery_state(self, row: RecoveryState) -> None:
+        self.add(row)
+
+    async def commit_workout_completion(self, workout: WorkoutLog) -> None:
+        await self.commit()
+        await self.refresh(workout)

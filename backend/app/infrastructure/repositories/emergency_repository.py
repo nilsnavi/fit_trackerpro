@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from sqlalchemy import and_, desc, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.emergency_contact import EmergencyContact
+from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
-class EmergencyRepository:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+class EmergencyRepository(SQLAlchemyRepository):
 
     async def list_contacts(self, user_id: int):
         result = await self.db.execute(
@@ -66,3 +64,18 @@ class EmergencyRepository:
             )
         )
         return result.scalars().all()
+
+    async def create_contact(self, contact: EmergencyContact) -> EmergencyContact:
+        self.add(contact)
+        await self.commit()
+        await self.refresh(contact)
+        return contact
+
+    async def update_contact(self, contact: EmergencyContact) -> EmergencyContact:
+        await self.commit()
+        await self.refresh(contact)
+        return contact
+
+    async def delete_contact(self, contact: EmergencyContact) -> None:
+        await self.delete(contact)
+        await self.commit()

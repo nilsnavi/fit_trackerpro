@@ -1,16 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.achievement import Achievement
 from app.domain.user import User
 from app.domain.user_achievement import UserAchievement
+from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
-class AchievementsRepository:
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
+class AchievementsRepository(SQLAlchemyRepository):
 
     async def list_achievements(self, category: str | None):
         query = select(Achievement)
@@ -113,3 +113,24 @@ class AchievementsRepository:
             )
         )
         return int(result.scalar() or 0)
+
+    async def complete_user_achievement(
+        self,
+        user_id: int,
+        achievement_id: int,
+        existing: UserAchievement | None,
+        earned_at: datetime,
+    ) -> None:
+        if existing:
+            existing.progress = 100
+            existing.earned_at = earned_at
+        else:
+            self.add(
+                UserAchievement(
+                    user_id=user_id,
+                    achievement_id=achievement_id,
+                    progress=100,
+                    earned_at=earned_at,
+                )
+            )
+        await self.commit()

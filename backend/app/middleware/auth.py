@@ -4,13 +4,13 @@ JWT token handling and user authentication dependencies
 """
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.settings import settings
 from app.core.security import security, verify_token
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
+from app.infrastructure.repositories.auth_repository import AuthRepository
 
 
 async def get_current_user_id(
@@ -71,10 +71,7 @@ async def get_current_user(
     Raises:
         HTTPException: If user not found
     """
-    result = await db.execute(
-        select(User).where(User.telegram_id == user_id)
-    )
-    user = result.scalar_one_or_none()
+    user = await AuthRepository(db).get_user_by_telegram_id(telegram_id=user_id)
 
     if user is None:
         raise HTTPException(

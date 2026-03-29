@@ -24,7 +24,6 @@ from app.infrastructure.telegram_auth import validate_and_get_user
 
 class AuthService:
     def __init__(self, db: AsyncSession) -> None:
-        self.db = db
         self.repository = AuthRepository(db)
 
     @staticmethod
@@ -32,8 +31,7 @@ class AuthService:
         return user_profile_from_db(user)
 
     async def delete_account(self, user: User) -> None:
-        await self.db.delete(user)
-        await self.db.commit()
+        await self.repository.delete_user(user)
 
     async def _get_or_create_user(self, telegram_user_data: dict) -> User:
         telegram_id = telegram_user_data["id"]
@@ -46,14 +44,11 @@ class AuthService:
                 profile={"equipment": [], "limitations": [], "goals": []},
                 settings={"theme": "telegram", "notifications": True, "units": "metric"},
             )
-            self.db.add(user)
-            await self.db.commit()
-            await self.db.refresh(user)
-            return user
+            return await self.repository.insert_user(user)
 
         user.username = telegram_user_data.get("username") or user.username
         user.first_name = telegram_user_data.get("first_name") or user.first_name
-        await self.db.commit()
+        await self.repository.commit_user_fields()
         return user
 
     async def authenticate_telegram(self, auth_request: TelegramAuthRequest) -> AuthResponse:
@@ -100,8 +95,7 @@ class AuthService:
                 flag_modified(current_user, field)
             else:
                 setattr(current_user, field, value)
-        await self.db.commit()
-        await self.db.refresh(current_user)
+        await self.repository.save_profile(current_user)
         return user_profile_from_db(current_user)
 
     @staticmethod
