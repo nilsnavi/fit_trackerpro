@@ -1,11 +1,10 @@
-# Production deploy pipeline — explicit stages (DAG via needs:):
-#   build     → build/push images (release only; manual deploy reuses existing GHCR tags)
-#   migrate   → sync compose, .env, DB backup, pull images, alembic upgrade
-#   deploy    → docker compose up -d, prune, on-host health checks
-#   verify    → public smoke checks (API / frontend)
+# Production / staging deploy — explicit stages (DAG via needs:):
+#   resolve-tag → build (release) or skip build (manual)
+#   deploy-pipeline (reusable) → migrate → deploy → verify → record-stable | rollback → notify
 #
-# Supporting jobs: record-stable, rollback, notify (depend on verify / failure paths).
-name: Deploy to Production
+# Staging and production share the same job graph via reusable workflow deploy-environment.yml;
+# GitHub Environment (staging vs production) is selected per run (release → production).
+name: Deploy
 
 on:
   release:
@@ -31,15 +30,11 @@ on:
         type: boolean
 
 concurrency:
-  group: production-deploy-${{ github.event_name }}-${{ github.event.release.tag_name || github.event.inputs.image_tag || github.sha }}
+  group: deploy-${{ github.event_name }}-${{ github.event.release.tag_name || github.event.inputs.image_tag || github.sha }}-${{ github.event_name == 'release' && 'production' || github.event.inputs.environment }}
   cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
-  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  DEPLOY_DIR: ~/fittracker-pro
-  PRODUCTION_DOMAIN: fittrackpro.ru
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -50,8 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.resolve.outputs.image_tag }}
+      deploy_environment: ${{ steps.resolve.outputs.deploy_environment }}
     steps:
-      - name: Resolve deploy image tag
+      - name: Resolve deploy image tag and target environment
         id: resolve
         run: |
           set -Eeuo pipefail
@@ -66,6 +62,13 @@ jobs:
             exit 1
           fi
           echo "image_tag=${DEPLOY_IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "deploy_environment=production" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy_environment=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
+          fi
+
           echo "Deploying image tag: ${DEPLOY_IMAGE_TAG}"
 
   # ---------------------------------------------------------------------------
@@ -93,10 +96,10 @@ jobs:
           echo "IMAGE_TAG=${{ needs.resolve-tag.outputs.image_tag }}"
 
   # ---------------------------------------------------------------------------
-  # Stage: migrate — backup, pull, alembic (no full stack up except via compose run)
+  # Stages: migrate → deploy → verify → record-stable | rollback → notify (shared)
   # ---------------------------------------------------------------------------
-  migrate:
-    name: "Stage: migrate"
+  deploy-pipeline:
+    name: "Deploy pipeline (${{ needs.resolve-tag.outputs.deploy_environment }})"
     needs: [resolve-tag, build, build-skipped]
     if: |
       always() &&
@@ -105,342 +108,11 @@ jobs:
         (needs.build.result == 'success' && needs.build-skipped.result == 'skipped') ||
         (needs.build.result == 'skipped' && needs.build-skipped.result == 'success')
       )
-    runs-on: ubuntu-latest
-    environment: production
-    env:
-      DEPLOY_IMAGE_TAG: ${{ needs.resolve-tag.outputs.image_tag }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.10.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add host to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Sync infra files to server
-        run: |
-          set -Eeuo pipefail
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/nginx"
-          scp docker-compose.prod.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/docker-compose.prod.yml
-          scp nginx/nginx.conf ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/nginx/nginx.conf
-
-      - name: Migrate database (backup, pull, alembic upgrade)
-        run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -Eeuo pipefail
-
-            cd ~/fittracker-pro || exit 1
-            mkdir -p backups nginx/ssl nginx/logs
-
-            PREVIOUS_IMAGE_TAG=""
-            if [ -f .env ]; then
-              if grep -qE '^IMAGE_TAG=' .env; then
-                PREVIOUS_IMAGE_TAG="$(grep -E '^IMAGE_TAG=' .env | tail -n1 | cut -d'=' -f2-)"
-              fi
-            fi
-
-            cat > .env << EOL
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
-          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_WEBAPP_URL=${{ secrets.TELEGRAM_WEBAPP_URL }}
-          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
-          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
-          VITE_API_URL=${{ secrets.VITE_API_URL }}
-          VITE_TELEGRAM_BOT_USERNAME=${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
-          IMAGE_TAG=${{ env.DEPLOY_IMAGE_TAG }}
-          GITHUB_REPOSITORY=${{ github.repository }}
-          EOL
-
-            cat > .rollback-meta.env << EOL
-          PREVIOUS_IMAGE_TAG=${PREVIOUS_IMAGE_TAG}
-          TARGET_IMAGE_TAG=${{ env.DEPLOY_IMAGE_TAG }}
-          DEPLOY_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          EOL
-
-            mkdir -p backups
-            echo "Creating database backup..."
-            DB_BACKUP_PATH="backups/backup_$(date +%Y%m%d_%H%M%S).sql"
-            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > "${DB_BACKUP_PATH}"
-            echo "DB_BACKUP_PATH=${DB_BACKUP_PATH}" >> .rollback-meta.env
-
-            echo "Pulling container images..."
-            docker-compose -f docker-compose.prod.yml pull
-
-            echo "Running database migrations..."
-            docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
-
-            echo "Migration stage completed successfully"
-          EOF
-
-  # ---------------------------------------------------------------------------
-  # Stage: deploy — bring stack up and run on-host checks
-  # ---------------------------------------------------------------------------
-  deploy:
-    name: "Stage: deploy"
-    needs: [resolve-tag, migrate]
-    if: needs.migrate.result == 'success'
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.10.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add host to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy services and run on-host health checks
-        run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -Eeuo pipefail
-            cd ~/fittracker-pro || exit 1
-
-            echo "Deploying services..."
-            docker-compose -f docker-compose.prod.yml up -d
-
-            echo "Cleaning up..."
-            docker image prune -f
-
-            echo "Running health checks..."
-            sleep 15
-
-            if curl -fsS http://localhost:8000/health; then
-              echo "Backend is healthy"
-            else
-              echo "Backend health check failed"
-              exit 1
-            fi
-
-            if curl -fsS http://localhost:8000/api/v1/system/version; then
-              echo "Backend version endpoint is healthy"
-            else
-              echo "Backend version endpoint failed"
-              exit 1
-            fi
-
-            if curl -fsS http://localhost/; then
-              echo "Reverse proxy smoke check passed"
-            else
-              echo "Reverse proxy smoke check failed"
-              exit 1
-            fi
-
-            echo "Deploy stage completed successfully"
-          EOF
-
-  # ---------------------------------------------------------------------------
-  # Stage: verify — external smoke (public URLs)
-  # ---------------------------------------------------------------------------
-  verify:
-    name: "Stage: verify"
-    runs-on: ubuntu-latest
-    needs: [deploy]
-    if: needs.deploy.result == 'success'
-    environment: production
-
-    steps:
-      - name: Run production smoke checks
-        env:
-          API_BASE_URL: ${{ secrets.VITE_API_URL }}
-        run: |
-          set -Eeuo pipefail
-          echo "Production domain (reference): ${PRODUCTION_DOMAIN}"
-          if [ -z "${API_BASE_URL:-}" ]; then
-            echo "::error::VITE_API_URL secret is empty — cannot run post-deploy smoke checks."
-            exit 1
-          fi
-          API_BASE_TRIMMED="${API_BASE_URL%/}"
-          FRONTEND_BASE_URL="${API_BASE_TRIMMED%/api/v1}"
-          FRONTEND_BASE_URL="${FRONTEND_BASE_URL%/}"
-
-          HEALTH_URL="${API_BASE_TRIMMED}/system/health"
-          VERSION_URL="${API_BASE_TRIMMED}/version"
-          NGINX_HEALTH_URL="${FRONTEND_BASE_URL}/health"
-          DOMAIN_URL="${API_BASE_TRIMMED}/workouts/templates?page=1&page_size=1"
-
-          smoke_check() {
-            local name="$1"
-            local url="$2"
-            local expected_codes="$3"
-            local max_attempts=12
-            local status_code=""
-
-            echo "Smoke check: ${name} -> ${url} (expected: ${expected_codes})"
-
-            for attempt in $(seq 1 "$max_attempts"); do
-              set +e
-              status_code="$(curl --silent --show-error --location --output /dev/null --write-out "%{http_code}" "$url")"
-              curl_exit=$?
-              set -e
-              if [ "$curl_exit" -ne 0 ]; then
-                status_code="${status_code:-000}"
-              fi
-              if [[ " ${expected_codes} " == *" ${status_code} "* ]]; then
-                echo "Smoke check passed: ${name} (status ${status_code})"
-                return 0
-              fi
-
-              echo "Attempt ${attempt}/${max_attempts} failed for ${name}: status ${status_code}"
-              sleep 5
-            done
-
-            echo "Smoke check failed: ${name}. Last status: ${status_code}, expected: ${expected_codes}"
-            return 1
-          }
-
-          smoke_check "backend health (GET /api/v1/system/health)" "${HEALTH_URL}" "200"
-          curl -fsS "${HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null
-          echo "Health JSON validated: status=healthy"
-
-          smoke_check "nginx→backend health (GET /health)" "${NGINX_HEALTH_URL}" "200"
-          curl -fsS "${NGINX_HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null
-
-          smoke_check "API connectivity (GET /api/v1/system/version)" "${VERSION_URL}" "200"
-          curl -fsS "${VERSION_URL}" | jq -e '.version != null' >/dev/null
-          echo "Version JSON validated"
-
-          smoke_check "frontend (site root HTML)" "${FRONTEND_BASE_URL}/" "200"
-          curl -fsS "${FRONTEND_BASE_URL}/" | grep -qiE '<!DOCTYPE[[:space:]]+html|<html[[:space:]>]'
-          echo "Frontend HTML validated"
-
-          smoke_check "protected API route /workouts/templates" "${DOMAIN_URL}" "200 401 403"
-
-  record-stable:
-    name: Record last stable image tags
-    runs-on: ubuntu-latest
-    needs: [migrate, deploy, verify]
-    if: ${{ needs.migrate.result == 'success' && needs.deploy.result == 'success' && needs.verify.result == 'success' }}
-    environment: production
-
-    steps:
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.10.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add host to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Write .last-stable-deploy.env on server
-        run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -Eeuo pipefail
-            cd ~/fittracker-pro || exit 1
-            if [ ! -f .rollback-meta.env ]; then
-              echo "Warning: .rollback-meta.env missing — skipping last-stable snapshot"
-              exit 0
-            fi
-            set -a
-            # shellcheck disable=SC1091
-            source .rollback-meta.env
-            set +a
-            {
-              echo "LAST_STABLE_IMAGE_TAG=${TARGET_IMAGE_TAG:-}"
-              echo "LAST_STABLE_PREVIOUS_TAG=${PREVIOUS_IMAGE_TAG:-}"
-              echo "LAST_STABLE_RECORDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            } > .last-stable-deploy.env
-            echo "Recorded last successful deploy tags in .last-stable-deploy.env"
-          EOF
-
-  rollback:
-    name: Rollback on Failure
-    runs-on: ubuntu-latest
-    needs: [migrate, deploy, verify]
-    if: ${{ always() && (needs.migrate.result == 'failure' || needs.deploy.result == 'failure' || needs.verify.result == 'failure') }}
-
-    steps:
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.10.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Rollback deployment
-        run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            set -Eeuo pipefail
-            cd ~/fittracker-pro
-
-            PREVIOUS_IMAGE_TAG=""
-            DB_BACKUP_PATH=""
-            if [ -f .rollback-meta.env ]; then
-              # shellcheck disable=SC1091
-              source .rollback-meta.env
-            fi
-
-            if [ -z "${PREVIOUS_IMAGE_TAG}" ]; then
-              echo "Error: No previous IMAGE_TAG in .rollback-meta.env — cannot roll back app images (first deploy or missing metadata)."
-              exit 1
-            fi
-
-            if [ -f .env ]; then
-              sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${PREVIOUS_IMAGE_TAG}|" .env
-            else
-              echo "IMAGE_TAG=${PREVIOUS_IMAGE_TAG}" > .env
-              echo "GITHUB_REPOSITORY=${{ github.repository }}" >> .env
-            fi
-
-            echo "Rolling back to image tag: ${PREVIOUS_IMAGE_TAG}"
-            docker-compose -f docker-compose.prod.yml pull backend frontend
-            docker-compose -f docker-compose.prod.yml up -d
-
-            if [ "${{ github.event_name == 'workflow_dispatch' && inputs.rollback_restore_db == true }}" = "true" ]; then
-              if [ -n "${DB_BACKUP_PATH}" ] && [ -f "${DB_BACKUP_PATH}" ]; then
-                echo "Restoring DB from pre-deploy backup: ${DB_BACKUP_PATH}"
-                docker-compose -f docker-compose.prod.yml up -d postgres
-                sleep 8
-                docker exec -i fittracker-postgres psql -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} < "${DB_BACKUP_PATH}"
-              else
-                echo "rollback_restore_db=true, but backup not found: ${DB_BACKUP_PATH}"
-                exit 1
-              fi
-            else
-              echo "DB restore skipped (rollback_restore_db=false)"
-            fi
-
-            sleep 15
-            curl -fsS http://localhost:8000/health > /dev/null
-            curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
-            curl -fsS http://localhost/ > /dev/null
-            echo "Rollback completed and health checks passed"
-          EOF
-
-  notify:
-    name: Notify Deployment Result
-    runs-on: ubuntu-latest
-    needs: [migrate, deploy, verify, rollback, record-stable]
-    if: ${{ always() }}
-
-    steps:
-      - name: Notify on success
-        if: ${{ needs.deploy.result == 'success' && needs.verify.result == 'success' }}
-        uses: 8398a7/action-slack@v3
-        with:
-          status: success
-          text: "FitTracker Pro deployed successfully to production and smoke checks passed!"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify on failure
-        if: ${{ needs.migrate.result == 'failure' || needs.deploy.result == 'failure' || needs.verify.result == 'failure' || needs.rollback.result == 'failure' }}
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          text: "FitTracker Pro deployment or smoke validation failed. Rollback status: ${{ needs.rollback.result }}"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      image_tag: ${{ needs.resolve-tag.outputs.image_tag }}
+      deploy_environment: ${{ needs.resolve-tag.outputs.deploy_environment }}
+      rollback_restore_db: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.rollback_restore_db || false }}
+    secrets: inherit
