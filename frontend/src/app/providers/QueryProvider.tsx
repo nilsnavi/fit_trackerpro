@@ -6,6 +6,7 @@ import {
     OFFLINE_QUERY_CACHE_MAX_AGE_MS,
     shouldDehydrateOfflineQuery,
 } from '@shared/offline/offlineQueryPersist'
+import { SyncQueueRunner } from './SyncQueueRunner'
 
 /** Корневой клиент TanStack Query; офлайн — last-known для каталога, истории и шаблонов (см. offlineQueryPersist). */
 export function QueryProvider({ children }: PropsWithChildren) {
@@ -35,6 +36,7 @@ export function QueryProvider({ children }: PropsWithChildren) {
                 },
             }}
         >
+            <SyncQueueRunner />
             {children}
         </PersistQueryClientProvider>
     )
