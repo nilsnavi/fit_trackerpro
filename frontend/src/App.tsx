@@ -5,6 +5,7 @@ import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
 import { AppShell } from './app/layouts/AppShell'
+import { RouteErrorBoundary } from '@shared/ui/RouteErrorBoundary'
 
 const Home = lazy(() =>
     import('@features/home/pages/Home').then((m) => ({ default: m.Home })),
@@ -85,19 +86,110 @@ export default function App() {
                             <Suspense fallback={<RoutePageFallback />}>
                                 <Routes>
                                     <Route element={<AppShell />}>
-                                        <Route path="/" element={<Home />} />
-                                        <Route path="/workouts" element={<WorkoutsPage />} />
-                                        <Route path="/workouts/builder" element={<WorkoutBuilderPage />} />
-                                        <Route path="/workouts/mode/:mode" element={<WorkoutModePage />} />
-                                        <Route path="/workouts/calendar" element={<WorkoutCalendarPage />} />
-                                        <Route path="/workouts/:id/edit" element={<WorkoutEditPage />} />
-                                        <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
-                                        <Route path="/login" element={<LoginPage />} />
-                                        <Route path="/exercises" element={<Catalog />} />
-                                        <Route path="/exercises/add" element={<AddExercise />} />
-                                        <Route path="/health" element={<HealthPage />} />
-                                        <Route path="/analytics" element={<AnalyticsPage />} />
-                                        <Route path="/profile" element={<ProfilePage />} />
+                                        <Route
+                                            path="/"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Главная">
+                                                    <Home />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Тренировки">
+                                                    <WorkoutsPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/builder"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Конструктор тренировки">
+                                                    <WorkoutBuilderPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/mode/:mode"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Режим тренировки">
+                                                    <WorkoutModePage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/calendar"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Календарь">
+                                                    <WorkoutCalendarPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/:id/edit"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Редактирование тренировки">
+                                                    <WorkoutEditPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/:id"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Тренировка">
+                                                    <WorkoutDetailPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/login"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Вход">
+                                                    <LoginPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/exercises"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Каталог упражнений">
+                                                    <Catalog />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/exercises/add"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Новое упражнение">
+                                                    <AddExercise />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/health"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Здоровье">
+                                                    <HealthPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/analytics"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Аналитика">
+                                                    <AnalyticsPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/profile"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Профиль">
+                                                    <ProfilePage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
                                         <Route path="*" element={<Navigate to="/" replace />} />
                                     </Route>
                                 </Routes>
