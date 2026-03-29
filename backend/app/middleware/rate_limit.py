@@ -155,6 +155,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/openapi.json",
             "/health",
             "/api/v1/system/health",
+            "/api/v1/system/version",
         ]:
             return await call_next(request)
 

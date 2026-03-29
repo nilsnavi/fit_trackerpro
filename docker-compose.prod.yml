@@ -63,6 +63,12 @@ services:
       - DEBUG=false
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - SENTRY_DSN=${SENTRY_DSN}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,7 +93,8 @@ services:
       - VITE_TELEGRAM_BOT_USERNAME=${VITE_TELEGRAM_BOT_USERNAME}
       - VITE_ENVIRONMENT=production
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - fittracker-network
     deploy:
