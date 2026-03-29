@@ -18,7 +18,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from typing import AsyncGenerator, Generator
 
-from app.domain import Base
+from app.domain.base import Base
+import app.domain.registry  # noqa: F401 — full metadata for create_all
 from app.infrastructure.database import get_async_db
 from app.main import app
 from app.tests.telegram_webapp import build_init_data

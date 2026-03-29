@@ -3,7 +3,8 @@ from __future__ import annotations
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import Challenge, User
+from app.domain.challenge import Challenge
+from app.domain.user import User
 
 
 class ChallengesRepository:

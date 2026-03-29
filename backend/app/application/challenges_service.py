@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import Challenge
+from app.domain.challenge import Challenge
 from app.domain.exceptions import (
     ChallengeForbiddenError,
     ChallengeNotFoundError,

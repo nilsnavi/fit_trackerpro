@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.security import create_access_token, create_refresh_token, verify_token
-from app.domain import User
+from app.domain.user import User
 from app.domain.exceptions import AuthenticationError
 from app.infrastructure.repositories.auth_repository import AuthRepository
 from app.schemas.auth import (

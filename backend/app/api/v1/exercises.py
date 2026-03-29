@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.auth import get_current_user, require_admin
-from app.domain import User
+from app.domain.user import User
 from app.domain.exceptions import ExerciseNotFoundError
 from app.infrastructure.database import get_async_db
 from app.schemas.exercises import (

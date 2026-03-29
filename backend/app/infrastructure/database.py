@@ -6,8 +6,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.settings import settings
 
-# Import domain so all ORM models attach to Base.metadata (Alembic, tests).
-from app.domain import Base  # noqa: F401
+from app.domain.base import Base  # noqa: F401
+import app.domain.registry  # noqa: F401 — attach all ORM models to Base.metadata
 
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 

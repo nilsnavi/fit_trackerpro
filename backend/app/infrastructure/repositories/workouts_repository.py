@@ -6,15 +6,13 @@ from typing import List, Optional
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import (
-    DailyWellness,
-    Exercise,
-    MuscleLoad,
-    RecoveryState,
-    TrainingLoadDaily,
-    WorkoutLog,
-    WorkoutTemplate,
-)
+from app.domain.daily_wellness import DailyWellness
+from app.domain.exercise import Exercise
+from app.domain.muscle_load import MuscleLoad
+from app.domain.recovery_state import RecoveryState
+from app.domain.training_load_daily import TrainingLoadDaily
+from app.domain.workout_log import WorkoutLog
+from app.domain.workout_template import WorkoutTemplate
 
 
 class WorkoutsRepository:

@@ -1,36 +1,10 @@
 """
-Domain layer: ORM entities (SQLAlchemy models) and domain exceptions.
+Domain layer: ORM entities (SQLAlchemy) and domain exceptions.
 
-Persistence (engine, sessions) lives in ``app.infrastructure.database``.
+Import concrete models from submodules, e.g. ``from app.domain.user import User``.
+For full ``Base.metadata`` registration, import ``app.domain.registry`` alongside
+``app.domain.base.Base`` (see ``app.infrastructure.database``).
 """
-from .user import User
-from .workout_template import WorkoutTemplate
-from .workout_log import WorkoutLog
-from .exercise import Exercise
-from .glucose_log import GlucoseLog
-from .daily_wellness import DailyWellness
-from .training_load_daily import TrainingLoadDaily
-from .muscle_load import MuscleLoad
-from .recovery_state import RecoveryState
-from .achievement import Achievement
-from .user_achievement import UserAchievement
-from .challenge import Challenge
-from .emergency_contact import EmergencyContact
-from .base import Base
+from app.domain.base import Base
 
-__all__ = [
-    "Base",
-    "User",
-    "WorkoutTemplate",
-    "WorkoutLog",
-    "Exercise",
-    "GlucoseLog",
-    "DailyWellness",
-    "TrainingLoadDaily",
-    "MuscleLoad",
-    "RecoveryState",
-    "Achievement",
-    "UserAchievement",
-    "Challenge",
-    "EmergencyContact",
-]
+__all__ = ["Base"]
