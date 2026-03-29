@@ -40,6 +40,7 @@ import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import { useAchievements } from '@features/achievements/hooks/useAchievements';
 import { useProfile } from '@features/profile/hooks/useProfile';
 import { ProfileShowcase } from '@features/achievements/components';
+import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
 
 // ============================================
 // Constants
@@ -251,22 +252,7 @@ export const ProfilePage: React.FC = () => {
     const weightProgress = getWeightProgress();
 
     if (isLoading) {
-        return (
-            <div className="p-4 space-y-6 animate-pulse">
-                <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-telegram-secondary-bg" />
-                    <div className="space-y-2">
-                        <div className="w-32 h-6 bg-telegram-secondary-bg rounded" />
-                        <div className="w-24 h-4 bg-telegram-secondary-bg rounded" />
-                    </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className="h-24 bg-telegram-secondary-bg rounded-2xl" />
-                    ))}
-                </div>
-            </div>
-        );
+        return <ProfilePageSkeleton />;
     }
 
     return (

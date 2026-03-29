@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
     LineChart,
     Line,
@@ -43,6 +44,7 @@ import { Modal } from '@shared/ui/Modal';
 import { OneRMCalculator } from '@features/analytics/components';
 import { useTelegramWebApp, UseTelegramWebAppReturn } from '@shared/hooks/useTelegramWebApp';
 import { trackBusinessMetric } from '@shared/lib/businessMetrics';
+import { AnalyticsPageSkeleton } from '@shared/ui/page-skeletons';
 
 // ============================================
 // Types
@@ -672,9 +674,16 @@ const Analytics: React.FC = () => {
         dotFill: isDark ? '#1a1a1a' : '#ffffff',
     };
 
-    // Load data (replace with API call)
-    const workouts = useMemo(() => generateMockWorkouts(), []);
-    const exercises = useMemo(() => MOCK_EXERCISES, []);
+    const { data: analyticsData, isPending: isAnalyticsPending } = useQuery({
+        queryKey: ['analytics', 'dashboard'],
+        queryFn: async () => ({
+            workouts: generateMockWorkouts(),
+            exercises: MOCK_EXERCISES,
+        }),
+    });
+
+    const workouts = analyticsData?.workouts ?? [];
+    const exercises = analyticsData?.exercises ?? [];
 
     // Filter data by period
     const filteredWorkouts = useMemo(() => {
@@ -793,6 +802,10 @@ const Analytics: React.FC = () => {
 
     // Colors for chart lines
     const lineColors = ['#2481cc', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
+
+    if (isAnalyticsPending) {
+        return <AnalyticsPageSkeleton />;
+    }
 
     return (
         <div className="min-h-screen bg-telegram-bg pb-20">

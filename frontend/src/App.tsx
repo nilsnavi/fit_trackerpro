@@ -1,11 +1,18 @@
 import * as Sentry from '@sentry/react'
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
 import { AppShell } from './app/layouts/AppShell'
 import { RouteErrorBoundary } from '@shared/ui/RouteErrorBoundary'
+import {
+    AnalyticsPageSkeleton,
+    CatalogPageSkeleton,
+    ProfilePageSkeleton,
+    RouteFallbackSpinner,
+    WorkoutsPageSkeleton,
+} from '@shared/ui/page-skeletons'
 
 const Home = lazy(() =>
     import('@features/home/pages/Home').then((m) => ({ default: m.Home })),
@@ -61,19 +68,12 @@ function SentryErrorFallback({
 }
 
 function RoutePageFallback() {
-    return (
-        <div
-            className="flex min-h-[40dvh] flex-col items-center justify-center gap-3 p-6"
-            aria-busy="true"
-            aria-live="polite"
-        >
-            <div
-                className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
-                role="status"
-                aria-label="Loading page"
-            />
-        </div>
-    )
+    const { pathname } = useLocation()
+    if (pathname === '/profile') return <ProfilePageSkeleton />
+    if (pathname === '/exercises') return <CatalogPageSkeleton />
+    if (pathname === '/workouts') return <WorkoutsPageSkeleton />
+    if (pathname === '/analytics') return <AnalyticsPageSkeleton />
+    return <RouteFallbackSpinner />
 }
 
 export default function App() {
