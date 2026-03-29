@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
+from app.api.deps.idempotency import optional_idempotency_key
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.analytics import (
@@ -174,11 +175,13 @@ async def export_data(
     export_request: DataExportRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
+    idempotency_key: str | None = Depends(optional_idempotency_key),
 ):
     service = AnalyticsService(db)
     return await service.export_data(
         user_id=current_user.id,
         export_request=export_request,
+        idempotency_key=idempotency_key,
     )
 
 

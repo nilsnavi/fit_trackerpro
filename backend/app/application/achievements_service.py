@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.exceptions import AchievementNotFoundError
+from app.infrastructure.idempotency import run_idempotent
+from app.settings import settings
 from app.infrastructure.repositories.achievements_repository import AchievementsRepository
 from app.core.audit import ACHIEVEMENT_CLAIM, audit_log
 from app.schemas.achievements import (
@@ -88,7 +91,7 @@ class AchievementsService:
             is_completed=ua.progress >= 100,
         )
 
-    async def claim_achievement(
+    async def _claim_achievement_once(
         self,
         user_id: int,
         achievement_id: int,
@@ -103,20 +106,38 @@ class AchievementsService:
             achievement_id=achievement_id,
         )
         if existing and existing.progress >= 100:
+            total_points = await self.repository.get_user_total_points(user_id=user_id)
             return AchievementUnlockResponse(
                 unlocked=False,
                 achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
                 points_earned=0,
-                new_total_points=0,
+                new_total_points=total_points,
                 message="Achievement already unlocked",
             )
 
-        await self.repository.complete_user_achievement(
-            user_id=user_id,
-            achievement_id=achievement_id,
-            existing=existing,
-            earned_at=datetime.utcnow(),
-        )
+        try:
+            await self.repository.complete_user_achievement(
+                user_id=user_id,
+                achievement_id=achievement_id,
+                existing=existing,
+                earned_at=datetime.utcnow(),
+            )
+        except IntegrityError:
+            await self.repository.db.rollback()
+            existing_after = await self.repository.get_user_achievement(
+                user_id=user_id,
+                achievement_id=achievement_id,
+            )
+            total_points = await self.repository.get_user_total_points(user_id=user_id)
+            if existing_after and existing_after.progress >= 100:
+                return AchievementUnlockResponse(
+                    unlocked=False,
+                    achievement=AchievementResponse.model_validate(achievement, from_attributes=True),
+                    points_earned=0,
+                    new_total_points=total_points,
+                    message="Achievement already unlocked",
+                )
+            raise
 
         total_points = await self.repository.get_user_total_points(user_id=user_id)
         audit_log(
@@ -134,6 +155,32 @@ class AchievementsService:
             new_total_points=total_points,
             message=f"Achievement unlocked! {achievement.description}",
         )
+
+    async def claim_achievement(
+        self,
+        user_id: int,
+        achievement_id: int,
+        client_ip: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> AchievementUnlockResponse:
+        async def _run() -> AchievementUnlockResponse:
+            return await self._claim_achievement_once(
+                user_id=user_id,
+                achievement_id=achievement_id,
+                client_ip=client_ip,
+            )
+
+        if idempotency_key:
+            return await run_idempotent(
+                user_id=user_id,
+                scope=f"achievement_claim:{achievement_id}",
+                raw_key=idempotency_key,
+                ttl_seconds=settings.IDEMPOTENCY_DEFAULT_TTL_SECONDS,
+                execute=_run,
+                serialize_result=lambda r: r.model_dump(mode="json"),
+                deserialize_result=lambda d: AchievementUnlockResponse.model_validate(d),
+            )
+        return await _run()
 
     async def get_leaderboard(self, user_id: int, limit: int) -> AchievementLeaderboardResponse:
         top_users = await self.repository.list_top_users(limit=limit)

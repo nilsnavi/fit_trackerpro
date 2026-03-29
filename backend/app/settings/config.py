@@ -94,6 +94,16 @@ class Settings(BaseSettings):
     ANALYTICS_DEFAULT_MAX_DATA_POINTS: int = 120
     ANALYTICS_MAX_DATA_POINTS_HARD_LIMIT: int = 365
 
+    # Idempotency-Key replay window for sensitive mutations (seconds).
+    IDEMPOTENCY_DEFAULT_TTL_SECONDS: Annotated[
+        int,
+        Field(description="TTL for Idempotency-Key response replay (workouts, achievements, export).", ge=60),
+    ] = 86400
+    IDEMPOTENCY_EMERGENCY_TTL_SECONDS: Annotated[
+        int,
+        Field(description="TTL for emergency notify idempotency keys.", ge=60),
+    ] = 3600
+
     # --- Production-critical (dev/test defaults; override in prod) ---
     TELEGRAM_BOT_TOKEN: Annotated[
         str,
