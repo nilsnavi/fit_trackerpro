@@ -24,8 +24,8 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# Docker
-.dockerignore
+# Docker (только корень; frontend/.dockerignore нужен в репозитории)
+/.dockerignore
 docker-compose.override.yml
 
 # Temporary files

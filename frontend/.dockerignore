@@ -1,0 +1,91 @@
+# Dependencies (reinstalled in the image via npm ci)
+node_modules
+
+# Vite / bundler output
+dist
+dist-ssr
+build
+storybook-static
+
+# Tooling caches (large, never needed in the image)
+.vite
+.cache
+.parcel-cache
+.turbo
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+node_modules/.cache
+
+# Tests & coverage (not used by `tsc && vite build`)
+coverage
+.nyc_output
+__tests__
+**/__mocks__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+jest.config.*
+jest.setup.*
+vitest.config.*
+playwright.config.*
+playwright-report
+test-results
+cypress
+e2e
+
+# Local env & secrets (do not exclude .env.production if you rely on it for vite build)
+.env
+.env.local
+.env.*.local
+
+# Version control & CI
+.git
+.gitignore
+.github
+.gitlab-ci.yml
+.husky
+
+# IDE & editor
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Archives (accidental drops in repo root)
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# Docker metadata (image is built from these paths locally; omit from context tarball)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Docs & licenses (not part of the production bundle build)
+*.md
+LICENSE
+
+# Yarn Berry / Plug'n'Play (not used by npm ci, but huge if present)
+.yarn
+.pnp
+.pnp.js
