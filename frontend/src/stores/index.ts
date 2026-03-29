@@ -1,5 +1,10 @@
-export { useSessionStore } from './sessionStore'
-export { useUiStore } from './uiStore'
-export type { AnalyticsRange } from './uiStore'
-export { useWorkoutDraftStore } from './workoutDraftStore'
-export { useWorkoutSessionDraftStore } from './workoutSessionDraftStore'
+/**
+ * Обратная совместимость: предпочтительно импортировать из @/state/local или @/state.
+ */
+export {
+    useSessionStore,
+    useUiStore,
+    useWorkoutDraftStore,
+    useWorkoutSessionDraftStore,
+} from '../state/local'
+export type { AnalyticsRange } from '../state/local'

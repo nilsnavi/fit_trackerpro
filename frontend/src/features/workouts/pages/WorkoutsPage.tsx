@@ -23,7 +23,7 @@ import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHisto
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
 import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
-import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
+import { useWorkoutSessionDraftStore } from '@/state/local'
 import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import type { WorkoutType } from '@shared/types'
 import type { BackendWorkoutType } from '@features/workouts/types/workouts'

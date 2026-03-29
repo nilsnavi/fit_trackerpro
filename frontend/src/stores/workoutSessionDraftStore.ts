@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
 
+/** Черновик активной тренировки на клиенте; серверная история — `queryKeys.workouts.*` и мутации в `useWorkoutMutations`. */
 interface WorkoutSessionDraftState {
     workoutId: number | null
     title: string | null

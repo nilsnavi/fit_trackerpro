@@ -2,7 +2,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '@shared/types'
 
-/** Кэш идентичности пользователя; актуальный профиль с сервера — через TanStack Query. */
+/**
+ * Зарезервировано под клиентский снимок идентичности (офлайн, миграции).
+ *
+ * Не подключайте к экранам без отдельного решения: профиль и сессия с API —
+ * TanStack Query (useCurrentUserQuery, useProfile, queryKeys.profile.me). Иначе
+ * дублирование смысла с серверным кэшем.
+ */
 interface SessionState {
     user: User | null
     setUser: (user: User | null) => void

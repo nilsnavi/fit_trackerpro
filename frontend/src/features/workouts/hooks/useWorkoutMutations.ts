@@ -7,7 +7,7 @@ import type {
     WorkoutTemplateCreateRequest,
     WorkoutHistoryItem,
 } from '@features/workouts/types/workouts'
-import { useWorkoutSessionDraftStore } from '@/stores/workoutSessionDraftStore'
+import { useWorkoutSessionDraftStore } from '@/state/local'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
 import {
     appendCalendarWorkoutForMatchingMonth,

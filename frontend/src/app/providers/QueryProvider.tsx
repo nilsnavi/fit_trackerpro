@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PropsWithChildren, useState } from 'react'
 
+/** Корневой клиент TanStack Query; ключи кэша — queryKeys (state/server). */
 export function QueryProvider({ children }: PropsWithChildren) {
     const [queryClient] = useState(
         () =>
