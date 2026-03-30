@@ -176,6 +176,11 @@ jobs:
             echo "Running database migrations..."
             docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
 
+            echo "Seeding reference data (idempotent)..."
+            docker-compose -f docker-compose.prod.yml run --rm \
+              -e REFERENCE_DATA_DIR=/app/reference_data \
+              backend python3 -m app.cli.seed_reference_data apply
+
             echo "Migration stage completed successfully"
           EOF
 

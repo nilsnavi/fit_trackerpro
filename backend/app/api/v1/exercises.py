@@ -106,7 +106,7 @@ async def get_exercise_categories(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ExercisesService(db)
-    return service.get_categories()
+    return await service.get_categories()
 
 
 @router.get("/equipment/list", response_model=ExerciseEquipmentListResponse)
@@ -115,7 +115,7 @@ async def get_equipment_list(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ExercisesService(db)
-    return service.get_equipment()
+    return await service.get_equipment()
 
 
 @router.get("/muscle-groups/list", response_model=ExerciseMuscleGroupsResponse)
@@ -124,4 +124,4 @@ async def get_muscle_groups(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ExercisesService(db)
-    return service.get_muscle_groups()
+    return await service.get_muscle_groups()

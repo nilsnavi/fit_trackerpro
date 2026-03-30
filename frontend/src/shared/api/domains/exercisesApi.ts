@@ -1,5 +1,10 @@
 import { api } from '@shared/api/client'
 import type { ExerciseListApiResponse } from '@features/exercises/types/exerciseApi'
+import type {
+    ExerciseCategoriesApiResponse,
+    ExerciseEquipmentListApiResponse,
+    ExerciseMuscleGroupsApiResponse,
+} from '@features/exercises/types/referenceApi'
 
 export const exercisesApi = {
     list(params?: Record<string, unknown>): Promise<ExerciseListApiResponse> {
@@ -20,5 +25,14 @@ export const exercisesApi = {
     },
     remove(exerciseId: number) {
         return api.delete(`/exercises/${exerciseId}`)
+    },
+    categories() {
+        return api.get<ExerciseCategoriesApiResponse>('/exercises/categories/list')
+    },
+    equipment() {
+        return api.get<ExerciseEquipmentListApiResponse>('/exercises/equipment/list')
+    },
+    muscleGroups() {
+        return api.get<ExerciseMuscleGroupsApiResponse>('/exercises/muscle-groups/list')
     },
 }

@@ -1,0 +1,11 @@
+{
+  "version": "2026-03-30",
+  "datasets": [
+    { "name": "ref_exercise_category", "file": "ref_exercise_category.json" },
+    { "name": "ref_muscle_group", "file": "ref_muscle_group.json" },
+    { "name": "ref_equipment", "file": "ref_equipment.json" },
+    { "name": "ref_exercise_status", "file": "ref_exercise_status.json" },
+    { "name": "exercises", "file": "exercises.ndjson" }
+  ]
+}
+

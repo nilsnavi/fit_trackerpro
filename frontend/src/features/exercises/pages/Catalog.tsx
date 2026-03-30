@@ -10,6 +10,10 @@ import { Modal } from '@shared/ui/Modal';
 import { cn } from '@shared/lib/cn';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery';
+import {
+    useExerciseCategoriesQuery,
+    useExerciseEquipmentQuery,
+} from '@features/exercises/hooks/useExerciseReferenceData';
 import type {
     Exercise,
     ExerciseCategory,
@@ -43,305 +47,44 @@ const MOCK_EXERCISES: Exercise[] = [
     {
         id: 1,
         name: 'Приседания со штангой',
-        category: 'legs',
+        category: 'strength',
         equipment: ['barbell'],
         primaryMuscles: ['Квадрицепсы', 'Ягодицы'],
         secondaryMuscles: ['Спина', 'Кор'],
         difficulty: 'intermediate',
         risks: ['knee', 'back'],
         description: 'Базовое упражнение для развития силы ног и ягодиц.',
-        instructions: [
-            'Встаньте под штангу, расположив её на верхней части трапеций',
-            'Снимите штангу со стоек, отступите на 1-2 шага',
-            'Ноги на ширине плеч, носки слегка разведены',
-            'Опуститесь в присед, отводя таз назад',
-            'Вернитесь в исходное положение, выпрямляя ноги',
-        ],
-        tips: ['Держите спину прямой', 'Не поднимайте пятки от пола', 'Смотрите перед собой'],
+        instructions: ['Встаньте под штангу', 'Опуститесь в присед', 'Вернитесь в исходное положение'],
+        tips: [],
         isCustom: false,
-        similarExercises: [2, 3],
     },
     {
         id: 2,
-        name: 'Гоблет-приседания',
-        category: 'legs',
-        equipment: ['dumbbells', 'kettlebell'],
-        primaryMuscles: ['Квадрицепсы', 'Ягодицы'],
-        secondaryMuscles: ['Кор', 'Спина'],
-        difficulty: 'beginner',
-        risks: ['knee'],
-        description: 'Отличное упражнение для начинающих с акцентом на технику.',
-        instructions: [
-            'Возьмите гантель или гирю и держите у груди',
-            'Ноги на ширине плеч',
-            'Опуститесь в присед, сохраняя спину прямой',
-            'Вернитесь в исходное положение',
-        ],
-        tips: ['Грудь открыта', 'Локти внутри колен', 'Контролируйте движение'],
-        isCustom: false,
-        similarExercises: [1, 3],
-    },
-    {
-        id: 3,
-        name: 'Приседания с собственным весом',
-        category: 'legs',
-        equipment: ['bodyweight'],
-        primaryMuscles: ['Квадрицепсы', 'Ягодицы'],
-        secondaryMuscles: ['Кор'],
-        difficulty: 'beginner',
-        risks: ['knee'],
-        description: 'Базовое упражнение без оборудования.',
-        instructions: [
-            'Ноги на ширине плеч',
-            'Руки перед собой или за головой',
-            'Опуститесь в присед до параллели с полом',
-            'Вернитесь в исходное положение',
-        ],
-        tips: ['Вес на пятках', 'Колени не сводите внутрь'],
-        isCustom: false,
-        similarExercises: [1, 2],
-    },
-    {
-        id: 4,
-        name: 'Становая тяга',
-        category: 'back',
-        equipment: ['barbell'],
-        primaryMuscles: ['Спина', 'Ягодицы'],
-        secondaryMuscles: ['Бицепс', 'Квадрицепсы', 'Кор'],
-        difficulty: 'advanced',
-        risks: ['back'],
-        description: 'Королева всех упражнений для развития общей силы.',
-        instructions: [
-            'Встаньте к штанге, стопы под грифом',
-            'Возьмитесь за гриф хватом сверху или смешанным',
-            'Спина прямая, грудь открыта',
-            'Поднимите штангу, выпрямляя ноги и спину',
-            'Опустите контролируемо',
-        ],
-        tips: ['Штанга близко к телу', 'Не округляйте спину', 'Смотрите перед собой'],
-        isCustom: false,
-        similarExercises: [5],
-    },
-    {
-        id: 5,
-        name: 'Румынская тяга',
-        category: 'back',
-        equipment: ['barbell', 'dumbbells'],
-        primaryMuscles: ['Задняя поверхность бедра', 'Ягодицы'],
-        secondaryMuscles: ['Спина'],
-        difficulty: 'intermediate',
-        risks: ['back'],
-        description: 'Упражнение для развития задней поверхности бедра.',
-        instructions: [
-            'Встаньте, держа штангу перед бёдрами',
-            'Слегка согните колени',
-            'Наклонитесь вперёд, отводя таз назад',
-            'Опуститесь до уровня колен или ниже',
-            'Вернитесь в исходное положение',
-        ],
-        tips: ['Спина прямая на протяжении всего движения', 'Чувствуйте растяжение в бёдрах'],
-        isCustom: false,
-        similarExercises: [4],
-    },
-    {
-        id: 6,
-        name: 'Жим штанги лёжа',
-        category: 'chest',
-        equipment: ['barbell'],
-        primaryMuscles: ['Грудные мышцы'],
-        secondaryMuscles: ['Трицепс', 'Передние дельты'],
-        difficulty: 'intermediate',
-        risks: ['shoulder'],
-        description: 'Базовое упражнение для развития грудных мышц.',
-        instructions: [
-            'Лягте на скамью, ноги на полу',
-            'Возьмите штангу хватом чуть шире плеч',
-            'Опустите штангу к груди',
-            'Выжмите штангу вверх до полного выпрямления рук',
-        ],
-        tips: ['Лопатки сведены', 'Следите за локтями', 'Контролируйте опускание'],
-        isCustom: false,
-        similarExercises: [7, 8],
-    },
-    {
-        id: 7,
-        name: 'Жим гантелей лёжа',
-        category: 'chest',
-        equipment: ['dumbbells'],
-        primaryMuscles: ['Грудные мышцы'],
-        secondaryMuscles: ['Трицепс', 'Передние дельты'],
-        difficulty: 'beginner',
-        risks: ['shoulder'],
-        description: 'Вариант жима с большей амплитудой движения.',
-        instructions: [
-            'Лягте на скамью с гантелями',
-            'Начните с гантелей над грудью',
-            'Опустите гантели в стороны',
-            'Сведите гантели вверх, сжимая грудь',
-        ],
-        tips: ['Контролируйте движение', 'Не опускайте слишком низко'],
-        isCustom: false,
-        similarExercises: [6, 8],
-    },
-    {
-        id: 8,
-        name: 'Отжимания',
-        category: 'chest',
-        equipment: ['bodyweight'],
-        primaryMuscles: ['Грудные мышцы'],
-        secondaryMuscles: ['Трицепс', 'Передние дельты', 'Кор'],
-        difficulty: 'beginner',
-        risks: ['shoulder', 'elbow'],
-        description: 'Классическое упражнение с собственным весом.',
-        instructions: [
-            'Примите упор лёжа, руки на ширине плеч',
-            'Тело прямое от головы до пяток',
-            'Опуститесь, сгибая руки',
-            'Отожмитесь в исходное положение',
-        ],
-        tips: ['Кор напряжён', 'Не прогибайте поясницу', 'Контролируйте движение'],
-        isCustom: false,
-        similarExercises: [6, 7],
-    },
-    {
-        id: 9,
-        name: 'Армейский жим',
-        category: 'shoulders',
-        equipment: ['barbell', 'dumbbells'],
-        primaryMuscles: ['Дельтовидные мышцы'],
-        secondaryMuscles: ['Трицепс', 'Кор'],
-        difficulty: 'intermediate',
-        risks: ['shoulder'],
-        description: 'Базовое упражнение для развития плеч.',
-        instructions: [
-            'Встаньте, штанга на верхней части груди',
-            'Локти направлены вперёд и вниз',
-            'Выжмите вес вверх до полного выпрямления',
-            'Опустите контролируемо',
-        ],
-        tips: ['Не прогибайтесь в пояснице', 'Смотрите прямо', 'Контролируйте движение'],
-        isCustom: false,
-        similarExercises: [10],
-    },
-    {
-        id: 10,
-        name: 'Махи гантелями в стороны',
-        category: 'shoulders',
-        equipment: ['dumbbells'],
-        primaryMuscles: ['Средние дельты'],
-        secondaryMuscles: ['Трапеции'],
-        difficulty: 'beginner',
-        risks: ['shoulder'],
-        description: 'Изолирующее упражнение для средних дельт.',
-        instructions: [
-            'Встаньте с гантелями в руках',
-            'Поднимите руки в стороны до уровня плеч',
-            'Слегка согните локти',
-            'Опустите контролируемо',
-        ],
-        tips: ['Не поднимайте выше плеч', 'Контролируйте движение'],
-        isCustom: false,
-        similarExercises: [9],
-    },
-    {
-        id: 11,
-        name: 'Сгибания рук со штангой',
-        category: 'arms',
-        equipment: ['barbell', 'dumbbells'],
-        primaryMuscles: ['Бицепс'],
-        secondaryMuscles: ['Предплечья'],
-        difficulty: 'beginner',
-        risks: ['elbow', 'wrist'],
-        description: 'Классическое упражнение для бицепса.',
-        instructions: [
-            'Встаньте прямо, штанга в опущенных руках',
-            'Согните руки, поднимая штангу к плечам',
-            'Зафиксируйте положение на секунду',
-            'Опустите контролируемо',
-        ],
-        tips: ['Не раскачивайтесь', 'Локти не отводите', 'Контролируйте опускание'],
-        isCustom: false,
-        similarExercises: [12],
-    },
-    {
-        id: 12,
-        name: 'Французский жим',
-        category: 'arms',
-        equipment: ['barbell', 'dumbbells'],
-        primaryMuscles: ['Трицепс'],
-        secondaryMuscles: [],
-        difficulty: 'intermediate',
-        risks: ['elbow'],
-        description: 'Изолирующее упражнение для трицепса.',
-        instructions: [
-            'Лягте на скамью, гантели над грудью',
-            'Согните руки, опуская гантели к голове',
-            'Выпрямите руки, напрягая трицепс',
-            'Повторите',
-        ],
-        tips: ['Локти не разводите', 'Контролируйте движение'],
-        isCustom: false,
-        similarExercises: [11],
-    },
-    {
-        id: 13,
         name: 'Бег на месте',
         category: 'cardio',
-        equipment: ['bodyweight'],
-        primaryMuscles: ['Ноги', 'Сердечно-сосудистая система'],
+        equipment: ['none'],
+        primaryMuscles: ['Ноги'],
         secondaryMuscles: ['Кор'],
         difficulty: 'beginner',
         risks: ['knee'],
         description: 'Кардио упражнение без оборудования.',
-        instructions: [
-            'Встаньте прямо',
-            'Начните бег на месте, поднимая колени',
-            'Двигайте руками',
-            'Поддерживайте темп',
-        ],
-        tips: ['Дышите ритмично', 'Следите за осанкой'],
+        instructions: ['Встаньте прямо', 'Начните бег на месте'],
+        tips: [],
         isCustom: false,
-        similarExercises: [14],
     },
     {
-        id: 14,
-        name: 'Джампинг джек',
-        category: 'cardio',
-        equipment: ['bodyweight'],
-        primaryMuscles: ['Всё тело'],
-        secondaryMuscles: ['Сердечно-сосудистая система'],
+        id: 3,
+        name: 'Растяжка задней поверхности бедра',
+        category: 'flexibility',
+        equipment: ['yoga_mat'],
+        primaryMuscles: ['Бёдра'],
+        secondaryMuscles: [],
         difficulty: 'beginner',
-        risks: ['knee'],
-        description: 'Динамичное кардио упражнение.',
-        instructions: [
-            'Встаньте, ноги вместе, руки вдоль тела',
-            'Прыгните, разведя ноги и подняв руки',
-            'Вернитесь в исходное положение',
-            'Повторите ритмично',
-        ],
-        tips: ['Приземляйтесь мягко', 'Дышите ритмично'],
+        risks: [],
+        description: 'Мягкая растяжка.',
+        instructions: ['Примите удобное положение', 'Дышите ровно', 'Удерживайте растяжку'],
+        tips: [],
         isCustom: false,
-        similarExercises: [13],
-    },
-    {
-        id: 15,
-        name: 'Планка',
-        category: 'stretching',
-        equipment: ['bodyweight'],
-        primaryMuscles: ['Кор'],
-        secondaryMuscles: ['Плечи', 'Спина'],
-        difficulty: 'beginner',
-        risks: ['back', 'shoulder'],
-        description: 'Статическое упражнение для укрепления корпуса.',
-        instructions: [
-            'Примите упор лёжа на предплечьях',
-            'Тело прямое от головы до пяток',
-            'Напрягите мышцы пресса',
-            'Удерживайте положение',
-        ],
-        tips: ['Не прогибайте поясницу', 'Дышите спокойно', 'Смотрите в пол'],
-        isCustom: false,
-        similarExercises: [],
     },
 ];
 
@@ -369,13 +112,26 @@ const highlightText = (text: string, searchTerm: string): React.ReactNode => {
     );
 };
 
-const getCategoryLabel = (category: ExerciseCategory): string => {
-    return CATEGORIES.find(c => c.id === category)?.label || category;
-};
+const getCategoryLabel = (category: ExerciseCategory): string => category;
 
-const getEquipmentLabel = (equipment: EquipmentType): string => {
-    return EQUIPMENT_OPTIONS.find(e => e.id === equipment)?.label || equipment;
-};
+const getEquipmentLabel = (equipment: EquipmentType): string => equipment;
+
+const iconToEmoji = (icon: string): string => {
+    switch (icon) {
+        case 'dumbbell':
+            return '🏋️';
+        case 'heart-pulse':
+            return '❤️';
+        case 'person-stretching':
+            return '🧘';
+        case 'scale-balanced':
+            return '⚖️';
+        case 'basketball':
+            return '🏀';
+        default:
+            return '🏷️';
+    }
+}
 
 const getRiskLabel = (risk: RiskType): string => {
     return RISK_OPTIONS.find(r => r.id === risk)?.label || risk;
@@ -788,6 +544,33 @@ export const Catalog: React.FC = () => {
     const navigate = useNavigate();
     const tg = useTelegramWebApp();
     const exercisesQuery = useExercisesCatalogQuery();
+    const categoriesQuery = useExerciseCategoriesQuery();
+    const equipmentQuery = useExerciseEquipmentQuery();
+
+    const categories = useMemo((): { value: ExerciseCategory; label: string; icon: string }[] => {
+        if (categoriesQuery.data?.categories?.length) {
+            return [
+                { value: 'all', label: 'Все', icon: '🔍' },
+                ...categoriesQuery.data.categories.map((c) => ({
+                    value: c.value as ExerciseCategory,
+                    label: c.label,
+                    icon: iconToEmoji(c.icon),
+                })),
+            ]
+        }
+        return CATEGORIES.map((c) => ({ value: c.id, label: c.label, icon: c.icon }))
+    }, [categoriesQuery.data])
+
+    const equipmentOptions = useMemo(
+        () =>
+            equipmentQuery.data?.equipment?.length
+                ? equipmentQuery.data.equipment.map((e) => ({ id: e.value as EquipmentType, label: e.label }))
+                : EQUIPMENT_OPTIONS,
+        [equipmentQuery.data],
+    )
+
+    // Category/equipment labels inside cards use fallback dictionaries;
+    // fetched dictionaries are used for chips and filter modal.
 
     const exercises = useMemo(
         () =>
@@ -1041,12 +824,12 @@ export const Catalog: React.FC = () => {
                 {/* Category Chips */}
                 <div className="px-4 pb-3">
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
-                        {CATEGORIES.map(category => (
+                        {categories.map((category) => (
                             <Chip
-                                key={category.id}
+                                key={category.value}
                                 label={`${category.icon} ${category.label}`}
-                                active={filters.categories.includes(category.id)}
-                                onClick={() => handleCategoryToggle(category.id)}
+                                active={filters.categories.includes(category.value)}
+                                onClick={() => handleCategoryToggle(category.value)}
                                 size="sm"
                                 variant="filled"
                             />
@@ -1183,7 +966,7 @@ export const Catalog: React.FC = () => {
                     <div>
                         <h4 className="font-semibold text-gray-900 mb-3">Оборудование</h4>
                         <div className="flex flex-wrap gap-2">
-                            {EQUIPMENT_OPTIONS.map(option => (
+                            {equipmentOptions.map(option => (
                                 <Chip
                                     key={option.id}
                                     label={option.label}

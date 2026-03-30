@@ -30,32 +30,29 @@ interface FormErrors {
 }
 
 const CATEGORIES: { value: ExerciseCategory; label: string }[] = [
-    { value: 'legs', label: 'Ноги' },
-    { value: 'back', label: 'Спина' },
-    { value: 'chest', label: 'Грудь' },
-    { value: 'shoulders', label: 'Плечи' },
-    { value: 'arms', label: 'Руки' },
+    { value: 'strength', label: 'Силовые' },
     { value: 'cardio', label: 'Кардио' },
-    { value: 'stretching', label: 'Растяжка' },
+    { value: 'flexibility', label: 'Гибкость' },
+    { value: 'balance', label: 'Баланс' },
+    { value: 'sport', label: 'Спорт' },
 ];
 
 const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string; icon: string }[] = [
-    { value: 'bodyweight', label: 'Свой вес', icon: '🏃' },
+    { value: 'none', label: 'Без оборудования', icon: '🏃' },
     { value: 'dumbbells', label: 'Гантели', icon: '🏋️' },
     { value: 'barbell', label: 'Штанга', icon: '🏋️‍♂️' },
-    { value: 'machines', label: 'Тренажёры', icon: '⚙️' },
-    { value: 'cables', label: 'Блоки', icon: '🔗' },
     { value: 'kettlebell', label: 'Гиря', icon: '🔴' },
+    { value: 'pull_up_bar', label: 'Турник', icon: '🔧' },
+    { value: 'bench', label: 'Скамья', icon: '🪑' },
+    { value: 'cable_machine', label: 'Блочный тренажёр', icon: '🔗' },
 ];
 
 const MUSCLE_GROUPS: Record<Exclude<ExerciseCategory, 'all'>, string[]> = {
-    legs: ['Квадрицепс', 'Бицепс бедра', 'Ягодицы', 'Икры', 'Приводящие'],
-    back: ['Широчайшие', 'Трапеция', 'Ромбовидные', 'Поясница', 'Зубчатые'],
-    chest: ['Большая грудная', 'Малая грудная', 'Передняя дельта'],
-    shoulders: ['Передняя дельта', 'Средняя дельта', 'Задняя дельта', 'Трапеция'],
-    arms: ['Бицепс', 'Трицепс', 'Предплечья', 'Брахиалис'],
+    strength: ['Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Кор'],
     cardio: ['Сердце', 'Всё тело', 'Ноги', 'Кор'],
-    stretching: ['Всё тело', 'Спина', 'Ноги', 'Плечи', 'Бёдра'],
+    flexibility: ['Всё тело', 'Спина', 'Ноги', 'Плечи', 'Бёдра'],
+    balance: ['Кор', 'Ноги', 'Ягодицы', 'Спина'],
+    sport: ['Всё тело', 'Ноги', 'Кор', 'Плечи'],
 };
 
 const RISK_OPTIONS: { value: RiskType; label: string; description: string }[] = [
