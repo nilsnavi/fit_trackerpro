@@ -4,7 +4,16 @@ EmergencyContact Model
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, Boolean, ForeignKey, Index
+from sqlalchemy import (
+    Integer,
+    String,
+    DateTime,
+    Boolean,
+    ForeignKey,
+    Index,
+    CheckConstraint,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -104,6 +113,28 @@ class EmergencyContact(Base):
     __table_args__ = (
         Index('ix_emergency_contacts_is_active', 'is_active'),
         Index('ix_emergency_contacts_priority', 'priority'),
+        UniqueConstraint(
+            "user_id",
+            "contact_username",
+            name="uq_emergency_contacts_user_contact_username",
+        ),
+        UniqueConstraint(
+            "user_id",
+            "phone",
+            name="uq_emergency_contacts_user_phone",
+        ),
+        CheckConstraint(
+            "priority >= 1 AND priority <= 10",
+            name="ck_emergency_contacts_priority_range",
+        ),
+        CheckConstraint(
+            "trim(contact_name) <> ''",
+            name="ck_emergency_contacts_contact_name_not_blank",
+        ),
+        CheckConstraint(
+            "(trim(COALESCE(contact_username, '')) <> '' OR trim(COALESCE(phone, '')) <> '')",
+            name="ck_emergency_contacts_has_contact_channel",
+        ),
     )
 
     def __repr__(self) -> str:

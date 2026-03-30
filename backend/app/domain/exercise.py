@@ -4,7 +4,7 @@ Exercise Model
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, JSON, ForeignKey, Index
+from sqlalchemy import Integer, String, DateTime, JSON, ForeignKey, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -106,6 +106,14 @@ class Exercise(Base):
     __table_args__ = (
         Index('ix_exercises_status', 'status'),
         Index('ix_exercises_created_at', 'created_at'),
+        CheckConstraint(
+            "category IN ('strength','cardio','flexibility','balance','sport')",
+            name="ck_exercises_category_allowed",
+        ),
+        CheckConstraint(
+            "status IN ('active','pending','archived')",
+            name="ck_exercises_status_allowed",
+        ),
     )
 
     def __repr__(self) -> str:

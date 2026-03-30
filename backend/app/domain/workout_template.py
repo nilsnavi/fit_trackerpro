@@ -4,7 +4,17 @@ WorkoutTemplate Model
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, String, DateTime, JSON, Boolean, ForeignKey, Index, UniqueConstraint
+from sqlalchemy import (
+    Integer,
+    String,
+    DateTime,
+    JSON,
+    Boolean,
+    ForeignKey,
+    Index,
+    UniqueConstraint,
+    CheckConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -77,6 +87,10 @@ class WorkoutTemplate(Base):
             "user_id",
             "id",
             name="uq_workout_templates_user_id",
+        ),
+        CheckConstraint(
+            "type IN ('cardio','strength','flexibility','mixed')",
+            name="ck_workout_templates_type_allowed",
         ),
         Index('ix_workout_templates_type', 'type'),
         Index('ix_workout_templates_is_public', 'is_public'),

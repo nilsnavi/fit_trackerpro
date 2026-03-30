@@ -142,6 +142,18 @@ class Challenge(Base):
             "max_participants >= 0",
             name="ck_challenges_max_participants",
         ),
+        CheckConstraint(
+            "type IN ('workout_count','duration','calories','distance','custom')",
+            name="ck_challenges_type_allowed",
+        ),
+        CheckConstraint(
+            "status IN ('upcoming','active','completed','cancelled')",
+            name="ck_challenges_status_allowed",
+        ),
+        CheckConstraint(
+            "max_participants <= 1000000",
+            name="ck_challenges_max_participants_upper",
+        ),
         Index('ix_challenges_type', 'type'),
         Index('ix_challenges_is_public', 'is_public'),
         Index('ix_challenges_status', 'status'),

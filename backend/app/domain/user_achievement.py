@@ -4,7 +4,7 @@ UserAchievement Model (Association Table)
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, DateTime, JSON, ForeignKey, Index
+from sqlalchemy import Integer, DateTime, JSON, ForeignKey, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -66,6 +66,10 @@ class UserAchievement(Base):
             unique=True,
         ),
         Index('ix_user_achievements_earned_at', 'earned_at'),
+        CheckConstraint(
+            "progress >= 0",
+            name="ck_user_achievements_progress_non_negative",
+        ),
     )
 
     def __repr__(self) -> str:

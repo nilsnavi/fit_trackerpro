@@ -4,7 +4,7 @@ User Model
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, BigInteger, String, DateTime, JSON, Index
+from sqlalchemy import Integer, BigInteger, String, DateTime, JSON, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -141,7 +141,13 @@ class User(Base):
         cascade="all, delete-orphan"
     )
 
-    __table_args__ = (Index('ix_users_created_at', 'created_at'),)
+    __table_args__ = (
+        Index('ix_users_created_at', 'created_at'),
+        CheckConstraint(
+            "telegram_id > 0",
+            name="ck_users_telegram_id_positive",
+        ),
+    )
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, telegram_id={self.telegram_id}, username={self.username})>"

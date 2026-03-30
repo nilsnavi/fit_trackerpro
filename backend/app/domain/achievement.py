@@ -4,7 +4,7 @@ Achievement Model
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, JSON, Index
+from sqlalchemy import Integer, String, DateTime, JSON, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -95,7 +95,13 @@ class Achievement(Base):
         cascade="all, delete-orphan"
     )
 
-    __table_args__ = (Index('ix_achievements_category', 'category'),)
+    __table_args__ = (
+        Index('ix_achievements_category', 'category'),
+        CheckConstraint(
+            "points >= 0",
+            name="ck_achievements_points_non_negative",
+        ),
+    )
 
     def __repr__(self) -> str:
         return f"<Achievement(id={self.id}, code={self.code}, name={self.name})>"
