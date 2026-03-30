@@ -15,6 +15,7 @@ from sqlalchemy import (
     Index,
     Numeric,
     UniqueConstraint,
+    CheckConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -123,6 +124,18 @@ class WorkoutLog(Base):
             "user_id",
             "id",
             name="uq_workout_logs_user_id",
+        ),
+        CheckConstraint(
+            "duration IS NULL OR (duration >= 1 AND duration <= 1440)",
+            name="ck_workout_logs_duration_range",
+        ),
+        CheckConstraint(
+            "glucose_before IS NULL OR (glucose_before >= 2 AND glucose_before <= 30)",
+            name="ck_workout_logs_glucose_before_range",
+        ),
+        CheckConstraint(
+            "glucose_after IS NULL OR (glucose_after >= 2 AND glucose_after <= 30)",
+            name="ck_workout_logs_glucose_after_range",
         ),
         ForeignKeyConstraint(
             ["user_id", "template_id"],

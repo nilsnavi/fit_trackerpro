@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     Numeric,
+    CheckConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -87,6 +88,14 @@ class GlucoseLog(Base):
             ["workout_logs.user_id", "workout_logs.id"],
             ondelete="CASCADE",
             name="fk_glucose_logs_user_workout",
+        ),
+        CheckConstraint(
+            "value >= 2 AND value <= 30",
+            name="ck_glucose_logs_value_range",
+        ),
+        CheckConstraint(
+            "measurement_type IN ('fasting','pre_workout','post_workout','random','bedtime')",
+            name="ck_glucose_logs_measurement_type_allowed",
         ),
         Index('ix_glucose_logs_user_timestamp', 'user_id', 'timestamp'),
         Index('ix_glucose_logs_measurement_type', 'measurement_type'),

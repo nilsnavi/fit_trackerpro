@@ -1,7 +1,7 @@
-# Development Guidelines & Contributing
+# Руководство по разработке и участию в проекте
 
 <cite>
-**Referenced Files in This Document**
+**Файлы, на которые ссылается документ**
 - [README.md](file://README.md)
 - [ENVIRONMENT_SETUP.md](file://docs/ENVIRONMENT_SETUP.md)
 - [backend/app/main.py](file://backend/app/main.py)
@@ -23,68 +23,70 @@
 - [.github/workflows/migrate.yml](file://.github/workflows/migrate.yml)
 </cite>
 
-## Table of Contents
-1. [Introduction](#introduction)
-2. [Project Structure](#project-structure)
-3. [Core Components](#core-components)
-4. [Architecture Overview](#architecture-overview)
-5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Development Environment Setup](#development-environment-setup)
-10. [Coding Standards and Naming Conventions](#coding-standards-and-naming-conventions)
-11. [Code Formatting and Linting](#code-formatting-and-linting)
-12. [Testing Requirements](#testing-requirements)
-13. [Adding New Features and Modifying Functionality](#adding-new-features-and-modifying-functionality)
-14. [Backward Compatibility Guidelines](#backward-compatibility-guidelines)
-15. [Pull Request Process and Code Review Standards](#pull-request-process-and-code-review-standards)
-16. [Documentation Standards](#documentation-standards)
-17. [Commit Message Conventions](#commit-message-conventions)
-18. [Release Procedures](#release-procedures)
-19. [Debugging, Profiling, and Performance Optimization](#debugging-profiling-and-performance-optimization)
-20. [Conclusion](#conclusion)
+## Содержание
+1. [Введение](#introduction)
+2. [Структура проекта](#project-structure)
+3. [Основные компоненты](#core-components)
+4. [Обзор архитектуры](#architecture-overview)
+5. [Детальный разбор компонентов](#detailed-component-analysis)
+6. [Анализ зависимостей](#dependency-analysis)
+7. [Производительность](#performance-considerations)
+8. [Устранение неполадок](#troubleshooting-guide)
+9. [Настройка среды разработки](#development-environment-setup)
+10. [Стандарты кода и соглашения об именовании](#coding-standards-and-naming-conventions)
+11. [Форматирование кода и линтинг](#code-formatting-and-linting)
+12. [Требования к тестированию](#testing-requirements)
+13. [Добавление функций и изменение поведения](#adding-new-features-and-modifying-functionality)
+14. [Обратная совместимость](#backward-compatibility-guidelines)
+15. [Pull request и код-ревью](#pull-request-process-and-code-review-standards)
+16. [Стандарты документации](#documentation-standards)
+17. [Сообщения коммитов](#commit-message-conventions)
+18. [Выпуск релизов](#release-procedures)
+19. [Отладка, профилирование и оптимизация](#debugging-profiling-and-performance-optimization)
+20. [Заключение](#conclusion)
 
-## Introduction
-This document provides comprehensive development guidelines for contributors to FitTracker Pro. It covers coding standards, architectural patterns, development workflows, environment setup, testing, pull requests, documentation, releases, and operational practices. The goal is to ensure consistent, maintainable, and high-quality contributions across the frontend (React + TypeScript + Vite), backend (FastAPI), database (PostgreSQL with Alembic), and DevOps tooling.
+<a id="introduction"></a>
+## Введение
+Этот документ описывает правила разработки для участников FitTracker Pro: стандарты кода, архитектурные паттерны, рабочие процессы, настройку окружения, тестирование, pull request’ы, документацию, релизы и эксплуатацию. Цель — обеспечить единообразие, сопровождаемость и качество изменений во фронтенде (React + TypeScript + Vite), бэкенде (FastAPI), базе данных (PostgreSQL и Alembic) и инструментах DevOps.
 
-## Project Structure
-FitTracker Pro follows a multi-service layout:
-- frontend: React + TypeScript + Vite with routing, state management, and UI components
-- backend: FastAPI application with modular routers, middleware, models, schemas, and services
-- database: PostgreSQL with Alembic migrations
-- monitoring: Prometheus + Grafana stack
-- nginx: Reverse proxy configuration
-- docs: Deployment and environment setup guides
-- .github/workflows: CI/CD pipelines for testing, building, migration, and deployment
+<a id="project-structure"></a>
+## Структура проекта
+FitTracker Pro организован как несколько сервисов:
+- **frontend**: React + TypeScript + Vite, маршрутизация, состояние и UI-компоненты
+- **backend**: приложение FastAPI с роутерами, middleware, моделями, схемами и сервисами
+- **database**: PostgreSQL и миграции Alembic
+- **monitoring**: стек Prometheus + Grafana
+- **nginx**: конфигурация обратного прокси
+- **docs**: развёртывание и настройка окружения
+- **.github/workflows**: CI/CD — тесты, сборка, миграции, деплой
 
 ```mermaid
 graph TB
 subgraph "Frontend"
-FE_App["React App<br/>src/main.tsx"]
-FE_Routes["Routing<br/>src/App.tsx"]
-FE_Components["Components<br/>src/components/*"]
-FE_Hooks["Hooks<br/>src/hooks/*"]
-FE_Services["Services<br/>src/services/*"]
-FE_Tests["Jest Tests<br/>src/__tests__/*"]
+FE_App["React-приложение<br/>src/main.tsx"]
+FE_Routes["Маршрутизация<br/>src/App.tsx"]
+FE_Components["Компоненты<br/>src/components/*"]
+FE_Hooks["Хуки<br/>src/hooks/*"]
+FE_Services["Сервисы<br/>src/services/*"]
+FE_Tests["Тесты Jest<br/>src/__tests__/*"]
 end
 subgraph "Backend"
-BE_Main["FastAPI App<br/>backend/app/main.py"]
-BE_Routers["Routers<br/>backend/app/api/*"]
+BE_Main["Приложение FastAPI<br/>backend/app/main.py"]
+BE_Routers["Роутеры<br/>backend/app/api/*"]
 BE_Middleware["Middleware<br/>backend/app/middleware/*"]
-BE_Models["Models<br/>backend/app/models/*"]
-BE_Schemas["Schemas<br/>backend/app/schemas/*"]
-BE_Services["Services<br/>backend/app/services/*"]
-BE_Tests["Pytest Tests<br/>backend/app/tests/*"]
+BE_Models["Модели<br/>backend/app/models/*"]
+BE_Schemas["Схемы<br/>backend/app/schemas/*"]
+BE_Services["Сервисы<br/>backend/app/services/*"]
+BE_Tests["Тесты Pytest<br/>backend/app/tests/*"]
 end
 subgraph "Database"
 DB_Postgres["PostgreSQL"]
-DB_Alembic["Alembic Migrations"]
+DB_Alembic["Миграции Alembic"]
 end
 subgraph "DevOps"
-DO_Docker["Docker Images"]
+DO_Docker["Docker-образы"]
 DO_GHA["GitHub Actions<br/>.github/workflows/*"]
-DO_Nginx["Nginx Config"]
+DO_Nginx["Конфиг Nginx"]
 DO_Monitoring["Prometheus + Grafana"]
 end
 FE_App --> BE_Main
@@ -95,7 +97,7 @@ DO_Docker --> BE_Main
 DO_Docker --> FE_App
 ```
 
-**Diagram sources**
+**Источники диаграммы**
 - [backend/app/main.py:1-126](file://backend/app/main.py#L1-L126)
 - [frontend/src/main.tsx:1-23](file://frontend/src/main.tsx#L1-L23)
 - [frontend/src/App.tsx:1-35](file://frontend/src/App.tsx#L1-L35)
@@ -104,91 +106,94 @@ DO_Docker --> FE_App
 - [.github/workflows/deploy.yml](file://.github/workflows/deploy.yml)
 - [.github/workflows/migrate.yml](file://.github/workflows/migrate.yml)
 
-**Section sources**
+**Источники раздела**
 - [README.md:5-16](file://README.md#L5-L16)
 
-## Core Components
-- Backend FastAPI application initializes Sentry, configures CORS and rate-limiting middleware, and mounts routers under a common prefix. It exposes health and API docs conditionally based on environment.
-- Frontend React application sets up TanStack Query with sensible defaults, routes, and a shared design system via Tailwind CSS.
-- Database layer uses SQLAlchemy declarative base with Alembic for migrations.
-- CI/CD pipelines automate testing, image builds, migrations, and deployments.
+<a id="core-components"></a>
+## Основные компоненты
+- **Backend (FastAPI)**: инициализация Sentry, CORS и rate limiting, монтирование роутеров под общим префиксом; health и документация API в зависимости от окружения.
+- **Frontend (React)**: TanStack Query с разумными значениями по умолчанию, маршруты, общая дизайн-система на Tailwind CSS.
+- **База данных**: декларативная база SQLAlchemy и миграции Alembic.
+- **CI/CD**: автоматизация тестов, сборки образов, миграций и деплоев.
 
-Key implementation references:
-- Backend app initialization and router mounting: [backend/app/main.py:56-107](file://backend/app/main.py#L56-L107)
-- Authentication middleware and JWT utilities: [backend/app/middleware/auth.py:21-251](file://backend/app/middleware/auth.py#L21-L251)
-- Base ORM model: [backend/app/models/base.py:1-7](file://backend/app/models/base.py#L1-L7)
-- Frontend entry and query client setup: [frontend/src/main.tsx:7-14](file://frontend/src/main.tsx#L7-L14)
-- Frontend routing: [frontend/src/App.tsx:12-29](file://frontend/src/App.tsx#L12-L29)
+Ключевые места в коде:
+- Инициализация приложения и подключение роутеров: [backend/app/main.py:56-107](file://backend/app/main.py#L56-L107)
+- Аутентификация и JWT: [backend/app/middleware/auth.py:21-251](file://backend/app/middleware/auth.py#L21-L251)
+- Базовая ORM-модель: [backend/app/models/base.py:1-7](file://backend/app/models/base.py#L1-L7)
+- Точка входа фронтенда и Query Client: [frontend/src/main.tsx:7-14](file://frontend/src/main.tsx#L7-L14)
+- Маршрутизация: [frontend/src/App.tsx:12-29](file://frontend/src/App.tsx#L12-L29)
 
-**Section sources**
+**Источники раздела**
 - [backend/app/main.py:56-107](file://backend/app/main.py#L56-L107)
 - [backend/app/middleware/auth.py:21-251](file://backend/app/middleware/auth.py#L21-L251)
 - [backend/app/models/base.py:1-7](file://backend/app/models/base.py#L1-L7)
 - [frontend/src/main.tsx:7-14](file://frontend/src/main.tsx#L7-L14)
 - [frontend/src/App.tsx:12-29](file://frontend/src/App.tsx#L12-L29)
 
-## Architecture Overview
-FitTracker Pro uses a clean separation of concerns:
-- Frontend handles UI, routing, state, and API integration
-- Backend provides RESTful APIs with authentication, rate limiting, and middleware
-- Database persists structured data with migrations
-- DevOps ensures reproducible builds, monitoring, and deployments
+<a id="architecture-overview"></a>
+## Обзор архитектуры
+Разделение ответственности:
+- **Frontend**: интерфейс, маршруты, состояние, вызовы API
+- **Backend**: REST API, аутентификация, лимиты запросов, middleware
+- **База данных**: хранение данных и миграции схемы
+- **DevOps**: воспроизводимые сборки, мониторинг, деплой
 
 ```mermaid
 sequenceDiagram
-participant Browser as "Browser"
-participant Frontend as "React App"
-participant API as "FastAPI Backend"
+participant Browser as "Браузер"
+participant Frontend as "React-приложение"
+participant API as "Бэкенд FastAPI"
 participant DB as "PostgreSQL"
 participant Sentry as "Sentry"
-Browser->>Frontend : "Navigate to route"
-Frontend->>API : "HTTP request with Authorization"
-API->>API : "CORS + Rate Limit + Auth middleware"
-API->>DB : "SQLAlchemy async query"
-DB-->>API : "Result"
-API-->>Frontend : "JSON response"
-Frontend-->>Browser : "Render UI"
-Note over API,Sentry : "Sentry integration enabled when DSN configured"
+Browser->>Frontend : "Переход по маршруту"
+Frontend->>API : "HTTP с Authorization"
+API->>API : "CORS + лимит + auth middleware"
+API->>DB : "Асинхронный запрос SQLAlchemy"
+DB-->>API : "Результат"
+API-->>Frontend : "JSON-ответ"
+Frontend-->>Browser : "Отрисовка UI"
+Note over API,Sentry : "Sentry при настроенном DSN"
 ```
 
-**Diagram sources**
+**Источники диаграммы**
 - [backend/app/main.py:77-87](file://backend/app/main.py#L77-L87)
 - [backend/app/middleware/auth.py:111-131](file://backend/app/middleware/auth.py#L111-L131)
 - [backend/app/main.py:32-43](file://backend/app/main.py#L32-L43)
 
-**Section sources**
+**Источники раздела**
 - [backend/app/main.py:77-87](file://backend/app/main.py#L77-L87)
 - [backend/app/middleware/auth.py:111-131](file://backend/app/middleware/auth.py#L111-L131)
 
-## Detailed Component Analysis
+<a id="detailed-component-analysis"></a>
+## Детальный разбор компонентов
 
-### Backend Authentication Middleware
-The authentication layer manages JWT creation, verification, and dependency injection for current user retrieval. It enforces bearer token usage and supports access/refresh token types.
+### Middleware аутентификации (backend)
+Слой аутентификации отвечает за выпуск и проверку JWT, внедрение зависимостей для текущего пользователя, обязательную схему Bearer и типы access/refresh.
 
 ```mermaid
 flowchart TD
-Start(["Incoming Request"]) --> CheckAuth["Check Authorization Header"]
-CheckAuth --> Scheme{"Scheme is Bearer?"}
-Scheme --> |No| Deny["401 Unauthorized"]
-Scheme --> |Yes| Verify["Verify JWT"]
-Verify --> Valid{"Token Valid?"}
-Valid --> |No| Deny
-Valid --> |Yes| Extract["Extract User ID"]
-Extract --> LoadUser["Load User from DB"]
-LoadUser --> Found{"User Exists?"}
-Found --> |No| NotFound["404 Not Found"]
-Found --> |Yes| Allow["Proceed to Handler"]
+Start(["Входящий запрос"]) --> CheckAuth["Проверка заголовка Authorization"]
+CheckAuth --> Scheme{"Схема Bearer?"}
+Scheme --> |Нет| Deny["401 Unauthorized"]
+Scheme --> |Да| Verify["Проверка JWT"]
+Verify --> Valid{"Токен валиден?"}
+Valid --> |Нет| Deny
+Valid --> |Да| Extract["Извлечь ID пользователя"]
+Extract --> LoadUser["Загрузить пользователя из БД"]
+LoadUser --> Found{"Пользователь есть?"}
+Found --> |Нет| NotFound["404 Not Found"]
+Found --> |Да| Allow["Передать в обработчик"]
 ```
 
-**Diagram sources**
+**Источники диаграммы**
 - [backend/app/middleware/auth.py:117-172](file://backend/app/middleware/auth.py#L117-L172)
 - [backend/app/middleware/auth.py:174-203](file://backend/app/middleware/auth.py#L174-L203)
 
-**Section sources**
+**Источники раздела**
 - [backend/app/middleware/auth.py:21-251](file://backend/app/middleware/auth.py#L21-L251)
 
-### Frontend State and Data Fetching
-The frontend initializes TanStack Query with a default stale/retry policy and wraps the app in a provider. Routing is centralized in a single component.
+### Состояние и загрузка данных (frontend)
+TanStack Query инициализируется с политикой устаревания и повторов по умолчанию; приложение оборачивается в провайдер. Маршруты сосредоточены в одном компоненте.
 
 ```mermaid
 sequenceDiagram
@@ -196,35 +201,36 @@ participant Root as "main.tsx"
 participant Provider as "QueryClientProvider"
 participant App as "App.tsx"
 participant Router as "Routes"
-participant Page as "Page Component"
-Root->>Provider : "Create QueryClient with defaults"
-Provider->>App : "Render App"
-App->>Router : "Define routes"
-Router->>Page : "Render selected page"
+participant Page as "Страница"
+Root->>Provider : "Создать QueryClient с настройками"
+Provider->>App : "Отрисовать App"
+App->>Router : "Описать маршруты"
+Router->>Page : "Отрисовать выбранную страницу"
 ```
 
-**Diagram sources**
+**Источники диаграммы**
 - [frontend/src/main.tsx:7-14](file://frontend/src/main.tsx#L7-L14)
 - [frontend/src/App.tsx:12-29](file://frontend/src/App.tsx#L12-L29)
 
-**Section sources**
+**Источники раздела**
 - [frontend/src/main.tsx:7-14](file://frontend/src/main.tsx#L7-L14)
 - [frontend/src/App.tsx:12-29](file://frontend/src/App.tsx#L12-L29)
 
-### Database Model Base
-The SQLAlchemy declarative base is the foundation for all ORM models.
+### Базовая модель БД
+Декларативная база SQLAlchemy — основа всех ORM-моделей.
 
-**Section sources**
+**Источники раздела**
 - [backend/app/models/base.py:1-7](file://backend/app/models/base.py#L1-L7)
 
-## Dependency Analysis
-- Backend dependencies are declared in requirements.txt and include FastAPI, SQLAlchemy, Alembic, Pydantic, security libraries, Celery/Redis, and testing/logging packages.
-- Frontend dependencies include React, TanStack Query, Tailwind, and testing frameworks.
-- CI/CD workflows orchestrate tests, builds, migrations, and deployments.
+<a id="dependency-analysis"></a>
+## Анализ зависимостей
+- **Backend**: `requirements.txt` — FastAPI, SQLAlchemy, Alembic, Pydantic, безопасность, Celery/Redis, тесты и логирование.
+- **Frontend**: React, TanStack Query, Tailwind, тестовые фреймворки.
+- **CI/CD**: workflow’ы связывают тесты, сборку, миграции и деплой.
 
 ```mermaid
 graph LR
-BE_Req["backend/requirements.txt"] --> BE_Core["FastAPI + DB + Security"]
+BE_Req["backend/requirements.txt"] --> BE_Core["FastAPI + БД + безопасность"]
 FE_Pkg["frontend/package.json"] --> FE_Core["React + Query + Tailwind"]
 GHA_Test[".github/workflows/test.yml"] --> FE_Tests["Jest"]
 GHA_Test --> BE_Tests["Pytest"]
@@ -233,7 +239,7 @@ GHA_Deploy[".github/workflows/deploy.yml"] --> Docker_BE
 GHA_Migrate[".github/workflows/migrate.yml"] --> BE_Alembic["Alembic"]
 ```
 
-**Diagram sources**
+**Источники диаграммы**
 - [backend/requirements.txt:1-42](file://backend/requirements.txt#L1-L42)
 - [frontend/package.json:1-60](file://frontend/package.json#L1-L60)
 - [.github/workflows/test.yml](file://.github/workflows/test.yml)
@@ -242,195 +248,209 @@ GHA_Migrate[".github/workflows/migrate.yml"] --> BE_Alembic["Alembic"]
 - [.github/workflows/migrate.yml](file://.github/workflows/migrate.yml)
 - [backend/Dockerfile:1-48](file://backend/Dockerfile#L1-L48)
 
-**Section sources**
+**Источники раздела**
 - [backend/requirements.txt:1-42](file://backend/requirements.txt#L1-L42)
 - [frontend/package.json:1-60](file://frontend/package.json#L1-L60)
 
-## Performance Considerations
-- Backend
-  - Use async SQLAlchemy sessions to avoid blocking I/O.
-  - Enable Sentry sampling rates appropriate to environment.
-  - Apply rate limiting middleware to protect endpoints.
-  - Use Gunicorn with Uvicorn workers for production concurrency.
-- Frontend
-  - Leverage TanStack Query caching and staleTime to minimize redundant network calls.
-  - Keep component rendering efficient; avoid unnecessary re-renders.
-  - Use Tailwind utilities sparingly to reduce bundle size.
-- Database
-  - Define proper indexes for frequent filters and joins.
-  - Use Alembic migrations to evolve schema safely.
+<a id="performance-considerations"></a>
+## Производительность
+- **Backend**
+  - Асинхронные сессии SQLAlchemy, чтобы не блокировать I/O.
+  - Настройка выборки (sampling) Sentry под окружение.
+  - Rate limiting для защиты эндпоинтов.
+  - В продакшене — Gunicorn с воркерами Uvicorn.
+- **Frontend**
+  - Кэш и `staleTime` в TanStack Query, меньше лишних запросов.
+  - Эффективный рендер компонентов, без лишних перерисовок.
+  - Умеренное использование утилит Tailwind для размера бандла.
+- **База данных**
+  - Индексы под частые фильтры и соединения.
+  - Эволюция схемы через миграции Alembic.
 
-[No sources needed since this section provides general guidance]
+*Для этого раздела отдельные ссылки на файлы не требуются — общие рекомендации.*
 
-## Troubleshooting Guide
-Common issues and resolutions:
-- Database connection failures: verify credentials, service availability, and database existence.
-- Telegram WebApp loading errors: ensure HTTPS and correct WEBAPP_URL; check CORS settings.
-- CORS errors: configure ALLOWED_ORIGINS correctly with protocols and multiple origins separated by commas.
-- Sentry not capturing errors: confirm DSN configuration and environment settings.
+<a id="troubleshooting-guide"></a>
+## Устранение неполадок
+Типичные проблемы:
+- **Нет подключения к БД**: проверить учётные данные, доступность сервиса и существование базы.
+- **Ошибки загрузки Telegram WebApp**: HTTPS, корректный `WEBAPP_URL`, настройки CORS.
+- **CORS**: правильно задать `ALLOWED_ORIGINS` (протоколы, несколько origin через запятую).
+- **Sentry не ловит ошибки**: DSN и переменные окружения.
 
-**Section sources**
+**Источники раздела**
 - [docs/ENVIRONMENT_SETUP.md:122-141](file://docs/ENVIRONMENT_SETUP.md#L122-L141)
 
-## Development Environment Setup
-Follow the environment setup guide to configure backend and frontend variables, generate secrets, and prepare databases and bots.
+<a id="development-environment-setup"></a>
+## Настройка среды разработки
+Следуйте руководству по окружению: переменные бэкенда и фронтенда, секреты, базы и боты.
 
-Quick steps:
-- Copy example environment files and generate a secure SECRET_KEY.
-- Configure PostgreSQL locally or use managed service for production.
-- Set up Telegram Bot and Mini App URL.
-- Use Docker Compose for local development and apply Alembic migrations.
+Кратко:
+- Скопировать примеры `.env`, сгенерировать надёжный `SECRET_KEY`.
+- PostgreSQL локально или управляемый сервис в продакшене.
+- Настроить Telegram-бота и URL мини-приложения.
+- Локально — Docker Compose и применение миграций Alembic.
 
-**Section sources**
+**Источники раздела**
 - [docs/ENVIRONMENT_SETUP.md:7-23](file://docs/ENVIRONMENT_SETUP.md#L7-L23)
 - [docs/ENVIRONMENT_SETUP.md:36-52](file://docs/ENVIRONMENT_SETUP.md#L36-L52)
 - [docs/ENVIRONMENT_SETUP.md:53-63](file://docs/ENVIRONMENT_SETUP.md#L53-L63)
 - [README.md:47-64](file://README.md#L47-L64)
 
-## Coding Standards and Naming Conventions
-- Backend
-  - Module organization: api, middleware, models, schemas, services, tests, utils.
-  - Router naming: plural nouns (e.g., users, workouts).
-  - Model naming: PascalCase (e.g., User, WorkoutLog).
-  - Schema naming: PascalCase suffixed with “Schema” (e.g., UserCreateSchema).
-  - Function naming: snake_case; constants: UPPER_CASE.
-- Frontend
-  - Component naming: PascalCase; hook naming: useXxx.
-  - File extensions: .tsx for components, .ts for hooks/services/utils.
-  - Path aliases: @/*, @components/*, @pages/*, @hooks/*, @stores/*, @services/*, @types/*, @utils/*, @styles/*.
-- Database
-  - Table names: plural nouns; column names: snake_case; foreign keys: {child}_id.
+<a id="coding-standards-and-naming-conventions"></a>
+## Стандарты кода и соглашения об именовании
+- **Backend**
+  - Модули: `api`, `middleware`, `models`, `schemas`, `services`, `tests`, `utils`.
+  - Роутеры: множественное число (`users`, `workouts`).
+  - Модели: PascalCase (`User`, `WorkoutLog`).
+  - Pydantic-схемы: PascalCase и суффикс «Schema» (`UserCreateSchema`).
+  - Функции: `snake_case`; константы: `UPPER_CASE`.
+- **Frontend**
+  - Компоненты: PascalCase; хуки: `useXxx`.
+  - Расширения: `.tsx` для компонентов, `.ts` для хуков/сервисов/утилит.
+  - Алиасы путей: `@/*`, `@components/*`, `@pages/*`, `@hooks/*`, `@stores/*`, `@services/*`, `@types/*`, `@utils/*`, `@styles/*`.
+- **База данных**
+  - Таблицы: существительные во множественном числе; колонки: `snake_case`; внешние ключи: `{дочерняя_сущность}_id`.
 
-**Section sources**
+**Источники раздела**
 - [frontend/tsconfig.json:23-51](file://frontend/tsconfig.json#L23-L51)
 - [backend/app/models/base.py:1-7](file://backend/app/models/base.py#L1-L7)
 
-## Code Formatting and Linting
-- Backend
-  - Use pytest configuration for coverage thresholds and branch coverage.
-  - Keep async tests and proper fixtures.
-- Frontend
-  - ESLint configured with TypeScript parser and React plugin.
-  - Jest configured with ts-jest and DOM environment.
-  - Tailwind and PostCSS configured for styling pipeline.
+<a id="code-formatting-and-linting"></a>
+## Форматирование кода и линтинг
+- **Backend**
+  - Настройки pytest: пороги покрытия и ветвей.
+  - Асинхронные тесты и корректные фикстуры.
+- **Frontend**
+  - ESLint с парсером TypeScript и плагином React.
+  - Jest с ts-jest и DOM-окружением.
+  - Tailwind и PostCSS в цепочке стилей.
 
-**Section sources**
+**Источники раздела**
 - [backend/pytest.ini:11-16](file://backend/pytest.ini#L11-L16)
 - [frontend/package.json:9-9](file://frontend/package.json#L9-L9)
 - [frontend/jest.config.js:1-44](file://frontend/jest.config.js#L1-L44)
 - [frontend/tailwind.config.js:1-349](file://frontend/tailwind.config.js#L1-L349)
 - [frontend/postcss.config.js:1-7](file://frontend/postcss.config.js#L1-L7)
 
-## Testing Requirements
-- Coverage targets: minimum 80% across branches, functions, lines, and statements.
-- Test categories: unit, integration, auth, slow.
-- Frontend: Jest with DOM environment and coverage thresholds.
-- Backend: Pytest with asyncio mode and coverage reports.
+<a id="testing-requirements"></a>
+## Требования к тестированию
+- **Покрытие (backend)**: порог задан в `pytest.ini` (`--cov-fail-under`, сейчас 51%); учитываются ветки (`--cov-branch`). Для фронтенда — см. `jest.config.js`.
+- **Категории**: unit, integration, auth, slow.
+- **Frontend**: Jest, DOM, пороги покрытия.
+- **Backend**: Pytest в режиме asyncio, отчёты покрытия.
 
-**Section sources**
+**Источники раздела**
 - [backend/pytest.ini:17-22](file://backend/pytest.ini#L17-L22)
 - [backend/pytest.ini:30-36](file://backend/pytest.ini#L30-L36)
 - [frontend/jest.config.js:30-37](file://frontend/jest.config.js#L30-L37)
 
-## Adding New Features and Modifying Functionality
-- Backend
-  - Create a new router under app/api and mount it in main.py.
-  - Add Pydantic schemas under app/schemas.
-  - Implement models under app/models and ensure migrations.
-  - Write tests under app/tests.
-- Frontend
-  - Add pages/components under src/pages and src/components.
-  - Integrate with TanStack Query for data fetching.
-  - Add routes in src/App.tsx.
-  - Write unit tests under src/__tests__.
-- Database
-  - Use Alembic to generate and apply migrations after schema changes.
+<a id="adding-new-features-and-modifying-functionality"></a>
+## Добавление функций и изменение поведения
+- **Backend**
+  - Новый роутер в `app/api`, подключение в `main.py`.
+  - Схемы Pydantic в `app/schemas`.
+  - Модели в `app/models` и миграции.
+  - Тесты в `app/tests`.
+- **Frontend**
+  - Страницы и компоненты в `src/pages` и `src/components`.
+  - Данные через TanStack Query.
+  - Маршруты в `src/App.tsx`.
+  - Юнит-тесты в `src/__tests__`.
+- **База данных**
+  - После изменения схемы — сгенерировать и применить миграции Alembic.
 
-**Section sources**
+**Источники раздела**
 - [backend/app/main.py:89-107](file://backend/app/main.py#L89-L107)
 - [frontend/src/App.tsx:12-29](file://frontend/src/App.tsx#L12-L29)
 
-## Backward Compatibility Guidelines
-- API versioning: keep base path under /api/v1 and introduce new versions for breaking changes.
-- Deprecation: mark deprecated endpoints with appropriate status and documentation updates.
-- Schema evolution: use Alembic migrations to alter tables without dropping data.
-- Frontend: avoid removing exported components/functions without deprecation notices.
+<a id="backward-compatibility-guidelines"></a>
+## Обратная совместимость
+- **Версии API**: базовый путь `/api/v1`; ломающие изменения — новая версия API.
+- **Устаревание**: помечать устаревшие эндпоинты и обновлять документацию.
+- **Схема БД**: менять через Alembic без потери данных где возможно.
+- **Frontend**: не удалять публичные API компонентов/функций без предупреждения об устаревании.
 
-**Section sources**
+**Источники раздела**
 - [backend/app/main.py:56-75](file://backend/app/main.py#L56-L75)
 
-## Pull Request Process and Code Review Standards
-- Branch naming: feature/short-description, fix/issue-number.
-- PR checklist:
-  - All tests pass and coverage meets thresholds.
-  - Linting passes for both frontend and backend.
-  - No console logs or debug flags in production code.
-  - Changes documented in docs or inline comments.
-  - Security review for authentication and environment variables.
-- Review standards:
-  - Clear problem statement and solution.
-  - Test coverage for new logic.
-  - Performance impact assessment.
-  - Accessibility and internationalization considerations.
+<a id="pull-request-process-and-code-review-standards"></a>
+## Pull request и код-ревью
+- **Ветки**: `feature/краткое-описание`, `fix/номер-issue`.
+- **Чек-лист PR**:
+  - Тесты проходят, покрытие не ниже порогов.
+  - Линтинг фронтенда и бэкенда без ошибок.
+  - Нет отладочных `console.log` и флагов в продакшен-коде.
+  - Изменения отражены в документации или комментариях.
+  - Проверка безопасности: аутентификация и секреты.
+- **Ревью**:
+  - Ясная формулировка задачи и решения.
+  - Тесты на новую логику.
+  - Оценка влияния на производительность.
+  - Доступность (a11y) и интернационализация при необходимости.
 
-[No sources needed since this section provides general guidance]
+*Отдельные ссылки на файлы не требуются — общие правила.*
 
-## Documentation Standards
-- Inline code comments: explain “why,” not “what.”
-- README updates: reflect new features, endpoints, and environment changes.
-- API documentation: OpenAPI docs exposed by FastAPI; keep examples accurate.
-- Architecture decisions: document in docs/ as ADR-style notes.
+<a id="documentation-standards"></a>
+## Стандарты документации
+- Комментарии в коде: объяснять **зачем**, а не **что**.
+- README: новые возможности, эндпоинты, переменные окружения.
+- API: OpenAPI от FastAPI — актуальные примеры.
+- Архитектурные решения: заметки в `docs/` в духе ADR.
 
-**Section sources**
+**Источники раздела**
 - [README.md:130-177](file://README.md#L130-L177)
 
-## Commit Message Conventions
-- Type prefixes: feat:, fix:, chore:, docs:, refactor:, perf:, test:, build:, ci:, revert:
-- Subject line: concise, imperative, under 50 characters.
-- Body: explain motivation and changes; reference issues.
+<a id="commit-message-conventions"></a>
+## Сообщения коммитов
+- Префиксы: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `perf:`, `test:`, `build:`, `ci:`, `revert:`.
+- Тема: кратко, повелительное наклонение, до ~50 символов.
+- Тело: мотивация и суть изменений; ссылки на issue.
 
-[No sources needed since this section provides general guidance]
+*Отдельные ссылки на файлы не требуются.*
 
-## Release Procedures
-- CI/CD
-  - test.yml: runs tests and coverage checks.
-  - build.yml: builds Docker images.
-  - migrate.yml: applies Alembic migrations.
-  - deploy.yml: deploys to production using docker-compose.prod.yml.
-- Pre-release
-  - Verify environment variables and secrets.
-  - Confirm migrations applied.
-  - Validate API docs and health endpoints.
-- Post-release
-  - Monitor Sentry for errors.
-  - Review Prometheus/Grafana dashboards.
+<a id="release-procedures"></a>
+## Выпуск релизов
+- **CI/CD**
+  - `test.yml`: тесты и покрытие.
+  - `build.yml`: сборка Docker-образов.
+  - `migrate.yml`: миграции Alembic.
+  - `deploy.yml`: продакшен через `docker-compose.prod.yml`.
+- **Перед релизом**
+  - Проверить переменные окружения и секреты.
+  - Убедиться, что миграции применены.
+  - Проверить документацию API и health-эндпоинты.
+- **После релиза**
+  - Мониторинг ошибок в Sentry.
+  - Дашборды Prometheus/Grafana.
 
-**Section sources**
+**Источники раздела**
 - [.github/workflows/test.yml](file://.github/workflows/test.yml)
 - [.github/workflows/build.yml](file://.github/workflows/build.yml)
 - [.github/workflows/migrate.yml](file://.github/workflows/migrate.yml)
 - [.github/workflows/deploy.yml](file://.github/workflows/deploy.yml)
 - [README.md:178-202](file://README.md#L178-L202)
 
-## Debugging, Profiling, and Performance Optimization
-- Backend
-  - Enable DEBUG for development; disable in production.
-  - Use Sentry for error tracking and performance profiling.
-  - Apply rate limiting middleware to prevent abuse.
-  - Optimize database queries and add indexes as needed.
-- Frontend
-  - Use React DevTools and React Query Devtools.
-  - Measure bundle size with Vite build analyzer.
-  - Minimize heavy computations in render paths.
-- Monitoring
-  - Prometheus metrics and Grafana dashboards for runtime insights.
+<a id="debugging-profiling-and-performance-optimization"></a>
+## Отладка, профилирование и оптимизация
+- **Backend**
+  - `DEBUG` в разработке; отключить в продакшене.
+  - Sentry для ошибок и профилирования.
+  - Rate limiting против злоупотреблений.
+  - Оптимизация запросов и индексов.
+- **Frontend**
+  - React DevTools и React Query Devtools.
+  - Размер бандла (анализатор сборки Vite).
+  - Тяжёлые вычисления вне горячего пути рендера.
+- **Мониторинг**
+  - Метрики Prometheus и дашборды Grafana.
 
-**Section sources**
+**Источники раздела**
 - [backend/app/main.py:28-43](file://backend/app/main.py#L28-L43)
 - [backend/Dockerfile:43-47](file://backend/Dockerfile#L43-L47)
 - [docs/ENVIRONMENT_SETUP.md:112-121](file://docs/ENVIRONMENT_SETUP.md#L112-L121)
 
-## Conclusion
-These guidelines aim to streamline development, ensure code quality, and support reliable operations. Contributors should align with the established patterns, maintain backward compatibility, and follow the documented workflows for environment setup, testing, reviews, and releases.
+<a id="conclusion"></a>
+## Заключение
+Эти правила помогают выстроить единый процесс разработки, поддерживать качество кода и стабильную эксплуатацию. Участникам стоит придерживаться принятых паттернов, сохранять обратную совместимость и следовать описанным шагам для окружения, тестов, ревью и релизов.
 
-[No sources needed since this section summarizes without analyzing specific files]
+*Итог без привязки к конкретным файлам — отдельные источники не указаны.*
