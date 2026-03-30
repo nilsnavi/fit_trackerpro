@@ -8,17 +8,28 @@ import type {
 } from '@features/exercises/types/catalogUi'
 
 const EQUIPMENT_WHITELIST = new Set<EquipmentType>([
-    'barbell',
+    'none',
     'dumbbells',
-    'bodyweight',
-    'machines',
-    'cables',
+    'barbell',
     'kettlebell',
+    'resistance_bands',
+    'pull_up_bar',
+    'bench',
+    'cable_machine',
+    'smith_machine',
+    'leg_press',
+    'treadmill',
+    'exercise_bike',
+    'rowing_machine',
+    'elliptical',
+    'medicine_ball',
+    'foam_roller',
+    'yoga_mat',
 ])
 
 function mapEquipment(raw: string[]): EquipmentType[] {
     const out = raw.filter((e): e is EquipmentType => EQUIPMENT_WHITELIST.has(e as EquipmentType))
-    return out.length > 0 ? out : ['bodyweight']
+    return out.length > 0 ? out : ['none']
 }
 
 function mapRisks(flags: ExerciseApiItem['risk_flags']): RiskType[] {
@@ -29,35 +40,19 @@ function mapRisks(flags: ExerciseApiItem['risk_flags']): RiskType[] {
     return r
 }
 
-function inferUiCategory(row: ExerciseApiItem): Exclude<ExerciseCategory, 'all'> {
-    const blob = [
-        ...(row.muscle_groups ?? []),
-        row.name,
-        row.description ?? '',
-    ]
-        .join(' ')
-        .toLowerCase()
+const CATEGORY_WHITELIST = new Set<Exclude<ExerciseCategory, 'all'>>([
+    'strength',
+    'cardio',
+    'flexibility',
+    'balance',
+    'sport',
+])
 
-    const has = (patterns: RegExp[]) => patterns.some((re) => re.test(blob))
-
-    if (has([/leg|quad|ham|glute|calf|thigh/i, /ног|квадри|ягодиц|икр|бедр|колен/i])) return 'legs'
-    if (has([/chest|pect/i, /груд/i])) return 'chest'
-    if (has([/back|lat|trap|rhomb|spine|lumb/i, /спин|широч|трапец/i])) return 'back'
-    if (has([/shoulder|delt/i, /плеч|дельт/i])) return 'shoulders'
-    if (has([/bicep|tricep|forearm|arm\b/i, /бицеп|трицеп|предплеч|рук/i])) return 'arms'
-
-    switch (row.category) {
-        case 'cardio':
-            return 'cardio'
-        case 'flexibility':
-            return 'stretching'
-        case 'balance':
-            return 'legs'
-        case 'sport':
-            return 'arms'
-        default:
-            return 'chest'
-    }
+function mapCategory(row: ExerciseApiItem): Exclude<ExerciseCategory, 'all'> {
+    const raw = String(row.category ?? '').toLowerCase()
+    return CATEGORY_WHITELIST.has(raw as Exclude<ExerciseCategory, 'all'>)
+        ? (raw as Exclude<ExerciseCategory, 'all'>)
+        : 'strength'
 }
 
 function inferDifficulty(row: ExerciseApiItem): DifficultyLevel {
@@ -101,7 +96,7 @@ export function mapApiExerciseToCatalog(row: ExerciseApiItem): Exercise {
     return {
         id: row.id,
         name: row.name,
-        category: inferUiCategory(row),
+        category: mapCategory(row),
         equipment: mapEquipment(row.equipment ?? []),
         primaryMuscles: primary,
         secondaryMuscles: secondary,

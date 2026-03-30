@@ -28,6 +28,12 @@ class Exercise(Base):
         index=True,
         comment="Exercise name"
     )
+    slug: Mapped[Optional[str]] = mapped_column(
+        String(180),
+        nullable=True,
+        index=True,
+        comment="Stable identifier for system catalog (nullable for legacy/user exercises)",
+    )
     description: Mapped[Optional[str]] = mapped_column(
         String(2000),
         nullable=True,
@@ -80,6 +86,13 @@ class Exercise(Base):
         comment="Status: active, pending, archived"
     )
 
+    source: Mapped[str] = mapped_column(
+        String(16),
+        default="system",
+        nullable=False,
+        comment="Source: system, user, imported",
+    )
+
     author_user_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -106,6 +119,7 @@ class Exercise(Base):
     __table_args__ = (
         Index('ix_exercises_status', 'status'),
         Index('ix_exercises_created_at', 'created_at'),
+        Index('ix_exercises_source', 'source'),
         CheckConstraint(
             "category IN ('strength','cardio','flexibility','balance','sport')",
             name="ck_exercises_category_allowed",
@@ -113,6 +127,10 @@ class Exercise(Base):
         CheckConstraint(
             "status IN ('active','pending','archived')",
             name="ck_exercises_status_allowed",
+        ),
+        CheckConstraint(
+            "source IN ('system','user','imported')",
+            name="ck_exercises_source_allowed",
         ),
     )
 

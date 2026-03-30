@@ -46,7 +46,7 @@ COPY requirements ./requirements
 # Install Python dependencies
 RUN pip install --no-cache-dir --proxy=$HTTPS_PROXY -r requirements/prod.txt
 
-# Copy application code
+# Copy application code (includes reference_data/)
 COPY . .
 
 # Create necessary directories and set permissions

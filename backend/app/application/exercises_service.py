@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.domain.exercise import Exercise
+from app.domain.reference_data import RefEquipment, RefExerciseCategory, RefMuscleGroup
 from app.domain.exceptions import ExerciseNotFoundError
 from app.infrastructure.repositories.exercises_repository import ExercisesRepository
 from app.schemas.exercises import (
@@ -20,6 +22,7 @@ from app.schemas.exercises import (
 class ExercisesService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = ExercisesRepository(db)
+        self.db = db
 
     async def get_exercises(
         self,
@@ -109,70 +112,38 @@ class ExercisesService:
         exercise = await self.repository.approve_exercise(exercise)
         return ExerciseResponse.model_validate(exercise, from_attributes=True)
 
-    @staticmethod
-    def get_categories() -> ExerciseCategoriesResponse:
+    async def get_categories(self) -> ExerciseCategoriesResponse:
+        rows = (
+            await self.db.execute(
+                select(RefExerciseCategory)
+                .where(RefExerciseCategory.is_active.is_(True))
+                .order_by(RefExerciseCategory.sort_order.asc(), RefExerciseCategory.code.asc())
+            )
+        ).scalars().all()
         return ExerciseCategoriesResponse.model_validate(
-            {
-                "categories": [
-                    {"value": "strength", "label": "Strength", "icon": "dumbbell"},
-                    {"value": "cardio", "label": "Cardio", "icon": "heart-pulse"},
-                    {"value": "flexibility", "label": "Flexibility", "icon": "person-stretching"},
-                    {"value": "balance", "label": "Balance", "icon": "scale-balanced"},
-                    {"value": "sport", "label": "Sport", "icon": "basketball"},
-                ]
-            }
+            {"categories": [{"value": r.code, "label": r.label, "icon": r.icon or ""} for r in rows]}
         )
 
-    @staticmethod
-    def get_equipment() -> ExerciseEquipmentListResponse:
+    async def get_equipment(self) -> ExerciseEquipmentListResponse:
+        rows = (
+            await self.db.execute(
+                select(RefEquipment)
+                .where(RefEquipment.is_active.is_(True))
+                .order_by(RefEquipment.sort_order.asc(), RefEquipment.code.asc())
+            )
+        ).scalars().all()
         return ExerciseEquipmentListResponse.model_validate(
-            {
-                "equipment": [
-                    {"value": "none", "label": "No Equipment"},
-                    {"value": "dumbbells", "label": "Dumbbells"},
-                    {"value": "barbell", "label": "Barbell"},
-                    {"value": "kettlebell", "label": "Kettlebell"},
-                    {"value": "resistance_bands", "label": "Resistance Bands"},
-                    {"value": "pull_up_bar", "label": "Pull-up Bar"},
-                    {"value": "bench", "label": "Bench"},
-                    {"value": "cable_machine", "label": "Cable Machine"},
-                    {"value": "smith_machine", "label": "Smith Machine"},
-                    {"value": "leg_press", "label": "Leg Press Machine"},
-                    {"value": "treadmill", "label": "Treadmill"},
-                    {"value": "exercise_bike", "label": "Exercise Bike"},
-                    {"value": "rowing_machine", "label": "Rowing Machine"},
-                    {"value": "elliptical", "label": "Elliptical"},
-                    {"value": "medicine_ball", "label": "Medicine Ball"},
-                    {"value": "foam_roller", "label": "Foam Roller"},
-                    {"value": "yoga_mat", "label": "Yoga Mat"},
-                ]
-            }
+            {"equipment": [{"value": r.code, "label": r.label} for r in rows]}
         )
 
-    @staticmethod
-    def get_muscle_groups() -> ExerciseMuscleGroupsResponse:
+    async def get_muscle_groups(self) -> ExerciseMuscleGroupsResponse:
+        rows = (
+            await self.db.execute(
+                select(RefMuscleGroup)
+                .where(RefMuscleGroup.is_active.is_(True))
+                .order_by(RefMuscleGroup.sort_order.asc(), RefMuscleGroup.code.asc())
+            )
+        ).scalars().all()
         return ExerciseMuscleGroupsResponse.model_validate(
-            {
-                "muscle_groups": [
-                    {"value": "chest", "label": "Chest"},
-                    {"value": "back", "label": "Back"},
-                    {"value": "shoulders", "label": "Shoulders"},
-                    {"value": "biceps", "label": "Biceps"},
-                    {"value": "triceps", "label": "Triceps"},
-                    {"value": "forearms", "label": "Forearms"},
-                    {"value": "abs", "label": "Abs"},
-                    {"value": "obliques", "label": "Obliques"},
-                    {"value": "lower_back", "label": "Lower Back"},
-                    {"value": "lats", "label": "Lats"},
-                    {"value": "traps", "label": "Traps"},
-                    {"value": "quadriceps", "label": "Quadriceps"},
-                    {"value": "hamstrings", "label": "Hamstrings"},
-                    {"value": "glutes", "label": "Glutes"},
-                    {"value": "calves", "label": "Calves"},
-                    {"value": "hip_flexors", "label": "Hip Flexors"},
-                    {"value": "adductors", "label": "Adductors"},
-                    {"value": "abductors", "label": "Abductors"},
-                    {"value": "full_body", "label": "Full Body"},
-                ]
-            }
+            {"muscle_groups": [{"value": r.code, "label": r.label} for r in rows]}
         )

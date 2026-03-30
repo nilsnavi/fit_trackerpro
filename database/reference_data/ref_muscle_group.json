@@ -1,0 +1,22 @@
+[
+  { "code": "chest", "label": "Chest", "sort_order": 10, "is_active": true },
+  { "code": "back", "label": "Back", "sort_order": 20, "is_active": true },
+  { "code": "shoulders", "label": "Shoulders", "sort_order": 30, "is_active": true },
+  { "code": "biceps", "label": "Biceps", "sort_order": 40, "is_active": true },
+  { "code": "triceps", "label": "Triceps", "sort_order": 50, "is_active": true },
+  { "code": "forearms", "label": "Forearms", "sort_order": 60, "is_active": true },
+  { "code": "abs", "label": "Abs", "sort_order": 70, "is_active": true },
+  { "code": "obliques", "label": "Obliques", "sort_order": 80, "is_active": true },
+  { "code": "lower_back", "label": "Lower Back", "sort_order": 90, "is_active": true },
+  { "code": "lats", "label": "Lats", "sort_order": 100, "is_active": true },
+  { "code": "traps", "label": "Traps", "sort_order": 110, "is_active": true },
+  { "code": "quadriceps", "label": "Quadriceps", "sort_order": 120, "is_active": true },
+  { "code": "hamstrings", "label": "Hamstrings", "sort_order": 130, "is_active": true },
+  { "code": "glutes", "label": "Glutes", "sort_order": 140, "is_active": true },
+  { "code": "calves", "label": "Calves", "sort_order": 150, "is_active": true },
+  { "code": "hip_flexors", "label": "Hip Flexors", "sort_order": 160, "is_active": true },
+  { "code": "adductors", "label": "Adductors", "sort_order": 170, "is_active": true },
+  { "code": "abductors", "label": "Abductors", "sort_order": 180, "is_active": true },
+  { "code": "full_body", "label": "Full Body", "sort_order": 190, "is_active": true }
+]
+

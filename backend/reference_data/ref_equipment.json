@@ -1,0 +1,20 @@
+[
+  { "code": "none", "label": "No Equipment", "sort_order": 10, "is_active": true },
+  { "code": "dumbbells", "label": "Dumbbells", "sort_order": 20, "is_active": true },
+  { "code": "barbell", "label": "Barbell", "sort_order": 30, "is_active": true },
+  { "code": "kettlebell", "label": "Kettlebell", "sort_order": 40, "is_active": true },
+  { "code": "resistance_bands", "label": "Resistance Bands", "sort_order": 50, "is_active": true },
+  { "code": "pull_up_bar", "label": "Pull-up Bar", "sort_order": 60, "is_active": true },
+  { "code": "bench", "label": "Bench", "sort_order": 70, "is_active": true },
+  { "code": "cable_machine", "label": "Cable Machine", "sort_order": 80, "is_active": true },
+  { "code": "smith_machine", "label": "Smith Machine", "sort_order": 90, "is_active": true },
+  { "code": "leg_press", "label": "Leg Press Machine", "sort_order": 100, "is_active": true },
+  { "code": "treadmill", "label": "Treadmill", "sort_order": 110, "is_active": true },
+  { "code": "exercise_bike", "label": "Exercise Bike", "sort_order": 120, "is_active": true },
+  { "code": "rowing_machine", "label": "Rowing Machine", "sort_order": 130, "is_active": true },
+  { "code": "elliptical", "label": "Elliptical", "sort_order": 140, "is_active": true },
+  { "code": "medicine_ball", "label": "Medicine Ball", "sort_order": 150, "is_active": true },
+  { "code": "foam_roller", "label": "Foam Roller", "sort_order": 160, "is_active": true },
+  { "code": "yoga_mat", "label": "Yoga Mat", "sort_order": 170, "is_active": true }
+]
+

@@ -51,8 +51,25 @@ export interface ApiResponse<T> {
     message?: string
 }
 
-export type ExerciseCategory = 'all' | 'legs' | 'back' | 'chest' | 'shoulders' | 'arms' | 'cardio' | 'stretching'
-export type EquipmentType = 'barbell' | 'dumbbells' | 'bodyweight' | 'machines' | 'cables' | 'kettlebell'
+export type ExerciseCategory = 'all' | 'strength' | 'cardio' | 'flexibility' | 'balance' | 'sport'
+export type EquipmentType =
+    | 'none'
+    | 'dumbbells'
+    | 'barbell'
+    | 'kettlebell'
+    | 'resistance_bands'
+    | 'pull_up_bar'
+    | 'bench'
+    | 'cable_machine'
+    | 'smith_machine'
+    | 'leg_press'
+    | 'treadmill'
+    | 'exercise_bike'
+    | 'rowing_machine'
+    | 'elliptical'
+    | 'medicine_ball'
+    | 'foam_roller'
+    | 'yoga_mat'
 export type RiskType = 'shoulder' | 'knee' | 'back' | 'wrist' | 'elbow'
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 

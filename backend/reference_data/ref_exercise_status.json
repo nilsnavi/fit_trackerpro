@@ -1,0 +1,6 @@
+[
+  { "code": "active", "label": "Active", "sort_order": 10, "is_active": true },
+  { "code": "pending", "label": "Pending", "sort_order": 20, "is_active": true },
+  { "code": "archived", "label": "Archived", "sort_order": 30, "is_active": true }
+]
+

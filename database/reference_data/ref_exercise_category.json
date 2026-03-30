@@ -1,0 +1,8 @@
+[
+  { "code": "strength", "label": "Strength", "icon": "dumbbell", "sort_order": 10, "is_active": true },
+  { "code": "cardio", "label": "Cardio", "icon": "heart-pulse", "sort_order": 20, "is_active": true },
+  { "code": "flexibility", "label": "Flexibility", "icon": "person-stretching", "sort_order": 30, "is_active": true },
+  { "code": "balance", "label": "Balance", "icon": "scale-balanced", "sort_order": 40, "is_active": true },
+  { "code": "sport", "label": "Sport", "icon": "basketball", "sort_order": 50, "is_active": true }
+]
+
