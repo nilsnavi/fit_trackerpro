@@ -16,6 +16,7 @@ export default {
     },
     moduleNameMapper: {
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+        '^virtual:pwa-register/react$': '<rootDir>/src/__mocks__/virtual-pwa-register-react.ts',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@app/(.*)$': '<rootDir>/src/app/$1',
         '^@features/(.*)$': '<rootDir>/src/features/$1',
