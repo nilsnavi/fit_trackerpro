@@ -23,6 +23,29 @@ BEGIN
   END IF;
 END $$;
 
+-- 1b) Fast template listing per-user (recent-first).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'workout_templates'
+  ) THEN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'workout_templates' AND column_name = 'user_id'
+    ) THEN
+      EXECUTE 'CREATE INDEX IF NOT EXISTS ix_workout_templates_user_created_at_desc ON workout_templates (user_id, created_at DESC)';
+      EXECUTE 'CREATE INDEX IF NOT EXISTS ix_workout_templates_user_type_created_at_desc ON workout_templates (user_id, type, created_at DESC)';
+    ELSIF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'workout_templates' AND column_name = 'userId'
+    ) THEN
+      EXECUTE 'CREATE INDEX IF NOT EXISTS ix_workout_templates_user_created_at_desc ON workout_templates ("userId", "createdAt" DESC)';
+      EXECUTE 'CREATE INDEX IF NOT EXISTS ix_workout_templates_user_type_created_at_desc ON workout_templates ("userId", type, "createdAt" DESC)';
+    END IF;
+  END IF;
+END $$;
+
 -- 2) Pending sync queue by user.
 -- Adaptive to naming variants across environments:
 --   status: event_status OR sync_status
