@@ -32,6 +32,21 @@ async def test_update_user_profile(authenticated_client: AsyncClient):
     assert data["first_name"] == update_data["first_name"]
     assert "muscle_gain" in (data.get("profile") or {}).get("goals", [])
 
+@pytest.mark.integration
+async def test_profile_patch_persists_between_requests(authenticated_client: AsyncClient):
+    """PATCH /users/me then GET /users/me must reflect persisted fields."""
+    patch = await authenticated_client.patch(
+        "/api/v1/users/me",
+        json={"first_name": "Persisted", "profile": {"goals": ["cutting"]}},
+    )
+    assert patch.status_code == 200, patch.text
+
+    fetched = await authenticated_client.get("/api/v1/users/me")
+    assert fetched.status_code == 200, fetched.text
+    data = fetched.json()
+    assert data.get("first_name") == "Persisted"
+    assert "cutting" in (data.get("profile") or {}).get("goals", [])
+
 
 @pytest.mark.unit
 async def test_get_user_stats(authenticated_client: AsyncClient):

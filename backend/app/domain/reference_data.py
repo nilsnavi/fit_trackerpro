@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -23,7 +23,12 @@ class RefExerciseCategory(Base):
     icon: Mapped[str | None] = mapped_column(String(80), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    meta: Mapped[dict] = mapped_column(
+        "metadata",
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=False,
+        default=dict,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -36,7 +41,12 @@ class RefMuscleGroup(Base):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    meta: Mapped[dict] = mapped_column(
+        "metadata",
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=False,
+        default=dict,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -49,7 +59,12 @@ class RefEquipment(Base):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    meta: Mapped[dict] = mapped_column(
+        "metadata",
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=False,
+        default=dict,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -62,7 +77,12 @@ class RefExerciseStatus(Base):
     label: Mapped[str] = mapped_column(String(80), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    meta: Mapped[dict] = mapped_column(
+        "metadata",
+        JSON().with_variant(JSONB, "postgresql"),
+        nullable=False,
+        default=dict,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

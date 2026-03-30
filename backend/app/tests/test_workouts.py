@@ -41,14 +41,26 @@ class TestWorkoutTemplates:
         created_json = created.json()
         template_id = created_json.get("id")
         assert template_id, created_json
+        assert created_json.get("name") == payload["name"]
+        assert created_json.get("type") in (payload["type"], str(payload["type"]))
+        assert isinstance(created_json.get("exercises"), list)
+        assert created_json.get("is_public") is False
 
         listed = await authenticated_client.get("/api/v1/workouts/templates")
         assert listed.status_code == 200, listed.text
-        # TODO: assert created template exists in list contract
+        listed_json = listed.json()
+        assert "items" in listed_json
+        items = listed_json["items"]
+        assert isinstance(items, list)
+        assert any((t or {}).get("id") == template_id for t in items)
 
         fetched = await authenticated_client.get(f"/api/v1/workouts/templates/{template_id}")
         assert fetched.status_code == 200, fetched.text
-        # TODO: assert fetched fields match created (name/type/exercises)
+        fetched_json = fetched.json()
+        assert fetched_json.get("id") == template_id
+        assert fetched_json.get("name") == payload["name"]
+        assert isinstance(fetched_json.get("exercises"), list)
+        assert len(fetched_json["exercises"]) == len(payload["exercises"])
 
         updated_payload = {**payload, "name": "Template A (updated)"}
         updated = await authenticated_client.put(
@@ -57,12 +69,58 @@ class TestWorkoutTemplates:
         )
         assert updated.status_code == 200, updated.text
         assert updated.json().get("name") == "Template A (updated)"
+        assert isinstance(updated.json().get("exercises"), list)
 
         deleted = await authenticated_client.delete(f"/api/v1/workouts/templates/{template_id}")
         assert deleted.status_code == 204, deleted.text
 
         after = await authenticated_client.get(f"/api/v1/workouts/templates/{template_id}")
         assert after.status_code in (404, 410), after.text
+
+    async def test_update_template_updates_exercises(self, authenticated_client: AsyncClient):
+        """PUT /workouts/templates/{id} should persist updated exercise list."""
+        payload = {
+            "name": "Template B",
+            "type": "strength",
+            "exercises": [
+                {
+                    "exercise_id": 1,
+                    "name": "Push-ups",
+                    "sets": 3,
+                    "reps": 10,
+                    "rest_seconds": 60,
+                }
+            ],
+            "is_public": False,
+        }
+        created = await authenticated_client.post("/api/v1/workouts/templates", json=payload)
+        assert created.status_code in (200, 201), created.text
+        template_id = created.json().get("id")
+        assert template_id
+
+        updated_payload = {
+            **payload,
+            "exercises": [
+                {
+                    "exercise_id": 2,
+                    "name": "Squats",
+                    "sets": 5,
+                    "reps": 5,
+                    "rest_seconds": 120,
+                }
+            ],
+        }
+        updated = await authenticated_client.put(
+            f"/api/v1/workouts/templates/{template_id}",
+            json=updated_payload,
+        )
+        assert updated.status_code == 200, updated.text
+
+        fetched = await authenticated_client.get(f"/api/v1/workouts/templates/{template_id}")
+        assert fetched.status_code == 200, fetched.text
+        exercises = fetched.json().get("exercises") or []
+        assert len(exercises) == 1
+        assert exercises[0].get("exercise_id") == 2
 
 
 @pytest.mark.integration
@@ -137,6 +195,10 @@ class TestWorkoutStartComplete:
             headers={"Idempotency-Key": idem_key},
         )
         assert completed_1.status_code == 200, completed_1.text
+        completed_1_json = completed_1.json()
+        assert completed_1_json.get("id") == workout_id
+        assert completed_1_json.get("duration") == complete_payload["duration"]
+        assert isinstance(completed_1_json.get("exercises"), list)
 
         completed_2 = await authenticated_client.post(
             f"/api/v1/workouts/complete?workout_id={workout_id}",
@@ -144,12 +206,16 @@ class TestWorkoutStartComplete:
             headers={"Idempotency-Key": idem_key},
         )
         assert completed_2.status_code == 200, completed_2.text
-        # TODO: assert idempotency semantics (same response or stable identifiers)
+        completed_2_json = completed_2.json()
+        assert completed_2_json.get("id") == workout_id
 
         # History/detail should show completed duration > 0
         detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
         assert detail.status_code == 200, detail.text
-        # TODO: assert duration/exercises persisted
+        detail_json = detail.json()
+        assert detail_json.get("id") == workout_id
+        assert detail_json.get("duration") == complete_payload["duration"]
+        assert isinstance(detail_json.get("exercises"), list)
 
 
 @pytest.mark.integration
@@ -162,6 +228,8 @@ class TestWorkoutHistory:
         r = await authenticated_client.get("/api/v1/workouts/history?page=1&page_size=20")
         assert r.status_code == 200, r.text
         data = r.json()
-        # TODO: assert pagination fields + items array shape
-        assert "items" in data
+        assert isinstance(data.get("items"), list)
+        assert data.get("page") == 1
+        assert data.get("page_size") == 20
+        assert "total" in data
 
