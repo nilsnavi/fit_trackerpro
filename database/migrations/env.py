@@ -1,22 +1,25 @@
 """
 Alembic environment configuration
 """
-from alembic import context
-from sqlalchemy.ext.asyncio import async_engine_from_config
-from sqlalchemy.engine import Connection
-from sqlalchemy import pool
-from logging.config import fileConfig
 import asyncio
-from app.domain.base import Base
-import app.domain.registry  # noqa: F401 — register all models for autogenerate
-from app.settings import settings
-import sys
 import os
+import sys
+from logging.config import fileConfig
 
-# Add backend to path FIRST before any other imports
-backend_path = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', '..', 'backend'))
+from alembic import context
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
+# Add backend to path before importing app.*
+backend_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "backend")
+)
 sys.path.insert(0, backend_path)
+
+from app.domain.base import Base  # noqa: E402
+import app.domain.registry  # noqa: F401,E402 — register all models for autogenerate
+from app.settings import settings  # noqa: E402
 
 
 # this is the Alembic Config object
