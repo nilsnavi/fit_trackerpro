@@ -48,8 +48,8 @@ API включает домены:
 Текущие артефакты данных:
 - Alembic: `database/migrations`.
 - SQL migrations/runbooks: `database/postgresql/migrations`.
-- SQL snapshots: `database/schema_v2.sql`, `database/models.sql`.
-- Prisma schema присутствует в `database/prisma/schema.prisma`.
+- Legacy SQL snapshots (архив): `docs/db/legacy/schema_v2.sql`, `docs/db/legacy/models.sql`.
+- Legacy Prisma schema (архив, не используется runtime): `docs/db/legacy/schema.prisma`.
 
 Боевая БД:
 - **PostgreSQL** (основное хранилище).

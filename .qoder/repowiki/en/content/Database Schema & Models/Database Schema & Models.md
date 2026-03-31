@@ -16,8 +16,8 @@
 - [initial_schema.py](file://database/migrations/versions/cd723942379e_initial_schema.py)
 - [env.py](file://database/migrations/env.py)
 - [script.py.mako](file://database/migrations/script.py.mako)
-- [schema_v2.sql](file://database/schema_v2.sql)
-- [models.sql](file://database/models.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
+- [models.sql (legacy archive)](file://docs/db/legacy/models.sql)
 </cite>
 
 ## Table of Contents
@@ -37,6 +37,8 @@ This document describes the database schema and data models for FitTracker Pro. 
 
 ## Project Structure
 FitTracker Pro uses SQLAlchemy ORM models backed by PostgreSQL. The models are defined in Python under backend/app/models and are managed via Alembic migrations located under database/migrations. The initial migration mirrors a comprehensive SQL schema described in schema_v2.sql.
+
+**Source of truth policy:** SQLAlchemy models + Alembic migrations. The SQL files referenced below are **legacy snapshots** archived under `docs/db/legacy/*` and are not used for runtime nor for evolving the schema.
 
 ```mermaid
 graph TB
@@ -643,12 +645,12 @@ SQL["schema_v2.sql"] --> DB
 **Diagram sources**
 - [env.py:1-81](file://database/migrations/env.py#L1-L81)
 - [initial_schema.py:19-460](file://database/migrations/versions/cd723942379e_initial_schema.py#L19-L460)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 **Section sources**
 - [env.py:1-81](file://database/migrations/env.py#L1-L81)
 - [initial_schema.py:19-460](file://database/migrations/versions/cd723942379e_initial_schema.py#L19-L460)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Performance Considerations
 - JSONB storage: Flexible but requires GIN indexes for efficient filtering and range scans. The schema includes GIN indexes on profile, settings, exercises, tags, goal, rules, progress_data, and pain_zones.

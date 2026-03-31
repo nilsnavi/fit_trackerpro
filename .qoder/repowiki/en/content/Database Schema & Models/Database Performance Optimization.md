@@ -13,7 +13,7 @@
 - [__init__.py](file://backend/app/models/__init__.py)
 - [cd723942379e_initial_schema.py](file://database/migrations/versions/cd723942379e_initial_schema.py)
 - [9f41b6d2a7c1_add_analytics_indexes.py](file://database/migrations/versions/9f41b6d2a7c1_add_analytics_indexes.py)
-- [schema_v2.sql](file://database/schema_v2.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
 </cite>
 
 ## Table of Contents
@@ -53,7 +53,7 @@ end
 subgraph "Database Layer"
 Postgres["PostgreSQL 14+<br/>JSONB + GIN indexes"]
 Migrations["Alembic Migrations<br/>migrations/versions/*"]
-Schema["Schema v2<br/>schema_v2.sql"]
+Schema["Schema v2 (legacy snapshot)<br/>docs/db/legacy/schema_v2.sql"]
 end
 API --> Cache
 API --> Models
@@ -75,7 +75,7 @@ Models --> Schema
 - [__init__.py:1-54](file://backend/app/models/__init__.py#L1-L54)
 - [cd723942379e_initial_schema.py:1-460](file://database/migrations/versions/cd723942379e_initial_schema.py#L1-L460)
 - [9f41b6d2a7c1_add_analytics_indexes.py:1-29](file://database/migrations/versions/9f41b6d2a7c1_add_analytics_indexes.py#L1-L29)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 **Section sources**
 - [main.py:1-176](file://backend/app/main.py#L1-L176)
@@ -89,7 +89,7 @@ Models --> Schema
 - [__init__.py:1-54](file://backend/app/models/__init__.py#L1-L54)
 - [cd723942379e_initial_schema.py:1-460](file://database/migrations/versions/cd723942379e_initial_schema.py#L1-L460)
 - [9f41b6d2a7c1_add_analytics_indexes.py:1-29](file://database/migrations/versions/9f41b6d2a7c1_add_analytics_indexes.py#L1-L29)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Core Components
 - PostgreSQL schema with JSONB fields for exercises, tags, and wellness pain zones
@@ -104,7 +104,7 @@ Key performance-relevant elements:
 - Caching TTLs and memory fallback for high-latency analytics endpoints
 
 **Section sources**
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 - [cd723942379e_initial_schema.py:19-460](file://database/migrations/versions/cd723942379e_initial_schema.py#L19-L460)
 - [9f41b6d2a7c1_add_analytics_indexes.py:17-29](file://database/migrations/versions/9f41b6d2a7c1_add_analytics_indexes.py#L17-L29)
 - [workout_log.py:103-108](file://backend/app/models/workout_log.py#L103-L108)
@@ -143,7 +143,7 @@ end
 - [analytics.py:36-300](file://backend/app/api/analytics.py#L36-L300)
 - [cache.py:59-104](file://backend/app/utils/cache.py#L59-L104)
 - [__init__.py:47-54](file://backend/app/models/__init__.py#L47-L54)
-- [schema_v2.sql:121-180](file://database/schema_v2.sql#L121-L180)
+- [schema_v2.sql:121-180](file://docs/db/legacy/schema_v2.sql#L121-L180)
 
 ## Detailed Component Analysis
 
@@ -301,7 +301,7 @@ WorkoutLog --> GlucoseLog : "one-to-many via workout_id"
 - [workout_log.py:103-108](file://backend/app/models/workout_log.py#L103-L108)
 - [daily_wellness.py:108-114](file://backend/app/models/daily_wellness.py#L108-L114)
 - [glucose_log.py:70-76](file://backend/app/models/glucose_log.py#L70-L76)
-- [schema_v2.sql:121-239](file://database/schema_v2.sql#L121-L239)
+- [schema_v2.sql:121-239](file://docs/db/legacy/schema_v2.sql#L121-L239)
 
 ### Caching Strategy and Configuration
 The caching layer provides:

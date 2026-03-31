@@ -8,7 +8,7 @@
 - [workout_log.py](file://backend/app/models/workout_log.py)
 - [glucose_log.py](file://backend/app/models/glucose_log.py)
 - [base.py](file://backend/app/models/base.py)
-- [schema_v2.sql](file://database/schema_v2.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
 - [cd723942379e_initial_schema.py](file://database/migrations/versions/ce723942379e_initial_schema.py)
 - [workouts.py](file://backend/app/api/workouts.py)
 - [workouts.py (schemas)](file://backend/app/schemas/workouts.py)
@@ -35,7 +35,7 @@ This document provides comprehensive data model documentation for FitTracker Pro
 It details field definitions, data types, validation rules, business logic, foreign key relationships, indexing strategies, and performance optimizations. It also includes examples of data structures and common query patterns derived from the API and schema.
 
 ## Project Structure
-FitTracker Pro organizes models under backend/app/models, with SQLAlchemy declarative base and Postgres-specific JSONB and GIN indexing. Database schema and migrations are defined in database/schema_v2.sql and database/migrations/versions/*. The API layer exposes workout-related endpoints that operate against these models.
+FitTracker Pro organizes models under backend/app/models, with SQLAlchemy declarative base and Postgres-specific JSONB and GIN indexing. Database schema and migrations are defined via Alembic migrations under database/migrations/versions/* (source of truth) and the ORM models. The file `schema_v2.sql` is a legacy snapshot archived under `docs/db/legacy/schema_v2.sql`.
 
 ```mermaid
 graph TB
@@ -77,14 +77,14 @@ SCHEMAS --> APIW
 - [workout_template.py:18-83](file://backend/app/models/workout_template.py#L18-L83)
 - [workout_log.py:19-112](file://backend/app/models/workout_log.py#L19-L112)
 - [glucose_log.py:18-80](file://backend/app/models/glucose_log.py#L18-L80)
-- [schema_v2.sql:10-598](file://database/schema_v2.sql#L10-L598)
+- [schema_v2.sql:10-598](file://docs/db/legacy/schema_v2.sql#L10-L598)
 - [cd723942379e_initial_schema.py:26-460](file://database/migrations/versions/ce723942379e_initial_schema.py#L26-L460)
 - [workouts.py:29-522](file://backend/app/api/workouts.py#L29-L522)
 - [workouts.py (schemas):10-146](file://backend/app/schemas/workouts.py#L10-L146)
 
 **Section sources**
 - [base.py:1-7](file://backend/app/models/base.py#L1-L7)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 - [cd723942379e_initial_schema.py:1-460](file://database/migrations/versions/ce723942379e_initial_schema.py#L1-L460)
 
 ## Core Components
@@ -209,7 +209,7 @@ Validation and defaults:
 
 **Section sources**
 - [user.py:23-132](file://backend/app/models/user.py#L23-L132)
-- [schema_v2.sql:10-42](file://database/schema_v2.sql#L10-L42)
+- [schema_v2.sql:10-42](file://docs/db/legacy/schema_v2.sql#L10-L42)
 - [cd723942379e_initial_schema.py:26-50](file://database/migrations/versions/ce723942379e_initial_schema.py#L26-L50)
 
 ### Exercise Model
@@ -241,7 +241,7 @@ Validation and defaults:
 
 **Section sources**
 - [exercise.py:17-116](file://backend/app/models/exercise.py#L17-L116)
-- [schema_v2.sql:46-91](file://database/schema_v2.sql#L46-L91)
+- [schema_v2.sql:46-91](file://docs/db/legacy/schema_v2.sql#L46-L91)
 - [cd723942379e_initial_schema.py:55-93](file://database/migrations/versions/ce723942379e_initial_schema.py#L55-L93)
 
 ### WorkoutTemplate Model
@@ -270,7 +270,7 @@ Validation and defaults:
 
 **Section sources**
 - [workout_template.py:18-83](file://backend/app/models/workout_template.py#L18-L83)
-- [schema_v2.sql:95-118](file://database/schema_v2.sql#L95-L118)
+- [schema_v2.sql:95-118](file://docs/db/legacy/schema_v2.sql#L95-L118)
 - [cd723942379e_initial_schema.py:98-124](file://database/migrations/versions/ce723942379e_initial_schema.py#L98-L124)
 
 ### WorkoutLog Model
@@ -304,7 +304,7 @@ Validation and defaults:
 
 **Section sources**
 - [workout_log.py:19-112](file://backend/app/models/workout_log.py#L19-L112)
-- [schema_v2.sql:123-155](file://database/schema_v2.sql#L123-L155)
+- [schema_v2.sql:123-155](file://docs/db/legacy/schema_v2.sql#L123-L155)
 - [cd723942379e_initial_schema.py:129-165](file://database/migrations/versions/ce723942379e_initial_schema.py#L129-L165)
 
 ### GlucoseLog Model
@@ -332,7 +332,7 @@ Validation and defaults:
 
 **Section sources**
 - [glucose_log.py:18-80](file://backend/app/models/glucose_log.py#L18-L80)
-- [schema_v2.sql:159-179](file://database/schema_v2.sql#L159-L179)
+- [schema_v2.sql:159-179](file://docs/db/legacy/schema_v2.sql#L159-L179)
 - [cd723942379e_initial_schema.py:170-195](file://database/migrations/versions/ce723942379e_initial_schema.py#L170-L195)
 
 ## Architecture Overview
@@ -382,7 +382,7 @@ API-->>Client : WorkoutCompleteResponse
 
 **Section sources**
 - [user.py:23-132](file://backend/app/models/user.py#L23-L132)
-- [schema_v2.sql:10-42](file://database/schema_v2.sql#L10-L42)
+- [schema_v2.sql:10-42](file://docs/db/legacy/schema_v2.sql#L10-L42)
 
 ### Exercise Model Details
 - Equipment, muscle groups, and risk flags:
@@ -395,7 +395,7 @@ API-->>Client : WorkoutCompleteResponse
 
 **Section sources**
 - [exercise.py:17-116](file://backend/app/models/exercise.py#L17-L116)
-- [schema_v2.sql:46-91](file://database/schema_v2.sql#L46-L91)
+- [schema_v2.sql:46-91](file://docs/db/legacy/schema_v2.sql#L46-L91)
 
 ### WorkoutTemplate Details
 - Template composition:
@@ -407,7 +407,7 @@ API-->>Client : WorkoutCompleteResponse
 
 **Section sources**
 - [workout_template.py:18-83](file://backend/app/models/workout_template.py#L18-L83)
-- [schema_v2.sql:95-118](file://database/schema_v2.sql#L95-L118)
+- [schema_v2.sql:95-118](file://docs/db/legacy/schema_v2.sql#L95-L118)
 
 ### WorkoutLog Details
 - Session tracking:
@@ -421,7 +421,7 @@ API-->>Client : WorkoutCompleteResponse
 
 **Section sources**
 - [workout_log.py:19-112](file://backend/app/models/workout_log.py#L19-L112)
-- [schema_v2.sql:123-155](file://database/schema_v2.sql#L123-L155)
+- [schema_v2.sql:123-155](file://docs/db/legacy/schema_v2.sql#L123-L155)
 
 ### GlucoseLog Details
 - Measurement types:
@@ -433,7 +433,7 @@ API-->>Client : WorkoutCompleteResponse
 
 **Section sources**
 - [glucose_log.py:18-80](file://backend/app/models/glucose_log.py#L18-L80)
-- [schema_v2.sql:159-179](file://database/schema_v2.sql#L159-L179)
+- [schema_v2.sql:159-179](file://docs/db/legacy/schema_v2.sql#L159-L179)
 
 ## Dependency Analysis
 Foreign key relationships and referential actions:
@@ -513,10 +513,10 @@ WORKOUT_LOGS ||--o{ GLUCOSE_LOGS : "records"
 ```
 
 **Diagram sources**
-- [schema_v2.sql:10-598](file://database/schema_v2.sql#L10-L598)
+-- [schema_v2.sql:10-598](file://docs/db/legacy/schema_v2.sql#L10-L598)
 
 **Section sources**
-- [schema_v2.sql:10-598](file://database/schema_v2.sql#L10-L598)
+-- [schema_v2.sql:10-598](file://docs/db/legacy/schema_v2.sql#L10-L598)
 
 ## Performance Considerations
 - JSONB and GIN indexing:

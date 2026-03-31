@@ -1,6 +1,6 @@
 # ERD (logical) — FitTracker Pro
 
-Источник: `database/prisma/schema.prisma` (PostgreSQL). Ниже — **логическое ERD**: ключевые сущности, связи и бизнес-смысл.
+Источник (source of truth): **SQLAlchemy модели** (`backend/app/domain/*`) + **Alembic миграции** (`database/migrations`). Ниже — **логическое ERD**: ключевые сущности, связи и бизнес-смысл.
 
 ## Высокоуровневые домены
 

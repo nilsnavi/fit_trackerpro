@@ -10,7 +10,7 @@
 - [useAchievements.ts](file://frontend/src/hooks/useAchievements.ts)
 - [AchievementsPage.tsx](file://frontend/src/pages/AchievementsPage.tsx)
 - [index.ts](file://frontend/src/components/gamification/index.ts)
-- [schema_v2.sql](file://database/schema_v2.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
 </cite>
 
 ## Table of Contents
@@ -93,7 +93,7 @@ Key capabilities:
 - [achievements.py:10-81](file://backend/app/schemas/achievements.py#L10-L81)
 - [Achievements.tsx:24-71](file://frontend/src/components/gamification/Achievements.tsx#L24-L71)
 - [useAchievements.ts:67-278](file://frontend/src/hooks/useAchievements.ts#L67-L278)
-- [schema_v2.sql:412-575](file://database/schema_v2.sql#L412-L575)
+- [schema_v2.sql:412-575](file://docs/db/legacy/schema_v2.sql#L412-L575)
 
 ## Architecture Overview
 The system follows a client-server architecture:
@@ -319,8 +319,9 @@ ACHIEVEMENT ||--o{ USER_ACHIEVEMENT : "has"
 - [user_achievement.py:18-71](file://backend/app/models/user_achievement.py#L18-L71)
 
 **Section sources**
-- [schema_v2.sql:412-575](file://database/schema_v2.sql#L412-L575)
+- [schema_v2.sql:412-575](file://docs/db/legacy/schema_v2.sql#L412-L575)
 - [Achievements.tsx:217-229](file://frontend/src/components/gamification/Achievements.tsx#L217-L229)
+ 
 
 ### Social Sharing and Community Engagement
 - AchievementUnlockModal includes a share action that opens a Telegram WebApp share link with preformatted text including achievement name, description, and points.
