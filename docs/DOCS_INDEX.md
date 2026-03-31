@@ -24,6 +24,7 @@
 | `docs/PROJECT_AUDIT_2026-03-26.md` | Технический аудит и план стабилизации | Findings, Priorities, Iteration plan, Quick wins | Tech Lead |
 | `docs/target-architecture.md` | Целевая архитектура после рефакторинга (to-be) | Frontend/backend structure, deploy, env, health | Tech Lead |
 | `docs/architecture/backend.md` | Слои backend, направление зависимостей, bounded contexts, правила новых модулей | Слои, Направление зависимостей, Основные bounded contexts, Правила для новых модулей | Backend Lead |
+| `docs/qa/testing-strategy.md` | Стратегия тестирования (QA), приоритеты, тестовая пирамида, критичные сценарии | Пирамида, P0–P2, Critical flows | QA/Tech Lead |
 | `frontend/DESIGN_SYSTEM.md` | Дизайн-система frontend и UI-паттерны | Theme setup, component classes, animations, Telegram integration | Frontend Lead |
 | `database/postgresql/PARTITIONING_POLICY.md` | Политика партиционирования БД | Triggers, rollout policy, maintenance | DB Owner |
 | `database/postgresql/migrations/README_zero_downtime_snake_case.md` | Runbook zero-downtime миграций | Phases, migration order, validation | DB Owner |
