@@ -1,0 +1,25 @@
+stages:
+  - test
+
+e2e_frontend:
+  stage: test
+  image: node:20-bookworm
+  variables:
+    # Cache browsers between pipeline runs.
+    PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/ms-playwright"
+  cache:
+    key: "playwright-browsers"
+    paths:
+      - .cache/ms-playwright/
+  script:
+    - cd frontend
+    - npm ci --legacy-peer-deps
+    - npx playwright install --with-deps chromium
+    - npm run e2e:ci
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - frontend/playwright-report/
+      - frontend/test-results/
+
