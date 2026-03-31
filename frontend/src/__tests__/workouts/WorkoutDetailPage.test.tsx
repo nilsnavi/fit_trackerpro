@@ -1,6 +1,3 @@
-import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-
 /**
  * Skeleton tests for the most critical flow:
  * active workout draft -> mark sets -> validation -> complete mutation.

@@ -10,7 +10,9 @@ export function useRegisterSW(): UseRegisterSwResult {
     return {
         needRefresh: [false, jest.fn()],
         offlineReady: [false, jest.fn()],
-        updateServiceWorker: jest.fn(),
+        updateServiceWorker: jest.fn(
+            async (_reloadPage?: boolean) => undefined,
+        ) as unknown as UseRegisterSwResult['updateServiceWorker'],
     }
 }
 
