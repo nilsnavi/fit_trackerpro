@@ -150,7 +150,13 @@ async def test_request_logging_middleware_registered():
 
 @pytest.mark.unit
 def test_json_formatter_includes_audit_fields():
-    fmt = JsonFormatter()
+    fmt = JsonFormatter(
+        service="FitTracker Pro",
+        environment="test",
+        version="1.0.0",
+        git_commit_sha=None,
+        build_timestamp=None,
+    )
     record = logging.LogRecord(
         name="app.audit",
         level=logging.INFO,
@@ -178,7 +184,13 @@ def test_json_formatter_includes_audit_fields():
 
 @pytest.mark.unit
 def test_json_formatter_includes_structured_fields():
-    fmt = JsonFormatter()
+    fmt = JsonFormatter(
+        service="FitTracker Pro",
+        environment="test",
+        version="1.0.0",
+        git_commit_sha=None,
+        build_timestamp=None,
+    )
     record = logging.LogRecord(
         name="test",
         level=logging.INFO,

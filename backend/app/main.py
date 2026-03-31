@@ -204,7 +204,10 @@ async def telegram_webhook(request: Request):
         await process_webhook_update(update_data)
         return Response(status_code=200)
     except Exception as e:
-        logger.error(f"Error processing webhook update: {e}")
+        logger.exception(
+            "telegram_webhook_error",
+            extra={"event": "telegram_webhook_error"},
+        )
         sentry_sdk.capture_exception(e)
         return Response(status_code=500)
 
