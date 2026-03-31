@@ -33,6 +33,14 @@ CHALLENGE_LEAVE = "challenge.leave"
 def get_client_ip(request: Request | None) -> str | None:
     if request is None:
         return None
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        first = xff.split(",")[0].strip()
+        if first:
+            return first
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()
     if request.client is None:
         return None
     return request.client.host
