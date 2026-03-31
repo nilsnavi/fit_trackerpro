@@ -124,6 +124,26 @@ class Settings(BaseSettings):
     # --- Optional: CORS & observability ---
     ALLOWED_ORIGINS: str | List[str] = "*"
     SENTRY_DSN: str | None = None
+    SENTRY_RELEASE: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional explicit Sentry release. If unset, derived from GIT_COMMIT_SHA or APP_VERSION."
+            )
+        ),
+    ] = None
+    SENTRY_ERROR_SAMPLE_RATE: Annotated[
+        float,
+        Field(description="Sampling for error events (0..1).", ge=0.0, le=1.0),
+    ] = 1.0
+    SENTRY_TRACES_SAMPLE_RATE: Annotated[
+        float | None,
+        Field(description="Sampling for transactions (0..1). If unset, defaults by ENVIRONMENT.", ge=0.0, le=1.0),
+    ] = None
+    SENTRY_PROFILES_SAMPLE_RATE: Annotated[
+        float | None,
+        Field(description="Sampling for profiles (0..1). If unset, uses traces sample rate.", ge=0.0, le=1.0),
+    ] = None
     ENABLE_PROMETHEUS_METRICS: bool = True
 
     # --- Optional: email ---

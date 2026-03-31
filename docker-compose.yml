@@ -94,6 +94,10 @@ services:
       - API_URL=${API_URL:-http://localhost:8000/api/v1}
       - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-}
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:-}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-${ENVIRONMENT:-development}}
+      - SENTRY_RELEASE=${SENTRY_RELEASE:-}
+      - SENTRY_DIST=${SENTRY_DIST:-}
     ports:
       - "80:80"
     depends_on:

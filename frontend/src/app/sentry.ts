@@ -1,10 +1,10 @@
 import * as Sentry from '@sentry/react'
 
 import packageJson from '../../package.json'
-import { getPublicApiBaseUrl } from '@shared/config/runtime'
+import { getPublicApiBaseUrl, getRuntimeConfig } from '@shared/config/runtime'
 
 export function isSentryEnabled(): boolean {
-    return Boolean(import.meta.env.VITE_SENTRY_DSN?.trim())
+    return Boolean(getRuntimeConfig().SENTRY_DSN?.trim())
 }
 
 function tracePropagationTargets(): (string | RegExp)[] {
@@ -24,16 +24,15 @@ function tracePropagationTargets(): (string | RegExp)[] {
  * Call once before React render. No-op when `VITE_SENTRY_DSN` is unset.
  */
 export function initSentry(): void {
-    const dsn = import.meta.env.VITE_SENTRY_DSN?.trim()
+    const cfg = getRuntimeConfig()
+    const dsn = cfg.SENTRY_DSN?.trim()
     if (!dsn) {
         return
     }
 
-    const environment =
-        import.meta.env.VITE_ENVIRONMENT || import.meta.env.MODE || 'development'
-    const release =
-        import.meta.env.VITE_SENTRY_RELEASE?.trim() ||
-        `fittracker-web@${packageJson.version}`
+    const environment = (cfg.SENTRY_ENVIRONMENT || 'development').trim()
+    const release = cfg.SENTRY_RELEASE?.trim() || `fittracker-web@${packageJson.version}`
+    const dist = cfg.SENTRY_DIST?.trim()
 
     const isProd = environment === 'production'
 
@@ -41,10 +40,25 @@ export function initSentry(): void {
         dsn,
         environment,
         release,
+        dist: dist || undefined,
         integrations: [Sentry.browserTracingIntegration()],
         tracePropagationTargets: tracePropagationTargets(),
         tracesSampleRate: isProd ? 0.1 : 1.0,
         sendDefaultPii: false,
+        maxBreadcrumbs: 50,
+        initialScope: {
+            tags: {
+                service: 'fittracker-frontend',
+                component: 'frontend',
+                app: 'fittracker',
+            },
+        },
+        ignoreErrors: [
+            // Common noisy browser errors
+            'ResizeObserver loop limit exceeded',
+            'ResizeObserver loop completed with undelivered notifications.',
+            'Non-Error promise rejection captured',
+        ],
         beforeSend(event) {
             if (event.request?.headers) {
                 const h = event.request.headers as Record<string, string>

@@ -100,6 +100,10 @@ services:
       - API_URL=${API_URL}
       - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-}
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:-}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - SENTRY_RELEASE=${SENTRY_RELEASE:-}
+      - SENTRY_DIST=${SENTRY_DIST:-}
     depends_on:
       backend:
         condition: service_healthy

@@ -2,4 +2,8 @@ window.__APP_CONFIG__ = {
   API_URL: '',
   TELEGRAM_BOT_USERNAME: '',
   TELEGRAM_WEBAPP_URL: '',
+  SENTRY_DSN: '',
+  SENTRY_ENVIRONMENT: '',
+  SENTRY_RELEASE: '',
+  SENTRY_DIST: '',
 };

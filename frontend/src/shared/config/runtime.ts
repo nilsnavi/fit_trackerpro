@@ -10,6 +10,14 @@ export interface AppRuntimeConfig {
     TELEGRAM_BOT_USERNAME: string
     /** Public Mini App URL (share / deep links) */
     TELEGRAM_WEBAPP_URL: string
+    /** Sentry DSN for browser SDK (optional) */
+    SENTRY_DSN: string
+    /** Sentry environment, e.g. production/staging/dev (optional) */
+    SENTRY_ENVIRONMENT: string
+    /** Sentry release, e.g. fittracker-web@<sha> (optional) */
+    SENTRY_RELEASE: string
+    /** Sentry dist (optional, useful for SPA build artifacts) */
+    SENTRY_DIST: string
 }
 
 declare global {
@@ -46,6 +54,12 @@ export function getRuntimeConfig(): AppRuntimeConfig {
         TELEGRAM_WEBAPP_URL:
             firstNonEmpty(w?.TELEGRAM_WEBAPP_URL, import.meta.env.VITE_TELEGRAM_WEBAPP_URL) ??
             '',
+        SENTRY_DSN: firstNonEmpty(w?.SENTRY_DSN, import.meta.env.VITE_SENTRY_DSN) ?? '',
+        SENTRY_ENVIRONMENT:
+            firstNonEmpty(w?.SENTRY_ENVIRONMENT, import.meta.env.VITE_ENVIRONMENT, import.meta.env.MODE) ??
+            'development',
+        SENTRY_RELEASE: firstNonEmpty(w?.SENTRY_RELEASE, import.meta.env.VITE_SENTRY_RELEASE) ?? '',
+        SENTRY_DIST: firstNonEmpty(w?.SENTRY_DIST) ?? '',
     }
 }
 
