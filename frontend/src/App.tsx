@@ -42,6 +42,8 @@ const LoginPage = lazy(() =>
     import('@features/auth/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
 const WorkoutCalendarPage = lazy(() => import('@features/workouts/pages/Calendar'))
+const AchievementsPage = lazy(() => import('@features/achievements/pages/AchievementsPage'))
+const RestTimerSandboxPage = lazy(() => import('@features/sandbox/pages/RestTimerDemo'))
 
 function SentryErrorFallback({
     resetError,
@@ -189,6 +191,22 @@ export default function App() {
                                             element={
                                                 <RouteErrorBoundary screenTitle="Профиль">
                                                     <ProfilePage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/achievements"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Достижения">
+                                                    <AchievementsPage />
+                                                </RouteErrorBoundary>
+                                            }
+                                        />
+                                        <Route
+                                            path="/sandbox/rest-timer"
+                                            element={
+                                                <RouteErrorBoundary screenTitle="Sandbox · Rest timer">
+                                                    <RestTimerSandboxPage />
                                                 </RouteErrorBoundary>
                                             }
                                         />

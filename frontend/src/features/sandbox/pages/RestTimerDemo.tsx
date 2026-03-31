@@ -35,12 +35,8 @@ export const RestTimerDemo: React.FC = () => {
             <div className="max-w-md mx-auto space-y-6">
                 {/* Header */}
                 <div className="text-center py-4">
-                    <h1 className="text-2xl font-bold text-telegram-text">
-                        Таймер отдыха
-                    </h1>
-                    <p className="text-sm text-telegram-hint mt-1">
-                        Демонстрация компонента
-                    </p>
+                    <h1 className="text-2xl font-bold text-telegram-text">Таймер отдыха</h1>
+                    <p className="text-sm text-telegram-hint mt-1">Демонстрация компонента</p>
                 </div>
 
                 {/* Timer Card */}
@@ -59,9 +55,7 @@ export const RestTimerDemo: React.FC = () => {
 
                 {/* Settings */}
                 <Card className="p-4">
-                    <h2 className="text-lg font-semibold text-telegram-text mb-4">
-                        Настройки
-                    </h2>
+                    <h2 className="text-lg font-semibold text-telegram-text mb-4">Настройки</h2>
                     <div className="space-y-3">
                         <label className="flex items-center justify-between">
                             <span className="text-telegram-text">Звуковые сигналы</span>
@@ -86,9 +80,7 @@ export const RestTimerDemo: React.FC = () => {
 
                 {/* Event Log */}
                 <Card className="p-4">
-                    <h2 className="text-lg font-semibold text-telegram-text mb-4">
-                        События
-                    </h2>
+                    <h2 className="text-lg font-semibold text-telegram-text mb-4">События</h2>
                     <div className="min-h-[60px] p-3 bg-telegram-secondary-bg rounded-lg">
                         {lastEvent ? (
                             <p className="text-telegram-text">{lastEvent}</p>
@@ -106,19 +98,13 @@ export const RestTimerDemo: React.FC = () => {
                 </Card>
 
                 {/* Reset Button */}
-                <Button
-                    variant="primary"
-                    className="w-full"
-                    onClick={resetTimer}
-                >
+                <Button variant="primary" className="w-full" onClick={resetTimer}>
                     Новый таймер
                 </Button>
 
                 {/* Features List */}
                 <Card className="p-4">
-                    <h2 className="text-lg font-semibold text-telegram-text mb-4">
-                        Возможности
-                    </h2>
+                    <h2 className="text-lg font-semibold text-telegram-text mb-4">Возможности</h2>
                     <ul className="space-y-2 text-sm text-telegram-text">
                         <li className="flex items-start gap-2">
                             <span className="text-primary">✓</span>

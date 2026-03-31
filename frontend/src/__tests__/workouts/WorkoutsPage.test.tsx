@@ -1,5 +1,3 @@
-import React from 'react'
-
 describe('WorkoutsPage (critical flow skeleton)', () => {
     it('shows draft banner when there is draftWorkoutId', () => {
         // TODO: mock draft store to return workoutId/title and assert banner text renders
