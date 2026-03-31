@@ -11,6 +11,7 @@ from typing import Callable, Optional
 
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from starlette.responses import Response
 
 from app.api.v1.registration import API_V1_PREFIX
@@ -264,9 +265,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not allowed:
             retry_after = max(1, reset_time - int(time.time()))
             hdrs["Retry-After"] = str(retry_after)
-            raise HTTPException(
+            # BaseHTTPMiddleware runs inside an AnyIO task group; raising exceptions may end up
+            # wrapped into an ExceptionGroup depending on Starlette/AnyIO versions. Returning a
+            # concrete response keeps behaviour stable and predictable for clients.
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded. Please try again later.",
+                content={"detail": "Rate limit exceeded. Please try again later."},
                 headers=hdrs,
             )
 
