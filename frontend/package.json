@@ -13,6 +13,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "coverage:baseline:check": "node scripts/coverage-baseline.mjs check",
+    "coverage:baseline:update": "node scripts/coverage-baseline.mjs update",
     "api:types:generate": "node scripts/generate-openapi-types.mjs",
     "api:contract:check": "node scripts/check-openapi-types.mjs",
     "e2e": "playwright test",

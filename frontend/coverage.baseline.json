@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "slack": {
+    "lines": 1,
+    "statements": 1,
+    "functions": 1,
+    "branches": 1
+  },
+  "minFloor": {
+    "lines": 0,
+    "statements": 0,
+    "functions": 0,
+    "branches": 0
+  },
+  "critical": [
+    "src/shared/offline/syncQueue/engine.ts",
+    "src/shared/offline/syncQueue/recoverableError.ts",
+    "src/shared/offline/syncQueue/types.ts",
+    "src/shared/offline/syncQueue/workoutKinds.ts",
+    "src/shared/lib/telegramEnv.ts",
+    "src/shared/ui/RouteErrorBoundary.tsx",
+    "src/shared/ui/Button.tsx"
+  ],
+  "baseline": {}
+}
