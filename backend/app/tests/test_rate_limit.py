@@ -5,17 +5,23 @@
 """
 from __future__ import annotations
 
+import os
 from unittest.mock import MagicMock
 
 import fakeredis
 import redis
+import pytest
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
+from app.api.exception_handlers import register_exception_handlers
 from app.middleware.rate_limit import (
     POLICY_DEFAULT,
     RateLimitMiddleware,
     close_rate_limit_redis_client,
     create_rate_limit_redis_client,
 )
+from app.settings import settings
 
 
 def _make_middleware() -> RateLimitMiddleware:
@@ -178,3 +184,113 @@ def test_close_rate_limit_redis_client_accepts_none():
 def test_close_rate_limit_redis_client_closes_real_client():
     fake = fakeredis.FakeRedis(decode_responses=True)
     close_rate_limit_redis_client(fake)
+
+
+def _build_rate_limited_app(*, redis_client: redis.Redis | None) -> FastAPI:
+    app = FastAPI()
+    register_exception_handlers(app)
+    app.state.redis_rate_limit = redis_client
+
+    @app.get("/api/v1/analytics/summary")
+    async def summary():
+        return {"ok": True}
+
+    app.add_middleware(RateLimitMiddleware)
+    return app
+
+
+@pytest.mark.asyncio
+async def test_middleware_allows_normal_traffic_and_sets_headers(monkeypatch):
+    monkeypatch.setenv("PYTEST_RUNNING", "0")
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_REQUESTS", 2)
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60)
+
+    app = _build_rate_limited_app(redis_client=None)  # fallback mode (in-memory)
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r1 = await client.get("/api/v1/analytics/summary")
+        assert r1.status_code == 200
+        assert r1.headers["X-RateLimit-Limit"] == "2"
+        assert r1.headers["X-RateLimit-Remaining"] == "1"
+        assert r1.headers["X-RateLimit-Window"] == "60"
+        assert r1.headers["X-RateLimit-Policy"] == POLICY_DEFAULT
+
+        r2 = await client.get("/api/v1/analytics/summary")
+        assert r2.status_code == 200
+        assert r2.headers["X-RateLimit-Remaining"] == "0"
+
+
+@pytest.mark.asyncio
+async def test_middleware_returns_429_on_limit_exceeded_with_retry_after(monkeypatch):
+    monkeypatch.setenv("PYTEST_RUNNING", "0")
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_REQUESTS", 1)
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 30)
+
+    app = _build_rate_limited_app(redis_client=None)  # fallback mode (in-memory)
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        ok = await client.get("/api/v1/analytics/summary")
+        assert ok.status_code == 200
+
+        blocked = await client.get("/api/v1/analytics/summary")
+        assert blocked.status_code == 429
+        assert "Rate limit exceeded" in blocked.text
+        assert blocked.headers["X-RateLimit-Limit"] == "1"
+        assert blocked.headers["X-RateLimit-Remaining"] == "0"
+        assert blocked.headers["X-RateLimit-Window"] == "30"
+        assert blocked.headers["X-RateLimit-Policy"] == POLICY_DEFAULT
+        assert int(blocked.headers["Retry-After"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_middleware_window_resets_after_time_advance(monkeypatch):
+    monkeypatch.setenv("PYTEST_RUNNING", "0")
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_REQUESTS", 1)
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 10)
+
+    t0 = 50_000.0
+
+    def fake_time():
+        return fake_time._v  # type: ignore[attr-defined]
+
+    fake_time._v = t0
+    monkeypatch.setattr("app.middleware.rate_limit.time.time", fake_time)
+
+    app = _build_rate_limited_app(redis_client=None)  # fallback mode (in-memory)
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r1 = await client.get("/api/v1/analytics/summary")
+        assert r1.status_code == 200
+
+        # Still in the same window -> blocked
+        fake_time._v = t0 + 1
+        r2 = await client.get("/api/v1/analytics/summary")
+        assert r2.status_code == 429
+
+        # After window -> allowed again
+        fake_time._v = t0 + 10.5
+        r3 = await client.get("/api/v1/analytics/summary")
+        assert r3.status_code == 200
+        assert r3.headers["X-RateLimit-Remaining"] == "0"
+
+
+@pytest.mark.asyncio
+async def test_middleware_uses_redis_and_sets_ttl(monkeypatch):
+    monkeypatch.setenv("PYTEST_RUNNING", "0")
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_REQUESTS", 2)
+    monkeypatch.setattr(settings, "RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60)
+
+    fake = fakeredis.FakeRedis(decode_responses=True)
+    app = _build_rate_limited_app(redis_client=fake)
+
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r1 = await client.get("/api/v1/analytics/summary", headers={"X-Forwarded-For": "9.9.9.9"})
+        assert r1.status_code == 200
+
+    # Проверяем, что ключ создан и имеет TTL (expire(key, window)).
+    keys = [k for k in fake.keys() if "ratelimit:" in k]
+    assert len(keys) == 1
+    ttl = fake.ttl(keys[0])
+    assert ttl > 0
+    assert ttl <= 60
