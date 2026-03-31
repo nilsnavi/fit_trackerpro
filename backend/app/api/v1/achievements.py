@@ -4,7 +4,7 @@ HTTP-only endpoints delegating business logic to services
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import get_client_ip

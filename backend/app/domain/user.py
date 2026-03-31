@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from .user_achievement import UserAchievement
     from .challenge import Challenge
     from .emergency_contact import EmergencyContact
+    from .exercise import Exercise
 
 
 class User(Base):

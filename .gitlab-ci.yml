@@ -1,6 +1,22 @@
 stages:
   - test
 
+lint_backend:
+  stage: test
+  image: python:3.12-slim
+  cache:
+    key: "pip-cache"
+    paths:
+      - .cache/pip/
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  script:
+    - python --version
+    - python -m pip install --upgrade pip
+    - pip install ruff
+    - ruff --version
+    - ruff check backend/app
+
 unit_backend:
   stage: test
   image: python:3.12-slim

@@ -9,7 +9,7 @@ import redis
 from functools import wraps
 from typing import Callable, Optional
 
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.responses import Response
