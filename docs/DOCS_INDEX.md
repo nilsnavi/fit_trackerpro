@@ -12,15 +12,19 @@
 
 | Документ | Что покрывает | Ключевые секции | Ответственный |
 |---|---|---|---|
-| `README.md` | Общий обзор проекта, запуск, архитектура, API-карта | Структура проекта, Быстрый старт, Backend архитектура, API Endpoints, CI/CD | Tech Lead |
-| `README-DEPLOYMENT.md` | Короткая operational-шпаргалка для запуска и эксплуатации | Local Start, Current Backend Architecture, CI/CD, Ops Commands, Required Env | DevOps |
+| `README.md` | Entrypoint: навигация, быстрый старт, source of truth | Док-ссылки, Quick Start, Source of truth | Tech Lead |
+| `docs/local-development.md` | Локальная разработка | Docker Compose, hybrid mode, quick checks | Tech Lead |
+| `docs/deployment.md` | Production деплой | Source of truth, env, deploy flow, ручные шаги | DevOps |
+| `docs/architecture.md` | Архитектура (канон) | Контуры, backend/frontend структура, API карта | Tech Lead |
+| `docs/security.md` | Безопасность (канон) | Secrets, TLS/Nginx, auth, deps, checks | Security Owner |
+| `docs/offline-pwa.md` | Офлайн и PWA | SW, caches, persist, queue, ограничения | Frontend Lead |
 | `TELEGRAM_SETUP.md` | Интеграция Telegram Mini App и auth flow | BotFather setup, env, auth endpoints, troubleshooting, security notes | Backend Lead |
 | `docs/ENVIRONMENT_SETUP.md` | Полная настройка переменных окружения | Backend vars, Frontend vars, Production compose vars, validation checklist | DevOps |
-| `docs/DEPLOYMENT.md` | Полный гайд production-деплоя | Prerequisites, Server bootstrap, secrets, SSL/Nginx, manual/automated deploy, rollback | DevOps |
+| `docs/DEPLOYMENT.md` | Legacy-redirect на новый гайд деплоя | Ссылка на `docs/deployment.md` | DevOps |
 | `docs/ROLLBACK_STRATEGY.md` | P1-стратегия безопасного отката | Trigger conditions, workflow rollback, DB restore policy, manual runbook | DevOps/SRE |
 | `docs/PRODUCTION_CHECKLIST.md` | Релизный чеклист перед/после выката | Before release, Environment and secrets, Smoke checks, Rollback readiness | Release Manager |
-| `docs/SECURITY_CHECKLIST.md` | Безопасность приложения и инфраструктуры | Transport, Auth/session security, Secrets, Containers/dependencies, Review cadence | Security Owner |
-| `docs/security/checklist.md` | Практический чеклист безопасности (RU), привязка к стеку и env | Секреты, TLS, Telegram/JWT, API-лимиты, CI, периодичность | Security Owner |
+| `docs/SECURITY_CHECKLIST.md` | Legacy-redirect на канонический security | Ссылка на `docs/security.md` | Security Owner |
+| `docs/security/checklist.md` | Расширенный практический чеклист (RU) | Детали по стеку и env | Security Owner |
 | `docs/PROJECT_AUDIT_2026-03-26.md` | Технический аудит и план стабилизации | Findings, Priorities, Iteration plan, Quick wins | Tech Lead |
 | `docs/target-architecture.md` | Целевая архитектура после рефакторинга (to-be) | Frontend/backend structure, deploy, env, health | Tech Lead |
 | `docs/architecture/backend.md` | Слои backend, направление зависимостей, bounded contexts, правила новых модулей | Слои, Направление зависимостей, Основные bounded contexts, Правила для новых модулей | Backend Lead |
@@ -38,6 +42,13 @@
 - **Database:** migration runbooks, schema policy, compatibility notes.
 - **DevOps/SRE:** окружения, деплой, CI/CD, rollback, production checklists.
 - **Security:** `docs/SECURITY_CHECKLIST.md`, `docs/security/checklist.md`, secret management, periodic review cadence.
+
+## Source of truth (где смотреть в первую очередь)
+
+- **Деплой**: `docs/deployment.md` (канонические ссылки на workflows + `docker-compose.prod.yml`)
+- **Архитектура**: `docs/architecture.md` (backend-детали: `docs/architecture/backend.md`)
+- **Окружения**: `docs/env-matrix.md` + `docs/ENVIRONMENT_SETUP.md`
+- **Миграции**: `database/migrations` (правила: `docs/db/schema-governance.md`)
 
 ## Регламент обновления документации
 

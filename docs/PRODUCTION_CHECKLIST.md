@@ -12,7 +12,7 @@ Checklist for releasing current FitTracker Pro stack.
 
 ## 2) Environment and secrets
 
-- [ ] Server has root project folder `~/fit_trackerpro`
+- [ ] Server has root project folder `~/fittracker-pro`
 - [ ] Root `.env` exists with production values
 - [ ] GitHub secrets configured (deploy + migrations)
 - [ ] `SECRET_KEY` rotated/strong
@@ -24,7 +24,7 @@ Checklist for releasing current FitTracker Pro stack.
 - [ ] Docker and Docker Compose installed
 - [ ] SSL certificate issued and copied to `nginx/ssl`
 - [ ] Firewall allows only 22/80/443
-- [ ] DB backups directory created (`~/fit_trackerpro/backups`)
+- [ ] DB backups directory created (`~/fittracker-pro/backups`)
 
 ## 4) Deploy
 

@@ -50,11 +50,11 @@
 | Слой | Путь | Ответственность |
 |------|------|-----------------|
 | HTTP | `backend/app/api/v1` | Роутеры, валидация входа, маппинг в сервисы, OpenAPI-теги |
-| Сервисы | `backend/app/services` | Бизнес-логика, оркестрация, правила use-case |
-| Доступ к данным | `backend/app/repositories` | Запросы к БД, изоляция SQLAlchemy/ORM от API |
+| Application | `backend/app/application` | Бизнес-логика, оркестрация, правила use-case |
+| Доступ к данным | `backend/app/infrastructure/repositories` | Репозитории и доступ к данным (БД/кэш), изоляция SQLAlchemy от API |
 | Контракты | `backend/app/schemas` | Pydantic-модели запросов/ответов (публичный контракт API) |
 | Домен | `backend/app/domain` | Сущности и правила предметной области (по возможности без зависимости от FastAPI) |
-| Инфраструктура | `backend/app/core`, `backend/app/middleware` | Настройки, безопасность, логирование, rate limit, телеметрия |
+| Инфраструктура | `backend/app/infrastructure`, `backend/app/core`, `backend/app/middleware` | БД-сессии/engine, интеграции, безопасность, логирование, rate limit, телеметрия |
 | Интеграции | `backend/app/bot` | Telegram Bot / webhook, отдельно от REST-слоя |
 
 **Принципы:**
