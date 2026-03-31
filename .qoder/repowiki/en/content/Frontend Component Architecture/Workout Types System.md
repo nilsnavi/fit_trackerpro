@@ -14,7 +14,7 @@
 - [App.tsx](file://frontend/src/App.tsx)
 - [exercises.py](file://backend/app/api/exercises.py)
 - [exercise.py](file://backend/app/models/exercise.py)
-- [schema_v2.sql](file://database/schema_v2.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
 </cite>
 
 ## Table of Contents
@@ -92,7 +92,7 @@ The architecture ensures scalability through asynchronous database operations, e
 
 **Section sources**
 - [workouts.py:1-525](file://backend/app/api/workouts.py#L1-L525)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Core Components
 
@@ -565,12 +565,12 @@ EXERCISES ||--o{ WORKOUT_TEMPLATES : referenced_by
 ```
 
 **Diagram sources**
-- [schema_v2.sql:10-180](file://database/schema_v2.sql#L10-L180)
+- [schema_v2.sql:10-180](file://docs/db/legacy/schema_v2.sql#L10-L180)
 
 The schema design optimizes for both flexibility and performance, utilizing JSONB columns for dynamic exercise configurations while maintaining foreign key relationships for data integrity.
 
 **Section sources**
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Performance Considerations
 

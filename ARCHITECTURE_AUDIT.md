@@ -50,8 +50,8 @@
 ## Database (`database/`)
 - `migrations/` - Alembic
 - `postgresql/migrations/` - SQL runbooks/migration scripts
-- `schema_v2.sql`, `models.sql` - SQL snapshots/DDL
-- `prisma/schema.prisma` - альтернативная модель данных (Prisma)
+- `docs/db/legacy/schema_v2.sql`, `docs/db/legacy/models.sql` - SQL snapshots/DDL (архив; не source of truth)
+- `docs/db/legacy/schema.prisma` - альтернативная модель данных (Prisma) (архив; не source of truth)
 
 ## DevOps / Infra
 - `.github/workflows` - CI/CD
@@ -74,9 +74,9 @@
    - Параллельно существуют:
      - `database/migrations` (Alembic)
      - `database/postgresql/migrations` (ручные SQL-миграции)
-     - `database/schema_v2.sql`, `database/models.sql` (snapshot-скрипты)
-     - `database/prisma/schema.prisma` (отдельная Prisma-модель)
-   - По факту `prisma` не используется кодом приложения (найден только `database/prisma/schema.prisma`), но присутствуют root `package.json`/`package-lock.json`/`node_modules` под Prisma.
+     - `docs/db/legacy/schema_v2.sql`, `docs/db/legacy/models.sql` (snapshot-скрипты; архив)
+     - `docs/db/legacy/schema.prisma` (отдельная Prisma-модель; архив)
+   - По факту `prisma` не используется кодом приложения (legacy-схема заархивирована в `docs/db/legacy/schema.prisma`), но ранее присутствовали root `package.json`/`package-lock.json`/`node_modules` под Prisma.
    - Риск: drift схемы и невозможность однозначно определить Source of Truth.
 
 2. **Конфликтная структура frontend-страниц (часть страниц не маршрутизируется)**
@@ -129,7 +129,7 @@
 - `frontend/src/pages/AchievementsPage.tsx` - не подключен к роутеру и не импортируется.
 - `frontend/src/pages/RestTimerDemo.tsx` - демо-страница, не подключена.
 - `frontend/src/pages/Calendar.tsx` - полноценная страница, но без маршрута.
-- `database/prisma/schema.prisma` + root prisma dependencies - не интегрированы с runtime backend.
+- `docs/db/legacy/schema.prisma` + (если ещё есть) root prisma dependencies - не интегрированы с runtime backend.
 - Cache/coverage artifacts внутри репозитория (особенно tracked pyc/coverage.xml) - кандидаты на удаление и блокировку через `.gitignore`.
 
 ---

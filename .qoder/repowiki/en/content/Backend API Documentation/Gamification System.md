@@ -13,7 +13,7 @@
 - [auth.py](file://backend/app/middleware/auth.py)
 - [Achievements.tsx](file://frontend/src/components/gamification/Achievements.tsx)
 - [useAchievements.ts](file://frontend/src/hooks/useAchievements.ts)
-- [schema_v2.sql](file://database/schema_v2.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
 </cite>
 
 ## Table of Contents
@@ -316,15 +316,15 @@ ACHIEVEMENTS ||--o{ USER_ACHIEVEMENTS : "awarded"
 ```
 
 **Diagram sources**
-- [schema_v2.sql:10-42](file://database/schema_v2.sql#L10-L42)
-- [schema_v2.sql:242-275](file://database/schema_v2.sql#L242-L275)
-- [schema_v2.sql:301-340](file://database/schema_v2.sql#L301-L340)
+- [schema_v2.sql:10-42](file://docs/db/legacy/schema_v2.sql#L10-L42)
+- [schema_v2.sql:242-275](file://docs/db/legacy/schema_v2.sql#L242-L275)
+- [schema_v2.sql:301-340](file://docs/db/legacy/schema_v2.sql#L301-L340)
 - [achievement.py:17-105](file://backend/app/models/achievement.py#L17-L105)
 - [user_achievement.py:18-71](file://backend/app/models/user_achievement.py#L18-L71)
 - [challenge.py:17-138](file://backend/app/models/challenge.py#L17-L138)
 
 **Section sources**
-- [schema_v2.sql:242-340](file://database/schema_v2.sql#L242-L340)
+- [schema_v2.sql:242-340](file://docs/db/legacy/schema_v2.sql#L242-L340)
 - [achievement.py:17-105](file://backend/app/models/achievement.py#L17-L105)
 - [user_achievement.py:18-71](file://backend/app/models/user_achievement.py#L18-L71)
 - [challenge.py:17-138](file://backend/app/models/challenge.py#L17-L138)

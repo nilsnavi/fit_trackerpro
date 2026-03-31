@@ -6,7 +6,7 @@
 - [exercises.py](file://backend/app/api/exercises.py)
 - [exercises.py](file://backend/app/schemas/exercises.py)
 - [initial_schema.py](file://database/migrations/versions/cd723942379e_initial_schema.py)
-- [schema_v2.sql](file://database/schema_v2.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
 - [main.py](file://backend/app/main.py)
 - [Catalog.tsx](file://frontend/src/pages/Catalog.tsx)
 - [AddExercise.tsx](file://frontend/src/pages/AddExercise.tsx)
@@ -86,7 +86,7 @@ The exercise system utilizes a PostgreSQL database with JSONB fields for flexibl
 **Section sources**
 - [exercise.py:17-116](file://backend/app/models/exercise.py#L17-L116)
 - [initial_schema.py:55-93](file://database/migrations/versions/cd723942379e_initial_schema.py#L55-L93)
-- [schema_v2.sql:46-85](file://database/schema_v2.sql#L46-L85)
+- [schema_v2.sql:46-85](file://docs/db/legacy/schema_v2.sql#L46-L85)
 
 ### Backend API Endpoints
 

@@ -16,8 +16,8 @@
 - [challenge.py](file://backend/app/models/challenge.py)
 - [workout_template.py](file://backend/app/models/workout_template.py)
 - [migrate.yml](file://.github/workflows/migrate.yml)
-- [schema_v2.sql](file://database/schema_v2.sql)
-- [models.sql](file://database/models.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
+- [models.sql (legacy archive)](file://docs/db/legacy/models.sql)
 </cite>
 
 ## Table of Contents
@@ -377,5 +377,5 @@ FitTracker Pro’s Alembic-based migration system establishes a robust foundatio
   - Older schema layout with normalized user settings and a simpler workouts table.
 
 **Section sources**
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
-- [models.sql:1-240](file://database/models.sql#L1-L240)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
+- [models.sql:1-240](file://docs/db/legacy/models.sql#L1-L240)

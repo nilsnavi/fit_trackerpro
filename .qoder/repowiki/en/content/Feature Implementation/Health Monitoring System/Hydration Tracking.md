@@ -8,7 +8,7 @@
 - [api.ts](file://frontend/src/services/api.ts)
 - [main.py](file://backend/app/main.py)
 - [health.py](file://backend/app/api/health.py)
-- [schema_v2.sql](file://database/schema_v2.sql)
+- [schema_v2.sql (legacy archive)](file://docs/db/legacy/schema_v2.sql)
 </cite>
 
 ## Table of Contents
@@ -40,7 +40,7 @@ end
 subgraph "Backend"
 MAIN["main.py"]
 HEALTH["health.py"]
-DB["schema_v2.sql"]
+DB["schema_v2.sql (legacy)"]
 end
 WT --> API
 WW --> API
@@ -55,7 +55,7 @@ HEALTH --> DB
 - [api.ts](file://frontend/src/services/api.ts)
 - [main.py:89-106](file://backend/app/main.py#L89-L106)
 - [health.py:1-615](file://backend/app/api/health.py#L1-L615)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 **Section sources**
 - [WaterTracker.tsx:1-1171](file://frontend/src/components/health/WaterTracker.tsx#L1-L1171)
@@ -64,7 +64,7 @@ HEALTH --> DB
 - [api.ts](file://frontend/src/services/api.ts)
 - [main.py:89-106](file://backend/app/main.py#L89-L106)
 - [health.py:1-615](file://backend/app/api/health.py#L1-L615)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Core Components
 - WaterTracker (frontend): Full-featured hydration tracker with progress ring, quick-add buttons, custom amount input, goal settings modal, reminder settings modal, and history modal.
@@ -83,7 +83,7 @@ Key capabilities:
 - [WaterTracker.tsx:29-80](file://frontend/src/components/health/WaterTracker.tsx#L29-L80)
 - [WaterWidget.tsx:5-13](file://frontend/src/components/home/WaterWidget.tsx#L5-L13)
 - [health.py:1-615](file://backend/app/api/health.py#L1-L615)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Architecture Overview
 The frontend components communicate with backend endpoints under the /api/v1/health prefix. The WaterTracker component orchestrates fetching and updating hydration data, while the backend validates requests, persists data, and computes statistics.
@@ -94,7 +94,7 @@ participant UI as "WaterTracker.tsx"
 participant API as "api.ts"
 participant APP as "main.py"
 participant ROUTER as "health.py"
-participant DB as "schema_v2.sql"
+participant DB as "schema_v2.sql (legacy snapshot)"
 UI->>API : GET /health/water/goal
 API->>APP : HTTP GET /api/v1/health/water/goal
 APP->>ROUTER : Route to health router
@@ -118,7 +118,7 @@ API-->>UI : Water entry
 - [api.ts](file://frontend/src/services/api.ts)
 - [main.py:89-106](file://backend/app/main.py#L89-L106)
 - [health.py:1-615](file://backend/app/api/health.py#L1-L615)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Detailed Component Analysis
 
@@ -209,7 +209,7 @@ Highlights:
 - Triggers for automatic updated_at timestamps
 
 **Section sources**
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Dependency Analysis
 Frontend-to-backend dependencies:
@@ -223,7 +223,7 @@ graph LR
 WT["WaterTracker.tsx"] --> API["api.ts"]
 API --> MAIN["main.py"]
 MAIN --> HEALTH["health.py"]
-HEALTH --> DB["schema_v2.sql"]
+HEALTH --> DB["schema_v2.sql (legacy snapshot)"]
 ```
 
 **Diagram sources**
@@ -231,14 +231,14 @@ HEALTH --> DB["schema_v2.sql"]
 - [api.ts](file://frontend/src/services/api.ts)
 - [main.py:89-106](file://backend/app/main.py#L89-L106)
 - [health.py:1-615](file://backend/app/api/health.py#L1-L615)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 **Section sources**
 - [WaterTracker.tsx:1-10](file://frontend/src/components/health/WaterTracker.tsx#L1-L10)
 - [api.ts](file://frontend/src/services/api.ts)
 - [main.py:89-106](file://backend/app/main.py#L89-L106)
 - [health.py:1-615](file://backend/app/api/health.py#L1-L615)
-- [schema_v2.sql:1-598](file://database/schema_v2.sql#L1-L598)
+- [schema_v2.sql:1-598](file://docs/db/legacy/schema_v2.sql#L1-L598)
 
 ## Performance Considerations
 - Frontend:
