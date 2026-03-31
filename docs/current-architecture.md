@@ -6,7 +6,7 @@
 
 Приложение состоит из четырех основных контуров:
 - **Frontend**: Telegram Mini App на React + Vite.
-- **Backend**: REST API на FastAPI (слои API -> services -> repositories -> models).
+- **Backend**: REST API на FastAPI (слои API -> application -> domain -> infrastructure).
 - **Data Layer**: PostgreSQL + Redis, миграции через Alembic и SQL migration scripts.
 - **Delivery/Operations**: Docker Compose (dev/prod), GitHub Actions, Nginx, monitoring stack.
 
@@ -33,9 +33,9 @@
 
 Слои:
 - `backend/app/api` - HTTP endpoints (v1 namespace).
-- `backend/app/services` - бизнес-логика и orchestration.
-- `backend/app/repositories` - data access.
-- `backend/app/models` - SQLAlchemy ORM.
+- `backend/app/application` - бизнес-сценарии (use cases) и оркестрация.
+- `backend/app/domain` - доменные сущности/исключения и ORM-модели.
+- `backend/app/infrastructure` - доступ к БД/Redis и внешним интеграциям, реализации репозиториев.
 - `backend/app/schemas` - Pydantic DTO/контракты.
 - `backend/app/middleware` - cross-cutting concerns (например rate limiting).
 - `backend/app/bot` - Telegram bot/webhook integration.
