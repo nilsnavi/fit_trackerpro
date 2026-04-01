@@ -18,9 +18,14 @@ AsyncSessionLocal = sessionmaker(
 
 
 async def init_db() -> None:
-    """Verify DB connectivity at startup (pool is created lazily otherwise)."""
+    """Verify DB connectivity and (optionally) ensure schema exists."""
     async with engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
+
+    # Local dev convenience: schema bootstrap (no Alembic migrations in repo).
+    if settings.ENVIRONMENT.strip().lower() == "development" and settings.AUTO_CREATE_DB_SCHEMA:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
 
 async def close_db() -> None:

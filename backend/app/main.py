@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
             logger.info("Redis (rate limiting) unavailable; using in-memory counters")
 
     bot_started = False
-    if not _PYTEST and settings.TELEGRAM_BOT_TOKEN:
+    if not _PYTEST and settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_ENABLED:
         try:
             bot_app = setup_bot()
             if bot_app:
@@ -74,6 +74,8 @@ async def lifespan(app: FastAPI):
             logger.error("Failed to start Telegram bot: %s", e)
     elif not settings.TELEGRAM_BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN not set, bot not started")
+    elif not settings.TELEGRAM_BOT_ENABLED:
+        logger.info("Telegram bot runtime disabled (TELEGRAM_BOT_ENABLED=false)")
 
     try:
         yield
