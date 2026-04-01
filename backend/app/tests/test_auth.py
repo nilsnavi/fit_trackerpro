@@ -57,6 +57,7 @@ async def test_authentication_flow(client: AsyncClient, mock_telegram_auth_body:
     assert response.status_code == 200
     data = response.json()
     assert data.get("access_token")
+    assert data.get("refresh_token")
     token = data["access_token"]
 
     me = await client.get(

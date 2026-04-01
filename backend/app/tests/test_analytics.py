@@ -108,6 +108,18 @@ class TestAnalyticsEmptyStateContracts:
         assert data.get("month") == now.month
         assert isinstance(data.get("days"), list)
         assert isinstance(data.get("summary"), dict)
+        if data.get("days"):
+            day0 = data["days"][0]
+            for key in [
+                "date",
+                "has_workout",
+                "workout_count",
+                "total_duration",
+                "workout_types",
+                "glucose_logged",
+                "wellness_logged",
+            ]:
+                assert key in day0
 
 
 @pytest.mark.integration

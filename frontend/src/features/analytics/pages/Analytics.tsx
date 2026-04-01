@@ -683,7 +683,6 @@ const Analytics: React.FC = () => {
     })
 
     const isAnalyticsPending = summaryQuery.isPending || progressQuery.isPending
-    const analyticsError = summaryQuery.error ?? progressQuery.error
 
     const exercises = useMemo((): Exercise[] => {
         const rows = progressQuery.data ?? []

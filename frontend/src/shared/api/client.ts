@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/react'
 import { isSentryEnabled } from '@app/sentry'
 import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, normalizeError } from '@shared/errors'
+import { getAuthTokens, useAuthStore } from '@/stores/authStore'
 
 class ApiService {
     private client: AxiosInstance
@@ -25,9 +26,9 @@ class ApiService {
             (config) => {
                 config.baseURL = getPublicApiBaseUrl()
                 // Add auth token if available
-                const token = localStorage.getItem('auth_token')
-                if (token) {
-                    config.headers.Authorization = `Bearer ${token}`
+                const { accessToken } = getAuthTokens()
+                if (accessToken) {
+                    config.headers.Authorization = `Bearer ${accessToken}`
                 }
                 if (config.data instanceof FormData) {
                     delete (config.headers as Record<string, unknown>)['Content-Type']
@@ -40,8 +41,36 @@ class ApiService {
         // Response interceptor — reject with unified AppHttpError payload
         this.client.interceptors.response.use(
             (response) => response,
-            (error: unknown) => {
+            async (error: unknown) => {
                 const clientError = normalizeError(error)
+                const originalConfig = isAxiosError(error) ? error.config : undefined
+
+                // Refresh-once strategy: if access token expired, try refresh token and retry request.
+                if (
+                    clientError.status === 401 &&
+                    originalConfig &&
+                    !(originalConfig as any)._retry
+                ) {
+                    const { refreshToken } = getAuthTokens()
+                    if (refreshToken) {
+                        try {
+                            ;(originalConfig as any)._retry = true
+                            const res = await this.client.post<{
+                                access_token: string
+                                refresh_token: string
+                            }>('/users/auth/refresh', { refresh_token: refreshToken })
+                            useAuthStore.getState().setTokens({
+                                accessToken: res.data.access_token,
+                                refreshToken: res.data.refresh_token,
+                            })
+                            return await this.client.request(originalConfig)
+                        } catch {
+                            // fall through to redirect boundary below
+                            useAuthStore.getState().clear()
+                        }
+                    }
+                }
+
                 if (
                     clientError.status === 401 &&
                     typeof window !== 'undefined' &&

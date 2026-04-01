@@ -7,6 +7,7 @@ import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
 import { AppShell } from './app/layouts/AppShell'
 import { RouteErrorBoundary } from '@shared/ui/RouteErrorBoundary'
+import { ProtectedRoute } from '@shared/auth/ProtectedRoute'
 import {
     AnalyticsPageSkeleton,
     CatalogPageSkeleton,
@@ -101,49 +102,61 @@ export default function App() {
                                         <Route
                                             path="/workouts"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Тренировки">
-                                                    <WorkoutsPage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Тренировки">
+                                                        <WorkoutsPage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/workouts/builder"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Конструктор тренировки">
-                                                    <WorkoutBuilderPage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Конструктор тренировки">
+                                                        <WorkoutBuilderPage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/workouts/mode/:mode"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Режим тренировки">
-                                                    <WorkoutModePage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Режим тренировки">
+                                                        <WorkoutModePage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/workouts/calendar"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Календарь">
-                                                    <WorkoutCalendarPage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Календарь">
+                                                        <WorkoutCalendarPage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/workouts/:id/edit"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Редактирование тренировки">
-                                                    <WorkoutEditPage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Редактирование тренировки">
+                                                        <WorkoutEditPage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/workouts/:id"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Тренировка">
-                                                    <WorkoutDetailPage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Тренировка">
+                                                        <WorkoutDetailPage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
@@ -157,17 +170,21 @@ export default function App() {
                                         <Route
                                             path="/exercises"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Каталог упражнений">
-                                                    <Catalog />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Каталог упражнений">
+                                                        <Catalog />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/exercises/add"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Новое упражнение">
-                                                    <AddExercise />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Новое упражнение">
+                                                        <AddExercise />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
@@ -181,25 +198,31 @@ export default function App() {
                                         <Route
                                             path="/analytics"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Аналитика">
-                                                    <AnalyticsPage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Аналитика">
+                                                        <AnalyticsPage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/profile"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Профиль">
-                                                    <ProfilePage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Профиль">
+                                                        <ProfilePage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route
                                             path="/achievements"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Достижения">
-                                                    <AchievementsPage />
-                                                </RouteErrorBoundary>
+                                                <ProtectedRoute>
+                                                    <RouteErrorBoundary screenTitle="Достижения">
+                                                        <AchievementsPage />
+                                                    </RouteErrorBoundary>
+                                                </ProtectedRoute>
                                             }
                                         />
                                         <Route

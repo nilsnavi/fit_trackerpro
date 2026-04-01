@@ -245,7 +245,13 @@ export const ProfilePage: React.FC = () => {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('auth_token');
+        // Single source of truth for tokens: authStore (syncs to storage)
+        try {
+            const mod = await import('@/stores/authStore')
+            mod.useAuthStore.getState().clear()
+        } catch {
+            // ignore
+        }
         window.location.href = '/login';
     };
 

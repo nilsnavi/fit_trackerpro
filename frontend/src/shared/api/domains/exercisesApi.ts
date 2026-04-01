@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { ExerciseListApiResponse } from '@features/exercises/types/exerciseApi'
+import type { ExerciseApiItem, ExerciseListApiResponse } from '@features/exercises/types/exerciseApi'
 import type {
     ExerciseCategoriesApiResponse,
     ExerciseEquipmentListApiResponse,
@@ -11,8 +11,8 @@ export const exercisesApi = {
         return api.get<ExerciseListApiResponse>('/exercises', params)
     },
     /** Multipart custom exercise (same URL as AddExercise form). */
-    createCustom(formData: FormData) {
-        return api.post<unknown>('/exercises/custom', formData)
+    createCustom(formData: FormData): Promise<ExerciseApiItem> {
+        return api.post<ExerciseApiItem>('/exercises/custom', formData)
     },
     getById(exerciseId: number) {
         return api.get(`/exercises/${exerciseId}`)
