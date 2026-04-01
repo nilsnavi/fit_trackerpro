@@ -48,6 +48,13 @@ import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
 import { queryKeys } from '@shared/api/queryKeys';
 import { analyticsApi } from '@shared/api/domains/analyticsApi';
 import { getErrorMessage } from '@shared/errors';
+import { useRealAnalytics } from '@shared/config/runtime';
+import { buildMockAnalytics } from '@features/analytics/mocks/analyticsMock';
+import {
+    buildChartDataFromProgress,
+    mapKeyMetrics,
+    mapProgressToExercises,
+} from '@features/analytics/mappers/analyticsMappers';
 
 // ============================================
 // Types
@@ -636,6 +643,7 @@ const Analytics: React.FC = () => {
     const apiPeriod = toApiPeriod(period)
     const maxExercises = 50
     const maxDataPoints = 120
+    const isReal = useRealAnalytics()
     const dateRange = useMemo(
         () => buildDateRangeParams(period, customStart, customEnd),
         [period, customStart, customEnd],
@@ -644,6 +652,7 @@ const Analytics: React.FC = () => {
     const summaryQuery = useQuery({
         queryKey: queryKeys.analytics.summary(apiPeriod),
         queryFn: () => analyticsApi.getSummary({ period: apiPeriod }) as Promise<ApiAnalyticsSummaryResponse>,
+        enabled: isReal,
     })
 
     const progressQuery = useQuery({
@@ -662,36 +671,46 @@ const Analytics: React.FC = () => {
                 max_exercises: maxExercises,
                 max_data_points: maxDataPoints,
             }) as Promise<ApiExerciseProgressResponse[]>,
+        enabled: isReal,
     })
 
     const trainingLoadQuery = useQuery({
         queryKey: queryKeys.analytics.trainingLoadDaily(dateRange.date_from ?? null, dateRange.date_to ?? null),
         queryFn: () => analyticsApi.getTrainingLoadDaily(dateRange) as Promise<ApiTrainingLoadDailyEntry[]>,
         staleTime: 60_000,
+        enabled: isReal,
     })
 
     const muscleLoadQuery = useQuery({
         queryKey: queryKeys.analytics.muscleLoad(dateRange.date_from ?? null, dateRange.date_to ?? null),
         queryFn: () => analyticsApi.getMuscleLoad(dateRange) as Promise<ApiMuscleLoadEntry[]>,
         staleTime: 60_000,
+        enabled: isReal,
     })
 
     const recoveryStateQuery = useQuery({
         queryKey: queryKeys.analytics.recoveryState,
         queryFn: () => analyticsApi.getRecoveryState() as Promise<ApiRecoveryStateResponse>,
         staleTime: 60_000,
+        enabled: isReal,
     })
 
-    const isAnalyticsPending = summaryQuery.isPending || progressQuery.isPending
+    const mock = useMemo(() => {
+        if (isReal) return null
+        const date_from = dateRange.date_from ?? format(startOfDay(subDays(new Date(), 30)), 'yyyy-MM-dd')
+        const date_to = dateRange.date_to ?? format(endOfDay(new Date()), 'yyyy-MM-dd')
+        return buildMockAnalytics({ date_from, date_to, period: apiPeriod })
+    }, [apiPeriod, dateRange.date_from, dateRange.date_to, isReal])
+
+    const summary = (isReal ? summaryQuery.data : mock?.summary) as ApiAnalyticsSummaryResponse | undefined
+    const progressRows = (isReal ? progressQuery.data : mock?.progress) as ApiExerciseProgressResponse[] | undefined
+
+    const isAnalyticsPending = isReal && (summaryQuery.isPending || progressQuery.isPending)
+    const isAnalyticsError = isReal && (summaryQuery.isError || progressQuery.isError)
 
     const exercises = useMemo((): Exercise[] => {
-        const rows = progressQuery.data ?? []
-        return rows.map((r) => ({
-            id: r.exercise_id,
-            name: r.exercise_name,
-            category: 'strength',
-        }))
-    }, [progressQuery.data])
+        return mapProgressToExercises(progressRows)
+    }, [progressRows])
 
     useEffect(() => {
         if (selectedExercises.length > 0) return
@@ -701,60 +720,13 @@ const Analytics: React.FC = () => {
 
     // Prepare chart data
     const chartData = useMemo((): ChartDataPoint[] => {
-        const dataMap = new Map<string, ChartDataPoint>();
-
-        const byId = new Map<number, ApiExerciseProgressResponse>()
-        for (const r of progressQuery.data ?? []) {
-            byId.set(r.exercise_id, r)
-        }
-
-        for (const ex of selectedExercises) {
-            const row = byId.get(ex.id)
-            if (!row) continue
-            for (const p of row.data_points ?? []) {
-                const iso = String(p.date)
-                const d = parseISO(iso)
-                const formattedDate = format(d, 'dd.MM')
-                if (!dataMap.has(iso)) {
-                    dataMap.set(iso, { date: iso, formattedDate })
-                }
-                const point = dataMap.get(iso)!
-                if (typeof p.max_weight === 'number') {
-                    point[ex.name] = p.max_weight
-                }
-            }
-        }
-
-        return Array.from(dataMap.values()).sort((a, b) =>
-            a.date.localeCompare(b.date)
-        );
-    }, [progressQuery.data, selectedExercises]);
+        return buildChartDataFromProgress({ progressRows, selectedExercises })
+    }, [progressRows, selectedExercises]);
 
     // Calculate metrics
     const metrics = useMemo((): KeyMetrics => {
-        const summary = summaryQuery.data
-        const totalWorkouts = summary?.total_workouts ?? 0
-        const avgRestTime = 0
-
-        const progressById = new Map<number, ApiExerciseProgressResponse>()
-        for (const r of progressQuery.data ?? []) progressById.set(r.exercise_id, r)
-        const values: number[] = []
-        for (const ex of selectedExercises) {
-            const v = progressById.get(ex.id)?.summary?.progress_percentage
-            if (typeof v === 'number' && Number.isFinite(v)) values.push(v)
-        }
-        const strengthGrowth =
-            values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0
-
-        const personalRecords = Array.isArray(summary?.personal_records) ? summary!.personal_records.length : 0
-
-        return {
-            totalWorkouts,
-            avgRestTime,
-            strengthGrowth,
-            personalRecords,
-        };
-    }, [summaryQuery.data, progressQuery.data, selectedExercises]);
+        return mapKeyMetrics({ summary, progressRows, selectedExercises })
+    }, [summary, progressRows, selectedExercises]);
 
     const loadCards = useMemo(() => {
         const training = trainingLoadQuery.data ?? []
@@ -828,6 +800,26 @@ const Analytics: React.FC = () => {
 
     if (isAnalyticsPending) {
         return <AnalyticsPageSkeleton />;
+    }
+
+    if (isAnalyticsError) {
+        const err = summaryQuery.error ?? progressQuery.error
+        return (
+            <div className="bg-telegram-bg p-4">
+                <Card variant="info" className="p-4">
+                    <div className="text-sm font-medium text-telegram-text mb-1">Не удалось загрузить аналитику</div>
+                    <div className="text-xs text-telegram-hint mb-4">{getErrorMessage(err)}</div>
+                    <Button
+                        onClick={() => {
+                            summaryQuery.refetch()
+                            progressQuery.refetch()
+                        }}
+                    >
+                        Повторить
+                    </Button>
+                </Card>
+            </div>
+        )
     }
 
     return (

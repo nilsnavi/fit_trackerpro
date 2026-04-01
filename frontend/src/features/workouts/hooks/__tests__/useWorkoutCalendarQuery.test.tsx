@@ -19,7 +19,7 @@ describe('useWorkoutCalendarQuery', () => {
     }
 
     it('calls analytics calendar endpoint and maps to CalendarWorkout[]', async () => {
-        ;(analyticsApi.getCalendar as jest.Mock).mockResolvedValue({
+        (analyticsApi.getCalendar as jest.Mock).mockResolvedValue({
             year: 2026,
             month: 4,
             days: [

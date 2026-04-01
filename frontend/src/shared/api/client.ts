@@ -54,7 +54,7 @@ class ApiService {
                     const { refreshToken } = getAuthTokens()
                     if (refreshToken) {
                         try {
-                            ;(originalConfig as any)._retry = true
+                            (originalConfig as any)._retry = true
                             const res = await this.client.post<{
                                 access_token: string
                                 refresh_token: string

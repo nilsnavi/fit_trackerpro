@@ -48,9 +48,6 @@ const RestTimerSandboxPage = lazy(() => import('@features/sandbox/pages/RestTime
 
 function SentryErrorFallback({
     resetError,
-    error: _error,
-    componentStack: _componentStack,
-    eventId: _eventId,
 }: {
     error: unknown
     componentStack: string

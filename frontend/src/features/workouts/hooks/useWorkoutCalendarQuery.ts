@@ -20,7 +20,7 @@ export function useWorkoutCalendarQuery(year: number, monthIndex: number) {
             for (const day of calendar.days ?? []) {
                 if (!day?.has_workout) continue
                 const workoutType = (day.workout_types?.[0] ?? 'strength') as CalendarWorkout['type']
-                const ymd = Number((day.date ?? '').replaceAll('-', ''))
+            const ymd = Number((day.date ?? '').replace(/-/g, ''))
                 items.push({
                     id: Number.isFinite(ymd) ? ymd : Math.floor(Math.random() * 1_000_000_000),
                     title: day.workout_count > 0 ? `Тренировок: ${day.workout_count}` : 'Тренировка',
