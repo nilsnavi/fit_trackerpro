@@ -62,8 +62,24 @@ def test_production_accepts_realistic_overrides():
         "SECRET_KEY": "x" * 32,
         "TELEGRAM_BOT_TOKEN": "123456789:AAHproduction_token_not_equal_to_dev_default",
         "TELEGRAM_WEBAPP_URL": "https://fittrackpro.ru",
+        "ALLOWED_ORIGINS": "https://fittrackpro.ru",
         "DEBUG": False,
     }
     s = Settings(**payload)
     assert s.ENVIRONMENT == "production"
     assert s.DEBUG is False
+
+
+@pytest.mark.unit
+def test_production_rejects_empty_allowed_origins():
+    payload = {
+        "ENVIRONMENT": "production",
+        "DATABASE_URL": "postgresql+asyncpg://user:pass@db.example.com:5432/app",
+        "SECRET_KEY": "x" * 32,
+        "TELEGRAM_BOT_TOKEN": "123456789:AAHproduction_token_not_equal_to_dev_default",
+        "TELEGRAM_WEBAPP_URL": "https://fittrackpro.ru",
+        "ALLOWED_ORIGINS": " , , ",
+        "DEBUG": False,
+    }
+    with pytest.raises(ValidationError):
+        Settings(**payload)

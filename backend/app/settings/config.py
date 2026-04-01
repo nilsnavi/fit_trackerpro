@@ -285,6 +285,13 @@ class Settings(BaseSettings):
         environment = info.data.get("ENVIRONMENT", "production")
         if environment == "production" and value == ["*"]:
             raise ValueError("ALLOWED_ORIGINS cannot be wildcard in production")
+        if environment == "production":
+            non_empty = [o for o in value if isinstance(o, str) and o.strip()]
+            if not non_empty:
+                raise ValueError(
+                    "ALLOWED_ORIGINS must list at least one origin in production "
+                    "(comma-separated HTTPS origins for the Mini App)"
+                )
         return value
 
     @field_validator("DEBUG")
