@@ -215,6 +215,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         self,
         user_id: int,
         date_from: date,
+        date_to: date,
         exercise_id: Optional[int],
         max_exercises: int,
     ) -> List[Dict[str, Any]]:
@@ -233,6 +234,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                 ) AS set_item(item)
                 WHERE wl.user_id = :user_id
                   AND wl.date >= :date_from
+                  AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
                   AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
             ),
@@ -252,6 +254,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         params = {
             "user_id": user_id,
             "date_from": date_from,
+            "date_to": date_to,
             "exercise_id": exercise_id,
             "max_exercises": max_exercises,
         }
@@ -281,6 +284,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         self,
         user_id: int,
         date_from: date,
+        date_to: date,
         exercise_id: Optional[int],
         max_exercises: int,
         max_data_points: int,
@@ -300,6 +304,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                 ) AS set_item(item)
                 WHERE wl.user_id = :user_id
                   AND wl.date >= :date_from
+                  AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
                   AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
             ),
@@ -319,6 +324,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         params = {
             "user_id": user_id,
             "date_from": date_from,
+            "date_to": date_to,
             "exercise_id": exercise_id,
             "max_exercises": max_exercises,
             "max_data_points": max_data_points,
@@ -366,6 +372,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         self,
         user_id: int,
         date_from: date,
+        date_to: date,
         exercise_id: Optional[int],
         max_exercises: int,
     ) -> List[Dict[str, Any]]:
@@ -384,6 +391,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                 ) AS set_item(item)
                 WHERE wl.user_id = :user_id
                   AND wl.date >= :date_from
+                  AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
                   AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
             ),
@@ -403,6 +411,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         params = {
             "user_id": user_id,
             "date_from": date_from,
+            "date_to": date_to,
             "exercise_id": exercise_id,
             "max_exercises": max_exercises,
         }

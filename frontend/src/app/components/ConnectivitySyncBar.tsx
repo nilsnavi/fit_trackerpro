@@ -9,9 +9,9 @@ import { useSyncQueueUiState } from '@shared/hooks/useSyncQueueUiState'
  */
 export function ConnectivitySyncBar() {
     const online = useNetworkOnline()
-    const { queuedCount, isFlushing, retryInSec } = useSyncQueueUiState()
+    const { queuedCount, failedCount, isFlushing, retryInSec } = useSyncQueueUiState()
 
-    const showBar = !online || queuedCount > 0 || isFlushing
+    const showBar = !online || queuedCount > 0 || failedCount > 0 || isFlushing
 
     if (!showBar) return null
 
@@ -51,6 +51,12 @@ export function ConnectivitySyncBar() {
         }
         surfaceClass =
             'border-border bg-telegram-secondary-bg/80 text-telegram-text'
+    } else if (failedCount > 0) {
+        icon = <UploadCloud className="h-4 w-4 shrink-0" aria-hidden />
+        title = 'Не удалось синхронизировать изменения'
+        subtitle = `Требуется внимание: ${failedCount} ${pluralOps(failedCount)} не отправлены.`
+        surfaceClass =
+            'border-rose-500/35 bg-rose-500/12 text-rose-950 dark:text-rose-100'
     } else {
         return null
     }

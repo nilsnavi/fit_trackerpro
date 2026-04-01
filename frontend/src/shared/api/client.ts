@@ -42,6 +42,20 @@ class ApiService {
             (response) => response,
             (error: unknown) => {
                 const clientError = normalizeError(error)
+                if (
+                    clientError.status === 401 &&
+                    typeof window !== 'undefined' &&
+                    window.location.pathname !== '/login'
+                ) {
+                    // Minimal auth boundary UX: redirect to login and preserve return URL.
+                    const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+                    try {
+                        sessionStorage.setItem('return_url_after_login', returnUrl)
+                    } catch {
+                        // ignore
+                    }
+                    window.location.href = `/login?from=${encodeURIComponent(returnUrl)}`
+                }
                 if (clientError.status != null) {
                     console.error('API Error:', clientError)
                 } else {

@@ -734,11 +734,54 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleAddToWorkout = useCallback((exercise: Exercise) => {
-        // TODO: Implement adding to workout
-        console.log('Add to workout:', exercise);
+        // MVP: drop exercise into WorkoutBuilder draft and open the builder.
+        const draftKey = 'workout_builder_draft'
+        const now = new Date()
+        const existingRaw = localStorage.getItem(draftKey)
+        let existing: { name?: string; types?: string[]; blocks?: unknown[]; savedAt?: string } | null = null
+        if (existingRaw) {
+            try {
+                existing = JSON.parse(existingRaw) as typeof existing
+            } catch {
+                existing = null
+            }
+        }
+
+        const blockType =
+            exercise.category === 'cardio'
+                ? 'cardio'
+                : 'strength'
+
+        const newBlock = {
+            id: `block-${Date.now()}`,
+            type: blockType,
+            exercise: {
+                id: String(exercise.id),
+                name: exercise.name,
+                category: blockType,
+                muscleGroups: exercise.primaryMuscles,
+            },
+            config: {
+                sets: 3,
+                reps: blockType === 'cardio' ? undefined : 10,
+                weight: 0,
+                restSeconds: 60,
+            },
+            order: Array.isArray(existing?.blocks) ? existing.blocks.length : 0,
+        }
+
+        const draft = {
+            name: existing?.name || 'Моя тренировка',
+            types: Array.isArray(existing?.types) ? existing.types : [],
+            blocks: [...(Array.isArray(existing?.blocks) ? existing.blocks : []), newBlock],
+            savedAt: now.toISOString(),
+        }
+        localStorage.setItem(draftKey, JSON.stringify(draft))
+
         tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
-        handleCloseDetail();
-    }, [handleCloseDetail, tg.hapticFeedback]);
+        handleCloseDetail()
+        navigate('/workouts/builder')
+    }, [handleCloseDetail, navigate, tg.hapticFeedback]);
 
     const handleAddExercise = useCallback(() => {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })

@@ -116,6 +116,10 @@ export class SyncQueueEngine {
         return this.items.filter((i) => i.status === 'pending').length
     }
 
+    failedCount(): number {
+        return this.items.filter((i) => i.status === 'failed').length
+    }
+
     enqueue(input: EnqueueSyncMutationInput): EnqueueResult {
         const now = Date.now()
         const before = this.items.length
@@ -200,7 +204,14 @@ export class SyncQueueEngine {
                         this.notify()
                         break
                     }
-                    this.items = this.items.filter((i) => i.id !== next.id)
+                    // Нерекаверибл ошибка: не теряем операцию молча — помечаем failed.
+                    this.items[idx] = {
+                        ...next,
+                        status: 'failed',
+                        lastError: msg,
+                        failedAt: Date.now(),
+                        nextRetryAt: 0,
+                    }
                     this.persist()
                     this.notify()
                 }

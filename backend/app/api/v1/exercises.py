@@ -4,7 +4,9 @@ HTTP-only endpoints delegating business logic to services
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+import json
+
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user, require_admin
@@ -18,6 +20,7 @@ from app.schemas.exercises import (
     ExerciseMuscleGroupsResponse,
     ExerciseResponse,
     ExerciseUpdate,
+    RiskFlags,
 )
 from app.application.exercises_service import ExercisesService
 
@@ -66,6 +69,65 @@ async def create_exercise(
 ):
     service = ExercisesService(db)
     return await service.create_exercise(user_id=current_user.id, data=exercise_data)
+
+
+@router.post("/custom", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
+async def create_custom_exercise_multipart(
+    name: str = Form(...),
+    category: str = Form(...),
+    description: str = Form(""),
+    equipment: str = Form("[]"),
+    target_muscles: str = Form("[]"),
+    risks: str = Form("[]"),
+    difficulty: str = Form("beginner"),
+    media: UploadFile | None = File(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Compatibility endpoint for the frontend `AddExercise` form.
+
+    The UI submits a multipart/form-data payload with JSON-encoded arrays in some fields.
+    For MVP we accept the payload and create a pending exercise. Media storage is not
+    implemented yet; file is accepted but ignored.
+    """
+
+    def _parse_json_list(raw: str) -> list[str]:
+        try:
+            parsed = json.loads(raw) if raw else []
+            if isinstance(parsed, list):
+                return [str(x) for x in parsed if isinstance(x, (str, int, float)) and str(x).strip()]
+        except json.JSONDecodeError:
+            pass
+        return []
+
+    equipment_list = _parse_json_list(equipment)
+    muscle_groups = _parse_json_list(target_muscles)
+    risks_list = _parse_json_list(risks)
+
+    # Best-effort mapping from UI "risks" (joint areas) to backend health flags.
+    risk_flags = RiskFlags()
+    if "back" in risks_list:
+        risk_flags.back_problems = True
+    if "heart" in risks_list or "cardio" in risks_list:
+        risk_flags.heart_conditions = True
+
+    # Ignore `difficulty` and `media` for now; they are UI-only fields.
+    _ = (difficulty, media)
+
+    service = ExercisesService(db)
+    return await service.create_exercise(
+        user_id=current_user.id,
+        data=ExerciseCreate(
+            name=name,
+            category=category,  # pydantic validates against ExerciseCategory
+            description=description or None,
+            equipment=equipment_list,
+            muscle_groups=muscle_groups,
+            risk_flags=risk_flags,
+            media_url=None,
+        ),
+    )
 
 
 @router.put("/{exercise_id}", response_model=ExerciseResponse)

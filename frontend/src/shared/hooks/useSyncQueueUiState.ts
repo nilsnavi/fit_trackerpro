@@ -15,6 +15,7 @@ function backoffRetryInSec(items: readonly SyncQueueItem[], now: number): number
 
 export type SyncQueueUiState = {
     queuedCount: number
+    failedCount: number
     isFlushing: boolean
     /** Секунд до следующей попытки при backoff; 0 если не в ожидании повтора. */
     retryInSec: number
@@ -31,6 +32,7 @@ export function useSyncQueueUiState(): SyncQueueUiState {
 
     const items = engine.getSnapshot()
     const queuedCount = items.length
+    const failedCount = items.filter((i) => i.status === 'failed').length
     const isFlushing = engine.isFlushActive()
 
     useEffect(() => {
@@ -42,6 +44,7 @@ export function useSyncQueueUiState(): SyncQueueUiState {
     const now = Date.now()
     return {
         queuedCount,
+        failedCount,
         isFlushing,
         retryInSec: backoffRetryInSec(items, now),
     }

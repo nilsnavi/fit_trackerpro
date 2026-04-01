@@ -46,5 +46,18 @@ export const queryKeys = {
     },
     analytics: {
         dashboard: ['analytics', 'dashboard'] as const,
+        summary: (period: string) => ['analytics', 'summary', period] as const,
+        progress: (
+            period: string,
+            maxExercises: number,
+            maxDataPoints: number,
+            dateFrom: string | null,
+            dateTo: string | null
+        ) => ['analytics', 'progress', period, maxExercises, maxDataPoints, dateFrom, dateTo] as const,
+        trainingLoadDaily: (dateFrom: string | null, dateTo: string | null) =>
+            ['analytics', 'trainingLoadDaily', dateFrom, dateTo] as const,
+        muscleLoad: (dateFrom: string | null, dateTo: string | null) =>
+            ['analytics', 'muscleLoad', dateFrom, dateTo] as const,
+        recoveryState: ['analytics', 'recoveryState'] as const,
     },
 } as const

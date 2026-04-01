@@ -11,6 +11,8 @@ import {
     requestSyncFlush,
 } from '@shared/offline/syncQueue'
 
+const WORKOUT_START_DEDUPE_WINDOW_MS = 10_000
+
 /** Очередь создания шаблона: одинаковый payload заменяет предыдущий pending. */
 export function enqueueOfflineTemplateCreate(payload: WorkoutTemplateCreateRequest): never {
     enqueueSyncMutation({
@@ -36,14 +38,16 @@ export function enqueueOfflineTemplateUpdate(
     throw new OfflineMutationQueuedError()
 }
 
-/** Каждый старт — отдельный id вызова (дубли по двойному тапу = отдельные записи). */
-export function enqueueOfflineWorkoutStart(
-    invocationId: string,
-    payload: WorkoutStartRequest,
-): never {
+/**
+ * Старт тренировки: защищаемся от дублей в коротком окне (двойной тап / повтор).
+ * При этом не запрещаем пользователю начать тренировку ещё раз позже.
+ */
+export function enqueueOfflineWorkoutStart(payload: WorkoutStartRequest): never {
+    const bucket = Math.floor(Date.now() / WORKOUT_START_DEDUPE_WINDOW_MS)
+    const dedupeKey = payloadDedupeKey(`workout:start:${bucket}`, payload)
     enqueueSyncMutation({
         kind: WORKOUT_SYNC_KINDS.START,
-        dedupeKey: `workout:start:${invocationId}`,
+        dedupeKey,
         payload,
     })
     requestSyncFlush()

@@ -121,7 +121,7 @@ describe('SyncQueueEngine', () => {
         expect(engine.getSnapshot()[0].nextRetryAt).toBeGreaterThan(Date.now())
     })
 
-    it('drops item on non-recoverable error and continues', async () => {
+    it('marks item failed on non-recoverable error and continues', async () => {
         const storage = memoryStorage()
         const executeOp = jest
             .fn()
@@ -155,6 +155,7 @@ describe('SyncQueueEngine', () => {
 
         const n = await engine.flush()
         expect(n).toBe(1)
-        expect(engine.getSnapshot()).toHaveLength(0)
+        expect(engine.getSnapshot()).toHaveLength(1)
+        expect(engine.getSnapshot()[0].status).toBe('failed')
     })
 })
