@@ -1,0 +1,7 @@
+version: "2"
+web_addr: 127.0.0.1:4041
+tunnels:
+  fittracker-backend:
+    proto: http
+    addr: 18000
+

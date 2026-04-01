@@ -114,6 +114,16 @@ class Settings(BaseSettings):
         Field(description="Public base URL of the Telegram Mini App (WebApp)."),
     ] = _DEV_TELEGRAM_WEBAPP_URL
 
+    TELEGRAM_BOT_ENABLED: Annotated[
+        bool,
+        Field(
+            description=(
+                "Start Telegram bot runtime inside the API process (polling in dev, webhook in prod). "
+                "Disable this if another bot instance already runs polling elsewhere; WebApp auth still works."
+            )
+        ),
+    ] = True
+
     SECRET_KEY: Annotated[
         str,
         Field(description="JWT signing secret; use a long random value in production."),
@@ -145,6 +155,17 @@ class Settings(BaseSettings):
         Field(description="Sampling for profiles (0..1). If unset, uses traces sample rate.", ge=0.0, le=1.0),
     ] = None
     ENABLE_PROMETHEUS_METRICS: bool = True
+
+    # --- Dev UX: create DB schema automatically (no Alembic in repo) ---
+    AUTO_CREATE_DB_SCHEMA: Annotated[
+        bool,
+        Field(
+            description=(
+                "Create database tables on startup (Base.metadata.create_all). "
+                "Intended for local development only; keep false in production."
+            )
+        ),
+    ] = True
 
     # --- Optional: email ---
     SMTP_HOST: str | None = None

@@ -1,0 +1,43 @@
+services:
+  # Public HTTPS URL for Telegram Mini App (frontend dev server) via localtunnel.me
+  tunnel-frontend:
+    image: node:20-alpine
+    container_name: fittracker-tunnel-frontend
+    restart: unless-stopped
+    environment:
+      - http_proxy=http://http.docker.internal:3128
+      - https_proxy=http://http.docker.internal:3128
+      - NO_PROXY=frontend,backend,postgres,redis,localhost,127.0.0.1
+      - no_proxy=frontend,backend,postgres,redis,localhost,127.0.0.1
+    command:
+      [
+        "sh",
+        "-lc",
+        "npm_config_update_notifier=false npx --yes localtunnel --local-host frontend --port 5173"
+      ]
+    depends_on:
+      - frontend
+    networks:
+      - fittracker-network
+
+  # Public HTTPS URL for API via localtunnel.me
+  tunnel-backend:
+    image: node:20-alpine
+    container_name: fittracker-tunnel-backend
+    restart: unless-stopped
+    environment:
+      - http_proxy=http://http.docker.internal:3128
+      - https_proxy=http://http.docker.internal:3128
+      - NO_PROXY=frontend,backend,postgres,redis,localhost,127.0.0.1
+      - no_proxy=frontend,backend,postgres,redis,localhost,127.0.0.1
+    command:
+      [
+        "sh",
+        "-lc",
+        "npm_config_update_notifier=false npx --yes localtunnel --local-host backend --port 8000"
+      ]
+    depends_on:
+      - backend
+    networks:
+      - fittracker-network
+

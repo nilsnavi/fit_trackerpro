@@ -50,16 +50,21 @@ Backend verifies Telegram payload with:
 - `auth_date` freshness check
 - safe parsing of user data from `init_data`
 
-Implementation lives in `backend/app/utils/telegram_auth.py` and is consumed by the auth service layer.
+Implementation lives in `backend/app/infrastructure/telegram_auth.py` and is consumed by the auth service layer.
 
 ## 6) Local testing
 
 Telegram requires HTTPS for real WebApp launch. For local validation:
 
-- Run app locally (`docker-compose up -d`)
-- Expose frontend with tunnel (`ngrok`/`cloudflared`)
-- Put tunnel HTTPS URL into BotFather menu button
-- Re-open Mini App from Telegram
+- Start app + tunnels:
+  - `powershell -ExecutionPolicy Bypass -File .\scripts\telegram-miniapp-dev.ps1` (localtunnel)
+  - If localtunnel is blocked in your network, use ngrok (requires authtoken):
+    - `powershell -ExecutionPolicy Bypass -File .\scripts\telegram-miniapp-dev.ps1 -TunnelProvider ngrok -NgrokAuthtoken "<NGROK_AUTHTOKEN>"`
+- Copy the **FRONTEND** HTTPS URL into BotFather:
+  - `@BotFather -> /mybots -> <your bot> -> Bot Settings -> Menu Button`
+- Apply URLs to runtime config + backend CORS:
+  - `powershell -ExecutionPolicy Bypass -File .\scripts\set-telegram-miniapp-urls.ps1 -FrontendUrl "<FRONTEND_URL>" -ApiUrl "<BACKEND_URL>/api/v1"`
+- Re-open Mini App from Telegram.
 
 ## 7) Troubleshooting
 

@@ -1,0 +1,29 @@
+services:
+  # Public HTTPS URL for Telegram Mini App (frontend dev server)
+  tunnel-frontend:
+    image: cloudflare/cloudflared:latest
+    container_name: fittracker-tunnel-frontend
+    restart: unless-stopped
+    environment:
+      - http_proxy=http://http.docker.internal:3128
+      - https_proxy=http://http.docker.internal:3128
+    command: tunnel --protocol http2 --url http://frontend:5173
+    depends_on:
+      - frontend
+    networks:
+      - fittracker-network
+
+  # Public HTTPS URL for API (so Mini App can call backend from Telegram client)
+  tunnel-backend:
+    image: cloudflare/cloudflared:latest
+    container_name: fittracker-tunnel-backend
+    restart: unless-stopped
+    environment:
+      - http_proxy=http://http.docker.internal:3128
+      - https_proxy=http://http.docker.internal:3128
+    command: tunnel --protocol http2 --url http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - fittracker-network
+
