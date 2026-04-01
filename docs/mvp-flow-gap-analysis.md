@@ -62,7 +62,7 @@
     - `GET /exercises/categories/list`
     - `GET /exercises/equipment/list`
     - `GET /exercises/muscle-groups/list`
-    - `POST /exercises/custom` (multipart) — **важно**
+    - `POST /api/v1/exercises/custom` (multipart) — **важно** (на фронте вызывается как `POST /exercises/custom` при `API_URL=.../api/v1`)
   - BE (`api/v1/exercises.py`):
     - `GET /api/v1/exercises/`
     - `GET /api/v1/exercises/{exercise_id}`
@@ -71,7 +71,7 @@
     - `GET /api/v1/exercises/categories/list`
     - `GET /api/v1/exercises/equipment/list`
     - `GET /api/v1/exercises/muscle-groups/list`
-  - **Несостыковка**: в BE **нет** `POST /exercises/custom` (в v1 router такого пути нет).
+  - **Статус**: в BE v1 **реализовано** `POST /api/v1/exercises/custom` (multipart) как совместимый эндпоинт для формы `AddExercise`.
 - **Backend services / use cases**
   - `app.application.exercises_service.ExercisesService`
 - **DB entities**
@@ -83,7 +83,7 @@
 
 **Gap summary**
 - Browsing каталога в целом подключён к API (React Query), есть loading/empty/error UX.
-- “Add custom exercise” flow на фронте ожидает `POST /exercises/custom`, а на бэке такого эндпоинта **нет** → **сломанный E2E сценарий добавления упражнения**.
+- “Add custom exercise” flow на фронте ожидает `POST /exercises/custom` (при базовом URL `.../api/v1` это превращается в `POST /api/v1/exercises/custom`) → E2E должен работать при корректной конфигурации `API_URL` и наличии JWT.
 - В `Catalog` кнопка “В мою тренировку” — **TODO** (лог только в консоль) → browsing не интегрирован с созданием тренировки/шаблона.
 
 ---
@@ -238,7 +238,7 @@
 
 **Gap summary**
 - История закрыта end-to-end достаточно хорошо.
-- Потенциальный gap: `workoutsApi.getCalendarMonth` использует `GET /workouts/calendar`, но в BE v1 `workouts.py` такого эндпоинта нет (календарь есть в analytics: `GET /analytics/calendar`). Это выглядит как **UI/API mismatch** для календаря (не core MVP list/history, но рядом).
+- Потенциальный gap: календарь в UI должен опираться на **канонический** эндпоинт `GET /api/v1/analytics/calendar`. Ранее фронт дергал `GET /workouts/calendar`, что расходилось с архитектурной логикой (calendar view живёт в analytics). Решение: фронт использует `GET /analytics/calendar` (относительно `API_URL=.../api/v1`).
 
 ---
 
@@ -290,7 +290,7 @@
 
 ### Экран есть, API нет
 - **Custom exercise upload**
-  - FE ожидает `POST /exercises/custom` (multipart) (`exercisesApi.createCustom`, `AddExercise`), но BE v1 router такого пути не содержит → E2E сломан.
+  - FE ожидает `POST /exercises/custom` (multipart) (`exercisesApi.createCustom`, `AddExercise`), а BE v1 предоставляет `POST /api/v1/exercises/custom` (multipart). Нужно держать этот путь как совместимый контракт и прикрыть тестами.
 - **User stats / coach access / export**
   - FE `usersApi` вызывает:
     - `GET /users/stats`
@@ -333,7 +333,7 @@
   - Реализовать `Login` через Telegram WebApp initData: получить `init_data` → `POST /users/auth/telegram` → сохранить `auth_token` → redirect назад.
   - Добавить базовые route guards: при 401 на `/profile`, `/workouts`, `/exercises`, `/analytics` → redirect to `/login` + сохранение returnUrl.
 - **Fix broken endpoints mismatches**
-  - Либо добавить на BE `POST /api/v1/exercises/custom` (multipart), либо поменять FE на `POST /api/v1/exercises/` (JSON) и/или реализовать multipart на существующем пути.
+  - Рекомендация: canonical creation остаётся `POST /api/v1/exercises/` (JSON), а `POST /api/v1/exercises/custom` (multipart) — compatibility endpoint для UI формы; поддерживать до миграции UI на JSON (если/когда понадобится).
   - Привести календарь к одному контракту: либо FE использовать `GET /analytics/calendar`, либо BE добавить alias `GET /workouts/calendar`.
 - **Catalog → workout integration**
   - Сделать “В мою тренировку”:

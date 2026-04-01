@@ -3,7 +3,7 @@ set -e
 
 # Runtime config for the SPA (window.__APP_CONFIG__) — must run before nginx serves /config.js.
 # Defaults match local dev; override via container environment at deploy time.
-export API_URL="${API_URL:-http://localhost:8000/api/v1}"
+export API_URL="${VITE_API_URL:-${API_URL:-http://localhost:8000/api/v1}}"
 export TELEGRAM_BOT_USERNAME="${TELEGRAM_BOT_USERNAME:-}"
 export TELEGRAM_WEBAPP_URL="${TELEGRAM_WEBAPP_URL:-}"
 export SENTRY_DSN="${SENTRY_DSN:-}"

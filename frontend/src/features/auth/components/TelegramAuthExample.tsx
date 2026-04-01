@@ -94,7 +94,15 @@ export function TelegramAuthExample() {
             const data = await response.json()
 
             // Store token
-            localStorage.setItem('auth_token', data.access_token)
+            try {
+                const { useAuthStore } = await import('@/stores/authStore')
+                useAuthStore.getState().setTokens({
+                    accessToken: data.access_token,
+                    refreshToken: data.refresh_token,
+                })
+            } catch {
+                // ignore
+            }
 
             // Update state
             setAuthState({

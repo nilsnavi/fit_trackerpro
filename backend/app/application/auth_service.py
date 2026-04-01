@@ -82,7 +82,7 @@ class AuthService:
 
         user, created = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
-        create_refresh_token(user.telegram_id)  # preserved side-effect compatibility
+        refresh_token = create_refresh_token(user.telegram_id)
 
         audit_log(
             action=AUTH_TELEGRAM_LOGIN,
@@ -107,6 +107,7 @@ class AuthService:
             message="Authentication successful",
             user=user_response,
             access_token=access_token,
+            refresh_token=refresh_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )

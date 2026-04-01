@@ -140,6 +140,12 @@ class AuthResponse(BaseModel):
     message: str = Field(..., max_length=2000)
     user: Optional[TelegramUserData] = None
     access_token: Optional[str] = Field(None, max_length=16384)
+    refresh_token: Optional[str] = Field(
+        None,
+        min_length=32,
+        max_length=16384,
+        description="Refresh token; optional for backward compatibility.",
+    )
     token_type: str = Field(default="bearer", pattern="^(?i)bearer$")
     expires_in: Optional[int] = Field(
         None,

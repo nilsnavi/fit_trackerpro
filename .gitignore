@@ -149,9 +149,7 @@ web_modules/
 .vite
 *.tsbuildinfo
 
-# Случайный npm в корне репозитория (проект: frontend/ и backend/)
-/package.json
-/package-lock.json
+# Root package.json используется для монорепо-скриптов (frontend+backend).
 
 # --- Testing / E2E ---
 playwright-report/

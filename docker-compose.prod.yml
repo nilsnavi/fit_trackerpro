@@ -97,7 +97,7 @@ services:
     container_name: fittracker-frontend
     restart: always
     environment:
-      - API_URL=${API_URL}
+      - VITE_API_URL=${VITE_API_URL:-${API_URL:?API_URL is required}}
       - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-}
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:-}
       - SENTRY_DSN=${SENTRY_DSN:-}

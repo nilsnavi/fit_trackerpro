@@ -738,10 +738,11 @@ export const Catalog: React.FC = () => {
         const draftKey = 'workout_builder_draft'
         const now = new Date()
         const existingRaw = localStorage.getItem(draftKey)
-        let existing: { name?: string; types?: string[]; blocks?: unknown[]; savedAt?: string } | null = null
+        type WorkoutBuilderDraft = { name?: string; types?: string[]; blocks?: unknown[]; savedAt?: string }
+        let existing: WorkoutBuilderDraft | null = null
         if (existingRaw) {
             try {
-                existing = JSON.parse(existingRaw) as typeof existing
+                existing = JSON.parse(existingRaw) as WorkoutBuilderDraft
             } catch {
                 existing = null
             }

@@ -5,10 +5,12 @@ import { useMemo, useState } from 'react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { api } from '@shared/api/client'
 import { getErrorMessage } from '@shared/errors'
+import { useAuthStore } from '@/stores/authStore'
 
 export function LoginPage() {
     const navigate = useNavigate()
     const tg = useTelegramWebApp()
+    const setTokens = useAuthStore((s) => s.setTokens)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -33,13 +35,16 @@ export function LoginPage() {
         }
         setIsSubmitting(true)
         try {
-            const res = await api.post<{ access_token: string }>('/users/auth/telegram', {
+            const res = await api.post<{ access_token: string; refresh_token?: string | null }>(
+                '/users/auth/telegram',
+                {
                 init_data: tg.initData,
-            })
+                },
+            )
             if (!res?.access_token) {
                 throw new Error('Не получен access_token')
             }
-            localStorage.setItem('auth_token', res.access_token)
+            setTokens({ accessToken: res.access_token, refreshToken: res.refresh_token })
             tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
             navigate(returnUrl, { replace: true })
         } catch (e) {
