@@ -60,10 +60,10 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
-      - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL}
+      - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:?TELEGRAM_WEBAPP_URL is required}
       - ENVIRONMENT=production
       - DEBUG=false
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
       - SENTRY_DSN=${SENTRY_DSN}
     healthcheck:
       test:

@@ -64,14 +64,20 @@ if [ ! -f .env ]; then
     read -p "Press Enter after editing .env file..."
 fi
 
-# Pull and start containers from registry images
-echo "🐳 Pulling and starting containers from registry..."
+# Pull images and apply migrations before switching running containers (matches CI order)
+echo "🐳 Pulling container images..."
 docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml up -d
 
-# Run database migrations
-echo "📊 Running database migrations..."
-docker-compose -f docker-compose.prod.yml exec backend alembic upgrade head
+echo "📊 Running database migrations (before up -d)..."
+docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+
+echo "🌱 Seeding reference data (idempotent)..."
+docker-compose -f docker-compose.prod.yml run --rm \
+  -e REFERENCE_DATA_DIR=/app/reference_data \
+  backend python3 -m app.cli.seed_reference_data apply
+
+echo "🐳 Starting / updating containers..."
+docker-compose -f docker-compose.prod.yml up -d
 
 # Set up SSL renewal cron job
 echo "⏰ Setting up SSL renewal cron job..."
