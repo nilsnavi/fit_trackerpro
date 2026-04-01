@@ -132,6 +132,8 @@ async def recalculate_recovery_state(
 async def get_exercise_progress(
     exercise_id: Optional[int] = Query(None),
     period: str = Query("30d", pattern="^(7d|30d|90d|1y|all)$"),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
     max_exercises: int = Query(
         settings.ANALYTICS_DEFAULT_MAX_EXERCISES,
         ge=1,
@@ -150,6 +152,8 @@ async def get_exercise_progress(
         user_id=current_user.id,
         exercise_id=exercise_id,
         period=period,
+        date_from=date_from,
+        date_to=date_to,
         max_exercises=max_exercises,
         max_data_points=max_data_points,
     )

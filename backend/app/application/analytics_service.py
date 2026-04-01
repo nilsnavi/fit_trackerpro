@@ -347,16 +347,23 @@ class AnalyticsService:
         period: str,
         max_exercises: int,
         max_data_points: int,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
     ) -> List[ExerciseProgressResponse]:
         days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 3650}
         days = days_map.get(period, 30)
-        date_from = date.today() - timedelta(days=days)
+        resolved_date_to = date_to or date.today()
+        resolved_date_from = date_from or (resolved_date_to - timedelta(days=days))
+        if resolved_date_from > resolved_date_to:
+            raise AnalyticsValidationError("date_from cannot be greater than date_to")
 
         cache_key = self._build_cache_key(
             "progress",
             user_id,
             exercise_id=exercise_id or "all",
             period=period,
+            date_from=resolved_date_from.isoformat(),
+            date_to=resolved_date_to.isoformat(),
             max_exercises=max_exercises,
             max_data_points=max_data_points,
         )
@@ -366,7 +373,8 @@ class AnalyticsService:
 
         summary_rows = await self.repository.get_exercise_progress_summary(
             user_id=user_id,
-            date_from=date_from,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
             exercise_id=exercise_id,
             max_exercises=max_exercises,
         )
@@ -375,14 +383,16 @@ class AnalyticsService:
 
         data_points_rows = await self.repository.get_exercise_progress_data_points(
             user_id=user_id,
-            date_from=date_from,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
             exercise_id=exercise_id,
             max_exercises=max_exercises,
             max_data_points=max_data_points,
         )
         best_perf_rows = await self.repository.get_exercise_progress_best_performance(
             user_id=user_id,
-            date_from=date_from,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
             exercise_id=exercise_id,
             max_exercises=max_exercises,
         )

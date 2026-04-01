@@ -171,12 +171,11 @@ export function useStartWorkoutMutation() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: async (payload: WorkoutStartRequest) => {
-            const invocationId = crypto.randomUUID()
             try {
                 return await workoutsApi.startWorkout(payload)
             } catch (e) {
                 if (isRecoverableSyncError(e)) {
-                    enqueueOfflineWorkoutStart(invocationId, payload)
+                    enqueueOfflineWorkoutStart(payload)
                 }
                 throw e
             }

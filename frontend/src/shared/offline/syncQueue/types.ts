@@ -2,7 +2,7 @@
  * Очередь офлайн-мутаций: элементы сериализуются в localStorage и
  * переотправляются по сети с защитой от дублей по {@link SyncQueueItem.dedupeKey}.
  */
-export type SyncQueueItemStatus = 'pending' | 'processing'
+export type SyncQueueItemStatus = 'pending' | 'processing' | 'failed'
 
 export type SyncQueueItem = {
     id: string
@@ -18,6 +18,11 @@ export type SyncQueueItem = {
     attempts: number
     status: SyncQueueItemStatus
     lastError?: string
+    /**
+     * Для нерекаверибл ошибок (обычно 4xx): элемент остаётся в очереди,
+     * но не будет автоматически ретраиться пока пользователь не вмешается.
+     */
+    failedAt?: number
     /** Unix ms — не раньше этого времени пробовать снова (backoff). */
     nextRetryAt: number
 }

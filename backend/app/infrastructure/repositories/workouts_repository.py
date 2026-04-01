@@ -106,6 +106,20 @@ class WorkoutsRepository(SQLAlchemyRepository):
         )
         return result.scalars().all()
 
+    async def list_workouts_in_range(self, user_id: int, date_from: date, date_to: date) -> List[WorkoutLog]:
+        result = await self.db.execute(
+            select(WorkoutLog)
+            .where(
+                and_(
+                    WorkoutLog.user_id == user_id,
+                    WorkoutLog.date >= date_from,
+                    WorkoutLog.date <= date_to,
+                )
+            )
+            .order_by(WorkoutLog.date.asc(), WorkoutLog.id.asc())
+        )
+        return result.scalars().all()
+
     async def list_exercises_by_ids(self, exercise_ids: set[int]) -> List[Exercise]:
         if not exercise_ids:
             return []

@@ -2,6 +2,7 @@
 Workouts API Router
 HTTP-only endpoints delegating business logic to services
 """
+import calendar
 from datetime import date
 from typing import Optional
 
@@ -13,6 +14,7 @@ from app.api.deps.auth import get_current_user
 from app.api.deps.idempotency import optional_idempotency_key
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
+from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
 from app.schemas.workouts import (
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
@@ -165,3 +167,39 @@ async def get_workout_detail(
 ):
     service = WorkoutsService(db)
     return await service.get_workout_detail(user_id=current_user.id, workout_id=workout_id)
+
+
+@router.get("/calendar")
+async def get_workouts_calendar_month(
+    year: int = Query(date.today().year, ge=2020, le=2030),
+    month: int = Query(date.today().month, ge=1, le=12),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Compatibility endpoint for the current frontend calendar page.
+
+    Returns a flat list of workouts in the selected month (frontend groups by day).
+    """
+    first_day = date(year, month, 1)
+    last_day = date(year, month, calendar.monthrange(year, month)[1])
+    repo = WorkoutsRepository(db)
+    rows = await repo.list_workouts_in_range(user_id=current_user.id, date_from=first_day, date_to=last_day)
+
+    items = []
+    for w in rows:
+        completed = w.duration is not None and int(w.duration) > 0
+        title = (w.comments or "").strip() or f"Тренировка #{w.id}"
+        items.append(
+            {
+                "id": int(w.id),
+                "title": title,
+                "type": "strength",  # TODO: derive from template/type metadata
+                "status": "completed" if completed else "planned",
+                "duration_minutes": int(w.duration or 0),
+                "calories_burned": None,
+                "scheduled_at": w.date.isoformat(),
+                "completed_at": (w.updated_at.isoformat() if completed else None),
+            }
+        )
+    return items
