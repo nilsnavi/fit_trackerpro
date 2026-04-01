@@ -22,6 +22,30 @@ class UserProfileData(BaseModel):
     equipment: List[str] = Field(default_factory=list)
     limitations: List[str] = Field(default_factory=list)
     goals: List[str] = Field(default_factory=list)
+    current_weight: Optional[float] = Field(
+        None,
+        gt=0,
+        le=1000,
+        description="Current body weight in kilograms.",
+    )
+    target_weight: Optional[float] = Field(
+        None,
+        gt=0,
+        le=1000,
+        description="Target body weight in kilograms.",
+    )
+    height: Optional[float] = Field(
+        None,
+        gt=0,
+        le=300,
+        description="Height in centimeters.",
+    )
+    birth_date: Optional[str] = Field(
+        None,
+        min_length=4,
+        max_length=32,
+        description="Date of birth (string; format depends on client).",
+    )
 
 
 class UserSettingsData(BaseModel):
@@ -65,6 +89,30 @@ class UserProfilePatch(BaseModel):
         None,
         max_length=50,
         description="At most 50 goal tags.",
+    )
+    current_weight: Optional[float] = Field(
+        None,
+        gt=0,
+        le=1000,
+        description="Current body weight in kilograms.",
+    )
+    target_weight: Optional[float] = Field(
+        None,
+        gt=0,
+        le=1000,
+        description="Target body weight in kilograms.",
+    )
+    height: Optional[float] = Field(
+        None,
+        gt=0,
+        le=300,
+        description="Height in centimeters.",
+    )
+    birth_date: Optional[str] = Field(
+        None,
+        min_length=4,
+        max_length=32,
+        description="Date of birth (string; format depends on client).",
     )
 
 

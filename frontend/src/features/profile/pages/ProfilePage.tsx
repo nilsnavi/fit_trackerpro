@@ -337,7 +337,12 @@ export const ProfilePage: React.FC = () => {
                                 value={profile?.profile.current_weight || 0}
                                 suffix="кг"
                                 type="number"
-                                onSave={(value) => updateProfile({ current_weight: parseFloat(value) })}
+                                onSave={(value) => {
+                                    const normalized = value.replace(',', '.').trim()
+                                    const n = Number(normalized)
+                                    if (!Number.isFinite(n) || n <= 0) return
+                                    void updateProfile({ current_weight: n })
+                                }}
                             />
                         </div>
                         <div className="text-right">
@@ -347,7 +352,12 @@ export const ProfilePage: React.FC = () => {
                                 value={profile?.profile.target_weight || 0}
                                 suffix="кг"
                                 type="number"
-                                onSave={(value) => updateProfile({ target_weight: parseFloat(value) })}
+                                onSave={(value) => {
+                                    const normalized = value.replace(',', '.').trim()
+                                    const n = Number(normalized)
+                                    if (!Number.isFinite(n) || n <= 0) return
+                                    void updateProfile({ target_weight: n })
+                                }}
                             />
                         </div>
                     </div>
