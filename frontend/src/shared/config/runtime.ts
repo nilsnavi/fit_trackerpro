@@ -18,6 +18,8 @@ export interface AppRuntimeConfig {
     SENTRY_RELEASE: string
     /** Sentry dist (optional, useful for SPA build artifacts) */
     SENTRY_DIST: string
+    /** Feature flag: use real analytics backend API instead of local mocks */
+    USE_REAL_ANALYTICS: boolean
 }
 
 declare global {
@@ -42,6 +44,16 @@ function firstNonEmpty(...values: (string | undefined)[]): string | undefined {
     return undefined
 }
 
+function parseBoolean(v: unknown): boolean | undefined {
+    if (typeof v === 'boolean') return v
+    if (typeof v !== 'string') return undefined
+    const t = trim(v)?.toLowerCase()
+    if (t === undefined) return undefined
+    if (t === 'true' || t === '1' || t === 'yes' || t === 'y' || t === 'on') return true
+    if (t === 'false' || t === '0' || t === 'no' || t === 'n' || t === 'off') return false
+    return undefined
+}
+
 export function getRuntimeConfig(): AppRuntimeConfig {
     const w = typeof window !== 'undefined' ? window.__APP_CONFIG__ : undefined
 
@@ -60,11 +72,17 @@ export function getRuntimeConfig(): AppRuntimeConfig {
             'development',
         SENTRY_RELEASE: firstNonEmpty(w?.SENTRY_RELEASE, import.meta.env.VITE_SENTRY_RELEASE) ?? '',
         SENTRY_DIST: firstNonEmpty(w?.SENTRY_DIST) ?? '',
+        USE_REAL_ANALYTICS:
+            parseBoolean(w?.USE_REAL_ANALYTICS ?? import.meta.env.VITE_USE_REAL_ANALYTICS) ?? false,
     }
 }
 
 export function getPublicApiBaseUrl(): string {
     return getRuntimeConfig().API_URL
+}
+
+export function useRealAnalytics(): boolean {
+    return getRuntimeConfig().USE_REAL_ANALYTICS
 }
 
 export function getTelegramBotUsername(): string {

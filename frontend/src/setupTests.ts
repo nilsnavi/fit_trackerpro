@@ -61,7 +61,8 @@ Object.defineProperty(global, 'import', {
             env: {
                 VITE_API_URL: 'http://localhost:8000/api/v1',
                 VITE_TELEGRAM_BOT_USERNAME: 'test_bot',
-                VITE_ENVIRONMENT: 'test'
+                VITE_ENVIRONMENT: 'test',
+                VITE_USE_REAL_ANALYTICS: 'false',
             }
         }
     }

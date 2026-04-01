@@ -15,8 +15,6 @@ function RouteErrorFallback({
     resetError,
     eventId,
     screenTitle,
-    error: _error,
-    componentStack: _componentStack,
 }: SentryFallbackProps & { screenTitle?: string }) {
     const navigate = useNavigate()
 

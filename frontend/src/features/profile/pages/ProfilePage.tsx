@@ -244,7 +244,7 @@ export const ProfilePage: React.FC = () => {
         await revokeCoachAccess(accessId);
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         // Single source of truth for tokens: authStore (syncs to storage)
         try {
             const mod = await import('@/stores/authStore')

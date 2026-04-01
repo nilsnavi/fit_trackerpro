@@ -25,7 +25,7 @@ ENV HTTP_PROXY=$HTTP_PROXY \
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (Alpine)
 RUN export http_proxy=$HTTP_PROXY && \
     export https_proxy=$HTTPS_PROXY && \
     sed -i 's|https://dl-cdn.alpinelinux.org|http://dl-cdn.alpinelinux.org|g' /etc/apk/repositories && \
@@ -59,9 +59,9 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Health check: canonical GET /api/v1/system/health, validate JSON contract (matches CI smoke checks)
+# Health check: canonical GET /api/v1/system/health
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python3 -c "import json,sys,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/api/v1/system/health', timeout=5); d=json.load(r); sys.exit(0 if d.get('status')=='healthy' else 1)"
+    CMD curl -f http://127.0.0.1:8000/api/v1/system/health || exit 1
 
 # Run the application with Gunicorn and Uvicorn workers
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--error-logfile", "-", "--capture-output", "--enable-stdio-inheritance", "app.main:app"]

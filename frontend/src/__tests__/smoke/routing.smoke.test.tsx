@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import type React from 'react'
 import { render, waitFor } from '@testing-library/react'
 import App from '@/App'
@@ -100,8 +101,8 @@ async function expectNoCrashFallback() {
 
 describe('smoke: app routing', () => {
     beforeEach(() => {
-        ;(console.error as jest.Mock).mockClear?.()
-        ;(console.warn as jest.Mock).mockClear?.()
+        void (console.error as jest.Mock).mockClear?.()
+        void (console.warn as jest.Mock).mockClear?.()
     })
 
     it('renders App without crashing', async () => {

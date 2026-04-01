@@ -73,10 +73,11 @@ async function tryTelegramLogin(page: Page, opts: TelegramLoginOptions): Promise
 
     await page.addInitScript((initData: string) => {
         // Minimal stub for common Telegram WebApp usage patterns.
-        ;(window as any).Telegram = (window as any).Telegram ?? {}
-        ;(window as any).Telegram.WebApp = (window as any).Telegram.WebApp ?? {}
-        ;(window as any).Telegram.WebApp.initData = initData
-        ;(window as any).Telegram.WebApp.initDataUnsafe = { query_id: 'e2e' }
+        const w = window as any
+        w.Telegram = w.Telegram ?? {}
+        w.Telegram.WebApp = w.Telegram.WebApp ?? {}
+        w.Telegram.WebApp.initData = initData
+        w.Telegram.WebApp.initDataUnsafe = { query_id: 'e2e' }
     }, opts.initData)
 
     const endpoint = opts.endpoint ?? '/api/v1/users/auth/telegram'
