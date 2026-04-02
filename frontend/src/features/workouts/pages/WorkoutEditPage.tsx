@@ -16,14 +16,14 @@ export function WorkoutEditPage() {
                 <button
                     type="button"
                     onClick={() => navigate('/analytics')}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-neutral-800"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-telegram-secondary-bg text-telegram-text"
                     aria-label="Назад"
                 >
                     <ArrowLeft className="h-4 w-4" />
                 </button>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Редактирование тренировки</h1>
+                <h1 className="text-xl font-bold text-telegram-text">Редактирование тренировки</h1>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-telegram-hint">
                 Заглушка для тренировки #{id ?? '—'}. Редактирование записи из истории пока не реализовано.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">

@@ -1,5 +1,6 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { cn } from '@shared/lib/cn'
+import { useEffect } from 'react'
 
 /**
  * Prompt-based PWA update: new service worker stays in "waiting" until the user
@@ -12,6 +13,15 @@ export function PwaUpdatePrompt() {
     } = useRegisterSW({
         immediate: true,
     })
+
+    // В Telegram Mini App пользователи часто не видят промпт обновления.
+    // Автоприменяем свежий SW, чтобы не застревать на старых ассетах/теме/локализации.
+    useEffect(() => {
+        if (!needRefresh) return
+        const isTelegram = typeof window !== 'undefined' && Boolean((window as any).Telegram?.WebApp)
+        if (!isTelegram) return
+        void updateServiceWorker(true)
+    }, [needRefresh, updateServiceWorker])
 
     if (!needRefresh) {
         return null

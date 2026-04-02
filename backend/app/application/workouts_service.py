@@ -252,17 +252,42 @@ class WorkoutsService:
         data: WorkoutStartRequest,
         client_ip: str | None = None,
     ) -> WorkoutStartResponse:
+        template = None
         if data.template_id:
             template = await self.repository.get_template(user_id=user_id, template_id=data.template_id)
             if not template:
                 raise WorkoutNotFoundError("Template not found")
 
+        initial_exercises: list[dict] = []
+        if template is not None:
+            for ex in template.exercises or []:
+                sets = int(ex.get("sets") or 0)
+                if sets < 1:
+                    sets = 1
+                initial_exercises.append(
+                    {
+                        "exercise_id": ex.get("exercise_id"),
+                        "name": ex.get("name") or "Exercise",
+                        "notes": ex.get("notes"),
+                        "sets_completed": [
+                            {
+                                "set_number": i + 1,
+                                "reps": ex.get("reps"),
+                                "weight": ex.get("weight"),
+                                "duration": ex.get("duration"),
+                                "completed": False,
+                            }
+                            for i in range(sets)
+                        ],
+                    }
+                )
+
         workout = WorkoutLog(
             user_id=user_id,
             template_id=data.template_id,
             date=date.today(),
-            exercises=[],
-            comments=data.name,
+            exercises=initial_exercises,
+            comments=data.name or (template.name if template else None),
         )
         workout = await self.repository.create_workout_log(workout)
         await invalidate_user_analytics_cache(user_id)

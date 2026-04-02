@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { useNavigate } from 'react-router-dom'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
+import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import { getWorkoutListTypeConfig } from '@features/workouts/config/workoutTypeConfigs'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
@@ -13,6 +14,7 @@ import { useUserStatsQuery } from '@features/profile/hooks/useUserStatsQuery'
 import { useAddWaterEntryMutation } from '@features/health/hooks/useHealthQueries'
 import { useHomeWaterQuery, useHomeWorkoutTemplatesQuery } from '@features/home/hooks'
 import { WaterWidget, WorkoutCard } from '@features/home/components'
+import { useWorkoutSessionDraftStore } from '@/state/local'
 
 interface DashboardStats {
     calories: number
@@ -35,12 +37,17 @@ export function Home() {
     const { data: userStats } = useUserStatsQuery()
     const { data: waterData } = useHomeWaterQuery()
     const { templates, isPending: templatesLoading } = useHomeWorkoutTemplatesQuery()
+    const startWorkoutMutation = useStartWorkoutMutation()
+    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
     const addWater = useAddWaterEntryMutation()
 
     const { data: workoutHistory, isLoading: historyLoading } = useWorkoutHistoryQuery()
 
     const recentWorkouts = useMemo(() => {
-        const items = (workoutHistory?.items ?? []).map(toWorkoutListItem).slice(0, 3)
+        const items = (workoutHistory?.items ?? [])
+            .filter((item) => typeof item.duration === 'number' && item.duration > 0)
+            .map(toWorkoutListItem)
+            .slice(0, 3)
         return items
     }, [workoutHistory])
 
@@ -107,13 +114,22 @@ export function Home() {
         })
     }
 
-    const handleTemplateStart = (id: string) => {
+    const handleTemplateStart = async (id: string) => {
         tg.hapticFeedback({ type: 'selection' })
         if (id === 'custom') {
             navigate('/workouts/builder')
             return
         }
-        navigate(`/workouts/builder?templateId=${encodeURIComponent(id)}`)
+        const templateId = Number.parseInt(id, 10)
+        if (!Number.isFinite(templateId)) return
+        try {
+            const started = await startWorkoutMutation.mutateAsync({ template_id: templateId })
+            const templateName = templates.find((t) => t.id === id)?.name
+            setWorkoutSessionDraft(started.id, templateName ?? `Тренировка #${started.id}`)
+            navigate(`/workouts/${started.id}`)
+        } catch {
+            // errors are surfaced via global error handlers
+        }
     }
 
     const getGreeting = () => {
@@ -208,8 +224,12 @@ export function Home() {
                                   <div key={template.id} className="w-40 shrink-0">
                                       <WorkoutCard
                                           template={template}
-                                          onStart={handleTemplateStart}
-                                          onClick={() => handleTemplateStart(template.id)}
+                                          onStart={(id) => {
+                                              void handleTemplateStart(id)
+                                          }}
+                                          onClick={(id) => {
+                                              void handleTemplateStart(id)
+                                          }}
                                       />
                                   </div>
                               ))}

@@ -107,6 +107,18 @@ export default defineConfig({
         port: 5173,
         host: true,
         allowedHosts: true,
+        /**
+         * Docker on Windows + large repo can exhaust watcher memory.
+         * Ignore heavy non-runtime folders to prevent ENOMEM crashes.
+         */
+        watch: {
+            ignored: [
+                /(^|\/)e2e(\/|$)/,
+                /(^|\/)\.husky(\/|$)/,
+                /(^|\/)node_modules(\/|$)/,
+                /(^|\/)dist(\/|$)/,
+            ],
+        },
     },
     build: {
         outDir: 'dist',
