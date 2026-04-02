@@ -122,6 +122,81 @@ class TestWorkoutTemplates:
         assert len(exercises) == 1
         assert exercises[0].get("exercise_id") == 2
 
+    async def test_archive_template_hides_from_default_list(self, authenticated_client: AsyncClient):
+        payload = {
+            "name": "Template Archive",
+            "type": "strength",
+            "exercises": [
+                {
+                    "exercise_id": 1,
+                    "name": "Push-ups",
+                    "sets": 3,
+                    "reps": 10,
+                    "rest_seconds": 60,
+                }
+            ],
+            "is_public": False,
+        }
+        created = await authenticated_client.post("/api/v1/workouts/templates", json=payload)
+        assert created.status_code in (200, 201), created.text
+        template_id = created.json().get("id")
+        assert template_id
+
+        archived = await authenticated_client.post(
+            f"/api/v1/workouts/templates/{template_id}/archive",
+        )
+        assert archived.status_code == 200, archived.text
+        archived_json = archived.json()
+        assert archived_json.get("id") == template_id
+        assert archived_json.get("is_archived") is True
+
+        listed_default = await authenticated_client.get("/api/v1/workouts/templates")
+        assert listed_default.status_code == 200, listed_default.text
+        default_ids = [item.get("id") for item in listed_default.json().get("items", [])]
+        assert template_id not in default_ids
+
+        listed_with_archived = await authenticated_client.get(
+            "/api/v1/workouts/templates",
+            params={"include_archived": True},
+        )
+        assert listed_with_archived.status_code == 200, listed_with_archived.text
+        archived_ids = [item.get("id") for item in listed_with_archived.json().get("items", [])]
+        assert template_id in archived_ids
+
+    async def test_unarchive_template_returns_to_default_list(self, authenticated_client: AsyncClient):
+        payload = {
+            "name": "Template Restore",
+            "type": "strength",
+            "exercises": [
+                {
+                    "exercise_id": 1,
+                    "name": "Push-ups",
+                    "sets": 3,
+                    "reps": 10,
+                    "rest_seconds": 60,
+                }
+            ],
+            "is_public": False,
+        }
+        created = await authenticated_client.post("/api/v1/workouts/templates", json=payload)
+        assert created.status_code in (200, 201), created.text
+        template_id = created.json().get("id")
+        assert template_id
+
+        archived = await authenticated_client.post(f"/api/v1/workouts/templates/{template_id}/archive")
+        assert archived.status_code == 200, archived.text
+
+        unarchived = await authenticated_client.post(f"/api/v1/workouts/templates/{template_id}/unarchive")
+        assert unarchived.status_code == 200, unarchived.text
+        unarchived_json = unarchived.json()
+        assert unarchived_json.get("id") == template_id
+        assert unarchived_json.get("is_archived") is False
+
+        listed_default = await authenticated_client.get("/api/v1/workouts/templates")
+        assert listed_default.status_code == 200, listed_default.text
+        default_ids = [item.get("id") for item in listed_default.json().get("items", [])]
+        assert template_id in default_ids
+
 
 @pytest.mark.integration
 class TestWorkoutStartComplete:

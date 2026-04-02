@@ -27,7 +27,7 @@ export const mapBackendTypeToSelectedTypes = (type: BackendWorkoutType): Workout
 export const mapTemplateExercisesToBlocks = (exercises: ExerciseInTemplate[]): WorkoutBlock[] =>
     exercises.map((exercise, index) => {
         const isCardio =
-            typeof exercise.duration === 'number' && exercise.duration > 0 && !exercise.reps
+            typeof exercise.duration === 'number' && exercise.duration > 0 && exercise.reps == null
         return {
             id: `template-${exercise.exercise_id}-${index}`,
             type: isCardio ? 'cardio' : 'strength',
@@ -39,7 +39,10 @@ export const mapTemplateExercisesToBlocks = (exercises: ExerciseInTemplate[]): W
             config: {
                 sets: exercise.sets,
                 reps: exercise.reps,
-                duration: exercise.duration ? Math.round(exercise.duration / 60) : undefined,
+                duration:
+                    typeof exercise.duration === 'number' && exercise.duration > 0
+                        ? Math.max(1, Math.ceil(exercise.duration / 60))
+                        : undefined,
                 restSeconds: exercise.rest_seconds,
                 weight: exercise.weight,
                 note: exercise.notes,

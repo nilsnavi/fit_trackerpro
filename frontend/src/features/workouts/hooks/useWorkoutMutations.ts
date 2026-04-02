@@ -79,6 +79,14 @@ type DeleteTemplateContext = {
     templateListsSnap: ReturnType<typeof takeWorkoutsTemplateListsSnapshot>
 }
 
+type ArchiveTemplateContext = {
+    templateListsSnap: ReturnType<typeof takeWorkoutsTemplateListsSnapshot>
+}
+
+type UnarchiveTemplateContext = {
+    templateListsSnap: ReturnType<typeof takeWorkoutsTemplateListsSnapshot>
+}
+
 type CompleteMutationContext = {
     calendarSnap: ReturnType<typeof takeWorkoutsCalendarSnapshot>
     historyListsSnap: ReturnType<typeof takeWorkoutsHistoryListsSnapshot>
@@ -200,6 +208,72 @@ export function useDeleteWorkoutTemplateMutation() {
                 },
             )
             return { templateListsSnap } satisfies DeleteTemplateContext
+        },
+        onError: (_err, _templateId, ctx) => {
+            if (!ctx) return
+            restoreSnapshotEntries(queryClient, ctx.templateListsSnap)
+        },
+        onSettled: () => {
+            invalidateWorkouts(queryClient)
+        },
+    })
+}
+
+export function useArchiveWorkoutTemplateMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (templateId: number) => workoutsApi.archiveTemplate(templateId),
+        onMutate: async (templateId) => {
+            await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
+            const templateListsSnap = takeWorkoutsTemplateListsSnapshot(queryClient)
+
+            queryClient.setQueriesData<WorkoutTemplateListResponse>(
+                { queryKey: ['workouts', 'templates', 'list'], exact: false },
+                (current) => {
+                    if (!current) return current
+                    const items = current.items.filter((item) => item.id != templateId)
+                    if (items.length === current.items.length) return current
+                    return {
+                        ...current,
+                        items,
+                        total: Math.max(0, current.total - 1),
+                    }
+                },
+            )
+            return { templateListsSnap } satisfies ArchiveTemplateContext
+        },
+        onError: (_err, _templateId, ctx) => {
+            if (!ctx) return
+            restoreSnapshotEntries(queryClient, ctx.templateListsSnap)
+        },
+        onSettled: () => {
+            invalidateWorkouts(queryClient)
+        },
+    })
+}
+
+export function useUnarchiveWorkoutTemplateMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (templateId: number) => workoutsApi.unarchiveTemplate(templateId),
+        onMutate: async (templateId) => {
+            await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
+            const templateListsSnap = takeWorkoutsTemplateListsSnapshot(queryClient)
+
+            queryClient.setQueriesData<WorkoutTemplateListResponse>(
+                { queryKey: ['workouts', 'templates', 'list'], exact: false },
+                (current) => {
+                    if (!current) return current
+                    const items = current.items.filter((item) => item.id != templateId)
+                    if (items.length === current.items.length) return current
+                    return {
+                        ...current,
+                        items,
+                        total: Math.max(0, current.total - 1),
+                    }
+                },
+            )
+            return { templateListsSnap } satisfies UnarchiveTemplateContext
         },
         onError: (_err, _templateId, ctx) => {
             if (!ctx) return

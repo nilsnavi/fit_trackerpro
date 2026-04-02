@@ -1,6 +1,6 @@
 # FitTracker Pro - Шпаргалка по запуску ⚡
 
-## 🚀 Быстрый старт (3 команды)
+## 🚀 Быстрый старт (2 команды)
 
 ```bash
 # 1. Настроить окружение
@@ -8,10 +8,9 @@ cp backend/.env.example backend/.env && cp frontend/.env.example frontend/.env
 
 # 2. Запустить Docker
 docker compose --env-file backend/.env --env-file frontend/.env up -d --build
-
-# 3. Применить миграции
-docker compose exec backend alembic upgrade head
 ```
+
+Миграции теперь применяются автоматически сервисом `migrator` перед запуском backend.
 
 **Готово!** Проверяем:
 - API: http://localhost:18000/api/v1/system/health ✅
@@ -80,11 +79,10 @@ docker compose restart frontend
 ### Ошибки базы данных
 ```bash
 # Проверить миграции
-docker compose exec backend alembic current
+docker compose logs migrator
 
 # Применить заново
-docker compose exec backend alembic downgrade base
-docker compose exec backend alembic upgrade head
+docker compose run --rm migrator
 ```
 
 ### Сбросить всё и начать заново
@@ -94,9 +92,6 @@ docker compose down -v
 
 # Поднять заново
 docker compose up -d --build
-
-# Применить миграции
-docker compose exec backend alembic upgrade head
 ```
 
 ---

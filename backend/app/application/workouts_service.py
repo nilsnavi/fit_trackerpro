@@ -33,8 +33,10 @@ from app.infrastructure.cache import invalidate_user_analytics_cache
 from app.core.audit import (
     WORKOUT_COMPLETE,
     WORKOUT_START,
+    WORKOUT_TEMPLATE_ARCHIVE,
     WORKOUT_TEMPLATE_CREATE,
     WORKOUT_TEMPLATE_DELETE,
+    WORKOUT_TEMPLATE_UNARCHIVE,
     WORKOUT_TEMPLATE_UPDATE,
     WORKOUT_UPDATE,
     audit_log,
@@ -132,13 +134,19 @@ class WorkoutsService:
         page: int,
         page_size: int,
         template_type: Optional[str],
+        include_archived: bool = False,
     ) -> WorkoutTemplateList:
-        total = await self.repository.count_templates(user_id=user_id, template_type=template_type)
+        total = await self.repository.count_templates(
+            user_id=user_id,
+            template_type=template_type,
+            include_archived=include_archived,
+        )
         templates = await self.repository.list_templates(
             user_id=user_id,
             page=page,
             page_size=page_size,
             template_type=template_type,
+            include_archived=include_archived,
         )
         return WorkoutTemplateList(
             items=[WorkoutTemplateResponse.model_validate(t, from_attributes=True) for t in templates],
@@ -220,6 +228,48 @@ class WorkoutsService:
             client_ip=client_ip,
         )
 
+    async def archive_template(
+        self,
+        user_id: int,
+        template_id: int,
+        client_ip: str | None = None,
+    ) -> WorkoutTemplateResponse:
+        template = await self.repository.get_template(user_id=user_id, template_id=template_id)
+        if not template:
+            raise WorkoutNotFoundError("Template not found")
+
+        template.is_archived = True
+        template = await self.repository.update_template(template)
+        audit_log(
+            action=WORKOUT_TEMPLATE_ARCHIVE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=template_id,
+            client_ip=client_ip,
+        )
+        return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
+
+    async def unarchive_template(
+        self,
+        user_id: int,
+        template_id: int,
+        client_ip: str | None = None,
+    ) -> WorkoutTemplateResponse:
+        template = await self.repository.get_template(user_id=user_id, template_id=template_id)
+        if not template:
+            raise WorkoutNotFoundError("Template not found")
+
+        template.is_archived = False
+        template = await self.repository.update_template(template)
+        audit_log(
+            action=WORKOUT_TEMPLATE_UNARCHIVE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=template_id,
+            client_ip=client_ip,
+        )
+        return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
+
     async def get_history(
         self,
         user_id: int,
@@ -258,7 +308,7 @@ class WorkoutsService:
         template = None
         if data.template_id:
             template = await self.repository.get_template(user_id=user_id, template_id=data.template_id)
-            if not template:
+            if not template or template.is_archived:
                 raise WorkoutNotFoundError("Template not found")
 
         initial_exercises: list[dict] = []

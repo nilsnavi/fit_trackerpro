@@ -1,6 +1,6 @@
 import { Activity, Flame, Timer, TrendingUp, ChevronRight, Clock } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { useNavigate } from 'react-router-dom'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
@@ -14,7 +14,7 @@ import { useUserStatsQuery } from '@features/profile/hooks/useUserStatsQuery'
 import { useAddWaterEntryMutation } from '@features/health/hooks/useHealthQueries'
 import { useHomeWaterQuery, useHomeWorkoutTemplatesQuery } from '@features/home/hooks'
 import { WaterWidget, WorkoutCard } from '@features/home/components'
-import { useWorkoutSessionDraftStore } from '@/state/local'
+import { useWorkoutSessionDraftStore, useWorkoutTemplatePinsStore } from '@/state/local'
 
 interface DashboardStats {
     calories: number
@@ -39,7 +39,10 @@ export function Home() {
     const { templates, isPending: templatesLoading } = useHomeWorkoutTemplatesQuery()
     const startWorkoutMutation = useStartWorkoutMutation()
     const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
+    const pinnedTemplateIds = useWorkoutTemplatePinsStore((s) => s.pinnedTemplateIds)
+    const togglePinnedTemplate = useWorkoutTemplatePinsStore((s) => s.togglePinnedTemplate)
     const addWater = useAddWaterEntryMutation()
+    const [pinFeedbackTemplateId, setPinFeedbackTemplateId] = useState<string | null>(null)
 
     const { data: workoutHistory, isLoading: historyLoading } = useWorkoutHistoryQuery()
 
@@ -94,6 +97,12 @@ export function Home() {
         }
     }, [tg.isTelegram, navigate, tg.showMainButton, tg.hideMainButton])
 
+    useEffect(() => {
+        if (!pinFeedbackTemplateId) return
+        const timer = setTimeout(() => setPinFeedbackTemplateId(null), 1200)
+        return () => clearTimeout(timer)
+    }, [pinFeedbackTemplateId])
+
     const handleQuickAction = (action: string) => {
         tg.hapticFeedback({ type: 'impact', style: 'light' })
 
@@ -130,6 +139,33 @@ export function Home() {
         } catch {
             // errors are surfaced via global error handlers
         }
+    }
+
+    const sortedTemplates = useMemo(() => {
+        const custom = templates.find((t) => t.id === 'custom')
+        const regular = templates.filter((t) => t.id !== 'custom')
+        regular.sort((a, b) => {
+            const aPinned = pinnedTemplateIds.includes(Number.parseInt(a.id, 10))
+            const bPinned = pinnedTemplateIds.includes(Number.parseInt(b.id, 10))
+            if (aPinned && !bPinned) return -1
+            if (!aPinned && bPinned) return 1
+            return a.name.localeCompare(b.name, 'ru-RU')
+        })
+        return custom ? [...regular, custom] : regular
+    }, [templates, pinnedTemplateIds])
+
+    const handleToggleFavorite = (id: string) => {
+        const templateId = Number.parseInt(id, 10)
+        if (!Number.isFinite(templateId)) return
+        const alreadyPinned = pinnedTemplateIds.includes(templateId)
+        const pinLimitReached = pinnedTemplateIds.length >= 5 && !alreadyPinned
+        if (pinLimitReached) {
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
+            return
+        }
+        togglePinnedTemplate(templateId)
+        setPinFeedbackTemplateId(id)
+        tg.hapticFeedback({ type: 'selection' })
     }
 
     const getGreeting = () => {
@@ -220,10 +256,17 @@ export function Home() {
                                       className="h-44 w-40 shrink-0 animate-pulse rounded-2xl bg-gray-100 dark:bg-neutral-800"
                                   />
                               ))
-                            : templates.map((template) => (
+                            : sortedTemplates.map((template) => (
                                   <div key={template.id} className="w-40 shrink-0">
                                       <WorkoutCard
                                           template={template}
+                                          isPinned={pinnedTemplateIds.includes(Number.parseInt(template.id, 10))}
+                                          isPinDisabled={
+                                              template.id !== 'custom' &&
+                                              !pinnedTemplateIds.includes(Number.parseInt(template.id, 10)) &&
+                                              pinnedTemplateIds.length >= 5
+                                          }
+                                          onToggleFavorite={handleToggleFavorite}
                                           onStart={(id) => {
                                               void handleTemplateStart(id)
                                           }}
@@ -231,6 +274,9 @@ export function Home() {
                                               void handleTemplateStart(id)
                                           }}
                                       />
+                                      {pinFeedbackTemplateId === template.id && template.id !== 'custom' && (
+                                          <p className="mt-1 text-center text-[11px] text-primary">Избранное обновлено</p>
+                                      )}
                                   </div>
                               ))}
                     </div>

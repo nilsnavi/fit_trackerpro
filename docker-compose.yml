@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -41,6 +39,34 @@ services:
       - fittracker-network
 
   # Backend API
+  migrator:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fittracker-migrator
+    restart: "no"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-fittracker}:${POSTGRES_PASSWORD:-fittracker_password}@postgres:5432/${POSTGRES_DB:-fittracker}
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER:-fittracker}:${POSTGRES_PASSWORD:-fittracker_password}@postgres:5432/${POSTGRES_DB:-fittracker}
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-true}
+    volumes:
+      - ./backend:/backend
+      - ./database/migrations:/migrations
+    command:
+      [
+        "sh",
+        "-c",
+        "python /backend/tools/bootstrap_alembic_version.py /migrations/alembic.ini && python -m alembic -c /migrations/alembic.ini upgrade head",
+      ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fittracker-network
+
+  # Backend API
   backend:
     build:
       context: ./backend
@@ -72,6 +98,8 @@ services:
       retries: 3
       start_period: 15s
     depends_on:
+      migrator:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

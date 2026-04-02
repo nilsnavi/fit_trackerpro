@@ -157,6 +157,7 @@ class WorkoutTemplateResponse(BaseModel):
     type: str
     exercises: List[ExerciseInTemplate]
     is_public: bool
+    is_archived: bool
     created_at: datetime
     updated_at: datetime
 

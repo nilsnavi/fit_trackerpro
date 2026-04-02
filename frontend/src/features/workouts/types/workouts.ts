@@ -29,6 +29,7 @@ export interface WorkoutTemplateResponse {
     type: BackendWorkoutType
     exercises: ExerciseInTemplate[]
     is_public: boolean
+    is_archived: boolean
     created_at: string
     updated_at: string
 }

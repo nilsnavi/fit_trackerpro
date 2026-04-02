@@ -37,6 +37,7 @@ async def get_workout_templates(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     template_type: Optional[str] = Query(None, pattern="^(cardio|strength|flexibility|mixed)$"),
+    include_archived: bool = Query(False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -46,6 +47,7 @@ async def get_workout_templates(
         page=page,
         page_size=page_size,
         template_type=template_type,
+        include_archived=include_archived,
     )
 
 
@@ -105,6 +107,36 @@ async def delete_workout_template(
         client_ip=get_client_ip(request),
     )
     return None
+
+
+@router.post("/templates/{template_id}/archive", response_model=WorkoutTemplateResponse)
+async def archive_workout_template(
+    template_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.archive_template(
+        user_id=current_user.id,
+        template_id=template_id,
+        client_ip=get_client_ip(request),
+    )
+
+
+@router.post("/templates/{template_id}/unarchive", response_model=WorkoutTemplateResponse)
+async def unarchive_workout_template(
+    template_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.unarchive_template(
+        user_id=current_user.id,
+        template_id=template_id,
+        client_ip=get_client_ip(request),
+    )
 
 
 @router.get("/history", response_model=WorkoutHistoryResponse)

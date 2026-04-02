@@ -1,4 +1,4 @@
-import { Dumbbell, Zap, Heart, Activity, Plus, ChevronRight } from 'lucide-react'
+import { Dumbbell, Zap, Heart, Activity, Plus, ChevronRight, Pin } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import type { HomeWorkoutTemplate } from '@shared/types'
 
@@ -6,6 +6,9 @@ interface WorkoutCardProps {
     template: HomeWorkoutTemplate
     onStart: (id: string) => void
     onClick?: (id: string) => void
+    isPinned?: boolean
+    isPinDisabled?: boolean
+    onToggleFavorite?: (id: string) => void
 }
 
 const iconMap = {
@@ -24,7 +27,14 @@ const typeLabels: Record<string, string> = {
     custom: 'Своя'
 }
 
-export function WorkoutCard({ template, onStart, onClick }: WorkoutCardProps) {
+export function WorkoutCard({
+    template,
+    onStart,
+    onClick,
+    isPinned = false,
+    isPinDisabled = false,
+    onToggleFavorite,
+}: WorkoutCardProps) {
     const Icon = iconMap[template.icon as keyof typeof iconMap] || Dumbbell
     const isCustom = template.type === 'custom'
 
@@ -38,16 +48,35 @@ export function WorkoutCard({ template, onStart, onClick }: WorkoutCardProps) {
             )}
         >
             {/* Header with icon and type */}
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-2">
                 <div className={cn(
                     'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center',
                     template.color
                 )}>
                     <Icon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs text-telegram-hint bg-telegram-bg px-2 py-1 rounded-full">
-                    {typeLabels[template.type]}
-                </span>
+                <div className="flex items-center gap-2">
+                    {!isCustom && onToggleFavorite && (
+                        <button
+                            type="button"
+                            disabled={isPinDisabled}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onToggleFavorite(template.id)
+                            }}
+                            className={cn(
+                                'flex h-7 w-7 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-50',
+                                isPinned ? 'bg-primary/15 text-primary' : 'bg-telegram-bg text-telegram-hint',
+                            )}
+                            aria-label={isPinned ? `Убрать ${template.name} из избранного` : `Добавить ${template.name} в избранное`}
+                        >
+                            <Pin className={cn('w-3.5 h-3.5', isPinned && 'fill-current')} />
+                        </button>
+                    )}
+                    <span className="text-xs text-telegram-hint bg-telegram-bg px-2 py-1 rounded-full">
+                        {typeLabels[template.type]}
+                    </span>
+                </div>
             </div>
 
             {/* Title */}
