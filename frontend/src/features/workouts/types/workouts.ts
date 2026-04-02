@@ -82,6 +82,14 @@ export interface WorkoutCompleteRequest {
     glucose_after?: number
 }
 
+export interface WorkoutSessionUpdateRequest {
+    exercises: CompletedExercise[]
+    comments?: string
+    tags: string[]
+    glucose_before?: number
+    glucose_after?: number
+}
+
 export interface WorkoutCompleteResponse {
     id: number
     user_id: number

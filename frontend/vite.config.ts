@@ -12,8 +12,8 @@ export default defineConfig({
     plugins: [
         react(),
         VitePWA({
-            /** New SW waits until user confirms via PwaUpdatePrompt — avoids mid-session chunk/SW mismatch. */
-            registerType: 'prompt',
+            /** Telegram WebView is aggressive with caching; auto-update SW to apply hotfixes reliably. */
+            registerType: 'autoUpdate',
             injectRegister: 'auto',
             manifest: false,
             includeAssets: ['vite.svg', 'icons/**/*.png', 'manifest.webmanifest'],
@@ -31,8 +31,8 @@ export default defineConfig({
                 navigateFallbackDenylist: [/^\/api\//],
                 cleanupOutdatedCaches: true,
                 cacheId: 'fittracker-shell',
-                skipWaiting: false,
-                clientsClaim: false,
+                skipWaiting: true,
+                clientsClaim: true,
                 maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
                 /**
                  * Static asset strategies (same-origin, production URLs).

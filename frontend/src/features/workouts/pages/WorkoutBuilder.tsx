@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     DndContext,
     closestCenter,
@@ -38,7 +39,10 @@ import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
-import { useCreateWorkoutTemplateMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import {
+    useCreateWorkoutTemplateMutation,
+    useUpdateWorkoutTemplateMutation,
+} from '@features/workouts/hooks/useWorkoutMutations'
 import { queryKeys } from '@shared/api/queryKeys';
 import { workoutsApi } from '@shared/api/domains/workoutsApi';
 import { workoutTemplatesDefaultListParams } from '@features/workouts/lib/workoutQueryOptimistic';
@@ -50,6 +54,8 @@ import {
     WORKOUT_FILTER_TYPE_ORDER,
     WORKOUT_LIST_TYPE_CONFIG,
 } from '@features/workouts/config/workoutTypeConfigs';
+import { getErrorMessage } from '@shared/errors';
+import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue';
 
 const mapWorkoutTypeToBackend = (types: WorkoutType[]): BackendWorkoutType => {
     const normalized = types.filter((type) => type === 'cardio' || type === 'strength' || type === 'flexibility');
@@ -63,6 +69,37 @@ const toExerciseId = (id: string, fallbackIndex: number): number => {
     const parsed = Number.parseInt(id, 10);
     return Number.isNaN(parsed) ? fallbackIndex + 1 : parsed;
 };
+
+const mapBackendTypeToSelectedTypes = (type: BackendWorkoutType): WorkoutType[] => {
+    if (type === 'mixed') {
+        return [];
+    }
+    return [type];
+};
+
+const mapTemplateExercisesToBlocks = (exercises: ExerciseInTemplate[]): WorkoutBlock[] => (
+    exercises.map((exercise, index) => {
+        const isCardio = typeof exercise.duration === 'number' && exercise.duration > 0 && !exercise.reps;
+        return {
+            id: `template-${exercise.exercise_id}-${index}`,
+            type: isCardio ? 'cardio' : 'strength',
+            exercise: {
+                id: String(exercise.exercise_id),
+                name: exercise.name,
+                category: isCardio ? 'cardio' : 'strength',
+            },
+            config: {
+                sets: exercise.sets,
+                reps: exercise.reps,
+                duration: exercise.duration ? Math.round(exercise.duration / 60) : undefined,
+                restSeconds: exercise.rest_seconds,
+                weight: exercise.weight,
+                note: exercise.notes,
+            },
+            order: index,
+        };
+    })
+);
 
 const buildTemplateExercises = (blocks: WorkoutBlock[]): ExerciseInTemplate[] => (
     blocks
@@ -269,7 +306,30 @@ export const WorkoutBuilder: React.FC = () => {
     const tg = useTelegramWebApp()
     const queryClient = useQueryClient()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const createTemplateMutation = useCreateWorkoutTemplateMutation()
+    const updateTemplateMutation = useUpdateWorkoutTemplateMutation()
+    const hydratedTemplateIdRef = useRef<number | null>(null)
+
+    const editTemplateId = useMemo(() => {
+        const raw = searchParams.get('templateId')
+        if (!raw) return null
+        const parsed = Number.parseInt(raw, 10)
+        return Number.isNaN(parsed) ? null : parsed
+    }, [searchParams])
+
+    const isEditMode = editTemplateId != null
+
+    const {
+        data: editingTemplate,
+        isPending: isEditingTemplatePending,
+        error: editingTemplateError,
+    } = useQuery({
+        queryKey: queryKeys.workouts.templatesDetail(editTemplateId ?? -1),
+        queryFn: () => workoutsApi.getTemplate(editTemplateId!),
+        enabled: isEditMode,
+        staleTime: 60_000,
+    })
 
     useEffect(() => {
         void queryClient.prefetchQuery({
@@ -339,6 +399,9 @@ export const WorkoutBuilder: React.FC = () => {
 
     // Load draft on mount
     useEffect(() => {
+        if (isEditMode) {
+            return;
+        }
         const saved = localStorage.getItem(draftKey);
         if (saved) {
             try {
@@ -350,7 +413,17 @@ export const WorkoutBuilder: React.FC = () => {
                 // Invalid draft, ignore
             }
         }
-    }, []);
+    }, [isEditMode]);
+
+    useEffect(() => {
+        if (!editingTemplate) return;
+        if (hydratedTemplateIdRef.current === editingTemplate.id) return;
+
+        setWorkoutName(editingTemplate.name);
+        setSelectedTypes(mapBackendTypeToSelectedTypes(editingTemplate.type));
+        setBlocks(mapTemplateExercisesToBlocks(editingTemplate.exercises));
+        hydratedTemplateIdRef.current = editingTemplate.id;
+    }, [editingTemplate]);
 
     // Silent auto-save to localStorage every 30 s (crash recovery only — not shown to user)
     useEffect(() => {
@@ -509,12 +582,29 @@ export const WorkoutBuilder: React.FC = () => {
         };
 
         try {
-            await createTemplateMutation.mutateAsync(template);
+            if (isEditMode) {
+                await updateTemplateMutation.mutateAsync({
+                    templateId: editTemplateId,
+                    payload: template,
+                });
+            } else {
+                await createTemplateMutation.mutateAsync(template);
+            }
             tg.hapticFeedback({ type: 'notification', notificationType: 'success' });
             localStorage.removeItem(draftKey);
             navigate('/workouts');
-        } catch {
-            setSaveError('Не удалось сохранить тренировку. Попробуйте ещё раз.');
+        } catch (error) {
+            if (isOfflineMutationQueuedError(error)) {
+                tg.hapticFeedback({ type: 'notification', notificationType: 'success' });
+                localStorage.removeItem(draftKey);
+                navigate('/workouts');
+                return;
+            }
+            setSaveError(
+                isEditMode
+                    ? 'Не удалось обновить тренировку. Попробуйте ещё раз.'
+                    : 'Не удалось сохранить тренировку. Попробуйте ещё раз.'
+            );
             tg.hapticFeedback({ type: 'notification', notificationType: 'error' });
         }
     };
@@ -540,10 +630,17 @@ export const WorkoutBuilder: React.FC = () => {
     // ============================================
 
     return (
-        <div className="min-h-screen bg-telegram-bg pb-24">
+        <div className="min-h-screen bg-telegram-bg pb-[calc(var(--app-shell-nav-h)+7rem+env(safe-area-inset-bottom,0px))]">
             {/* Header */}
             <div className="sticky top-0 z-10 bg-telegram-bg/95 backdrop-blur-sm border-b border-border px-4 py-4">
                 <div className="space-y-4">
+                    {isEditMode && (
+                        <div className="rounded-xl border border-primary/25 bg-primary/10 px-3 py-2 text-sm text-primary">
+                            {isEditingTemplatePending && 'Загрузка шаблона для редактирования...'}
+                            {!isEditingTemplatePending && editingTemplateError && getErrorMessage(editingTemplateError)}
+                            {!isEditingTemplatePending && !editingTemplateError && 'Режим редактирования шаблона'}
+                        </div>
+                    )}
                     {/* Title Row */}
                     <div className="flex items-center gap-3">
                         <Input
@@ -933,7 +1030,7 @@ export const WorkoutBuilder: React.FC = () => {
             </Modal>
 
             {/* Sticky Save Footer */}
-            <div className="fixed bottom-0 left-0 right-0 z-20 bg-telegram-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 space-y-2">
+            <div className="fixed left-0 right-0 z-20 bg-telegram-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 space-y-2 bottom-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px))]">
                 {saveError && (
                     <p className="flex items-center gap-2 text-sm text-danger" role="alert">
                         <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
@@ -944,11 +1041,11 @@ export const WorkoutBuilder: React.FC = () => {
                     fullWidth
                     size="lg"
                     onClick={handleSave}
-                    isLoading={createTemplateMutation.isPending}
-                    disabled={createTemplateMutation.isPending}
+                    isLoading={createTemplateMutation.isPending || updateTemplateMutation.isPending}
+                    disabled={createTemplateMutation.isPending || updateTemplateMutation.isPending}
                     leftIcon={<Plus className="w-5 h-5" />}
                 >
-                    Сохранить тренировку
+                    {isEditMode ? 'Обновить тренировку' : 'Сохранить шаблон'}
                 </Button>
             </div>
         </div>

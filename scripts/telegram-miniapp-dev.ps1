@@ -46,8 +46,8 @@ function Get-LocaltunnelUrl([string]$containerName) {
     return $null
 }
 
-$frontendUrl = $frontendUrl ?? $null
-$backendUrl = $backendUrl ?? $null
+if (-not (Get-Variable -Name frontendUrl -Scope Local -ErrorAction SilentlyContinue)) { $frontendUrl = $null }
+if (-not (Get-Variable -Name backendUrl -Scope Local -ErrorAction SilentlyContinue)) { $backendUrl = $null }
 
 for ($i = 0; $i -lt 45; $i++) {
     if ($TunnelProvider -eq 'localtunnel') {
@@ -60,8 +60,16 @@ for ($i = 0; $i -lt 45; $i++) {
 
 Write-Host ""
 Write-Host "Tunnel URLs:" -ForegroundColor Green
-Write-Host ("  FRONTEND: " + ($frontendUrl ?? "<not found yet; run: docker compose logs tunnel-frontend -f>"))
-Write-Host ("  BACKEND : " + ($backendUrl ?? "<not found yet; run: docker compose logs tunnel-backend -f>"))
+if ($frontendUrl) {
+    Write-Host ("  FRONTEND: " + $frontendUrl)
+} else {
+    Write-Host "  FRONTEND: <not found yet; run: docker compose logs tunnel-frontend -f>"
+}
+if ($backendUrl) {
+    Write-Host ("  BACKEND : " + $backendUrl)
+} else {
+    Write-Host "  BACKEND : <not found yet; run: docker compose logs tunnel-backend -f>"
+}
 
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan

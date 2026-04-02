@@ -6,6 +6,9 @@ import {
     Flame,
     ChevronRight,
     Play,
+    Pencil,
+    Trash2,
+    BarChart3,
     CalendarDays,
     LayoutTemplate,
     Dumbbell,
@@ -22,7 +25,10 @@ import {
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
-import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import {
+    useDeleteWorkoutTemplateMutation,
+    useStartWorkoutMutation,
+} from '@features/workouts/hooks/useWorkoutMutations'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import type { WorkoutType } from '@shared/types'
@@ -31,6 +37,8 @@ import { getErrorMessage } from '@shared/errors'
 import { WorkoutsHistoryBlockSkeleton } from '@shared/ui/page-skeletons'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
+import { Modal } from '@shared/ui/Modal'
+import { Button } from '@shared/ui/Button'
 
 const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
     cardio: 'Кардио',
@@ -41,6 +49,8 @@ const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
 
 export function WorkoutsPage() {
     const [selectedType, setSelectedType] = useState<WorkoutType | 'all'>('all')
+    const [deletingTemplateId, setDeletingTemplateId] = useState<number | null>(null)
+    const [templateToDelete, setTemplateToDelete] = useState<{ id: number; name: string } | null>(null)
     const tg = useTelegramWebApp()
     const navigate = useNavigate()
     const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
@@ -78,6 +88,7 @@ export function WorkoutsPage() {
     } = useWorkoutTemplatesQuery()
 
     const startWorkoutMutation = useStartWorkoutMutation()
+    const deleteTemplateMutation = useDeleteWorkoutTemplateMutation()
     const templates = templatesData?.items ?? []
 
     const workouts = useMemo(
@@ -126,6 +137,11 @@ export function WorkoutsPage() {
     const handleOpenCalendar = useCallback(() => {
         tg.hapticFeedback({ type: 'selection' })
         navigate('/workouts/calendar')
+    }, [tg, navigate])
+
+    const handleOpenProgress = useCallback(() => {
+        tg.hapticFeedback({ type: 'selection' })
+        navigate('/analytics')
     }, [tg, navigate])
 
     const headerActions = useMemo(
@@ -180,6 +196,34 @@ export function WorkoutsPage() {
             navigate(`/workouts/${started.id}`)
         } catch {
             // mutation surfaces via global error handling if configured
+        }
+    }
+
+    const handleEditTemplate = (templateId: number) => {
+        tg.hapticFeedback({ type: 'selection' })
+        navigate(`/workouts/builder?templateId=${templateId}`)
+    }
+
+    const handleRequestDeleteTemplate = (templateId: number, templateName: string) => {
+        tg.hapticFeedback({ type: 'selection' })
+        setTemplateToDelete({ id: templateId, name: templateName })
+    }
+
+    const handleCloseDeleteModal = () => {
+        if (deleteTemplateMutation.isPending) return
+        setTemplateToDelete(null)
+    }
+
+    const handleConfirmDeleteTemplate = async () => {
+        if (!templateToDelete) return
+        const { id } = templateToDelete
+        setDeletingTemplateId(id)
+        tg.hapticFeedback({ type: 'impact', style: 'heavy' })
+        try {
+            await deleteTemplateMutation.mutateAsync(id)
+            setTemplateToDelete(null)
+        } finally {
+            setDeletingTemplateId((current) => (current === id ? null : current))
         }
     }
 
@@ -250,6 +294,24 @@ export function WorkoutsPage() {
                 </div>
             </div>
 
+            <button
+                type="button"
+                onClick={handleOpenProgress}
+                className="w-full rounded-xl bg-telegram-secondary-bg px-4 py-3 text-left transition-transform active:scale-[0.99]"
+                aria-label="Открыть прогресс и аналитику"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                        <BarChart3 className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-telegram-text">Прогресс</div>
+                        <div className="text-xs text-telegram-hint">Быстрый переход к аналитике тренировок</div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-telegram-hint" />
+                </div>
+            </button>
+
             {/* Workout templates */}
             <div className="space-y-3">
                 <h2 className="text-lg font-semibold text-telegram-text">Шаблоны</h2>
@@ -296,6 +358,23 @@ export function WorkoutsPage() {
                                     {t.exercises.length === 1 ? 'упражнение' : 'упражнений'}
                                 </p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => handleEditTemplate(t.id)}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-telegram-bg text-telegram-hint transition-transform active:scale-95"
+                                aria-label={`Редактировать шаблон ${t.name}`}
+                            >
+                                <Pencil className="h-5 w-5" />
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deleteTemplateMutation.isPending && deletingTemplateId === t.id}
+                                onClick={() => handleRequestDeleteTemplate(t.id, t.name)}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-telegram-bg text-danger transition-transform active:scale-95 disabled:opacity-60"
+                                aria-label={`Удалить шаблон ${t.name}`}
+                            >
+                                <Trash2 className="h-5 w-5" />
+                            </button>
                             <button
                                 type="button"
                                 disabled={startWorkoutMutation.isPending}
@@ -414,6 +493,38 @@ export function WorkoutsPage() {
             </div>
                 </>
             )}
+
+            <Modal
+                isOpen={templateToDelete != null}
+                onClose={handleCloseDeleteModal}
+                title="Удалить шаблон"
+                size="sm"
+            >
+                <div className="space-y-4 p-1">
+                    <p className="text-sm text-telegram-text">
+                        Удалить шаблон «{templateToDelete?.name}»? Это действие нельзя отменить.
+                    </p>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="secondary"
+                            fullWidth
+                            onClick={handleCloseDeleteModal}
+                            disabled={deleteTemplateMutation.isPending}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            variant="emergency"
+                            fullWidth
+                            onClick={() => void handleConfirmDeleteTemplate()}
+                            isLoading={deleteTemplateMutation.isPending}
+                            disabled={deleteTemplateMutation.isPending}
+                        >
+                            Удалить
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     )
 }
