@@ -23,8 +23,6 @@ import {
     ArrowLeft,
     CalendarDays,
     Clock3,
-    Dumbbell,
-    HeartPulse,
     MessageSquare,
     PencilRuler,
     Plus,
@@ -51,7 +49,6 @@ import {
     formatDate,
     formatDurationMinutes,
     parseOptionalNumber,
-    pluralizeRu,
     getExerciseSummaryMeta,
     formatExerciseStructureSummary,
 } from '@features/workouts/lib/workoutDetailFormatters'
@@ -84,6 +81,14 @@ function buildSyncPayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequ
         glucose_before: workout.glucose_before,
         glucose_after: workout.glucose_after,
     }
+}
+
+function formatSetValue(value?: number, unit?: string) {
+    if (value == null || Number.isNaN(value)) {
+        return '—'
+    }
+
+    return unit ? `${value} ${unit}` : String(value)
 }
 
 export function WorkoutDetailPage() {

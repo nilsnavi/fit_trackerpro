@@ -143,9 +143,11 @@ export function useWorkoutsPageState() {
                 workoutType === 'cardio' || workoutType === 'strength' || workoutType === 'flexibility'
                     ? workoutType
                     : 'mixed'
+            const fallbackTemplateName =
+                templateName ?? workout.comments?.trim() ?? `Шаблон из тренировки #${workout.id}`
 
             await createWorkoutTemplateMutation.mutateAsync({
-                name: templateName ?? workout.comments?.trim() || `Шаблон из тренировки #${workout.id}`,
+                name: fallbackTemplateName,
                 type: templateType,
                 is_public: false,
                 exercises: workout.exercises.map((exercise, index) => {
