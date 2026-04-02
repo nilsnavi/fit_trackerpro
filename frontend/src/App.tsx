@@ -12,6 +12,7 @@ import {
     CatalogPageSkeleton,
     ProfilePageSkeleton,
     ProgressExercisesSkeleton,
+    ProgressOverviewSkeleton,
     ProgressRecoverySkeleton,
     RouteFallbackSpinner,
     TemplateBuilderSkeleton,
@@ -225,11 +226,15 @@ export default function App() {
                                         />
                                         <Route
                                             path="/analytics"
-                                            element={<Navigate to="/progress/exercises" replace />}
+                                            element={<Navigate to="/progress" replace />}
                                         />
                                         <Route
                                             path="/progress"
-                                            element={<Navigate to="/progress/exercises" replace />}
+                                            element={
+                                                <RouteGuard screenTitle="Прогресс" skeleton={<ProgressOverviewSkeleton />}>
+                                                    <AnalyticsPage />
+                                                </RouteGuard>
+                                            }
                                         />
                                         <Route
                                             path="/workouts/builder"

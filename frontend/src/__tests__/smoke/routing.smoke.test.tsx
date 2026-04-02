@@ -127,6 +127,7 @@ describe('smoke: app routing', () => {
         '/workouts/active/1',
         '/workouts/history',
         '/exercises',
+        '/progress',
         '/progress/exercises',
         '/progress/recovery',
         '/health',

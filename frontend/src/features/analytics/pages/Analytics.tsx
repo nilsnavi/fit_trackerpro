@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
     LineChart,
@@ -31,7 +32,6 @@ import {
     Edit3,
     Trophy,
     Activity,
-    Timer,
     BarChart3,
     Calculator,
 } from 'lucide-react';
@@ -62,6 +62,7 @@ import {
 
 type PeriodType = '7d' | '30d' | '90d' | 'all' | 'custom';
 type ViewTab = 'chart' | 'calculator';
+type AnalyticsScreen = 'overview' | 'exercises' | 'recovery';
 
 interface Exercise {
     id: number;
@@ -88,6 +89,22 @@ interface KeyMetrics {
     avgRestTime: number;
     strengthGrowth: number;
     personalRecords: number;
+}
+
+interface ExerciseProgressInsight {
+    exercise: Exercise;
+    changeKg: number | null;
+    changePct: number | null;
+    currentWeight: number | null;
+    currentDate: ApiDate | null;
+    prWeight: number | null;
+    prDate: ApiDate | null;
+}
+
+interface RecoveryRecommendation {
+    title: string;
+    body: string;
+    tone: 'good' | 'warn' | 'alert';
 }
 
 type ProgressPeriod = '7d' | '30d' | '90d' | '1y' | 'all';
@@ -159,16 +176,25 @@ const toApiPeriod = (period: PeriodType): ProgressPeriod => {
     return '30d';
 }
 
+const resolveAnalyticsScreen = (pathname: string): AnalyticsScreen => {
+    if (pathname.startsWith('/progress/exercises')) return 'exercises';
+    if (pathname.startsWith('/progress/recovery')) return 'recovery';
+    return 'overview';
+}
+
 const buildDateRangeParams = (
     period: PeriodType,
     customStart?: Date,
     customEnd?: Date,
 ): { date_from?: string; date_to?: string } => {
     const end = endOfDay(new Date())
-    if (period === 'custom' && customStart && customEnd) {
+    if (period === 'custom') {
+        const fallbackStart = startOfDay(subDays(end, 29))
+        const safeStart = customStart ? startOfDay(customStart) : fallbackStart
+        const safeEnd = customEnd ? endOfDay(customEnd) : end
         return {
-            date_from: format(startOfDay(customStart), 'yyyy-MM-dd'),
-            date_to: format(endOfDay(customEnd), 'yyyy-MM-dd'),
+            date_from: format(safeStart <= safeEnd ? safeStart : safeEnd, 'yyyy-MM-dd'),
+            date_to: format(safeEnd >= safeStart ? safeEnd : safeStart, 'yyyy-MM-dd'),
         }
     }
     const apiPeriod = toApiPeriod(period)
@@ -202,6 +228,122 @@ const downloadFile = (content: string, filename: string, type: string) => {
     URL.revokeObjectURL(url);
 };
 
+const formatSignedWeight = (value: number | null) => {
+    if (value == null) return '—';
+    return `${value > 0 ? '+' : ''}${value.toFixed(1)} кг`;
+}
+
+const formatSignedPercent = (value: number | null) => {
+    if (value == null) return '—';
+    return `${value > 0 ? '+' : ''}${Math.round(value)}%`;
+}
+
+const buildExerciseInsights = (params: {
+    progressRows: ApiExerciseProgressResponse[] | undefined;
+    selectedExercises: Exercise[];
+}): ExerciseProgressInsight[] => {
+    const byId = new Map<number, ApiExerciseProgressResponse>()
+    for (const row of params.progressRows ?? []) byId.set(row.exercise_id, row)
+
+    return params.selectedExercises.map((exercise) => {
+        const row = byId.get(exercise.id)
+        const numericPoints = (row?.data_points ?? []).filter(
+            (point): point is ApiExerciseProgressPoint & { max_weight: number } => typeof point.max_weight === 'number'
+        )
+
+        const firstPoint = numericPoints[0]
+        const lastPoint = numericPoints[numericPoints.length - 1]
+        const derivedChangeKg =
+            firstPoint && lastPoint ? Math.round((lastPoint.max_weight - firstPoint.max_weight) * 10) / 10 : null
+        const derivedChangePct =
+            firstPoint && lastPoint && firstPoint.max_weight > 0
+                ? ((lastPoint.max_weight - firstPoint.max_weight) / firstPoint.max_weight) * 100
+                : null
+
+        const bestPoint = numericPoints.reduce<ApiExerciseProgressPoint | null>((best, point) => {
+            if (best == null) return point
+            if ((point.max_weight ?? -Infinity) > (best.max_weight ?? -Infinity)) return point
+            return best
+        }, null)
+
+        return {
+            exercise,
+            changeKg: derivedChangeKg,
+            changePct: typeof row?.summary?.progress_percentage === 'number' ? row.summary.progress_percentage : derivedChangePct,
+            currentWeight: lastPoint?.max_weight ?? null,
+            currentDate: lastPoint?.date ?? null,
+            prWeight: row?.best_performance?.weight ?? bestPoint?.max_weight ?? null,
+            prDate: row?.best_performance?.date ?? bestPoint?.date ?? null,
+        }
+    })
+}
+
+const buildRecoveryRecommendations = (params: {
+    readiness: number | null;
+    fatigueLevel: number | null;
+    avgRpe: number | null;
+    topMuscleLoad: Array<{ muscleGroup: string; loadScore: number }>;
+}): RecoveryRecommendation[] => {
+    const items: RecoveryRecommendation[] = []
+
+    if (params.readiness != null) {
+        if (params.readiness >= 75) {
+            items.push({
+                title: 'Можно держать план',
+                body: 'Готовность высокая. Если техника стабильна, оставляйте рабочий объём без снижения.',
+                tone: 'good',
+            })
+        } else if (params.readiness >= 55) {
+            items.push({
+                title: 'Держите умеренную нагрузку',
+                body: 'Готовность средняя. Лучше избегать лишних добивочных подходов и оставить 1-2 повтора в запасе.',
+                tone: 'warn',
+            })
+        } else {
+            items.push({
+                title: 'Нужен разгрузочный день',
+                body: 'Готовность низкая. Снизьте объём, оставьте лёгкую технику или добавьте восстановление вместо тяжёлой сессии.',
+                tone: 'alert',
+            })
+        }
+    }
+
+    if (params.fatigueLevel != null && params.fatigueLevel >= 4) {
+        items.push({
+            title: 'Усталость накопилась',
+            body: 'Высокий fatigue level. Приоритет на сон, гидратацию и уменьшение суммарного тоннажа в ближайшие 1-2 тренировки.',
+            tone: 'alert',
+        })
+    } else if (params.avgRpe != null && params.avgRpe >= 8) {
+        items.push({
+            title: 'RPE слишком высокий',
+            body: 'Средний RPE за период высокий. Сохраните интенсивность только в ключевых упражнениях, а аксессуары сделайте легче.',
+            tone: 'warn',
+        })
+    }
+
+    if (params.topMuscleLoad.length > 0) {
+        const dominant = params.topMuscleLoad[0]
+        items.push({
+            title: `Проверьте восстановление: ${dominant.muscleGroup}`,
+            body: `Эта зона получила наибольшую нагрузку (${dominant.loadScore}). Добавьте паузу или снизьте локальный объём, если там есть остаточная забитость.`,
+            tone: dominant.loadScore >= 220 ? 'warn' : 'good',
+        })
+    }
+
+    if (items.length === 0) {
+        return [
+            {
+                title: 'Данных пока мало',
+                body: 'Соберите ещё несколько тренировок в выбранном периоде, чтобы рекомендации по восстановлению стали точнее и полезнее.',
+                tone: 'warn',
+            },
+        ]
+    }
+
+    return items.slice(0, 3)
+}
+
 // ============================================
 // Components
 // ============================================
@@ -213,6 +355,8 @@ const PeriodSelector: React.FC<{
     customEnd?: Date;
     onCustomChange: (start?: Date, end?: Date) => void;
 }> = ({ selected, onChange, customStart, customEnd, onCustomChange }) => {
+    const today = endOfDay(new Date())
+    const defaultCustomStart = startOfDay(subDays(today, 29))
 
     const periods: { value: PeriodType; label: string }[] = [
         { value: '7d', label: '7 дней' },
@@ -231,6 +375,9 @@ const PeriodSelector: React.FC<{
                         label={period.label}
                         active={selected === period.value}
                         onClick={() => {
+                            if (period.value === 'custom' && (!customStart || !customEnd)) {
+                                onCustomChange(customStart ?? defaultCustomStart, customEnd ?? today)
+                            }
                             onChange(period.value);
                         }}
                         size="sm"
@@ -283,8 +430,9 @@ const ExerciseSelector: React.FC<{
     const toggleExercise = (exercise: Exercise) => {
         const isSelected = selected.find(s => s.id === exercise.id);
         if (isSelected) {
+            if (selected.length === 1) return;
             onChange(selected.filter(s => s.id !== exercise.id));
-        } else if (selected.length < 5) {
+        } else if (selected.length < 3) {
             onChange([...selected, exercise]);
         }
     };
@@ -308,7 +456,7 @@ const ExerciseSelector: React.FC<{
                         <span className="text-sm text-telegram-text">
                             {selected.length === 0
                                 ? 'Выберите упражнения'
-                                : `${selected.length} выбрано`}
+                                : `${selected.length} из 3 выбрано`}
                         </span>
                     </div>
                     <ChevronDown className={cn(
@@ -385,29 +533,32 @@ const ExerciseSelector: React.FC<{
             </div>
 
             {selected.length > 0 && (
-                <ChipGroup wrap>
-                    {selected.map((exercise, index) => (
-                        <Chip
-                            key={exercise.id}
-                            label={exercise.name}
-                            active={true}
-                            onClick={() => toggleExercise(exercise)}
-                            size="sm"
-                            icon={
-                                <div
-                                    className="w-2 h-2 rounded-full"
-                                    style={{ backgroundColor: colors[index] }}
-                                />
-                            }
-                        />
-                    ))}
-                </ChipGroup>
+                <>
+                    <div className="text-xs text-telegram-hint">Выберите от 1 до 3 упражнений для сравнения.</div>
+                    <ChipGroup wrap>
+                        {selected.map((exercise, index) => (
+                            <Chip
+                                key={exercise.id}
+                                label={exercise.name}
+                                active={true}
+                                onClick={() => toggleExercise(exercise)}
+                                size="sm"
+                                icon={
+                                    <div
+                                        className="w-2 h-2 rounded-full"
+                                        style={{ backgroundColor: colors[index] }}
+                                    />
+                                }
+                            />
+                        ))}
+                    </ChipGroup>
+                </>
             )}
         </div>
     );
 };
 
-const KeyMetricsCard: React.FC<{ metrics: KeyMetrics }> = ({ metrics }) => {
+const KeyMetricsCard: React.FC<{ metrics: KeyMetrics; selectedCount: number }> = ({ metrics, selectedCount }) => {
     const items = [
         {
             icon: Activity,
@@ -416,14 +567,14 @@ const KeyMetricsCard: React.FC<{ metrics: KeyMetrics }> = ({ metrics }) => {
             color: 'text-blue-500',
         },
         {
-            icon: Timer,
-            label: 'Средний отдых',
-            value: `${metrics.avgRestTime}s`,
-            color: 'text-green-600',
+            icon: Dumbbell,
+            label: 'Выбрано',
+            value: selectedCount,
+            color: 'text-telegram-text',
         },
         {
             icon: TrendingUp,
-            label: 'Рост силы',
+            label: 'Рост за период',
             value: `+${metrics.strengthGrowth}%`,
             color: 'text-green-600',
         },
@@ -612,11 +763,51 @@ const CustomTooltip: React.FC<{
     );
 };
 
+const screenTabs: { path: string; label: string }[] = [
+    { path: '/progress', label: 'Сводка' },
+    { path: '/progress/exercises', label: 'Упражнения' },
+    { path: '/progress/recovery', label: 'Восстановление' },
+]
+
+const ProgressScreenTabs: React.FC = () => {
+    const tg = useTelegramWebApp()
+
+    return (
+        <div className="grid grid-cols-3 gap-2">
+            {screenTabs.map((tab) => (
+                <NavLink
+                    key={tab.path}
+                    to={tab.path}
+                    onClick={() => tg.hapticFeedback({ type: 'selection' })}
+                    className={({ isActive }) =>
+                        cn(
+                            'touch-manipulation rounded-full border px-3 py-2 text-center text-xs font-medium transition duration-150',
+                            'active:scale-[0.985] active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                            isActive
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-telegram-secondary-bg text-telegram-text'
+                        )
+                    }
+                    end={tab.path === '/progress'}
+                >
+                    {tab.label}
+                </NavLink>
+            ))}
+        </div>
+    )
+}
+
 // ============================================
 // Main Component
 // ============================================
 
 const Analytics: React.FC = () => {
+    const { pathname } = useLocation()
+    const screen = useMemo(() => resolveAnalyticsScreen(pathname), [pathname])
+    const isOverviewScreen = screen === 'overview'
+    const isExerciseScreen = screen === 'exercises'
+    const isRecoveryScreen = screen === 'recovery'
+
     const [period, setPeriod] = useState<PeriodType>('30d');
     const [customStart, setCustomStart] = useState<Date>();
     const [customEnd, setCustomEnd] = useState<Date>();
@@ -650,9 +841,14 @@ const Analytics: React.FC = () => {
     )
 
     const summaryQuery = useQuery({
-        queryKey: queryKeys.analytics.summary(apiPeriod),
-        queryFn: () => analyticsApi.getSummary({ period: apiPeriod }) as Promise<ApiAnalyticsSummaryResponse>,
-        enabled: isReal,
+        queryKey: queryKeys.analytics.summary(apiPeriod, dateRange.date_from ?? null, dateRange.date_to ?? null),
+        queryFn: () =>
+            analyticsApi.getSummary({
+                period: apiPeriod,
+                ...(dateRange.date_from ? { date_from: dateRange.date_from } : {}),
+                ...(dateRange.date_to ? { date_to: dateRange.date_to } : {}),
+            }) as Promise<ApiAnalyticsSummaryResponse>,
+        enabled: isReal && !isRecoveryScreen,
     })
 
     const progressQuery = useQuery({
@@ -671,28 +867,28 @@ const Analytics: React.FC = () => {
                 max_exercises: maxExercises,
                 max_data_points: maxDataPoints,
             }) as Promise<ApiExerciseProgressResponse[]>,
-        enabled: isReal,
+        enabled: isReal && !isRecoveryScreen,
     })
 
     const trainingLoadQuery = useQuery({
         queryKey: queryKeys.analytics.trainingLoadDaily(dateRange.date_from ?? null, dateRange.date_to ?? null),
         queryFn: () => analyticsApi.getTrainingLoadDaily(dateRange) as Promise<ApiTrainingLoadDailyEntry[]>,
         staleTime: 60_000,
-        enabled: isReal,
+        enabled: isReal && isRecoveryScreen,
     })
 
     const muscleLoadQuery = useQuery({
         queryKey: queryKeys.analytics.muscleLoad(dateRange.date_from ?? null, dateRange.date_to ?? null),
         queryFn: () => analyticsApi.getMuscleLoad(dateRange) as Promise<ApiMuscleLoadEntry[]>,
         staleTime: 60_000,
-        enabled: isReal,
+        enabled: isReal && isRecoveryScreen,
     })
 
     const recoveryStateQuery = useQuery({
         queryKey: queryKeys.analytics.recoveryState,
         queryFn: () => analyticsApi.getRecoveryState() as Promise<ApiRecoveryStateResponse>,
         staleTime: 60_000,
-        enabled: isReal,
+        enabled: isReal && isRecoveryScreen,
     })
 
     const mock = useMemo(() => {
@@ -704,9 +900,12 @@ const Analytics: React.FC = () => {
 
     const summary = (isReal ? summaryQuery.data : mock?.summary) as ApiAnalyticsSummaryResponse | undefined
     const progressRows = (isReal ? progressQuery.data : mock?.progress) as ApiExerciseProgressResponse[] | undefined
+    const trainingLoadRows = (isReal ? trainingLoadQuery.data : mock?.trainingLoadDaily) as ApiTrainingLoadDailyEntry[] | undefined
+    const muscleLoadRows = (isReal ? muscleLoadQuery.data : mock?.muscleLoad) as ApiMuscleLoadEntry[] | undefined
+    const recoveryState = (isReal ? recoveryStateQuery.data : mock?.recoveryState) as ApiRecoveryStateResponse | undefined
 
-    const isAnalyticsPending = isReal && (summaryQuery.isPending || progressQuery.isPending)
-    const isAnalyticsError = isReal && (summaryQuery.isError || progressQuery.isError)
+    const isAnalyticsPending = isReal && !isRecoveryScreen && (summaryQuery.isPending || progressQuery.isPending)
+    const isAnalyticsError = isReal && !isRecoveryScreen && (summaryQuery.isError || progressQuery.isError)
 
     const exercises = useMemo((): Exercise[] => {
         return mapProgressToExercises(progressRows)
@@ -715,7 +914,7 @@ const Analytics: React.FC = () => {
     useEffect(() => {
         if (selectedExercises.length > 0) return
         if (exercises.length === 0) return
-        setSelectedExercises(exercises.slice(0, 2))
+        setSelectedExercises(exercises.slice(0, 1))
     }, [exercises, selectedExercises.length])
 
     // Prepare chart data
@@ -728,14 +927,19 @@ const Analytics: React.FC = () => {
         return mapKeyMetrics({ summary, progressRows, selectedExercises })
     }, [summary, progressRows, selectedExercises]);
 
+    const exerciseInsights = useMemo(
+        () => buildExerciseInsights({ progressRows, selectedExercises }),
+        [progressRows, selectedExercises],
+    )
+
     const loadCards = useMemo(() => {
-        const training = trainingLoadQuery.data ?? []
+        const training = trainingLoadRows ?? []
         const totalVolume = training.reduce((acc, x) => acc + (Number(x.volume) || 0), 0)
         const totalFatigue = training.reduce((acc, x) => acc + (Number(x.fatigueScore) || 0), 0)
         const avgRpeValues = training.map((x) => x.avgRpe).filter((x): x is number => typeof x === 'number')
         const avgRpe = avgRpeValues.length ? avgRpeValues.reduce((a, b) => a + b, 0) / avgRpeValues.length : null
 
-        const recovery = recoveryStateQuery.data
+        const recovery = recoveryState
         const readiness = recovery?.readinessScore ?? null
         const fatigueLevel = recovery?.fatigueLevel ?? null
 
@@ -746,10 +950,10 @@ const Analytics: React.FC = () => {
             readiness: readiness != null ? Math.round(readiness) : null,
             fatigueLevel,
         }
-    }, [trainingLoadQuery.data, recoveryStateQuery.data])
+    }, [recoveryState, trainingLoadRows])
 
     const topMuscleLoad = useMemo(() => {
-        const rows = muscleLoadQuery.data ?? []
+        const rows = muscleLoadRows ?? []
         const byGroup = new Map<string, number>()
         for (const r of rows) {
             const k = r.muscleGroup
@@ -759,7 +963,34 @@ const Analytics: React.FC = () => {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([muscleGroup, loadScore]) => ({ muscleGroup, loadScore: Math.round(loadScore) }))
-    }, [muscleLoadQuery.data])
+    }, [muscleLoadRows])
+
+    const recoveryRecommendations = useMemo(
+        () =>
+            buildRecoveryRecommendations({
+                readiness: loadCards.readiness,
+                fatigueLevel: loadCards.fatigueLevel,
+                avgRpe: loadCards.avgRpe,
+                topMuscleLoad,
+            }),
+        [loadCards.avgRpe, loadCards.fatigueLevel, loadCards.readiness, topMuscleLoad],
+    )
+
+    const muscleLoadSummary = useMemo(() => {
+        if (topMuscleLoad.length === 0) {
+            return 'Нет данных по мышечной нагрузке за выбранный период.'
+        }
+        const primary = topMuscleLoad[0]
+        const secondary = topMuscleLoad[1]
+        if (!secondary) {
+            return `Основная нагрузка пришлась на ${primary.muscleGroup}. Проверьте, успевает ли эта зона восстанавливаться между тренировками.`
+        }
+        const spread = primary.loadScore - secondary.loadScore
+        if (spread >= 40) {
+            return `Доминирует ${primary.muscleGroup}: нагрузка заметно выше, чем у ${secondary.muscleGroup}. Имеет смысл снизить локальный объём или добавить восстановление этой зоны.`
+        }
+        return `Нагрузка распределена относительно ровно между ${primary.muscleGroup.toLowerCase()} и ${secondary.muscleGroup.toLowerCase()}. Это хороший сигнал по балансу программы.`
+    }, [topMuscleLoad])
 
     // Handle chart click
     const handleChartClick = useCallback((data: { activeLabel?: string; activePayload?: unknown[] } | undefined) => {
@@ -790,10 +1021,10 @@ const Analytics: React.FC = () => {
 
     const analyticsHeaderExport = useMemo(
         () =>
-            activeTab === 'chart' ? (
+            isExerciseScreen && activeTab === 'chart' ? (
                 <ExportMenu data={chartData} selectedExercises={selectedExercises} tg={tg} />
             ) : null,
-        [activeTab, chartData, selectedExercises, tg],
+        [activeTab, chartData, isExerciseScreen, selectedExercises, tg],
     );
 
     useAppShellHeaderRight(analyticsHeaderExport);
@@ -824,58 +1055,144 @@ const Analytics: React.FC = () => {
 
     return (
         <div className="bg-telegram-bg">
-            <div className="sticky top-0 z-10 bg-telegram-bg/95 backdrop-blur-sm border-b border-border">
-                <div className="px-4 py-3">
-                    <ChipGroup>
-                        <Chip
-                            label="Прогресс"
-                            active={activeTab === 'chart'}
-                            onClick={() => {
-                                tg.hapticFeedback({ type: 'selection' })
-                                setActiveTab('chart')
-                            }}
-                            icon={<TrendingUp className="w-4 h-4" />}
-                        />
-                        <Chip
-                            label="1ПМ Калькулятор"
-                            active={activeTab === 'calculator'}
-                            onClick={() => {
-                                tg.hapticFeedback({ type: 'selection' })
-                                setActiveTab('calculator')
-                            }}
-                            icon={<Calculator className="w-4 h-4" />}
-                        />
-                    </ChipGroup>
+            <div className="sticky top-0 z-10 border-b border-border bg-telegram-bg/95 backdrop-blur-sm">
+                <div className="space-y-3 px-4 py-3">
+                    <ProgressScreenTabs />
+                    {isExerciseScreen && (
+                        <ChipGroup>
+                            <Chip
+                                label="Прогресс"
+                                active={activeTab === 'chart'}
+                                onClick={() => {
+                                    tg.hapticFeedback({ type: 'selection' })
+                                    setActiveTab('chart')
+                                }}
+                                icon={<TrendingUp className="w-4 h-4" />}
+                            />
+                            <Chip
+                                label="1ПМ Калькулятор"
+                                active={activeTab === 'calculator'}
+                                onClick={() => {
+                                    tg.hapticFeedback({ type: 'selection' })
+                                    setActiveTab('calculator')
+                                }}
+                                icon={<Calculator className="w-4 h-4" />}
+                            />
+                        </ChipGroup>
+                    )}
                 </div>
             </div>
 
-            {activeTab === 'chart' ? (
-                <div className="p-4 space-y-6">
-                    {/* Period Selector */}
+            {isOverviewScreen && (
+                <div className="space-y-5 p-4">
+                    <Card variant="info" className="animate-progress-overview-in p-4">
+                        <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                            Прогресс
+                        </div>
+                        <h1 className="mt-3 text-lg font-semibold leading-tight text-telegram-text">Один экран = одна цель</h1>
+                        <p className="mt-2 text-sm text-telegram-hint">
+                            Сначала выберите фокус, затем работайте только с нужными метриками без перегруза.
+                        </p>
+                    </Card>
+
+                    <section className="animate-progress-overview-in progress-overview-delay-1">
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">Быстрый выбор фокуса</h2>
+                        <div className="grid gap-3">
+                            <NavLink
+                                to="/progress/exercises"
+                                className="block touch-manipulation rounded-2xl transition duration-150 active:scale-[0.985] active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                onClick={() => tg.hapticFeedback({ type: 'selection' })}
+                            >
+                                <Card variant="info" className="p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="text-base font-semibold text-telegram-text">Прогресс упражнений</div>
+                                            <div className="mt-1 text-xs text-telegram-hint">
+                                                График веса, сравнение упражнений и статистика прироста.
+                                            </div>
+                                        </div>
+                                        <Dumbbell className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <span className="rounded-full bg-telegram-secondary-bg px-2 py-1 text-[11px] text-telegram-hint">График</span>
+                                        <span className="rounded-full bg-telegram-secondary-bg px-2 py-1 text-[11px] text-telegram-hint">Сравнение</span>
+                                        <span className="rounded-full bg-telegram-secondary-bg px-2 py-1 text-[11px] text-telegram-hint">Статистика</span>
+                                    </div>
+                                </Card>
+                            </NavLink>
+
+                            <NavLink
+                                to="/progress/recovery"
+                                className="block touch-manipulation rounded-2xl transition duration-150 active:scale-[0.985] active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                onClick={() => tg.hapticFeedback({ type: 'selection' })}
+                            >
+                                <Card variant="info" className="p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="text-base font-semibold text-telegram-text">Восстановление</div>
+                                            <div className="mt-1 text-xs text-telegram-hint">
+                                                Нагрузка, усталость, готовность и мышечный стресс.
+                                            </div>
+                                        </div>
+                                        <Activity className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <span className="rounded-full bg-telegram-secondary-bg px-2 py-1 text-[11px] text-telegram-hint">Нагрузка</span>
+                                        <span className="rounded-full bg-telegram-secondary-bg px-2 py-1 text-[11px] text-telegram-hint">RPE</span>
+                                        <span className="rounded-full bg-telegram-secondary-bg px-2 py-1 text-[11px] text-telegram-hint">Готовность</span>
+                                    </div>
+                                </Card>
+                            </NavLink>
+                        </div>
+                    </section>
+
+                    <section className="animate-progress-overview-in progress-overview-delay-2">
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">Короткая сводка</h2>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Тренировок</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{summary?.total_workouts ?? 0}</div>
+                            </Card>
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Серия дней</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{summary?.current_streak ?? 0}</div>
+                            </Card>
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Личный рекорд</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{summary?.personal_records?.length ?? 0}</div>
+                            </Card>
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Рост силы</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">+{metrics.strengthGrowth}%</div>
+                            </Card>
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {isExerciseScreen && activeTab === 'chart' && (
+                <div className="space-y-6 p-4">
                     <section>
-                        <h2 className="text-sm font-medium text-gray-500 mb-3">Период</h2>
+                        <h2 className="mb-3 text-sm font-medium text-gray-500">Период</h2>
                         <PeriodSelector
                             selected={period}
                             onChange={setPeriod}
                             customStart={customStart}
                             customEnd={customEnd}
                             onCustomChange={(start, end) => {
-                                setCustomStart(start);
-                                setCustomEnd(end);
+                                setCustomStart(start)
+                                setCustomEnd(end)
                             }}
                         />
-                        {period === 'custom' && (
+                        {period === 'custom' && dateRange.date_from && dateRange.date_to && (
                             <p className="mt-2 text-xs text-telegram-hint">
-                                Свой период пока отображается как “30 дней” (ограничение текущего API). Полная поддержка будет добавлена позже.
+                                Период: {format(parseISO(dateRange.date_from), 'd MMM', { locale: ru })} - {format(parseISO(dateRange.date_to), 'd MMM yyyy', { locale: ru })}
                             </p>
                         )}
                     </section>
 
-                    {/* Exercise Selector */}
                     <section>
-                        <h2 className="text-sm font-medium text-gray-500 mb-3">
-                            Упражнения для сравнения (макс. 5)
-                        </h2>
+                        <h2 className="mb-3 text-sm font-medium text-gray-500">Упражнения для сравнения</h2>
                         <ExerciseSelector
                             exercises={exercises}
                             selected={selectedExercises}
@@ -883,113 +1200,99 @@ const Analytics: React.FC = () => {
                         />
                     </section>
 
-                    {/* Key Metrics */}
                     <section>
-                        <h2 className="text-sm font-medium text-telegram-hint mb-3">Ключевые метрики</h2>
-                        <KeyMetricsCard metrics={metrics} />
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">Сразу видно прогресс</h2>
+                        <KeyMetricsCard metrics={metrics} selectedCount={selectedExercises.length} />
                     </section>
 
-                    {/* Load / Recovery */}
                     <section>
-                        <h2 className="text-sm font-medium text-telegram-hint mb-3">Нагрузка и восстановление</h2>
-                        {(trainingLoadQuery.isError || recoveryStateQuery.isError) && (
-                            <div className="mb-3 text-xs text-telegram-hint">
-                                Часть показателей недоступна: {getErrorMessage(trainingLoadQuery.error ?? recoveryStateQuery.error)}
-                            </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-3">
-                            <Card variant="info" className="p-3">
-                                <div className="text-xs text-telegram-hint">Объём (период)</div>
-                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {trainingLoadQuery.isPending ? '—' : loadCards.totalVolume}
-                                </div>
-                            </Card>
-                            <Card variant="info" className="p-3">
-                                <div className="text-xs text-telegram-hint">Усталость (период)</div>
-                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {trainingLoadQuery.isPending ? '—' : loadCards.totalFatigue}
-                                </div>
-                            </Card>
-                            <Card variant="info" className="p-3">
-                                <div className="text-xs text-telegram-hint">Средний RPE</div>
-                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {trainingLoadQuery.isPending ? '—' : (loadCards.avgRpe ?? '—')}
-                                </div>
-                            </Card>
-                            <Card variant="info" className="p-3">
-                                <div className="text-xs text-telegram-hint">Готовность</div>
-                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {recoveryStateQuery.isPending ? '—' : (loadCards.readiness ?? '—')}
-                                </div>
-                                {loadCards.fatigueLevel != null && (
-                                    <div className="mt-1 text-xs text-telegram-hint">
-                                        Уровень усталости: {loadCards.fatigueLevel}
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <h2 className="text-sm font-medium text-telegram-hint">Изменение за период</h2>
+                            <div className="text-xs text-telegram-hint">Текущее значение против первого в периоде</div>
+                        </div>
+                        <div className="space-y-3">
+                            {exerciseInsights.map((insight, index) => (
+                                <Card key={insight.exercise.id} variant="info" className="p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="h-3 w-3 rounded-full"
+                                                    style={{ backgroundColor: lineColors[index] }}
+                                                />
+                                                <div className="text-sm font-semibold text-telegram-text">{insight.exercise.name}</div>
+                                            </div>
+                                            <div className="mt-1 text-xs text-telegram-hint">
+                                                {insight.currentDate
+                                                    ? `Последнее обновление ${format(parseISO(insight.currentDate), 'd MMM', { locale: ru })}`
+                                                    : 'Недостаточно данных за период'}
+                                            </div>
+                                        </div>
+                                        <div
+                                            className={cn(
+                                                'rounded-full px-2.5 py-1 text-xs font-medium',
+                                                (insight.changeKg ?? 0) >= 0
+                                                    ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                                                    : 'bg-red-500/10 text-red-500 dark:text-red-400'
+                                            )}
+                                        >
+                                            {formatSignedPercent(insight.changePct)}
+                                        </div>
                                     </div>
-                                )}
-                            </Card>
+
+                                    <div className="mt-4 grid grid-cols-2 gap-3">
+                                        <div className="rounded-2xl bg-telegram-secondary-bg p-3">
+                                            <div className="text-xs text-telegram-hint">Текущий максимум</div>
+                                            <div className="mt-1 text-lg font-semibold text-telegram-text">
+                                                {insight.currentWeight != null ? `${insight.currentWeight.toFixed(1)} кг` : '—'}
+                                            </div>
+                                        </div>
+                                        <div className="rounded-2xl bg-telegram-secondary-bg p-3">
+                                            <div className="text-xs text-telegram-hint">Изменение</div>
+                                            <div
+                                                className={cn(
+                                                    'mt-1 text-lg font-semibold',
+                                                    (insight.changeKg ?? 0) >= 0
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : 'text-red-500 dark:text-red-400'
+                                                )}
+                                            >
+                                                {formatSignedWeight(insight.changeKg)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
                         </div>
                     </section>
 
-                    {/* Muscle load */}
                     <section>
-                        <h2 className="text-sm font-medium text-telegram-hint mb-3">Мышечная нагрузка (топ)</h2>
-                        {muscleLoadQuery.isPending ? (
-                            <Card variant="info" className="p-4">
-                                <div className="text-sm text-telegram-hint">Загрузка…</div>
-                            </Card>
-                        ) : muscleLoadQuery.isError ? (
-                            <Card variant="info" className="p-4">
-                                <div className="text-sm text-telegram-hint">{getErrorMessage(muscleLoadQuery.error)}</div>
-                            </Card>
-                        ) : topMuscleLoad.length === 0 ? (
-                            <Card variant="info" className="p-4">
-                                <div className="text-sm text-telegram-hint">Нет данных за выбранный период</div>
-                            </Card>
-                        ) : (
-                            <Card variant="info" className="p-4">
-                                <div className="space-y-2">
-                                    {topMuscleLoad.map((row) => (
-                                        <div key={row.muscleGroup} className="flex items-center justify-between">
-                                            <div className="text-sm text-telegram-text">{row.muscleGroup}</div>
-                                            <div className="text-sm font-medium text-telegram-text">{row.loadScore}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
-                    </section>
-
-                    {/* Chart */}
-                    <section>
-                        <h2 className="text-sm font-medium text-telegram-hint mb-3">Прогресс</h2>
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">Прогресс</h2>
                         <Card variant="info" className="p-4">
                             {selectedExercises.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-telegram-hint">
-                                    <TrendingUp className="w-12 h-12 mb-3 opacity-50" />
+                                    <TrendingUp className="mb-3 h-12 w-12 opacity-50" />
                                     <p>Выберите упражнения для отображения графика</p>
                                 </div>
                             ) : chartData.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-telegram-hint">
-                                    <Calendar className="w-12 h-12 mb-3 opacity-50" />
+                                    <Calendar className="mb-3 h-12 w-12 opacity-50" />
                                     <p>Нет данных за выбранный период</p>
                                 </div>
                             ) : (
-                                <div className="h-80 -mx-2">
+                                <div className="-mx-2 h-80">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart
                                             data={chartData}
                                             onClick={handleChartClick}
                                             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                                         >
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                stroke={chartColors.grid}
-                                                opacity={0.5}
-                                            />
+                                            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.5} />
                                             <XAxis
                                                 dataKey="formattedDate"
                                                 tick={{ fontSize: 12, fill: chartColors.tick }}
                                                 stroke={chartColors.grid}
+                                                minTickGap={24}
                                             />
                                             <YAxis
                                                 tick={{ fontSize: 12, fill: chartColors.tick }}
@@ -1002,10 +1305,7 @@ const Analytics: React.FC = () => {
                                                 }}
                                             />
                                             <Tooltip content={<CustomTooltip />} />
-                                            <Legend
-                                                wrapperStyle={{ paddingTop: 16 }}
-                                                iconType="circle"
-                                            />
+                                            <Legend wrapperStyle={{ paddingTop: 16 }} iconType="circle" />
                                             {selectedExercises.map((exercise, index) => (
                                                 <Line
                                                     key={exercise.id}
@@ -1013,15 +1313,8 @@ const Analytics: React.FC = () => {
                                                     dataKey={exercise.name}
                                                     stroke={lineColors[index]}
                                                     strokeWidth={2}
-                                                    dot={{
-                                                        r: 4,
-                                                        strokeWidth: 2,
-                                                        fill: chartColors.dotFill,
-                                                    }}
-                                                    activeDot={{
-                                                        r: 6,
-                                                        strokeWidth: 2,
-                                                    }}
+                                                    dot={{ r: 4, strokeWidth: 2, fill: chartColors.dotFill }}
+                                                    activeDot={{ r: 6, strokeWidth: 2 }}
                                                     connectNulls
                                                 />
                                             ))}
@@ -1030,75 +1323,157 @@ const Analytics: React.FC = () => {
                                 </div>
                             )}
 
-                            <p className="text-xs text-telegram-hint text-center mt-2">
-                                Нажмите на точку для деталей
+                            <p className="mt-2 text-center text-xs text-telegram-hint">
+                                Каждая линия показывает лучший вес по дате. Нажмите на точку для деталей.
                             </p>
                         </Card>
                     </section>
 
-                    {/* Stats Summary */}
-                    {selectedExercises.length > 0 && chartData.length > 0 && (
-                        <section>
-                            <h2 className="text-sm font-medium text-telegram-hint mb-3">Статистика</h2>
-                            <div className="space-y-2">
-                                {selectedExercises.map((exercise, index) => {
-                                    const values = chartData
-                                        .map(d => d[exercise.name])
-                                        .filter((v): v is number => typeof v === 'number');
-
-                                    if (values.length === 0) return null;
-
-                                    const max = Math.max(...values);
-                                    const min = Math.min(...values);
-                                    const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-                                    const first = values[0];
-                                    const last = values[values.length - 1];
-                                    const growth = first > 0
-                                        ? Math.round(((last - first) / first) * 100)
-                                        : 0;
-
-                                    return (
-                                        <Card key={exercise.id} variant="info" className="p-3">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div
-                                                    className="w-3 h-3 rounded-full"
-                                                    style={{ backgroundColor: lineColors[index] }}
-                                                />
-                                                <span className="font-medium text-sm text-telegram-text">{exercise.name}</span>
+                    <section>
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">PR</h2>
+                        <div className="grid gap-3">
+                            {exerciseInsights.map((insight, index) => (
+                                <Card key={`${insight.exercise.id}-pr`} variant="info" className="p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <Trophy className="h-4 w-4 text-amber-500" />
+                                                <div className="text-sm font-semibold text-telegram-text">{insight.exercise.name}</div>
                                             </div>
-                                            <div className="grid grid-cols-4 gap-2 text-center">
-                                                <div>
-                                                    <p className="text-xs text-telegram-hint">Макс</p>
-                                                    <p className="font-medium text-telegram-text">{max} кг</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-telegram-hint">Мин</p>
-                                                    <p className="font-medium text-telegram-text">{min} кг</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-telegram-hint">Средн</p>
-                                                    <p className="font-medium text-telegram-text">{avg} кг</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-telegram-hint">Рост</p>
-                                                    <p className={cn(
-                                                        'font-medium',
-                                                        growth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
-                                                    )}>
-                                                        {growth > 0 ? '+' : ''}{growth}%
-                                                    </p>
-                                                </div>
+                                            <div className="mt-1 text-xs text-telegram-hint">
+                                                {insight.prDate
+                                                    ? `Личный рекорд зафиксирован ${format(parseISO(insight.prDate), 'd MMM yyyy', { locale: ru })}`
+                                                    : 'Пока нет PR по доступным данным'}
                                             </div>
-                                        </Card>
-                                    );
-                                })}
-                            </div>
-                        </section>
-                    )}
+                                        </div>
+                                        <div
+                                            className="h-3 w-3 rounded-full"
+                                            style={{ backgroundColor: lineColors[index] }}
+                                        />
+                                    </div>
+                                    <div className="mt-4 rounded-2xl bg-telegram-secondary-bg p-3">
+                                        <div className="text-xs text-telegram-hint">Лучший вес</div>
+                                        <div className="mt-1 text-xl font-semibold text-telegram-text">
+                                            {insight.prWeight != null ? `${insight.prWeight.toFixed(1)} кг` : '—'}
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </section>
                 </div>
-            ) : (
+            )}
+
+            {isExerciseScreen && activeTab === 'calculator' && (
                 <div className="p-4">
                     <OneRMCalculator />
+                </div>
+            )}
+
+            {isRecoveryScreen && (
+                <div className="space-y-6 p-4">
+                    <section>
+                        <h2 className="mb-3 text-sm font-medium text-gray-500">Период</h2>
+                        <PeriodSelector
+                            selected={period}
+                            onChange={setPeriod}
+                            customStart={customStart}
+                            customEnd={customEnd}
+                            onCustomChange={(start, end) => {
+                                setCustomStart(start)
+                                setCustomEnd(end)
+                            }}
+                        />
+                        {period === 'custom' && dateRange.date_from && dateRange.date_to && (
+                            <p className="mt-2 text-xs text-telegram-hint">
+                                Период: {format(parseISO(dateRange.date_from), 'd MMM', { locale: ru })} - {format(parseISO(dateRange.date_to), 'd MMM yyyy', { locale: ru })}
+                            </p>
+                        )}
+                    </section>
+
+                    <section>
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">Нагрузка и восстановление</h2>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Объём (период)</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                                    {isReal && trainingLoadQuery.isPending ? '—' : loadCards.totalVolume}
+                                </div>
+                            </Card>
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Усталость (период)</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                                    {isReal && trainingLoadQuery.isPending ? '—' : loadCards.totalFatigue}
+                                </div>
+                            </Card>
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Средний RPE</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                                    {isReal && trainingLoadQuery.isPending ? '—' : (loadCards.avgRpe ?? '—')}
+                                </div>
+                            </Card>
+                            <Card variant="info" className="p-3">
+                                <div className="text-xs text-telegram-hint">Готовность</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                                    {isReal && recoveryStateQuery.isPending ? '—' : (loadCards.readiness ?? '—')}
+                                </div>
+                                {loadCards.fatigueLevel != null && (
+                                    <div className="mt-1 text-xs text-telegram-hint">Уровень усталости: {loadCards.fatigueLevel}</div>
+                                )}
+                            </Card>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">Рекомендации</h2>
+                        <div className="space-y-3">
+                            {recoveryRecommendations.map((item) => (
+                                <Card key={item.title} variant="info" className="p-4">
+                                    <div
+                                        className={cn(
+                                            'inline-flex rounded-full px-2.5 py-1 text-xs font-medium',
+                                            item.tone === 'good' && 'bg-green-500/10 text-green-600 dark:text-green-400',
+                                            item.tone === 'warn' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                                            item.tone === 'alert' && 'bg-red-500/10 text-red-500 dark:text-red-400'
+                                        )}
+                                    >
+                                        {item.title}
+                                    </div>
+                                    <p className="mt-3 text-sm leading-6 text-telegram-text">{item.body}</p>
+                                </Card>
+                            ))}
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 className="mb-3 text-sm font-medium text-telegram-hint">Сводка по мышечной нагрузке</h2>
+                        <Card variant="info" className="p-4">
+                            <p className="text-sm leading-6 text-telegram-text">{muscleLoadSummary}</p>
+                            {topMuscleLoad.length > 0 && (
+                                <div className="mt-4 space-y-3">
+                                    {topMuscleLoad.map((row, index) => (
+                                        <div key={row.muscleGroup}>
+                                            <div className="mb-1 flex items-center justify-between text-sm">
+                                                <div className="text-telegram-text">{row.muscleGroup}</div>
+                                                <div className="font-medium text-telegram-text">{row.loadScore}</div>
+                                            </div>
+                                            <div className="h-2 rounded-full bg-telegram-secondary-bg">
+                                                <div
+                                                    className={cn(
+                                                        'h-2 rounded-full',
+                                                        index === 0 && 'bg-primary',
+                                                        index === 1 && 'bg-green-500',
+                                                        index >= 2 && 'bg-amber-500'
+                                                    )}
+                                                    style={{ width: `${Math.min(100, Math.max(12, row.loadScore / Math.max(topMuscleLoad[0].loadScore, 1) * 100))}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </Card>
+                    </section>
                 </div>
             )}
 
