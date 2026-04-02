@@ -38,6 +38,9 @@ const WorkoutTemplateDetailPage = lazy(() =>
 const WorkoutDetailPage = lazy(() =>
     import('@features/workouts/pages/WorkoutDetailPage').then((m) => ({ default: m.WorkoutDetailPage })),
 )
+const ActiveWorkoutPage = lazy(() =>
+    import('@features/workouts/pages/ActiveWorkoutPage').then((m) => ({ default: m.ActiveWorkoutPage })),
+)
 const ProfilePage = lazy(() => import('@features/profile/pages/ProfilePage'))
 const HealthPage = lazy(() =>
     import('@features/health/pages/HealthPage').then((m) => ({ default: m.HealthPage })),
@@ -157,7 +160,7 @@ export default function App() {
                                             path="/workouts/active/:id"
                                             element={
                                                 <RouteGuard screenTitle="Тренировка" skeleton={<ActiveWorkoutSkeleton />}>
-                                                    <WorkoutDetailPage />
+                                                    <ActiveWorkoutPage />
                                                 </RouteGuard>
                                             }
                                         />

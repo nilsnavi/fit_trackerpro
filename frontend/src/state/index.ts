@@ -12,6 +12,7 @@
 export { queryKeys } from './server'
 export type { AchievementListFilter } from './server'
 export {
+    useActiveWorkoutStore,
     useSessionStore,
     useUiStore,
     useWorkoutDraftStore,

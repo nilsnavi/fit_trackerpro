@@ -48,6 +48,7 @@ export interface CompletedSet {
     rpe?: number
     rir?: number
     duration?: number
+    distance?: number
     completed: boolean
 }
 
