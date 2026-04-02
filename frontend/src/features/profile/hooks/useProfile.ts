@@ -8,6 +8,7 @@ import {
     useQueryClient,
 } from '@tanstack/react-query'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
+import { getErrorMessage } from '@shared/errors'
 import { queryKeys } from '@shared/api/queryKeys'
 import { authApi } from '@features/profile/api/authApi'
 import { usersApi } from '@shared/api/domains/usersApi'
@@ -60,7 +61,7 @@ export interface UseProfileReturn {
 
 export function useProfile(): UseProfileReturn {
     const queryClient = useQueryClient()
-    const { hapticFeedback } = useTelegramWebApp()
+    const { hapticFeedback, showAlert } = useTelegramWebApp()
 
     const profileQuery = useQuery({
         queryKey: queryKeys.profile.me,
@@ -79,9 +80,8 @@ export function useProfile(): UseProfileReturn {
 
     const updateProfileMutation = useMutation({
         mutationFn: async (updates: Partial<UserProfile['profile']>) => {
-            const current = queryClient.getQueryData<UserProfile>(queryKeys.profile.me)
             return authApi.updateCurrentUser({
-                profile: { ...current?.profile, ...updates },
+                profile: updates,
             })
         },
         onSuccess: (data) => {
@@ -91,9 +91,8 @@ export function useProfile(): UseProfileReturn {
 
     const updateSettingsMutation = useMutation({
         mutationFn: async (updates: Partial<UserProfile['settings']>) => {
-            const current = queryClient.getQueryData<UserProfile>(queryKeys.profile.me)
             return authApi.updateCurrentUser({
-                settings: { ...current?.settings, ...updates },
+                settings: updates,
             })
         },
         onSuccess: (data) => {
@@ -134,10 +133,12 @@ export function useProfile(): UseProfileReturn {
                 hapticFeedback({ type: 'notification', notificationType: 'success' })
             } catch (err) {
                 console.error('Failed to update profile:', err)
+                hapticFeedback({ type: 'notification', notificationType: 'error' })
+                await showAlert(`Не удалось сохранить профиль: ${getErrorMessage(err)}`)
                 throw err
             }
         },
-        [updateProfileMutation, hapticFeedback],
+        [updateProfileMutation, hapticFeedback, showAlert],
     )
 
     const updateSettings = useCallback(
@@ -147,10 +148,12 @@ export function useProfile(): UseProfileReturn {
                 hapticFeedback({ type: 'notification', notificationType: 'success' })
             } catch (err) {
                 console.error('Failed to update settings:', err)
+                hapticFeedback({ type: 'notification', notificationType: 'error' })
+                await showAlert(`Не удалось сохранить настройки: ${getErrorMessage(err)}`)
                 throw err
             }
         },
-        [updateSettingsMutation, hapticFeedback],
+        [updateSettingsMutation, hapticFeedback, showAlert],
     )
 
     const updateWeight = useCallback(
