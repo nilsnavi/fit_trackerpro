@@ -140,6 +140,16 @@ export function WorkoutsPage() {
         [selectedType, workouts],
     )
 
+    const normalizedTemplateNames = useMemo(
+        () =>
+            new Set(
+                templates
+                    .map((template) => template.name.trim().toLocaleLowerCase('ru-RU'))
+                    .filter(Boolean),
+            ),
+        [templates],
+    )
+
     const recentHistoryItems = useMemo(() => {
         const items = workoutHistory?.items ?? []
         const filtered =
@@ -175,16 +185,6 @@ export function WorkoutsPage() {
         if (pinned.length > 0) return pinned.slice(0, 5)
         return templates.slice(0, Math.min(3, templates.length))
     }, [templates, pinnedTemplateIds])
-
-    const normalizedTemplateNames = useMemo(
-        () =>
-            new Set(
-                templates
-                    .map((template) => template.name.trim().toLocaleLowerCase('ru-RU'))
-                    .filter(Boolean),
-            ),
-        [templates],
-    )
 
     const hasPinnedTemplates = favoriteTemplates.some((template) => pinnedTemplateIds.includes(template.id))
     const pinnedTemplatesCount = pinnedTemplateIds.length
@@ -257,7 +257,7 @@ export function WorkoutsPage() {
         setSavedHistoryFeedback({ workoutId: workout.id, templateName: nextTemplateName })
     }
 
-    const handleTogglePinnedTemplate = (templateId: number, templateName: string) => {
+    const handleTogglePinnedTemplate = (templateId: number) => {
         const isCurrentlyPinned = pinnedTemplateIds.includes(templateId)
         togglePinnedTemplate(templateId)
         setTemplatePinFeedback({
@@ -589,7 +589,7 @@ export function WorkoutsPage() {
                                 disabled={!pinnedTemplateIds.includes(t.id) && isPinnedTemplatesLimitReached}
                                 onClick={(event) => {
                                     event.stopPropagation()
-                                    handleTogglePinnedTemplate(t.id, t.name)
+                                    handleTogglePinnedTemplate(t.id)
                                 }}
                                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95 ${pinnedTemplateIds.includes(t.id)
                                     ? 'bg-primary/15 text-primary'

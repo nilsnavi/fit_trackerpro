@@ -9,7 +9,6 @@ import { AppShell } from './app/layouts/AppShell'
 import { RouteGuard } from '@shared/auth/RouteGuard'
 import {
     ActiveWorkoutSkeleton,
-    AnalyticsPageSkeleton,
     CatalogPageSkeleton,
     ProfilePageSkeleton,
     ProgressExercisesSkeleton,
