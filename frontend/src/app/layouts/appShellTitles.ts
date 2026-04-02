@@ -19,7 +19,7 @@ const TITLE_RULES: { test: (path: string) => boolean; title: string }[] = [
     { test: (p) => p.startsWith('/workouts/') && p.includes('/edit'), title: 'Редактирование' },
     { test: (p) => /^\/workouts\/\d+$/.test(p), title: 'Тренировка' },
     { test: (p) => p === '/health', title: 'Здоровье' },
-    { test: (p) => p === '/analytics' || p.startsWith('/progress/'), title: 'Аналитика' },
+    { test: (p) => p === '/analytics' || p === '/progress' || p.startsWith('/progress/'), title: 'Аналитика' },
     { test: (p) => p === '/profile', title: 'Профиль' },
     { test: (p) => p === '/login', title: 'Вход' },
 ]

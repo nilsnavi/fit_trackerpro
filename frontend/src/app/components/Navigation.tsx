@@ -7,7 +7,7 @@ const navItems = [
     { path: '/', icon: Home, label: 'Главная' },
     { path: '/exercises', icon: Library, label: 'Каталог' },
     { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
-    { path: '/progress/exercises', icon: BarChart3, label: 'Статистика' },
+    { path: '/progress', icon: BarChart3, label: 'Статистика' },
     { path: '/profile', icon: User, label: 'Профиль' },
 ]
 

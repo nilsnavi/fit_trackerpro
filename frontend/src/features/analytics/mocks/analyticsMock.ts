@@ -50,6 +50,9 @@ export function buildMockAnalytics(params: {
 }): {
     summary: ApiAnalyticsSummaryResponse
     progress: ApiExerciseProgressResponse[]
+    trainingLoadDaily: Array<{ date: ApiDate; volume: number; fatigueScore: number; avgRpe: number | null }>
+    muscleLoad: Array<{ date: ApiDate; muscleGroup: string; loadScore: number }>
+    recoveryState: { fatigueLevel: number; readinessScore: number }
 } {
     const dates = dateRangeIso(params.date_from, params.date_to)
     const exercises = [
@@ -84,13 +87,24 @@ export function buildMockAnalytics(params: {
             progress_percentage,
         }
 
+        const bestPoint = points.reduce<typeof points[number] | null>((best, point) => {
+            if (best == null) return point
+            return (point.max_weight ?? 0) > (best.max_weight ?? 0) ? point : best
+        }, null)
+
         return {
             exercise_id: ex.id,
             exercise_name: ex.name,
             period: params.period,
             data_points: points,
             summary,
-            best_performance: null,
+            best_performance: bestPoint
+                ? {
+                      date: bestPoint.date,
+                      weight: bestPoint.max_weight,
+                      reps: bestPoint.reps,
+                  }
+                : null,
         }
     })
 
@@ -106,6 +120,42 @@ export function buildMockAnalytics(params: {
         monthly_average: 0,
     }
 
-    return { summary, progress }
+    const trainingLoadDaily = dates
+        .filter((_d, idx) => idx % 2 === 0)
+        .map((date, idx) => {
+            const seed = hashString(`load:${date}`)
+            const volume = clamp(1800 + idx * 35 + Math.round(seeded01(seed) * 500), 800, 5000)
+            const fatigueScore = clamp(45 + Math.round(seeded01(seed + 11) * 35), 20, 95)
+            const avgRpe = Math.round((5.5 + seeded01(seed + 19) * 3.5) * 10) / 10
+            return { date, volume, fatigueScore, avgRpe }
+        })
+
+    const muscleGroups = ['Ноги', 'Спина', 'Грудь', 'Плечи', 'Руки']
+    const muscleLoad = dates.flatMap((date, idx) =>
+        muscleGroups.map((muscleGroup, muscleIdx) => {
+            const seed = hashString(`muscle:${muscleGroup}:${date}`)
+            return {
+                date,
+                muscleGroup,
+                loadScore: clamp(18 + idx + muscleIdx * 4 + Math.round(seeded01(seed) * 20), 5, 100),
+            }
+        })
+    )
+
+    const avgFatigue =
+        trainingLoadDaily.length > 0
+            ? trainingLoadDaily.reduce((sum, row) => sum + row.fatigueScore, 0) / trainingLoadDaily.length
+            : 0
+    const avgRpe =
+        trainingLoadDaily.length > 0
+            ? trainingLoadDaily.reduce((sum, row) => sum + (row.avgRpe ?? 0), 0) / trainingLoadDaily.length
+            : 0
+
+    const recoveryState = {
+        fatigueLevel: clamp(Math.round(avgFatigue / 20), 1, 5),
+        readinessScore: clamp(Math.round(100 - avgFatigue / 1.6 - avgRpe * 3), 35, 92),
+    }
+
+    return { summary, progress, trainingLoadDaily, muscleLoad, recoveryState }
 }
 
