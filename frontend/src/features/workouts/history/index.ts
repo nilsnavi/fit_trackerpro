@@ -1,4 +1,4 @@
 /**
- * Zone: history — calendar view of completed workouts by date.
+ * Zone: history — list view of workouts with filters.
  */
-export { Calendar } from '@features/workouts/pages/Calendar';
+export { WorkoutHistoryPage } from '@features/workouts/pages/WorkoutHistoryPage'

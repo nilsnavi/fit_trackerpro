@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import {
     Plus,
     Clock,
-    Flame,
     ChevronRight,
     Play,
     Pencil,
@@ -14,27 +13,21 @@ import {
     Dumbbell,
     Sparkles,
     Zap,
-    History,
     Timer,
     Pin,
-    Check,
 } from 'lucide-react'
 import { RotateCcw } from 'lucide-react'
 import {
-    WORKOUT_FILTER_TYPE_ORDER,
     WORKOUT_MODE_ORDER,
     WORKOUT_TYPE_CONFIGS,
-    WORKOUT_TYPE_LABELS,
     getWorkoutListTypeConfig,
 } from '@features/workouts/config/workoutTypeConfigs'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
 import { useWorkoutsPageState } from '@features/workouts/hooks/useWorkoutsPageState'
-import { detectWorkoutType, toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
-import type { WorkoutType } from '@shared/types'
+import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import type { BackendWorkoutType } from '@features/workouts/types/workouts'
 import { getErrorMessage } from '@shared/errors'
-import { WorkoutsHistoryBlockSkeleton } from '@shared/ui/page-skeletons'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { Modal } from '@shared/ui/Modal'
@@ -51,7 +44,6 @@ const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
 export function WorkoutsPage() {
     const navigate = useNavigate()
     const {
-        selectedType,
         draftWorkoutId,
         draftTitle,
         draftUpdatedAt,
@@ -59,19 +51,15 @@ export function WorkoutsPage() {
         deletingTemplateId,
         isStartingWorkout,
         isRepeatingLast,
-        isSavingTemplateFromHistory,
         isDeletingTemplate,
-        handleFilterChange,
         handleAddWorkout,
         handleOpenCalendar,
         handleOpenProgress,
         handleOpenMode,
-        handleWorkoutClick,
         handleResumeDraft,
         handleStartEmpty,
         handleStartLast,
         handleStartFromTemplate,
-        handleSaveWorkoutAsTemplate,
         handleEditTemplate,
         handleRequestDeleteTemplate,
         handleCloseDeleteModal,
@@ -80,8 +68,6 @@ export function WorkoutsPage() {
 
     const {
         data: workoutHistory,
-        isLoading,
-        error,
     } = useWorkoutHistoryQuery()
 
     const {
@@ -134,54 +120,6 @@ export function WorkoutsPage() {
         }
     }, [lastCompletedWorkout])
 
-    const filteredWorkouts = useMemo(
-        () =>
-            selectedType === 'all'
-                ? workouts
-                : workouts.filter((w) => w.type === selectedType),
-        [selectedType, workouts],
-    )
-
-    const normalizedTemplateNames = useMemo(
-        () =>
-            new Set(
-                templates
-                    .map((template) => template.name.trim().toLocaleLowerCase('ru-RU'))
-                    .filter(Boolean),
-            ),
-        [templates],
-    )
-
-    const recentHistoryItems = useMemo(() => {
-        const items = workoutHistory?.items ?? []
-        const filtered =
-            selectedType === 'all'
-                ? items
-                : items.filter((item) => detectWorkoutType(item) === selectedType)
-
-        return filtered.slice(0, 5).map((item) => {
-            const mapped = toWorkoutListItem(item)
-            const parsedDate = new Date(item.date)
-            const formattedDate = Number.isNaN(parsedDate.getTime())
-                ? item.date
-                : new Intl.DateTimeFormat('ru-RU', {
-                      day: 'numeric',
-                      month: 'short',
-                  }).format(parsedDate)
-            const templateName = item.comments?.trim() || `Шаблон из тренировки #${item.id}`
-
-            return {
-                raw: item,
-                mapped,
-                formattedDate,
-                templateName,
-                isSavedAsTemplate: normalizedTemplateNames.has(
-                    templateName.trim().toLocaleLowerCase('ru-RU'),
-                ),
-            }
-        })
-    }, [workoutHistory, selectedType, normalizedTemplateNames])
-
     const favoriteTemplates = useMemo(() => {
         const pinned = templates.filter((template) => pinnedTemplateIds.includes(template.id))
         if (pinned.length > 0) return pinned.slice(0, 5)
@@ -191,7 +129,6 @@ export function WorkoutsPage() {
     const hasPinnedTemplates = favoriteTemplates.some((template) => pinnedTemplateIds.includes(template.id))
     const pinnedTemplatesCount = pinnedTemplateIds.length
     const isPinnedTemplatesLimitReached = pinnedTemplatesCount >= 5
-    const [savedHistoryFeedback, setSavedHistoryFeedback] = useState<{ workoutId: number; templateName: string } | null>(null)
     const [templatePinFeedback, setTemplatePinFeedback] = useState<{ templateId: number; message: string } | null>(null)
 
     const weeklySummary = useMemo(() => {
@@ -220,44 +157,10 @@ export function WorkoutsPage() {
     }, [draftUpdatedAt])
 
     useEffect(() => {
-        if (savedHistoryFeedback == null) return
-        const timeoutId = setTimeout(() => setSavedHistoryFeedback(null), 2400)
-        return () => clearTimeout(timeoutId)
-    }, [savedHistoryFeedback])
-
-    useEffect(() => {
         if (templatePinFeedback == null) return
         const timeoutId = setTimeout(() => setTemplatePinFeedback(null), 1800)
         return () => clearTimeout(timeoutId)
     }, [templatePinFeedback])
-
-    const buildUniqueTemplateName = (baseName: string) => {
-        const trimmedBaseName = baseName.trim() || 'Новый шаблон'
-        const normalizedExistingNames = new Set(
-            templates
-                .map((template) => template.name.trim().toLocaleLowerCase('ru-RU'))
-                .filter(Boolean),
-        )
-
-        if (!normalizedExistingNames.has(trimmedBaseName.toLocaleLowerCase('ru-RU'))) {
-            return trimmedBaseName
-        }
-
-        let suffix = 2
-        while (normalizedExistingNames.has(`${trimmedBaseName} (${suffix})`.toLocaleLowerCase('ru-RU'))) {
-            suffix += 1
-        }
-
-        return `${trimmedBaseName} (${suffix})`
-    }
-
-    const handleSaveFromHistory = async (workout: (typeof recentHistoryItems)[number]['raw']) => {
-        const nextTemplateName = buildUniqueTemplateName(
-            workout.comments?.trim() || `Шаблон из тренировки #${workout.id}`,
-        )
-        await handleSaveWorkoutAsTemplate(workout, nextTemplateName)
-        setSavedHistoryFeedback({ workoutId: workout.id, templateName: nextTemplateName })
-    }
 
     const handleTogglePinnedTemplate = (templateId: number) => {
         const isCurrentlyPinned = pinnedTemplateIds.includes(templateId)
@@ -275,7 +178,7 @@ export function WorkoutsPage() {
                     type="button"
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-telegram-secondary-bg text-telegram-text transition-transform active:scale-95"
                     onClick={handleOpenCalendar}
-                    aria-label="Календарь тренировок"
+                    aria-label="История тренировок"
                 >
                     <CalendarDays className="h-5 w-5" />
                 </button>
@@ -642,184 +545,6 @@ export function WorkoutsPage() {
                             </button>
                         </div>
                     ))}
-            </div>
-
-            {/* ── 5. History ──────────────────────────────────────── */}
-            <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <History className="h-4 w-4 text-telegram-hint" />
-                        <h2 className="text-base font-semibold text-telegram-text">История</h2>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleOpenCalendar}
-                        className="text-xs font-medium text-primary active:opacity-70"
-                    >
-                        Все
-                    </button>
-                </div>
-
-                {/* Filter chips */}
-                <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
-                    <button
-                        onClick={() => handleFilterChange('all')}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${selectedType === 'all'
-                            ? 'bg-primary text-white'
-                            : 'bg-telegram-secondary-bg text-telegram-text'
-                            }`}
-                    >
-                        Все
-                    </button>
-                    {WORKOUT_FILTER_TYPE_ORDER.map((type) => (
-                        <button
-                            key={type}
-                            onClick={() => handleFilterChange(type)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${selectedType === type
-                                ? 'bg-primary text-white'
-                                : 'bg-telegram-secondary-bg text-telegram-text'
-                                }`}
-                        >
-                            {getWorkoutListTypeConfig(type).filterLabel}
-                        </button>
-                    ))}
-                </div>
-
-                {isLoading ? (
-                    <WorkoutsHistoryBlockSkeleton />
-                ) : (
-                    <>
-                        {error && (
-                            <div className="text-sm text-danger">{getErrorMessage(error)}</div>
-                        )}
-                        {!error && filteredWorkouts.length === 0 && (
-                            <div className="rounded-2xl border border-dashed border-border bg-telegram-secondary-bg/60">
-                                {workouts.length === 0 ? (
-                                    <SectionEmptyState
-                                        icon={Dumbbell}
-                                        title="История пока пустая"
-                                        description="Запустите готовый режим или соберите тренировку в конструкторе — завершённые сессии появятся в этом списке."
-                                        primaryAction={{
-                                            label: 'Новая тренировка',
-                                            onClick: handleAddWorkout,
-                                        }}
-                                        secondaryAction={{
-                                            label: 'Открыть календарь',
-                                            onClick: handleOpenCalendar,
-                                        }}
-                                    />
-                                ) : (
-                                    <SectionEmptyState
-                                        icon={Sparkles}
-                                        compact
-                                        title="Нет тренировок этого типа"
-                                        description={
-                                            getWorkoutListTypeConfig(selectedType as WorkoutType).hints
-                                                .emptyHistory ??
-                                            'Смените фильтр или добавьте тренировку с этим типом.'
-                                        }
-                                        primaryAction={{
-                                            label: 'Все типы',
-                                            onClick: () => handleFilterChange('all'),
-                                        }}
-                                    />
-                                )}
-                            </div>
-                        )}
-                        {!error &&
-                            recentHistoryItems.map(({ raw, mapped, formattedDate, templateName, isSavedAsTemplate }) => {
-                                const listCfg = getWorkoutListTypeConfig(mapped.type)
-                                const TypeIcon = listCfg.icon
-                                const showCals = listCfg.ux.showCaloriesInSummary
-                                const isJustSaved = savedHistoryFeedback?.workoutId === raw.id
-                                return (
-                                    <div
-                                        key={mapped.id}
-                                        className={`rounded-xl p-4 transition-colors ${isSavedAsTemplate
-                                            ? 'bg-primary/5 ring-1 ring-primary/20'
-                                            : 'bg-telegram-secondary-bg'
-                                            }`}
-                                    >
-                                        <button
-                                            type="button"
-                                            className="flex w-full items-center gap-4 text-left active:scale-[0.99] transition-transform"
-                                            onClick={() => handleWorkoutClick(mapped.id)}
-                                        >
-                                            <div
-                                                className={`w-11 h-11 rounded-xl ${listCfg.listBadgeClass} flex items-center justify-center text-white shrink-0`}
-                                            >
-                                                <TypeIcon className="w-5 h-5" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <h3 className="font-medium text-telegram-text truncate">{mapped.title}</h3>
-                                                    {isSavedAsTemplate && (
-                                                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                                                            В шаблонах
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="mt-0.5 flex flex-wrap items-center gap-3 text-xs text-telegram-hint">
-                                                    <span>{formattedDate}</span>
-                                                    <span>{WORKOUT_TYPE_LABELS[mapped.type]}</span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />
-                                                        {mapped.duration} мин
-                                                    </span>
-                                                    {showCals && (
-                                                        <span className="flex items-center gap-1">
-                                                            <Flame className="w-3 h-3" />
-                                                            {mapped.calories} ккал
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <ChevronRight className="w-4 h-4 text-telegram-hint shrink-0" />
-                                        </button>
-
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleWorkoutClick(mapped.id)}
-                                                className="rounded-full bg-telegram-bg px-3 py-1.5 text-xs font-medium text-telegram-text active:scale-95 transition-transform"
-                                            >
-                                                Открыть
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={isStartingWorkout || isRepeatingLast}
-                                                onClick={() => void handleStartLast(raw)}
-                                                className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary active:scale-95 transition-transform disabled:opacity-60"
-                                            >
-                                                Повторить
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={isSavingTemplateFromHistory}
-                                                onClick={() => void handleSaveFromHistory(raw)}
-                                                className={`rounded-full px-3 py-1.5 text-xs font-medium active:scale-95 transition-transform disabled:opacity-60 ${isJustSaved
-                                                    ? 'bg-primary text-white'
-                                                    : 'bg-telegram-bg text-telegram-text'
-                                                    }`}
-                                            >
-                                                {isJustSaved
-                                                    ? 'Сохранено'
-                                                    : isSavedAsTemplate
-                                                        ? 'Сохранить копию'
-                                                        : 'Сохранить как шаблон'}
-                                            </button>
-                                            {isJustSaved && (
-                                                <div className="flex items-center gap-1 text-xs text-primary">
-                                                    <Check className="h-3.5 w-3.5" />
-                                                    {savedHistoryFeedback?.templateName ?? templateName}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                    </>
-                )}
             </div>
 
             <Modal

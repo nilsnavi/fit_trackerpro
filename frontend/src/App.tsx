@@ -35,6 +35,9 @@ const WorkoutTemplatesPage = lazy(() =>
 const WorkoutTemplateDetailPage = lazy(() =>
     import('@features/workouts/pages/WorkoutTemplateDetailPage').then((m) => ({ default: m.WorkoutTemplateDetailPage })),
 )
+const WorkoutHistoryPage = lazy(() =>
+    import('@features/workouts/pages/WorkoutHistoryPage').then((m) => ({ default: m.WorkoutHistoryPage })),
+)
 const WorkoutDetailPage = lazy(() =>
     import('@features/workouts/pages/WorkoutDetailPage').then((m) => ({ default: m.WorkoutDetailPage })),
 )
@@ -151,6 +154,14 @@ export default function App() {
                                         <Route
                                             path="/workouts/history"
                                             element={
+                                                <RouteGuard screenTitle="История тренировок" skeleton={<WorkoutHistorySkeleton />}>
+                                                    <WorkoutHistoryPage />
+                                                </RouteGuard>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/calendar"
+                                            element={
                                                 <RouteGuard screenTitle="Календарь" skeleton={<WorkoutHistorySkeleton />}>
                                                     <WorkoutCalendarPage />
                                                 </RouteGuard>
@@ -223,10 +234,6 @@ export default function App() {
                                         <Route
                                             path="/workouts/builder"
                                             element={<Navigate to="/workouts/templates/new" replace />}
-                                        />
-                                        <Route
-                                            path="/workouts/calendar"
-                                            element={<Navigate to="/workouts/history" replace />}
                                         />
                                         <Route
                                             path="/workouts/:id"
