@@ -35,6 +35,7 @@ export const workoutsApi = {
         page?: number
         page_size?: number
         template_type?: string
+        include_archived?: boolean
     }): Promise<WorkoutTemplateListResponse> {
         return api.get<WorkoutTemplateListResponse>('/workouts/templates', params)
     },
@@ -56,6 +57,14 @@ export const workoutsApi = {
 
     deleteTemplate(templateId: number): Promise<void> {
         return api.delete<void>(`/workouts/templates/${templateId}`)
+    },
+
+    archiveTemplate(templateId: number): Promise<WorkoutTemplateResponse> {
+        return api.post<WorkoutTemplateResponse>(`/workouts/templates/${templateId}/archive`)
+    },
+
+    unarchiveTemplate(templateId: number): Promise<WorkoutTemplateResponse> {
+        return api.post<WorkoutTemplateResponse>(`/workouts/templates/${templateId}/unarchive`)
     },
 
     updateWorkoutSession(

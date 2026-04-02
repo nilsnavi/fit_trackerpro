@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
     Plus,
     Clock,
@@ -48,6 +49,7 @@ const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
 }
 
 export function WorkoutsPage() {
+    const navigate = useNavigate()
     const {
         selectedType,
         draftWorkoutId,
@@ -527,15 +529,24 @@ export function WorkoutsPage() {
             <div className="space-y-3">
                 <div className="flex items-center justify-between">
                     <h2 className="text-base font-semibold text-telegram-text">Шаблоны</h2>
-                    <button
-                        type="button"
-                        onClick={handleAddWorkout}
-                        className="flex items-center gap-1 text-xs font-medium text-primary active:opacity-70"
-                        aria-label="Создать шаблон"
-                    >
-                        <Plus className="h-3.5 w-3.5" />
-                        Создать
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/workouts/templates')}
+                            className="text-xs font-medium text-telegram-hint active:opacity-70"
+                        >
+                            Все
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleAddWorkout}
+                            className="flex items-center gap-1 text-xs font-medium text-primary active:opacity-70"
+                            aria-label="Создать шаблон"
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            Создать
+                        </button>
+                    </div>
                 </div>
                 {templatesLoading && (
                     <div className="space-y-2">

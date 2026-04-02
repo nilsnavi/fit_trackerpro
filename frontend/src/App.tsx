@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react'
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { PwaUpdatePrompt } from './app/components/PwaUpdatePrompt'
 import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
@@ -29,6 +29,12 @@ const WorkoutsPage = lazy(() =>
 const WorkoutBuilderPage = lazy(() =>
     import('@features/workouts/pages/WorkoutBuilderPage').then((m) => ({ default: m.WorkoutBuilderPage })),
 )
+const WorkoutTemplatesPage = lazy(() =>
+    import('@features/workouts/pages/WorkoutTemplatesPage').then((m) => ({ default: m.WorkoutTemplatesPage })),
+)
+const WorkoutTemplateDetailPage = lazy(() =>
+    import('@features/workouts/pages/WorkoutTemplateDetailPage').then((m) => ({ default: m.WorkoutTemplateDetailPage })),
+)
 const WorkoutDetailPage = lazy(() =>
     import('@features/workouts/pages/WorkoutDetailPage').then((m) => ({ default: m.WorkoutDetailPage })),
 )
@@ -49,16 +55,6 @@ const LoginPage = lazy(() =>
 const WorkoutCalendarPage = lazy(() => import('@features/workouts/pages/Calendar'))
 const AchievementsPage = lazy(() => import('@features/achievements/pages/AchievementsPage'))
 const RestTimerSandboxPage = lazy(() => import('@features/sandbox/pages/RestTimerDemo'))
-
-function TemplateEditorRedirect() {
-    const { id } = useParams<{ id: string }>()
-
-    if (!id) {
-        return <Navigate to="/workouts/templates" replace />
-    }
-
-    return <Navigate to={`/workouts/templates/${id}/edit`} replace />
-}
 
 function SentryErrorFallback({
     resetError,
@@ -113,7 +109,7 @@ export default function App() {
                                             path="/workouts/templates"
                                             element={
                                                 <RouteGuard screenTitle="Шаблоны тренировок" skeleton={<TemplatesPageSkeleton />}>
-                                                    <WorkoutsPage />
+                                                    <WorkoutTemplatesPage />
                                                 </RouteGuard>
                                             }
                                         />
@@ -136,8 +132,8 @@ export default function App() {
                                         <Route
                                             path="/workouts/templates/:id"
                                             element={
-                                                <RouteGuard screenTitle="Редактирование шаблона" skeleton={<TemplateBuilderSkeleton />}>
-                                                    <TemplateEditorRedirect />
+                                                <RouteGuard screenTitle="Шаблон тренировки" skeleton={<TemplatesPageSkeleton />}>
+                                                    <WorkoutTemplateDetailPage />
                                                 </RouteGuard>
                                             }
                                         />

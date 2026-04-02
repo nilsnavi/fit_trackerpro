@@ -17,8 +17,15 @@ from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 class WorkoutsRepository(SQLAlchemyRepository):
 
-    async def count_templates(self, user_id: int, template_type: Optional[str]) -> int:
+    async def count_templates(
+        self,
+        user_id: int,
+        template_type: Optional[str],
+        include_archived: bool = False,
+    ) -> int:
         query = select(func.count(WorkoutTemplate.id)).where(WorkoutTemplate.user_id == user_id)
+        if not include_archived:
+            query = query.where(WorkoutTemplate.is_archived.is_(False))
         if template_type:
             query = query.where(WorkoutTemplate.type == template_type)
         result = await self.db.execute(query)
@@ -30,8 +37,11 @@ class WorkoutsRepository(SQLAlchemyRepository):
         page: int,
         page_size: int,
         template_type: Optional[str],
+        include_archived: bool = False,
     ) -> List[WorkoutTemplate]:
         query = select(WorkoutTemplate).where(WorkoutTemplate.user_id == user_id)
+        if not include_archived:
+            query = query.where(WorkoutTemplate.is_archived.is_(False))
         if template_type:
             query = query.where(WorkoutTemplate.type == template_type)
         query = (

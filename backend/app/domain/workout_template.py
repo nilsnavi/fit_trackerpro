@@ -61,6 +61,11 @@ class WorkoutTemplate(Base):
         default=False,
         comment="Whether template is publicly available"
     )
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        comment="Soft archive flag for template"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -94,6 +99,7 @@ class WorkoutTemplate(Base):
         ),
         Index('ix_workout_templates_type', 'type'),
         Index('ix_workout_templates_is_public', 'is_public'),
+        Index('ix_workout_templates_is_archived', 'is_archived'),
         Index('ix_workout_templates_created_at', 'created_at'),
     )
 
