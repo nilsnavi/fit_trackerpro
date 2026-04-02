@@ -15,12 +15,14 @@ from app.domain.exceptions import WorkoutNotFoundError
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
 from app.infrastructure.idempotency import run_idempotent
 from app.settings import settings
+from app.schemas.enums import WorkoutSessionType
 from app.schemas.workouts import (
     CompletedExercise,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
+    WorkoutSessionUpdateRequest,
     WorkoutStartRequest,
     WorkoutStartResponse,
     WorkoutTemplateCreate,
@@ -34,6 +36,7 @@ from app.core.audit import (
     WORKOUT_TEMPLATE_CREATE,
     WORKOUT_TEMPLATE_DELETE,
     WORKOUT_TEMPLATE_UPDATE,
+    WORKOUT_UPDATE,
     audit_log,
 )
 
@@ -288,6 +291,7 @@ class WorkoutsService:
             date=date.today(),
             exercises=initial_exercises,
             comments=data.name or (template.name if template else None),
+            tags=([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
         )
         workout = await self.repository.create_workout_log(workout)
         await invalidate_user_analytics_cache(user_id)
@@ -449,6 +453,55 @@ class WorkoutsService:
             message=message,
         )
 
+    def _workout_log_to_history_item(
+        self,
+        workout: WorkoutLog,
+        exercises: list[CompletedExercise],
+    ) -> WorkoutHistoryItem:
+        return WorkoutHistoryItem(
+            id=workout.id,
+            date=workout.date,
+            duration=workout.duration,
+            exercises=exercises,
+            comments=workout.comments,
+            tags=list(workout.tags or []),
+            glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
+            glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            created_at=workout.created_at,
+        )
+
+    async def update_workout_session(
+        self,
+        user_id: int,
+        workout_id: int,
+        data: WorkoutSessionUpdateRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutHistoryItem:
+        workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
+        if not workout:
+            raise WorkoutNotFoundError("Workout not found")
+        if workout.duration is not None:
+            raise WorkoutNotFoundError("Completed workout cannot be updated")
+
+        workout.exercises = [ex.model_dump() for ex in data.exercises]
+        workout.comments = data.comments
+        workout.tags = data.tags
+        workout.glucose_before = data.glucose_before
+        workout.glucose_after = data.glucose_after
+
+        workout = await self.repository.commit_workout_update(workout)
+
+        audit_log(
+            action=WORKOUT_UPDATE,
+            user_db_id=user_id,
+            resource_type="workout_log",
+            resource_id=workout_id,
+            client_ip=client_ip,
+            meta={"exercise_count": len(data.exercises)},
+        )
+
+        return self._workout_log_to_history_item(workout, data.exercises)
+
     async def _complete_workout_once(
         self,
         user_id: int,
@@ -539,4 +592,6 @@ class WorkoutsService:
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
         if not workout:
             raise WorkoutNotFoundError("Workout not found")
-        return WorkoutHistoryItem.model_validate(workout, from_attributes=True)
+        raw_exercises = workout.exercises or []
+        exercises = [CompletedExercise.model_validate(ex) for ex in raw_exercises]
+        return self._workout_log_to_history_item(workout, exercises)

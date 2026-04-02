@@ -20,6 +20,7 @@ from app.schemas.workouts import (
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
+    WorkoutSessionUpdateRequest,
     WorkoutStartRequest,
     WorkoutStartResponse,
     WorkoutTemplateCreate,
@@ -156,6 +157,23 @@ async def complete_workout(
         data=complete_data,
         client_ip=get_client_ip(request),
         idempotency_key=idempotency_key,
+    )
+
+
+@router.patch("/history/{workout_id}", response_model=WorkoutHistoryItem)
+async def update_active_workout(
+    workout_id: int,
+    session_data: WorkoutSessionUpdateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.update_workout_session(
+        user_id=current_user.id,
+        workout_id=workout_id,
+        data=session_data,
+        client_ip=get_client_ip(request),
     )
 
 

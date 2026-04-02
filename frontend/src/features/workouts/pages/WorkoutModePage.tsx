@@ -1,17 +1,46 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import {
+    useStartWorkoutMutation,
+    useUpdateWorkoutSessionMutation,
+} from '@features/workouts/hooks/useWorkoutMutations'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { WorkoutModePageView } from '@features/workouts/workoutMode/WorkoutModePageView'
 import { getWorkoutModePageConfig } from '@features/workouts/workoutMode/workoutModePageModel'
+import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
+import type { CompletedExercise, WorkoutHistoryItem, WorkoutSessionUpdateRequest } from '@features/workouts/types/workouts'
+
+function buildRepeatExercises(exercises: WorkoutHistoryItem['exercises']): CompletedExercise[] {
+    return exercises.map((exercise) => ({
+        ...exercise,
+        sets_completed: exercise.sets_completed.map((setItem) => ({
+            ...setItem,
+            completed: false,
+            rpe: undefined,
+            rir: undefined,
+        })),
+    }))
+}
+
+function buildSessionUpdatePayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequest {
+    return {
+        exercises: buildRepeatExercises(workout.exercises),
+        comments: workout.comments,
+        tags: workout.tags ?? [],
+        glucose_before: undefined,
+        glucose_after: undefined,
+    }
+}
 
 export function WorkoutModePage() {
     const { mode } = useParams<{ mode: string }>()
     const navigate = useNavigate()
     const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
     const startWorkoutMutation = useStartWorkoutMutation()
+    const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
     const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
+    const { data: historyData } = useWorkoutHistoryQuery()
 
     const config = getWorkoutModePageConfig(mode)
 
@@ -32,6 +61,15 @@ export function WorkoutModePage() {
         )
     }
 
+    const recentWorkout = useMemo(() => {
+        const items = historyData?.items ?? []
+        const modePrefix = config.title.trim().toLowerCase()
+        return items.find((item) => {
+            const comment = item.comments?.trim().toLowerCase() ?? ''
+            return comment.startsWith(modePrefix)
+        }) ?? null
+    }, [config.title, historyData])
+
     const handleStart = async () => {
         const selectedPreset = config.presets.find((preset) => preset.id === selectedPresetId) ?? config.presets[0]
         const sessionTitle = `${config.title} • ${selectedPreset.label}`
@@ -47,13 +85,34 @@ export function WorkoutModePage() {
         }
     }
 
+    const handleRepeat = async () => {
+        if (!recentWorkout) return
+        try {
+            const started = await startWorkoutMutation.mutateAsync({
+                name: recentWorkout.comments?.trim() || `${config.title} • повтор`,
+                type: config.backendType,
+            })
+            await updateWorkoutSessionMutation.mutateAsync({
+                workoutId: started.id,
+                payload: buildSessionUpdatePayload(recentWorkout),
+            })
+            setWorkoutSessionDraft(started.id, recentWorkout.comments?.trim() || config.title)
+            navigate(`/workouts/${started.id}`)
+        } catch (error) {
+            console.error('Failed to repeat workout mode:', error)
+        }
+    }
+
     return (
         <WorkoutModePageView
             config={config}
             selectedPresetId={selectedPresetId}
             onSelectPreset={setSelectedPresetId}
             onStart={handleStart}
+            onRepeat={recentWorkout ? handleRepeat : undefined}
             isStarting={startWorkoutMutation.isPending}
+            isRepeating={updateWorkoutSessionMutation.isPending}
+            recentWorkoutTitle={recentWorkout?.comments ?? null}
         />
     )
 }

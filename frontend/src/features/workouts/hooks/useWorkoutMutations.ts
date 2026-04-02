@@ -5,8 +5,10 @@ import { offlineListQueryDefaults } from '@shared/offline/offlineQueryPersist'
 import type {
     WorkoutCompleteRequest,
     WorkoutStartRequest,
+    WorkoutSessionUpdateRequest,
     WorkoutTemplateCreateRequest,
     WorkoutHistoryItem,
+    WorkoutTemplateListResponse,
 } from '@features/workouts/types/workouts'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
@@ -48,6 +50,11 @@ export type CompleteWorkoutVariables = {
     payload: WorkoutCompleteRequest
 }
 
+export type UpdateWorkoutSessionVariables = {
+    workoutId: number
+    payload: WorkoutSessionUpdateRequest
+}
+
 type StartMutationContext = {
     tempId: number
     calendarSnap: ReturnType<typeof takeWorkoutsCalendarSnapshot>
@@ -65,6 +72,10 @@ type UpdateTemplateVariables = {
 }
 
 type UpdateTemplateContext = {
+    templateListsSnap: ReturnType<typeof takeWorkoutsTemplateListsSnapshot>
+}
+
+type DeleteTemplateContext = {
     templateListsSnap: ReturnType<typeof takeWorkoutsTemplateListsSnapshot>
 }
 
@@ -163,6 +174,50 @@ export function useUpdateWorkoutTemplateMutation() {
         },
         onSettled: () => {
             invalidateWorkouts(queryClient)
+        },
+    })
+}
+
+export function useDeleteWorkoutTemplateMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (templateId: number) => workoutsApi.deleteTemplate(templateId),
+        onMutate: async (templateId) => {
+            await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
+            const templateListsSnap = takeWorkoutsTemplateListsSnapshot(queryClient)
+
+            queryClient.setQueriesData<WorkoutTemplateListResponse>(
+                { queryKey: ['workouts', 'templates', 'list'], exact: false },
+                (current) => {
+                    if (!current) return current
+                    const items = current.items.filter((item) => item.id !== templateId)
+                    if (items.length === current.items.length) return current
+                    return {
+                        ...current,
+                        items,
+                        total: Math.max(0, current.total - 1),
+                    }
+                },
+            )
+            return { templateListsSnap } satisfies DeleteTemplateContext
+        },
+        onError: (_err, _templateId, ctx) => {
+            if (!ctx) return
+            restoreSnapshotEntries(queryClient, ctx.templateListsSnap)
+        },
+        onSettled: () => {
+            invalidateWorkouts(queryClient)
+        },
+    })
+}
+
+export function useUpdateWorkoutSessionMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async ({ workoutId, payload }: UpdateWorkoutSessionVariables) =>
+            workoutsApi.updateWorkoutSession(workoutId, payload),
+        onSuccess: (data, variables) => {
+            queryClient.setQueryData(queryKeys.workouts.historyItem(variables.workoutId), data)
         },
     })
 }

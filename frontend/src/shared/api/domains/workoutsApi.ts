@@ -7,6 +7,7 @@ import type {
     WorkoutStartResponse,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
+    WorkoutSessionUpdateRequest,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
     CalendarWorkout,
@@ -51,6 +52,17 @@ export const workoutsApi = {
         payload: WorkoutTemplateCreateRequest,
     ): Promise<WorkoutTemplateResponse> {
         return api.put<WorkoutTemplateResponse>(`/workouts/templates/${templateId}`, payload)
+    },
+
+    deleteTemplate(templateId: number): Promise<void> {
+        return api.delete<void>(`/workouts/templates/${templateId}`)
+    },
+
+    updateWorkoutSession(
+        workoutId: number,
+        payload: WorkoutSessionUpdateRequest,
+    ): Promise<WorkoutHistoryItem> {
+        return api.patch<WorkoutHistoryItem>(`/workouts/history/${workoutId}`, payload)
     },
 
     startWorkout(payload: WorkoutStartRequest): Promise<WorkoutStartResponse> {

@@ -193,6 +193,11 @@ class WorkoutsRepository(SQLAlchemyRepository):
         await self.refresh(workout)
         return workout
 
+    async def commit_workout_update(self, workout: WorkoutLog) -> WorkoutLog:
+        await self.commit()
+        await self.refresh(workout)
+        return workout
+
     def add_training_load_daily(self, row: TrainingLoadDaily) -> None:
         self.add(row)
 

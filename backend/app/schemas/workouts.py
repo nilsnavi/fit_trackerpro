@@ -203,6 +203,35 @@ class WorkoutStartResponse(BaseModel):
     )
 
 
+class WorkoutSessionUpdateRequest(BaseModel):
+    """Request model for updating an in-progress workout session."""
+
+    exercises: List[CompletedExercise] = Field(
+        default_factory=list,
+        max_length=200,
+        description="Current session exercises persisted before workout completion.",
+    )
+    comments: Optional[str] = Field(
+        None,
+        max_length=1000,
+    )
+    tags: List[_Tag] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Session tags kept while workout is in progress.",
+    )
+    glucose_before: Optional[float] = Field(
+        None,
+        ge=2.0,
+        le=30.0,
+    )
+    glucose_after: Optional[float] = Field(
+        None,
+        ge=2.0,
+        le=30.0,
+    )
+
+
 class WorkoutCompleteRequest(BaseModel):
     """Request model for completing a workout"""
     duration: int = Field(

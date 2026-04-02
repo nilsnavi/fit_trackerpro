@@ -229,6 +229,62 @@ class TestWorkoutStartComplete:
         assert detail_json.get("duration") == complete_payload["duration"]
         assert isinstance(detail_json.get("exercises"), list)
 
+    async def test_update_active_workout_persists_session_payload(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Силовая • 3 круга", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json().get("id")
+        assert workout_id
+
+        update_payload = {
+            "comments": "Силовая • 3 круга",
+            "tags": ["strength"],
+            "glucose_before": None,
+            "glucose_after": None,
+            "exercises": [
+                {
+                    "exercise_id": 101,
+                    "name": "Burpees",
+                    "notes": "Круг 1",
+                    "sets_completed": [
+                        {"set_number": 1, "completed": False, "reps": 12, "weight": None, "duration": None}
+                    ],
+                },
+                {
+                    "exercise_id": 102,
+                    "name": "Таймер отдыха",
+                    "notes": "Перерыв",
+                    "sets_completed": [
+                        {"set_number": 1, "completed": False, "reps": None, "weight": None, "duration": 60}
+                    ],
+                },
+            ],
+        }
+
+        updated = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json=update_payload,
+        )
+        assert updated.status_code == 200, updated.text
+        updated_json = updated.json()
+        assert updated_json.get("comments") == update_payload["comments"]
+        assert updated_json.get("tags") == update_payload["tags"]
+        exercises = updated_json.get("exercises") or []
+        assert len(exercises) == 2
+        assert exercises[0].get("name") == "Burpees"
+        assert exercises[1].get("sets_completed")[0].get("duration") == 60
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail.status_code == 200, detail.text
+        detail_json = detail.json()
+        assert len(detail_json.get("exercises") or []) == 2
+        assert detail_json.get("comments") == update_payload["comments"]
+
 
 @pytest.mark.integration
 class TestWorkoutHistory:

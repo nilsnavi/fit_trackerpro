@@ -8,7 +8,10 @@ export interface WorkoutModePageViewProps {
     selectedPresetId: string | null
     onSelectPreset: (presetId: string) => void
     onStart: () => void
+    onRepeat?: () => void
     isStarting: boolean
+    isRepeating?: boolean
+    recentWorkoutTitle?: string | null
 }
 
 export function WorkoutModePageView({
@@ -16,7 +19,10 @@ export function WorkoutModePageView({
     selectedPresetId,
     onSelectPreset,
     onStart,
+    onRepeat,
     isStarting,
+    isRepeating = false,
+    recentWorkoutTitle,
 }: WorkoutModePageViewProps) {
     const ModeIcon = config.icon
 
@@ -90,11 +96,30 @@ export function WorkoutModePageView({
                 </div>
             )}
 
+            {onRepeat && recentWorkoutTitle && (
+                <div className="rounded-xl border border-border bg-telegram-secondary-bg p-4 space-y-3">
+                    <div>
+                        <div className="text-sm font-medium text-telegram-text">Повторить прошлую тренировку</div>
+                        <div className="mt-1 text-xs text-telegram-hint">{recentWorkoutTitle}</div>
+                    </div>
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        fullWidth
+                        isLoading={isRepeating}
+                        onClick={onRepeat}
+                    >
+                        Повторить прошлую
+                    </Button>
+                </div>
+            )}
+
             <Button
                 variant="primary"
                 size="lg"
                 fullWidth
                 isLoading={isStarting}
+                disabled={isRepeating}
                 leftIcon={selectedPresetId ? <Flag className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                 onClick={onStart}
             >
