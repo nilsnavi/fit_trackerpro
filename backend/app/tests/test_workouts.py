@@ -168,6 +168,18 @@ class TestWorkoutStartComplete:
         workout_id = started_json.get("id") or started_json.get("workout_id")
         assert workout_id, started_json
 
+        detail_after_start = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail_after_start.status_code == 200, detail_after_start.text
+        started_detail = detail_after_start.json()
+        started_exercises = started_detail.get("exercises") or []
+        assert len(started_exercises) == 1
+        assert started_exercises[0].get("exercise_id") == 1
+        assert len(started_exercises[0].get("sets_completed") or []) == 2
+        assert all(
+            set_row.get("completed") is False
+            for set_row in (started_exercises[0].get("sets_completed") or [])
+        )
+
         # Minimal completion payload — adjust to the exact schema if needed.
         complete_payload = {
             "duration": 45,

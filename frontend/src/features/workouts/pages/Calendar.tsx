@@ -21,7 +21,7 @@ const STATUS_CONFIG = {
     completed: { color: 'bg-success', label: 'Выполнена', icon: '✓' },
     partial: { color: 'bg-warning', label: 'Частично', icon: '◐' },
     missed: { color: 'bg-danger', label: 'Пропущена', icon: '✕' },
-    planned: { color: 'bg-neutral-300', label: 'Запланирована', icon: '○' }
+    planned: { color: 'bg-neutral-300 dark:bg-neutral-600', label: 'Запланирована', icon: '○' }
 };
 
 // Helper functions

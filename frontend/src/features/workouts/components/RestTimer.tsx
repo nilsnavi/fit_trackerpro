@@ -374,7 +374,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                                 'transition-all duration-200',
                                 duration === preset
                                     ? 'bg-primary text-primary-foreground'
-                                    : 'bg-telegram-secondary-bg text-telegram-text hover:bg-neutral-200 dark:hover:bg-neutral-700',
+                                    : 'bg-telegram-secondary-bg text-telegram-text hover:bg-telegram-bg/60',
                                 'focus:outline-none focus:ring-2 focus:ring-primary/30'
                             )}
                         >
@@ -393,7 +393,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                         className={cn(
                             'px-3 py-1.5 rounded-lg text-sm font-medium',
                             'bg-telegram-secondary-bg text-telegram-text',
-                            'hover:bg-neutral-200 dark:hover:bg-neutral-700',
+                            'hover:bg-telegram-bg/60',
                             'active:scale-95 transition-all duration-200',
                             'disabled:opacity-50 disabled:cursor-not-allowed',
                             'focus:outline-none focus:ring-2 focus:ring-primary/30'
@@ -407,7 +407,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                         className={cn(
                             'px-3 py-1.5 rounded-lg text-sm font-medium',
                             'bg-telegram-secondary-bg text-telegram-text',
-                            'hover:bg-neutral-200 dark:hover:bg-neutral-700',
+                            'hover:bg-telegram-bg/60',
                             'active:scale-95 transition-all duration-200',
                             'focus:outline-none focus:ring-2 focus:ring-primary/30'
                         )}
@@ -425,7 +425,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                     className={cn(
                         'p-4 rounded-full',
                         'bg-telegram-secondary-bg text-telegram-text',
-                        'hover:bg-neutral-200 dark:hover:bg-neutral-700',
+                        'hover:bg-telegram-bg/60',
                         'active:scale-95',
                         'transition-all duration-200',
                         'focus:outline-none focus:ring-2 focus:ring-primary/30'
@@ -503,7 +503,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                     className={cn(
                         'p-4 rounded-full',
                         'bg-telegram-secondary-bg text-telegram-text',
-                        'hover:bg-neutral-200 dark:hover:bg-neutral-700',
+                        'hover:bg-telegram-bg/60',
                         'active:scale-95',
                         'transition-all duration-200',
                         'focus:outline-none focus:ring-2 focus:ring-primary/30'

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
     DndContext,
     closestCenter,
@@ -28,11 +29,8 @@ import {
     Edit2,
     ChevronUp,
     ChevronDown,
-    Save,
     Search,
     Plus,
-    Check,
-    Trophy,
     AlertCircle,
 } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
@@ -93,18 +91,18 @@ const buildTemplateExercises = (blocks: WorkoutBlock[]): ExerciseInTemplate[] =>
 // ============================================
 
 const mockExercises: WorkoutBuilderExercise[] = [
-    { id: '1', name: 'Push-ups', category: 'strength', muscleGroups: ['chest', 'triceps'] },
-    { id: '2', name: 'Squats', category: 'strength', muscleGroups: ['legs', 'glutes'] },
-    { id: '3', name: 'Deadlift', category: 'strength', muscleGroups: ['back', 'legs'] },
-    { id: '4', name: 'Bench Press', category: 'strength', muscleGroups: ['chest', 'triceps'] },
-    { id: '5', name: 'Pull-ups', category: 'strength', muscleGroups: ['back', 'biceps'] },
-    { id: '6', name: 'Running', category: 'cardio', muscleGroups: ['legs'] },
-    { id: '7', name: 'Cycling', category: 'cardio', muscleGroups: ['legs'] },
-    { id: '8', name: 'Jumping Jacks', category: 'cardio', muscleGroups: ['full body'] },
-    { id: '9', name: 'Burpees', category: 'cardio', muscleGroups: ['full body'] },
-    { id: '10', name: 'Plank', category: 'strength', muscleGroups: ['core'] },
-    { id: '11', name: 'Lunges', category: 'strength', muscleGroups: ['legs', 'glutes'] },
-    { id: '12', name: 'Shoulder Press', category: 'strength', muscleGroups: ['shoulders'] },
+    { id: '1', name: 'Отжимания', category: 'strength', muscleGroups: ['грудь', 'трицепс'] },
+    { id: '2', name: 'Приседания', category: 'strength', muscleGroups: ['ноги', 'ягодицы'] },
+    { id: '3', name: 'Становая тяга', category: 'strength', muscleGroups: ['спина', 'ноги'] },
+    { id: '4', name: 'Жим лёжа', category: 'strength', muscleGroups: ['грудь', 'трицепс'] },
+    { id: '5', name: 'Подтягивания', category: 'strength', muscleGroups: ['спина', 'бицепс'] },
+    { id: '6', name: 'Бег', category: 'cardio', muscleGroups: ['ноги'] },
+    { id: '7', name: 'Велотренажёр', category: 'cardio', muscleGroups: ['ноги'] },
+    { id: '8', name: 'Прыжки “звёздочка”', category: 'cardio', muscleGroups: ['всё тело'] },
+    { id: '9', name: 'Бёрпи', category: 'cardio', muscleGroups: ['всё тело'] },
+    { id: '10', name: 'Планка', category: 'strength', muscleGroups: ['кор'] },
+    { id: '11', name: 'Выпады', category: 'strength', muscleGroups: ['ноги', 'ягодицы'] },
+    { id: '12', name: 'Жим над головой', category: 'strength', muscleGroups: ['плечи'] },
 ];
 
 const workoutTypeOptions: { type: WorkoutType; label: string }[] = WORKOUT_FILTER_TYPE_ORDER.map(
@@ -112,9 +110,9 @@ const workoutTypeOptions: { type: WorkoutType; label: string }[] = WORKOUT_FILTE
 );
 
 const categoryFilters = [
-    { id: 'all', label: 'All' },
-    { id: 'strength', label: 'Strength' },
-    { id: 'cardio', label: 'Cardio' },
+    { id: 'all', label: 'Все' },
+    { id: 'strength', label: 'Силовые' },
+    { id: 'cardio', label: 'Кардио' },
 ];
 
 // ============================================
@@ -176,11 +174,11 @@ const SortableItem: React.FC<SortableItemProps> = ({
         if (!block.config) return '';
 
         const parts: string[] = [];
-        if (block.config.sets) parts.push(`${block.config.sets} sets`);
-        if (block.config.reps) parts.push(`${block.config.reps} reps`);
-        if (block.config.weight) parts.push(`${block.config.weight}kg`);
-        if (block.config.duration) parts.push(`${block.config.duration}min`);
-        if (block.config.restSeconds) parts.push(`${block.config.restSeconds}s rest`);
+        if (block.config.sets) parts.push(`${block.config.sets} подх.`);
+        if (block.config.reps) parts.push(`${block.config.reps} повт.`);
+        if (block.config.weight) parts.push(`${block.config.weight} кг`);
+        if (block.config.duration) parts.push(`${block.config.duration} мин`);
+        if (block.config.restSeconds) parts.push(`${block.config.restSeconds} сек отдых`);
 
         return parts.join(' • ');
     };
@@ -199,29 +197,29 @@ const SortableItem: React.FC<SortableItemProps> = ({
             <button
                 {...attributes}
                 {...listeners}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 cursor-grab active:cursor-grabbing"
-                aria-label="Drag to reorder"
+                className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg cursor-grab active:cursor-grabbing"
+                aria-label="Перетащить для сортировки"
             >
                 <GripVertical className="w-5 h-5" />
             </button>
 
             {/* Number Badge */}
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-semibold">
+            <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-semibold">
                 {index + 1}
             </div>
 
             {/* Icon */}
-            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-900">
+            <div className="w-10 h-10 rounded-xl bg-telegram-secondary-bg flex items-center justify-center text-telegram-text">
                 {getBlockIcon()}
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900 truncate">
-                    {block.exercise?.name || (block.type === 'note' ? 'Note' : 'Timer')}
+                <h4 className="font-medium text-telegram-text truncate">
+                    {block.exercise?.name || (block.type === 'note' ? 'Заметка' : 'Таймер')}
                 </h4>
-                <p className="text-sm text-gray-500 truncate">
-                    {getBlockSummary() || block.config?.note || 'No configuration'}
+                <p className="text-sm text-telegram-hint truncate">
+                    {getBlockSummary() || block.config?.note || 'Без настроек'}
                 </p>
             </div>
 
@@ -230,30 +228,30 @@ const SortableItem: React.FC<SortableItemProps> = ({
                 <button
                     onClick={() => onMoveUp(index)}
                     disabled={isFirst}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-30"
-                    aria-label="Move up"
+                    className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg disabled:opacity-30"
+                    aria-label="Переместить вверх"
                 >
                     <ChevronUp className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => onMoveDown(index)}
                     disabled={isLast}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-30"
-                    aria-label="Move down"
+                    className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg disabled:opacity-30"
+                    aria-label="Переместить вниз"
                 >
                     <ChevronDown className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => onEdit(block)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50"
-                    aria-label="Edit"
+                    className="p-1.5 rounded-lg text-telegram-hint hover:text-primary hover:bg-primary/10"
+                    aria-label="Редактировать"
                 >
                     <Edit2 className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => onDelete(block.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    aria-label="Delete"
+                    className="p-1.5 rounded-lg text-telegram-hint hover:text-danger hover:bg-danger/10"
+                    aria-label="Удалить"
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
@@ -270,6 +268,7 @@ export const WorkoutBuilder: React.FC = () => {
     // Telegram WebApp
     const tg = useTelegramWebApp()
     const queryClient = useQueryClient()
+    const navigate = useNavigate()
     const createTemplateMutation = useCreateWorkoutTemplateMutation()
 
     useEffect(() => {
@@ -283,14 +282,11 @@ export const WorkoutBuilder: React.FC = () => {
     const [workoutName, setWorkoutName] = useState('');
     const [selectedTypes, setSelectedTypes] = useState<WorkoutType[]>([]);
     const [blocks, setBlocks] = useState<WorkoutBlock[]>([]);
-    const [lastSaved, setLastSaved] = useState<Date | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
-    const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+    const [saveError, setSaveError] = useState('');
 
     // Modal states
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
-    const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
     const [currentBlockType, setCurrentBlockType] = useState<WorkoutBlock['type'] | null>(null);
     const [editingBlock, setEditingBlock] = useState<WorkoutBlock | null>(null);
 
@@ -302,27 +298,22 @@ export const WorkoutBuilder: React.FC = () => {
     // Config state
     const [config, setConfig] = useState<WorkoutBlockConfig>({});
 
-    // Save template state
-    const [templateName, setTemplateName] = useState('');
-    const [isPublic, setIsPublic] = useState(false);
-    const [templateTags, setTemplateTags] = useState('');
-    const [saveError, setSaveError] = useState('');
-
-    // Refs
+    // Refs for silent auto-draft (localStorage recovery only)
     const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const draftKey = 'workout_builder_draft';
 
     // Setup Telegram back button
     useEffect(() => {
-        if (tg.isTelegram) {
-            tg.showBackButton(() => {
+        const { isTelegram, showBackButton, hideBackButton } = tg
+        if (isTelegram) {
+            showBackButton(() => {
                 window.history.back()
             })
         }
         return () => {
-            tg.hideBackButton()
+            hideBackButton()
         }
-    }, [tg.isTelegram, tg.showBackButton, tg.hideBackButton])
+    }, [tg])
 
     // Sensors for DnD
     const sensors = useSensors(
@@ -355,14 +346,13 @@ export const WorkoutBuilder: React.FC = () => {
                 setWorkoutName(draft.name || '');
                 setSelectedTypes(draft.types || []);
                 setBlocks(draft.blocks || []);
-                setLastSaved(new Date(draft.savedAt));
             } catch {
                 // Invalid draft, ignore
             }
         }
     }, []);
 
-    // Auto-save every 30 seconds
+    // Silent auto-save to localStorage every 30 s (crash recovery only — not shown to user)
     useEffect(() => {
         autoSaveRef.current = setInterval(() => {
             const draft = {
@@ -372,13 +362,10 @@ export const WorkoutBuilder: React.FC = () => {
                 savedAt: new Date().toISOString(),
             };
             localStorage.setItem(draftKey, JSON.stringify(draft));
-            setLastSaved(new Date());
         }, 30000);
 
         return () => {
-            if (autoSaveRef.current) {
-                clearInterval(autoSaveRef.current);
-            }
+            if (autoSaveRef.current) clearInterval(autoSaveRef.current);
         };
     }, [workoutName, selectedTypes, blocks, draftKey]);
 
@@ -386,16 +373,6 @@ export const WorkoutBuilder: React.FC = () => {
     // Handlers
     // ============================================
 
-    const saveDraft = useCallback(() => {
-        const draft = {
-            name: workoutName,
-            types: selectedTypes,
-            blocks,
-            savedAt: new Date().toISOString(),
-        };
-        localStorage.setItem(draftKey, JSON.stringify(draft));
-        setLastSaved(new Date());
-    }, [workoutName, selectedTypes, blocks]);
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
@@ -500,30 +477,18 @@ export const WorkoutBuilder: React.FC = () => {
         });
     };
 
-    const handleSaveDraft = async () => {
-        setIsSaving(true);
-        saveDraft();
-
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        setIsSaving(false);
-        setShowSaveSuccess(true);
-        tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
-        setTimeout(() => setShowSaveSuccess(false), 2000);
-    };
-
-    const handleSaveTemplate = async () => {
+    /** Основной сохранение тренировки как шаблона на бэке */
+    const handleSave = async () => {
         setSaveError('');
 
-        if (!templateName.trim()) {
-            setSaveError('Template name is required');
+        if (!workoutName.trim()) {
+            setSaveError('Введите название тренировки');
             tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
             return;
         }
 
         if (blocks.length === 0) {
-            setSaveError('Add at least one exercise');
+            setSaveError('Добавьте хотя бы одно упражнение');
             tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
             return;
         }
@@ -531,35 +496,26 @@ export const WorkoutBuilder: React.FC = () => {
         const exercises = buildTemplateExercises(blocks);
 
         if (exercises.length === 0) {
-            setSaveError('Add at least one strength or cardio exercise');
+            setSaveError('Добавьте хотя бы одно силовое упражнение или кардио');
             tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
             return;
         }
 
         const template: WorkoutTemplateCreateRequest = {
-            name: templateName.trim(),
+            name: workoutName.trim(),
             type: mapWorkoutTypeToBackend(selectedTypes),
             exercises,
-            is_public: isPublic,
+            is_public: false,
         };
 
         try {
-            await createTemplateMutation.mutateAsync(template)
-
-            tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
-
-            // Clear draft
+            await createTemplateMutation.mutateAsync(template);
+            tg.hapticFeedback({ type: 'notification', notificationType: 'success' });
             localStorage.removeItem(draftKey);
-            setWorkoutName('');
-            setSelectedTypes([]);
-            setBlocks([]);
-            setTemplateName('');
-            setIsPublic(false);
-            setTemplateTags('');
-            setIsSaveTemplateOpen(false);
-        } catch (error) {
-            setSaveError('Failed to save template. Please try again.');
-            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
+            navigate('/workouts');
+        } catch {
+            setSaveError('Не удалось сохранить тренировку. Попробуйте ещё раз.');
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' });
         }
     };
 
@@ -592,21 +548,15 @@ export const WorkoutBuilder: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <Input
                             type="text"
-                            placeholder="Workout name..."
+                            placeholder="Название тренировки…"
                             value={workoutName}
-                            onChange={(e) => setWorkoutName(e.target.value)}
+                            onChange={(e) => {
+                                setWorkoutName(e.target.value);
+                                if (saveError) setSaveError('');
+                            }}
                             className="flex-1 text-lg font-semibold"
                             haptic={false}
                         />
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleSaveDraft}
-                            isLoading={isSaving}
-                            leftIcon={<Save className="w-4 h-4" />}
-                        >
-                            Draft
-                        </Button>
                     </div>
 
                     {/* Type Chips */}
@@ -622,60 +572,48 @@ export const WorkoutBuilder: React.FC = () => {
                             />
                         ))}
                     </ChipGroup>
-
-                    {/* Save Status */}
-                    {showSaveSuccess ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                            <Check className="w-4 h-4" />
-                            <span>Draft saved!</span>
-                        </div>
-                    ) : lastSaved ? (
-                        <div className="text-xs text-gray-500">
-                            Last saved: {lastSaved.toLocaleTimeString()}
-                        </div>
-                    ) : null}
                 </div>
             </div>
 
             {/* Add Block Section */}
             <div className="px-4 py-4">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Add Block</h3>
+                <h3 className="text-sm font-medium text-telegram-hint mb-3">Добавить блок</h3>
                 <div className="grid grid-cols-4 gap-2">
                     <button
                         onClick={() => handleAddBlock('strength')}
-                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-100 hover:bg-blue-50 transition-colors"
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-telegram-secondary-bg hover:bg-primary/10 transition-colors"
                     >
                         <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center">
                             <Dumbbell className="w-5 h-5" />
                         </div>
-                        <span className="text-xs text-gray-900">Strength</span>
+                        <span className="text-xs text-telegram-text">Силовая</span>
                     </button>
                     <button
                         onClick={() => handleAddBlock('cardio')}
-                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-100 hover:bg-blue-50 transition-colors"
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-telegram-secondary-bg hover:bg-primary/10 transition-colors"
                     >
                         <div className="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
                             <Heart className="w-5 h-5" />
                         </div>
-                        <span className="text-xs text-gray-900">Cardio</span>
+                        <span className="text-xs text-telegram-text">Кардио</span>
                     </button>
                     <button
                         onClick={() => handleAddBlock('timer')}
-                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-100 hover:bg-blue-50 transition-colors"
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-telegram-secondary-bg hover:bg-primary/10 transition-colors"
                     >
                         <div className="w-10 h-10 rounded-full bg-green-100 text-green-500 flex items-center justify-center">
                             <Timer className="w-5 h-5" />
                         </div>
-                        <span className="text-xs text-gray-900">Timer</span>
+                        <span className="text-xs text-telegram-text">Таймер</span>
                     </button>
                     <button
                         onClick={() => handleAddBlock('note')}
-                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-100 hover:bg-blue-50 transition-colors"
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-telegram-secondary-bg hover:bg-primary/10 transition-colors"
                     >
                         <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center">
                             <FileText className="w-5 h-5" />
                         </div>
-                        <span className="text-xs text-gray-900">Note</span>
+                        <span className="text-xs text-telegram-text">Заметка</span>
                     </button>
                 </div>
             </div>
@@ -683,24 +621,24 @@ export const WorkoutBuilder: React.FC = () => {
             {/* Workout Plan List */}
             <div className="px-4 space-y-3">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-500">
-                        Exercises ({blocks.length})
+                    <h3 className="text-sm font-medium text-telegram-hint">
+                        План ({blocks.length})
                     </h3>
                     {blocks.length > 0 && (
                         <button
                             onClick={() => setBlocks([])}
-                            className="text-xs text-red-500 hover:underline"
+                            className="text-xs text-danger hover:underline"
                         >
-                            Clear all
+                            Очистить
                         </button>
                     )}
                 </div>
 
                 {blocks.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-telegram-hint">
                         <Dumbbell className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p>No exercises yet</p>
-                        <p className="text-sm">Tap a block type above to add</p>
+                        <p>Пока пусто</p>
+                        <p className="text-sm">Нажмите на тип блока выше, чтобы добавить</p>
                     </div>
                 ) : (
                     <DndContext
@@ -736,14 +674,14 @@ export const WorkoutBuilder: React.FC = () => {
             <Modal
                 isOpen={isSelectorOpen}
                 onClose={() => setIsSelectorOpen(false)}
-                title="Select Exercise"
+                title="Выберите упражнение"
                 size="lg"
             >
                 <div className="space-y-4">
                     {/* Search */}
                     <Input
                         type="search"
-                        placeholder="Search exercises..."
+                        placeholder="Поиск упражнений…"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         leftIcon={<Search className="w-5 h-5" />}
@@ -765,26 +703,26 @@ export const WorkoutBuilder: React.FC = () => {
                     {/* Exercise List */}
                     <div className="max-h-[50vh] overflow-y-auto space-y-2">
                         {filteredExercises.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
-                                <p>No exercises found</p>
+                            <div className="text-center py-8 text-telegram-hint">
+                                <p>Ничего не найдено</p>
                             </div>
                         ) : (
                             filteredExercises.map((exercise) => (
                                 <button
                                     key={exercise.id}
                                     onClick={() => handleExerciseSelect(exercise)}
-                                    className="w-full text-left p-3 rounded-xl bg-gray-100 hover:bg-blue-50 transition-colors"
+                                    className="w-full text-left p-3 rounded-xl bg-telegram-secondary-bg hover:bg-primary/10 transition-colors"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h4 className="font-medium text-gray-900">
+                                            <h4 className="font-medium text-telegram-text">
                                                 {exercise.name}
                                             </h4>
-                                            <p className="text-sm text-gray-500">
+                                            <p className="text-sm text-telegram-hint">
                                                 {exercise.muscleGroups?.join(', ')}
                                             </p>
                                         </div>
-                                        <ChevronDown className="w-5 h-5 text-gray-400 -rotate-90" />
+                                        <ChevronDown className="w-5 h-5 text-telegram-hint -rotate-90" />
                                     </div>
                                 </button>
                             ))
@@ -797,7 +735,7 @@ export const WorkoutBuilder: React.FC = () => {
                         fullWidth
                         leftIcon={<Plus className="w-4 h-4" />}
                         onClick={() => {
-                            const customName = prompt('Enter exercise name:');
+                            const customName = prompt('Введите название упражнения:');
                             if (customName) {
                                 handleExerciseSelect({
                                     id: `custom-${Date.now()}`,
@@ -807,7 +745,7 @@ export const WorkoutBuilder: React.FC = () => {
                             }
                         }}
                     >
-                        Add Custom Exercise
+                        Добавить своё упражнение
                     </Button>
                 </div>
             </Modal>
@@ -820,15 +758,15 @@ export const WorkoutBuilder: React.FC = () => {
                     setEditingBlock(null);
                     setSelectedExercise(null);
                 }}
-                title={editingBlock ? 'Edit Exercise' : 'Configure Exercise'}
+                title={editingBlock ? 'Редактировать' : 'Настроить упражнение'}
                 size="md"
             >
                 <div className="space-y-4">
                     {selectedExercise && (
-                        <div className="p-3 rounded-xl bg-blue-50">
-                            <h4 className="font-medium text-blue-600">{selectedExercise.name}</h4>
-                            <p className="text-sm text-gray-500">
-                                {selectedExercise.category}
+                        <div className="p-3 rounded-xl bg-primary/10">
+                            <h4 className="font-medium text-telegram-text">{selectedExercise.name}</h4>
+                            <p className="text-sm text-telegram-hint">
+                                {selectedExercise.category === 'cardio' ? 'кардио' : 'силовая'}
                             </p>
                         </div>
                     )}
@@ -838,8 +776,8 @@ export const WorkoutBuilder: React.FC = () => {
                             <>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                            Sets
+                                        <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                            Подходы
                                         </label>
                                         <Input
                                             type="number"
@@ -851,8 +789,8 @@ export const WorkoutBuilder: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                            Reps
+                                        <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                            Повторы
                                         </label>
                                         <Input
                                             type="number"
@@ -866,8 +804,8 @@ export const WorkoutBuilder: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                            Weight (kg)
+                                        <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                            Вес (кг)
                                         </label>
                                         <Input
                                             type="number"
@@ -879,8 +817,8 @@ export const WorkoutBuilder: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                            Rest (sec)
+                                        <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                            Отдых (сек)
                                         </label>
                                         <Input
                                             type="number"
@@ -903,8 +841,8 @@ export const WorkoutBuilder: React.FC = () => {
                             <>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                            Duration (min)
+                                        <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                            Длительность (мин)
                                         </label>
                                         <Input
                                             type="number"
@@ -919,8 +857,8 @@ export const WorkoutBuilder: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                            Distance (km)
+                                        <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                            Дистанция (км)
                                         </label>
                                         <Input
                                             type="number"
@@ -941,8 +879,8 @@ export const WorkoutBuilder: React.FC = () => {
                     {(currentBlockType === 'timer' ||
                         (editingBlock?.type === 'timer' && !currentBlockType)) && (
                             <div>
-                                <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                    Duration (seconds)
+                                <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                    Длительность (сек)
                                 </label>
                                 <Input
                                     type="number"
@@ -958,16 +896,16 @@ export const WorkoutBuilder: React.FC = () => {
                     {(currentBlockType === 'note' ||
                         (editingBlock?.type === 'note' && !currentBlockType)) && (
                             <div>
-                                <label className="text-sm font-medium text-gray-900 mb-1.5 block">
-                                    Note
+                                <label className="text-sm font-medium text-telegram-text mb-1.5 block">
+                                    Заметка
                                 </label>
                                 <textarea
                                     value={config.note || ''}
                                     onChange={(e) => setConfig({ ...config, note: e.target.value })}
-                                    placeholder="Add your notes here..."
+                                    placeholder="Добавьте заметку…"
                                     className={cn(
-                                        'w-full bg-gray-100 rounded-xl px-4 py-3',
-                                        'text-gray-900 placeholder:text-gray-400',
+                                        'w-full bg-telegram-secondary-bg rounded-xl px-4 py-3',
+                                        'text-telegram-text placeholder:text-telegram-hint',
                                         'focus:outline-none focus:ring-2 focus:ring-blue-200',
                                         'min-h-[100px] resize-none'
                                     )}
@@ -985,123 +923,34 @@ export const WorkoutBuilder: React.FC = () => {
                                 setSelectedExercise(null);
                             }}
                         >
-                            Cancel
+                            Отмена
                         </Button>
                         <Button fullWidth onClick={handleConfigSave}>
-                            {editingBlock ? 'Update' : 'Add to Workout'}
+                            {editingBlock ? 'Сохранить' : 'Добавить в тренировку'}
                         </Button>
                     </div>
                 </div>
             </Modal>
 
-            {/* Save Template Modal */}
-            <Modal
-                isOpen={isSaveTemplateOpen}
-                onClose={() => {
-                    setIsSaveTemplateOpen(false);
-                    setSaveError('');
-                }}
-                title="Save as Template"
-                size="md"
-            >
-                <div className="space-y-4">
-                    {/* XP Reward Banner */}
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 text-amber-600">
-                        <Trophy className="w-5 h-5" />
-                        <div className="flex-1">
-                            <p className="text-sm font-medium">Earn +50 XP!</p>
-                            <p className="text-xs opacity-80">Save this template to earn rewards</p>
-                        </div>
-                    </div>
-
-                    {/* Template Name */}
-                    <Input
-                        label="Template Name *"
-                        type="text"
-                        value={templateName}
-                        onChange={(e) => {
-                            setTemplateName(e.target.value);
-                            setSaveError('');
-                        }}
-                        placeholder="e.g., Upper Body Power"
-                        error={saveError === 'Template name is required' ? saveError : undefined}
-                        validationState={saveError === 'Template name is required' ? 'error' : 'default'}
-                    />
-
-                    {/* Visibility */}
-                    <div>
-                        <label className="text-sm font-medium text-gray-900 mb-2 block">
-                            Visibility
-                        </label>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setIsPublic(false)}
-                                className={cn(
-                                    'flex-1 p-3 rounded-xl border-2 text-left transition-colors',
-                                    !isPublic
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-blue-300'
-                                )}
-                            >
-                                <div className="font-medium text-gray-900">Only Me</div>
-                                <div className="text-xs text-gray-500">Private template</div>
-                            </button>
-                            <button
-                                onClick={() => setIsPublic(true)}
-                                className={cn(
-                                    'flex-1 p-3 rounded-xl border-2 text-left transition-colors',
-                                    isPublic
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-blue-300'
-                                )}
-                            >
-                                <div className="font-medium text-gray-900">Public</div>
-                                <div className="text-xs text-gray-500">Share with community</div>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Tags */}
-                    <Input
-                        label="Tags (optional)"
-                        type="text"
-                        value={templateTags}
-                        onChange={(e) => setTemplateTags(e.target.value)}
-                        placeholder="e.g., beginner, home, no-equipment"
-                        helperText="Separate tags with commas"
-                    />
-
-                    {saveError && saveError !== 'Template name is required' && (
-                        <p className="flex items-start gap-2 text-sm text-red-500" role="alert">
-                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
-                            <span>{saveError}</span>
-                        </p>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2">
-                        <Button
-                            variant="secondary"
-                            fullWidth
-                            disabled={createTemplateMutation.isPending}
-                            onClick={() => {
-                                setIsSaveTemplateOpen(false);
-                                setSaveError('');
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            fullWidth
-                            onClick={handleSaveTemplate}
-                            isLoading={createTemplateMutation.isPending}
-                            disabled={createTemplateMutation.isPending}
-                        >
-                            Save Template
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
+            {/* Sticky Save Footer */}
+            <div className="fixed bottom-0 left-0 right-0 z-20 bg-telegram-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 space-y-2">
+                {saveError && (
+                    <p className="flex items-center gap-2 text-sm text-danger" role="alert">
+                        <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
+                        <span>{saveError}</span>
+                    </p>
+                )}
+                <Button
+                    fullWidth
+                    size="lg"
+                    onClick={handleSave}
+                    isLoading={createTemplateMutation.isPending}
+                    disabled={createTemplateMutation.isPending}
+                    leftIcon={<Plus className="w-5 h-5" />}
+                >
+                    Сохранить тренировку
+                </Button>
+            </div>
         </div>
     );
 };

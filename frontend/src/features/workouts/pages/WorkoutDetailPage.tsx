@@ -87,13 +87,14 @@ export function WorkoutDetailPage() {
     }, [workoutId])
 
     useEffect(() => {
-        if (tg.isTelegram) {
-            tg.showBackButton(() => navigate('/workouts'))
+        const { isTelegram, showBackButton, hideBackButton } = tg
+        if (isTelegram) {
+            showBackButton(() => navigate('/workouts'))
         }
         return () => {
-            tg.hideBackButton()
+            hideBackButton()
         }
-    }, [tg.isTelegram, navigate, tg.showBackButton, tg.hideBackButton])
+    }, [tg, navigate])
 
     const errorMessage = !isValidWorkoutId
         ? 'Неверный идентификатор тренировки'
@@ -164,19 +165,19 @@ export function WorkoutDetailPage() {
             <div className="flex items-center gap-2">
                 <button
                     onClick={() => navigate('/workouts')}
-                    className="w-9 h-9 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center"
+                    className="w-9 h-9 rounded-full bg-telegram-secondary-bg flex items-center justify-center text-telegram-text"
                 >
                     <ArrowLeft className="w-4 h-4" />
                 </button>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Детали тренировки</h1>
+                <h1 className="text-xl font-bold text-telegram-text">Детали тренировки</h1>
             </div>
 
             {isLoading && (
-                <div className="text-sm text-gray-500 dark:text-gray-400">Загрузка...</div>
+                <div className="text-sm text-telegram-hint">Загрузка...</div>
             )}
 
             {!isLoading && errorMessage && (
-                <div className="text-sm text-red-500 dark:text-red-400">{errorMessage}</div>
+                <div className="text-sm text-danger">{errorMessage}</div>
             )}
 
             {!isLoading && !errorMessage && workout && (
@@ -198,31 +199,31 @@ export function WorkoutDetailPage() {
                             </Button>
                         </div>
                     )}
-                    <div className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 space-y-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="bg-telegram-secondary-bg rounded-xl p-4 space-y-4">
+                        <div className="flex items-center gap-2 text-sm text-telegram-hint">
                             <CalendarDays className="w-4 h-4" />
                             <span>{formatDate(workout.date)}</span>
                         </div>
 
                         <div className="grid grid-cols-3 gap-2">
-                            <div className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2">
-                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="rounded-lg bg-telegram-bg/60 p-2">
+                                <div className="flex items-center gap-1 text-xs text-telegram-hint">
                                     <Clock3 className="w-3.5 h-3.5" />
                                     <span>Длительность</span>
                                 </div>
-                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                <div className="mt-1 text-sm font-semibold text-telegram-text">
                                     {displayDurationLabel}
                                 </div>
                             </div>
-                            <div className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Упражнения</div>
-                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                            <div className="rounded-lg bg-telegram-bg/60 p-2">
+                                <div className="text-xs text-telegram-hint">Упражнения</div>
+                                <div className="mt-1 text-sm font-semibold text-telegram-text">
                                     {exerciseCount}
                                 </div>
                             </div>
-                            <div className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Подходы</div>
-                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                            <div className="rounded-lg bg-telegram-bg/60 p-2">
+                                <div className="text-xs text-telegram-hint">Подходы</div>
+                                <div className="mt-1 text-sm font-semibold text-telegram-text">
                                     {completedSetCount}
                                 </div>
                             </div>
@@ -230,7 +231,7 @@ export function WorkoutDetailPage() {
 
                         {isActiveDraft && (
                             <div className="space-y-2">
-                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                <label className="block text-xs font-medium text-telegram-hint">
                                     Длительность (мин)
                                 </label>
                                 <input
@@ -242,7 +243,7 @@ export function WorkoutDetailPage() {
                                         const v = Number(e.target.value)
                                         if (Number.isFinite(v)) setDurationMinutes(v)
                                     }}
-                                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-white"
+                                    className="w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
                                 />
                             </div>
                         )}
@@ -255,14 +256,14 @@ export function WorkoutDetailPage() {
                         )}
                         {isActiveDraft && (
                             <div className="space-y-2">
-                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                <label className="block text-xs font-medium text-telegram-hint">
                                     Комментарий (в т.ч. название сессии)
                                 </label>
                                 <textarea
                                     value={workout.comments ?? ''}
                                     onChange={(e) => updateSessionFields({ comments: e.target.value || undefined })}
                                     rows={2}
-                                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-white"
+                                    className="w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
                                 />
                             </div>
                         )}
@@ -275,10 +276,10 @@ export function WorkoutDetailPage() {
                     </div>
 
                     {sessionError && (
-                        <p className="text-sm text-red-500 dark:text-red-400">{sessionError}</p>
+                        <p className="text-sm text-danger">{sessionError}</p>
                     )}
                     {completeMutation.isError && (
-                        <p className="text-sm text-red-500 dark:text-red-400">
+                        <p className="text-sm text-danger">
                             {getErrorMessage(completeMutation.error)}
                         </p>
                     )}
@@ -298,10 +299,10 @@ export function WorkoutDetailPage() {
                         {workout.exercises.map((exercise, exerciseIndex) => (
                             <div
                                 key={`${exercise.exercise_id}-${exercise.name}`}
-                                className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4"
+                                className="bg-telegram-secondary-bg rounded-xl p-4"
                             >
                                 <div className="flex items-start justify-between gap-2">
-                                    <h2 className="font-semibold text-gray-900 dark:text-white">{exercise.name}</h2>
+                                    <h2 className="font-semibold text-telegram-text">{exercise.name}</h2>
                                     <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                                         #{exercise.exercise_id}
                                     </span>
@@ -311,7 +312,7 @@ export function WorkoutDetailPage() {
                                     {exercise.sets_completed.map((set) => (
                                         <div
                                             key={set.set_number}
-                                            className="rounded-lg bg-white/60 dark:bg-neutral-900/60 p-2 text-sm text-gray-700 dark:text-gray-300"
+                                            className="rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text"
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="font-medium">Подход {set.set_number}</span>
@@ -344,7 +345,7 @@ export function WorkoutDetailPage() {
                                             </div>
                                             {isActiveDraft ? (
                                                 <div className="mt-2 grid grid-cols-2 gap-2">
-                                                    <label className="text-xs text-gray-500 dark:text-gray-400">
+                                                    <label className="text-xs text-telegram-hint">
                                                         Повторы
                                                         <input
                                                             type="number"
@@ -355,10 +356,10 @@ export function WorkoutDetailPage() {
                                                                     reps: parseOptionalNumber(e.target.value),
                                                                 })
                                                             }
-                                                            className="mt-0.5 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm dark:border-neutral-600 dark:bg-neutral-900"
+                                                            className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
                                                         />
                                                     </label>
-                                                    <label className="text-xs text-gray-500 dark:text-gray-400">
+                                                    <label className="text-xs text-telegram-hint">
                                                         Вес (кг)
                                                         <input
                                                             type="number"
@@ -370,25 +371,25 @@ export function WorkoutDetailPage() {
                                                                     weight: parseOptionalNumber(e.target.value),
                                                                 })
                                                             }
-                                                            className="mt-0.5 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm dark:border-neutral-600 dark:bg-neutral-900"
+                                                            className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
                                                         />
                                                     </label>
                                                 </div>
                                             ) : (
                                                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    <span className="px-2 py-1 rounded-md bg-telegram-bg/60">
                                                         Повторы: {formatSetValue(set.reps, 'повт')}
                                                     </span>
-                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    <span className="px-2 py-1 rounded-md bg-telegram-bg/60">
                                                         Вес: {formatSetValue(set.weight, 'кг')}
                                                     </span>
-                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    <span className="px-2 py-1 rounded-md bg-telegram-bg/60">
                                                         RPE: {formatSetValue(set.rpe)}
                                                     </span>
-                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    <span className="px-2 py-1 rounded-md bg-telegram-bg/60">
                                                         RIR: {formatSetValue(set.rir)}
                                                     </span>
-                                                    <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800">
+                                                    <span className="px-2 py-1 rounded-md bg-telegram-bg/60">
                                                         Время: {formatSetValue(set.duration, 'сек')}
                                                     </span>
                                                 </div>
@@ -397,7 +398,7 @@ export function WorkoutDetailPage() {
                                     ))}
                                 </div>
                                 {exercise.notes && (
-                                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{exercise.notes}</p>
+                                    <p className="mt-2 text-sm text-telegram-hint">{exercise.notes}</p>
                                 )}
                             </div>
                         ))}
