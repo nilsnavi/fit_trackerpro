@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react'
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { PwaUpdatePrompt } from './app/components/PwaUpdatePrompt'
 import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
@@ -50,6 +50,16 @@ const LoginPage = lazy(() =>
 const WorkoutCalendarPage = lazy(() => import('@features/workouts/pages/Calendar'))
 const AchievementsPage = lazy(() => import('@features/achievements/pages/AchievementsPage'))
 const RestTimerSandboxPage = lazy(() => import('@features/sandbox/pages/RestTimerDemo'))
+
+function TemplateEditorRedirect() {
+    const { id } = useParams<{ id: string }>()
+
+    if (!id) {
+        return <Navigate to="/workouts/templates" replace />
+    }
+
+    return <Navigate to={`/workouts/templates/${id}/edit`} replace />
+}
 
 function SentryErrorFallback({
     resetError,
@@ -127,8 +137,8 @@ export default function App() {
                                         <Route
                                             path="/workouts/templates/:id"
                                             element={
-                                                <RouteGuard screenTitle="Шаблон тренировки" skeleton={<TemplateBuilderSkeleton />}>
-                                                    <WorkoutBuilderPage />
+                                                <RouteGuard screenTitle="Редактирование шаблона" skeleton={<TemplateBuilderSkeleton />}>
+                                                    <TemplateEditorRedirect />
                                                 </RouteGuard>
                                             }
                                         />

@@ -7,6 +7,7 @@ export interface WorkoutBuilderExercise {
     name: string
     category: string
     muscleGroups?: string[]
+    notes?: string
 }
 
 export interface WorkoutBlockConfig {
