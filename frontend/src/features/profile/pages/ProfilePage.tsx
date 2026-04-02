@@ -9,7 +9,7 @@
  * - Доступ для тренера
  * - Экспорт данных
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Edit2,
     Target,
@@ -118,7 +118,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon, value, label, color = 'primar
 interface EditableFieldProps {
     label: string;
     value: string | number;
-    onSave: (value: string) => void;
+    onSave: (value: string) => void | Promise<void>;
     type?: 'text' | 'number';
     suffix?: string;
 }
@@ -126,10 +126,22 @@ interface EditableFieldProps {
 const EditableField: React.FC<EditableFieldProps> = ({ value, onSave, type = 'text', suffix }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(String(value));
+    const [isSaving, setIsSaving] = useState(false);
 
-    const handleSave = () => {
-        onSave(editValue);
-        setIsEditing(false);
+    useEffect(() => {
+        if (!isEditing) {
+            setEditValue(String(value));
+        }
+    }, [value, isEditing]);
+
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            await onSave(editValue);
+            setIsEditing(false);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -149,12 +161,14 @@ const EditableField: React.FC<EditableFieldProps> = ({ value, onSave, type = 'te
                 />
                 {suffix && <span className="text-telegram-hint">{suffix}</span>}
                 <button
+                    disabled={isSaving}
                     onClick={handleSave}
                     className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20"
                 >
                     <Check className="w-4 h-4" />
                 </button>
                 <button
+                    disabled={isSaving}
                     onClick={handleCancel}
                     className="p-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger/20"
                 >
@@ -341,7 +355,7 @@ export const ProfilePage: React.FC = () => {
                                     const normalized = value.replace(',', '.').trim()
                                     const n = Number(normalized)
                                     if (!Number.isFinite(n) || n <= 0) return
-                                    void updateProfile({ current_weight: n })
+                                    return updateProfile({ current_weight: n })
                                 }}
                             />
                         </div>
@@ -356,7 +370,7 @@ export const ProfilePage: React.FC = () => {
                                     const normalized = value.replace(',', '.').trim()
                                     const n = Number(normalized)
                                     if (!Number.isFinite(n) || n <= 0) return
-                                    void updateProfile({ target_weight: n })
+                                    return updateProfile({ target_weight: n })
                                 }}
                             />
                         </div>
