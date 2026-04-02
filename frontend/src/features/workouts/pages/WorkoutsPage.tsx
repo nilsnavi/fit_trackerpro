@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import {
     Plus,
     Clock,
@@ -14,22 +13,15 @@ import {
     Dumbbell,
     Sparkles,
 } from 'lucide-react'
-import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import {
     WORKOUT_FILTER_TYPE_ORDER,
     WORKOUT_MODE_ORDER,
     WORKOUT_TYPE_CONFIGS,
     getWorkoutListTypeConfig,
-    type WorkoutMode,
 } from '@features/workouts/config/workoutTypeConfigs'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
-import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
-import {
-    useDeleteWorkoutTemplateMutation,
-    useStartWorkoutMutation,
-} from '@features/workouts/hooks/useWorkoutMutations'
-import { useWorkoutSessionDraftStore } from '@/state/local'
+import { useWorkoutsPageState } from '@features/workouts/hooks/useWorkoutsPageState'
 import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import type { WorkoutType } from '@shared/types'
 import type { BackendWorkoutType } from '@features/workouts/types/workouts'
@@ -48,33 +40,28 @@ const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
 }
 
 export function WorkoutsPage() {
-    const [selectedType, setSelectedType] = useState<WorkoutType | 'all'>('all')
-    const [deletingTemplateId, setDeletingTemplateId] = useState<number | null>(null)
-    const [templateToDelete, setTemplateToDelete] = useState<{ id: number; name: string } | null>(null)
-    const tg = useTelegramWebApp()
-    const navigate = useNavigate()
-    const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
-    const draftTitle = useWorkoutSessionDraftStore((s) => s.title)
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
-    const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
-
     const {
-        data: draftRemoteWorkout,
-        isError: draftRemoteError,
-    } = useWorkoutHistoryItemQuery(draftWorkoutId ?? 0, draftWorkoutId != null, {
-        staleWhileEditing: draftWorkoutId != null,
-    })
+        selectedType,
+        draftWorkoutId,
+        draftTitle,
+        templateToDelete,
+        deletingTemplateId,
+        isStartingWorkout,
+        isDeletingTemplate,
+        handleFilterChange,
+        handleAddWorkout,
+        handleOpenCalendar,
+        handleOpenProgress,
+        handleOpenMode,
+        handleWorkoutClick,
+        handleResumeDraft,
+        handleStartFromTemplate,
+        handleEditTemplate,
+        handleRequestDeleteTemplate,
+        handleCloseDeleteModal,
+        handleConfirmDeleteTemplate,
+    } = useWorkoutsPageState()
 
-    useEffect(() => {
-        if (draftWorkoutId == null) return
-        if (draftRemoteError) clearWorkoutSessionDraft()
-    }, [draftWorkoutId, draftRemoteError, clearWorkoutSessionDraft])
-
-    useEffect(() => {
-        if (!draftRemoteWorkout) return
-        const d = draftRemoteWorkout.duration
-        if (typeof d === 'number' && d > 0) clearWorkoutSessionDraft()
-    }, [draftRemoteWorkout, clearWorkoutSessionDraft])
     const {
         data: workoutHistory,
         isLoading,
@@ -87,8 +74,6 @@ export function WorkoutsPage() {
         error: templatesError,
     } = useWorkoutTemplatesQuery()
 
-    const startWorkoutMutation = useStartWorkoutMutation()
-    const deleteTemplateMutation = useDeleteWorkoutTemplateMutation()
     const templates = templatesData?.items ?? []
 
     const workouts = useMemo(
@@ -97,52 +82,27 @@ export function WorkoutsPage() {
     )
 
     const filteredWorkouts = useMemo(
-        () => (selectedType === 'all'
-            ? workouts
-            : workouts.filter(w => w.type === selectedType)),
-        [selectedType, workouts]
+        () =>
+            selectedType === 'all'
+                ? workouts
+                : workouts.filter((w) => w.type === selectedType),
+        [selectedType, workouts],
     )
 
     const weeklySummary = useMemo(() => {
         const now = new Date()
         const weekAgo = new Date(now)
         weekAgo.setDate(now.getDate() - 7)
-
         const weekWorkouts = workouts.filter((workout) => {
             const workoutDate = new Date(workout.date)
             return workoutDate >= weekAgo && workoutDate <= now
         })
-
-        const totalMinutes = weekWorkouts.reduce((acc, workout) => acc + workout.duration, 0)
-        const totalCalories = weekWorkouts.reduce((acc, workout) => acc + workout.calories, 0)
-
         return {
             count: weekWorkouts.length,
-            totalMinutes,
-            totalCalories,
+            totalMinutes: weekWorkouts.reduce((acc, w) => acc + w.duration, 0),
+            totalCalories: weekWorkouts.reduce((acc, w) => acc + w.calories, 0),
         }
     }, [workouts])
-
-    // Handle filter change with haptic feedback
-    const handleFilterChange = (type: WorkoutType | 'all') => {
-        tg.hapticFeedback({ type: 'selection' })
-        setSelectedType(type)
-    }
-
-    const handleAddWorkout = useCallback(() => {
-        tg.hapticFeedback({ type: 'impact', style: 'medium' })
-        navigate('/workouts/builder')
-    }, [tg, navigate])
-
-    const handleOpenCalendar = useCallback(() => {
-        tg.hapticFeedback({ type: 'selection' })
-        navigate('/workouts/calendar')
-    }, [tg, navigate])
-
-    const handleOpenProgress = useCallback(() => {
-        tg.hapticFeedback({ type: 'selection' })
-        navigate('/analytics')
-    }, [tg, navigate])
 
     const headerActions = useMemo(
         () => (
@@ -169,63 +129,6 @@ export function WorkoutsPage() {
     )
 
     useAppShellHeaderRight(headerActions)
-
-    const handleOpenMode = (mode: WorkoutMode) => {
-        tg.hapticFeedback({ type: 'selection' })
-        navigate(`/workouts/mode/${mode}`)
-    }
-
-    // Handle workout click
-    const handleWorkoutClick = (workoutId: number) => {
-        tg.hapticFeedback({ type: 'impact', style: 'light' })
-        navigate(`/workouts/${workoutId}`)
-    }
-
-    const handleResumeDraft = () => {
-        if (draftWorkoutId == null) return
-        tg.hapticFeedback({ type: 'impact', style: 'medium' })
-        navigate(`/workouts/${draftWorkoutId}`)
-    }
-
-    const handleStartFromTemplate = async (templateId: number) => {
-        tg.hapticFeedback({ type: 'impact', style: 'medium' })
-        try {
-            const started = await startWorkoutMutation.mutateAsync({ template_id: templateId })
-            const templateName = templates.find((t) => t.id === templateId)?.name
-            setWorkoutSessionDraft(started.id, templateName ?? `Тренировка #${started.id}`)
-            navigate(`/workouts/${started.id}`)
-        } catch {
-            // mutation surfaces via global error handling if configured
-        }
-    }
-
-    const handleEditTemplate = (templateId: number) => {
-        tg.hapticFeedback({ type: 'selection' })
-        navigate(`/workouts/builder?templateId=${templateId}`)
-    }
-
-    const handleRequestDeleteTemplate = (templateId: number, templateName: string) => {
-        tg.hapticFeedback({ type: 'selection' })
-        setTemplateToDelete({ id: templateId, name: templateName })
-    }
-
-    const handleCloseDeleteModal = () => {
-        if (deleteTemplateMutation.isPending) return
-        setTemplateToDelete(null)
-    }
-
-    const handleConfirmDeleteTemplate = async () => {
-        if (!templateToDelete) return
-        const { id } = templateToDelete
-        setDeletingTemplateId(id)
-        tg.hapticFeedback({ type: 'impact', style: 'heavy' })
-        try {
-            await deleteTemplateMutation.mutateAsync(id)
-            setTemplateToDelete(null)
-        } finally {
-            setDeletingTemplateId((current) => (current === id ? null : current))
-        }
-    }
 
     return (
         <div className="p-4 space-y-6">
@@ -333,10 +236,7 @@ export function WorkoutsPage() {
                             description="Соберите план в конструкторе и сохраните его как шаблон — быстрый старт без повторной настройки."
                             primaryAction={{
                                 label: 'Открыть конструктор',
-                                onClick: () => {
-                                    tg.hapticFeedback({ type: 'selection' })
-                                    navigate('/workouts/builder')
-                                },
+                                onClick: handleAddWorkout,
                             }}
                         />
                     </div>
@@ -368,7 +268,7 @@ export function WorkoutsPage() {
                             </button>
                             <button
                                 type="button"
-                                disabled={deleteTemplateMutation.isPending && deletingTemplateId === t.id}
+                                disabled={isDeletingTemplate && deletingTemplateId === t.id}
                                 onClick={() => handleRequestDeleteTemplate(t.id, t.name)}
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-telegram-bg text-danger transition-transform active:scale-95 disabled:opacity-60"
                                 aria-label={`Удалить шаблон ${t.name}`}
@@ -377,8 +277,8 @@ export function WorkoutsPage() {
                             </button>
                             <button
                                 type="button"
-                                disabled={startWorkoutMutation.isPending}
-                                onClick={() => void handleStartFromTemplate(t.id)}
+                                disabled={isStartingWorkout}
+                                onClick={() => void handleStartFromTemplate(t.id, t.name)}
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-transform active:scale-95 disabled:opacity-60"
                                 aria-label={`Начать по шаблону ${t.name}`}
                             >
@@ -509,7 +409,7 @@ export function WorkoutsPage() {
                             variant="secondary"
                             fullWidth
                             onClick={handleCloseDeleteModal}
-                            disabled={deleteTemplateMutation.isPending}
+                            disabled={isDeletingTemplate}
                         >
                             Отмена
                         </Button>
@@ -517,8 +417,8 @@ export function WorkoutsPage() {
                             variant="emergency"
                             fullWidth
                             onClick={() => void handleConfirmDeleteTemplate()}
-                            isLoading={deleteTemplateMutation.isPending}
-                            disabled={deleteTemplateMutation.isPending}
+                            isLoading={isDeletingTemplate}
+                            disabled={isDeletingTemplate}
                         >
                             Удалить
                         </Button>

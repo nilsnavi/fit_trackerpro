@@ -15,7 +15,7 @@ export function WorkoutEditPage() {
             <div className="flex items-center gap-2">
                 <button
                     type="button"
-                    onClick={() => navigate('/analytics')}
+                    onClick={() => navigate('/progress/exercises')}
                     className="flex h-9 w-9 items-center justify-center rounded-full bg-telegram-secondary-bg text-telegram-text"
                     aria-label="Назад"
                 >
@@ -27,7 +27,7 @@ export function WorkoutEditPage() {
                 Заглушка для тренировки #{id ?? '—'}. Редактирование записи из истории пока не реализовано.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
-                <Button type="button" className="flex-1" onClick={() => id && navigate(`/workouts/${id}`)}>
+                <Button type="button" className="flex-1" onClick={() => id && navigate(`/workouts/active/${id}`)}>
                     Открыть детали
                 </Button>
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => navigate('/workouts')}>

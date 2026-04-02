@@ -245,6 +245,195 @@ export function AnalyticsPageSkeleton() {
     )
 }
 
+// ============================================
+// Route-level skeletons for workouts / templates / active / progress zones
+// ============================================
+
+export function TemplatesPageSkeleton() {
+    return (
+        <div className="space-y-6 p-4" aria-busy="true" aria-label="Загрузка шаблонов">
+            <div className="flex items-center justify-between gap-3">
+                <div className="skeleton h-7 w-44 rounded" />
+                <div className="skeleton h-10 w-10 rounded-full" />
+            </div>
+            <div className="flex gap-2 overflow-hidden pb-1">
+                {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="skeleton h-8 w-20 shrink-0 rounded-full" />
+                ))}
+            </div>
+            {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 rounded-2xl border border-border bg-telegram-bg p-4">
+                    <div className="skeleton h-12 w-12 shrink-0 rounded-xl" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                        <div className="skeleton h-5 w-[65%] rounded" />
+                        <div className="flex gap-2">
+                            <div className="skeleton h-4 w-16 rounded-full" />
+                            <div className="skeleton h-4 w-20 rounded-full" />
+                        </div>
+                    </div>
+                    <div className="skeleton h-5 w-5 shrink-0 rounded" />
+                </div>
+            ))}
+        </div>
+    )
+}
+
+export function TemplateBuilderSkeleton() {
+    return (
+        <div className="space-y-0" aria-busy="true" aria-label="Загрузка конструктора">
+            <div className="sticky top-0 z-10 border-b border-border bg-telegram-bg/95 backdrop-blur-sm px-4 py-4 space-y-3">
+                <div className="skeleton h-12 w-full rounded-xl" />
+                <div className="flex gap-2 overflow-hidden">
+                    {[0, 1, 2, 3].map((i) => (
+                        <div key={i} className="skeleton h-8 w-20 shrink-0 rounded-full" />
+                    ))}
+                </div>
+            </div>
+            <div className="p-4 space-y-3">
+                {[0, 1, 2].map((i) => (
+                    <div key={i} className="skeleton h-20 w-full rounded-xl" />
+                ))}
+                <div className="skeleton h-11 w-full rounded-xl" />
+            </div>
+        </div>
+    )
+}
+
+export function ActiveWorkoutSkeleton() {
+    return (
+        <div className="pb-28" aria-busy="true" aria-label="Загрузка тренировки">
+            <div className="sticky top-0 z-10 border-b border-border bg-telegram-bg/95 backdrop-blur-sm px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between">
+                    <div className="skeleton h-6 w-40 rounded" />
+                    <div className="skeleton h-8 w-20 rounded-full" />
+                </div>
+                <div className="flex gap-4">
+                    <div className="skeleton h-4 w-24 rounded" />
+                    <div className="skeleton h-4 w-20 rounded" />
+                </div>
+            </div>
+            <div className="p-4 space-y-3">
+                {[0, 1, 2].map((i) => (
+                    <div key={i} className="rounded-2xl border border-border bg-telegram-bg p-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                            <div className="skeleton h-10 w-10 shrink-0 rounded-xl" />
+                            <div className="flex-1 space-y-1.5">
+                                <div className="skeleton h-5 w-[60%] rounded" />
+                                <div className="skeleton h-3 w-[40%] rounded" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[0, 1, 2].map((j) => (
+                                <div key={j} className="skeleton h-16 rounded-xl" />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+export function WorkoutHistorySkeleton() {
+    return (
+        <div className="pb-24" aria-busy="true" aria-label="Загрузка истории тренировок">
+            <div className="sticky top-0 z-10 border-b border-border bg-telegram-bg/95 backdrop-blur-sm px-4 py-3">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="skeleton h-7 w-28 rounded" />
+                    <div className="flex gap-2">
+                        <div className="skeleton h-9 w-9 rounded-full" />
+                        <div className="skeleton h-9 w-9 rounded-full" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                        <div key={i} className="skeleton h-6 rounded" />
+                    ))}
+                </div>
+            </div>
+            <div className="p-4 space-y-1">
+                <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 35 }).map((_, i) => (
+                        <div key={i} className="skeleton aspect-square rounded-lg" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export function ProgressExercisesSkeleton() {
+    return (
+        <div className="pb-20" aria-busy="true" aria-label="Загрузка прогресса">
+            <div className="sticky top-0 z-10 border-b border-border bg-telegram-bg/95 backdrop-blur-sm px-4 py-3">
+                <div className="flex gap-2">
+                    <div className="skeleton h-9 flex-1 rounded-full" />
+                    <div className="skeleton h-9 flex-1 rounded-full" />
+                </div>
+            </div>
+            <div className="p-4 space-y-6">
+                <section>
+                    <div className="skeleton mb-3 h-4 w-16 rounded" />
+                    <div className="flex flex-wrap gap-2">
+                        {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="skeleton h-8 w-20 rounded-full" />
+                        ))}
+                    </div>
+                </section>
+                <section>
+                    <div className="skeleton mb-3 h-4 w-52 rounded" />
+                    <div className="skeleton h-12 w-full rounded-xl" />
+                </section>
+                <section>
+                    <div className="skeleton mb-3 h-4 w-36 rounded" />
+                    <div className="grid grid-cols-2 gap-3">
+                        {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="rounded-2xl border border-border bg-telegram-secondary-bg/50 p-3">
+                                <div className="skeleton mb-2 h-4 w-24 rounded" />
+                                <div className="skeleton h-7 w-16 rounded" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+                <section>
+                    <div className="skeleton mb-3 h-4 w-28 rounded" />
+                    <div className="rounded-2xl border border-border bg-telegram-secondary-bg/30 p-4">
+                        <div className="skeleton h-64 w-full rounded-xl" />
+                    </div>
+                </section>
+            </div>
+        </div>
+    )
+}
+
+export function ProgressRecoverySkeleton() {
+    return (
+        <div className="pb-20" aria-busy="true" aria-label="Загрузка восстановления">
+            <div className="p-4 space-y-6">
+                <section className="grid grid-cols-2 gap-3">
+                    {[0, 1, 2, 3].map((i) => (
+                        <div key={i} className="rounded-2xl border border-border bg-telegram-secondary-bg/50 p-4">
+                            <div className="skeleton mb-2 h-4 w-24 rounded" />
+                            <div className="skeleton h-8 w-16 rounded" />
+                        </div>
+                    ))}
+                </section>
+                <section>
+                    <div className="skeleton mb-3 h-4 w-32 rounded" />
+                    <div className="rounded-2xl border border-border p-4 space-y-3">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                            <div key={i} className="flex items-center justify-between">
+                                <div className="skeleton h-4 w-24 rounded" />
+                                <div className="skeleton h-4 w-12 rounded" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            </div>
+        </div>
+    )
+}
+
 export function RouteFallbackSpinner() {
     return (
         <div

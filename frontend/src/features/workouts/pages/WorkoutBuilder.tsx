@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
     DndContext,
     closestCenter,
@@ -16,25 +16,17 @@ import {
     arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
-    useSortable,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
     Dumbbell,
     Timer,
     FileText,
     Heart,
-    GripVertical,
-    Trash2,
-    Edit2,
-    ChevronUp,
-    ChevronDown,
     Search,
     Plus,
     AlertCircle,
 } from 'lucide-react';
-import { cn } from '@shared/lib/cn';
 import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
@@ -47,7 +39,13 @@ import { queryKeys } from '@shared/api/queryKeys';
 import { workoutsApi } from '@shared/api/domains/workoutsApi';
 import { workoutTemplatesDefaultListParams } from '@features/workouts/lib/workoutQueryOptimistic';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
-import type { BackendWorkoutType, ExerciseInTemplate, WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
+import {
+    mapWorkoutTypeToBackend,
+    mapBackendTypeToSelectedTypes,
+    mapTemplateExercisesToBlocks,
+    buildTemplateExercises,
+} from '@features/workouts/lib/templateMappers';
+import { SortableTemplateBlock } from '@features/workouts/components/SortableTemplateBlock';
 import type { WorkoutBlock, WorkoutBlockConfig, WorkoutBuilderExercise } from '@features/workouts/types/workoutBuilder';
 import type { WorkoutType } from '@shared/types';
 import {
@@ -56,91 +54,7 @@ import {
 } from '@features/workouts/config/workoutTypeConfigs';
 import { getErrorMessage } from '@shared/errors';
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue';
-
-const mapWorkoutTypeToBackend = (types: WorkoutType[]): BackendWorkoutType => {
-    const normalized = types.filter((type) => type === 'cardio' || type === 'strength' || type === 'flexibility');
-    if (normalized.length !== 1) {
-        return 'mixed';
-    }
-    return normalized[0];
-};
-
-const toExerciseId = (id: string, fallbackIndex: number): number => {
-    const parsed = Number.parseInt(id, 10);
-    return Number.isNaN(parsed) ? fallbackIndex + 1 : parsed;
-};
-
-const mapBackendTypeToSelectedTypes = (type: BackendWorkoutType): WorkoutType[] => {
-    if (type === 'mixed') {
-        return [];
-    }
-    return [type];
-};
-
-const mapTemplateExercisesToBlocks = (exercises: ExerciseInTemplate[]): WorkoutBlock[] => (
-    exercises.map((exercise, index) => {
-        const isCardio = typeof exercise.duration === 'number' && exercise.duration > 0 && !exercise.reps;
-        return {
-            id: `template-${exercise.exercise_id}-${index}`,
-            type: isCardio ? 'cardio' : 'strength',
-            exercise: {
-                id: String(exercise.exercise_id),
-                name: exercise.name,
-                category: isCardio ? 'cardio' : 'strength',
-            },
-            config: {
-                sets: exercise.sets,
-                reps: exercise.reps,
-                duration: exercise.duration ? Math.round(exercise.duration / 60) : undefined,
-                restSeconds: exercise.rest_seconds,
-                weight: exercise.weight,
-                note: exercise.notes,
-            },
-            order: index,
-        };
-    })
-);
-
-const buildTemplateExercises = (blocks: WorkoutBlock[]): ExerciseInTemplate[] => (
-    blocks
-        .filter((block): block is WorkoutBlock & { exercise: WorkoutBuilderExercise } =>
-            (block.type === 'strength' || block.type === 'cardio') && Boolean(block.exercise)
-        )
-        .map((block, index) => {
-            const isCardio = block.type === 'cardio';
-            return {
-                exercise_id: toExerciseId(block.exercise.id, index),
-                name: block.exercise.name,
-                sets: Math.max(1, block.config?.sets ?? 3),
-                reps: isCardio ? undefined : Math.max(1, block.config?.reps ?? 10),
-                duration: isCardio && block.config?.duration
-                    ? Math.max(1, block.config.duration * 60)
-                    : undefined,
-                rest_seconds: Math.max(0, block.config?.restSeconds ?? 60),
-                weight: block.config?.weight && block.config.weight > 0 ? block.config.weight : undefined,
-                notes: block.config?.note?.trim() || undefined,
-            };
-        })
-);
-
-// ============================================
-// Mock Data
-// ============================================
-
-const mockExercises: WorkoutBuilderExercise[] = [
-    { id: '1', name: 'Отжимания', category: 'strength', muscleGroups: ['грудь', 'трицепс'] },
-    { id: '2', name: 'Приседания', category: 'strength', muscleGroups: ['ноги', 'ягодицы'] },
-    { id: '3', name: 'Становая тяга', category: 'strength', muscleGroups: ['спина', 'ноги'] },
-    { id: '4', name: 'Жим лёжа', category: 'strength', muscleGroups: ['грудь', 'трицепс'] },
-    { id: '5', name: 'Подтягивания', category: 'strength', muscleGroups: ['спина', 'бицепс'] },
-    { id: '6', name: 'Бег', category: 'cardio', muscleGroups: ['ноги'] },
-    { id: '7', name: 'Велотренажёр', category: 'cardio', muscleGroups: ['ноги'] },
-    { id: '8', name: 'Прыжки “звёздочка”', category: 'cardio', muscleGroups: ['всё тело'] },
-    { id: '9', name: 'Бёрпи', category: 'cardio', muscleGroups: ['всё тело'] },
-    { id: '10', name: 'Планка', category: 'strength', muscleGroups: ['кор'] },
-    { id: '11', name: 'Выпады', category: 'strength', muscleGroups: ['ноги', 'ягодицы'] },
-    { id: '12', name: 'Жим над головой', category: 'strength', muscleGroups: ['плечи'] },
-];
+import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery';
 
 const workoutTypeOptions: { type: WorkoutType; label: string }[] = WORKOUT_FILTER_TYPE_ORDER.map(
     (type) => ({ type, label: WORKOUT_LIST_TYPE_CONFIG[type].filterLabel }),
@@ -153,151 +67,6 @@ const categoryFilters = [
 ];
 
 // ============================================
-// Sortable Item Component
-// ============================================
-
-interface SortableItemProps {
-    block: WorkoutBlock;
-    index: number;
-    onEdit: (block: WorkoutBlock) => void;
-    onDelete: (id: string) => void;
-    onMoveUp: (index: number) => void;
-    onMoveDown: (index: number) => void;
-    isFirst: boolean;
-    isLast: boolean;
-}
-
-const SortableItem: React.FC<SortableItemProps> = ({
-    block,
-    index,
-    onEdit,
-    onDelete,
-    onMoveUp,
-    onMoveDown,
-    isFirst,
-    isLast,
-}) => {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: block.id });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 50 : 1,
-    };
-
-    const getBlockIcon = () => {
-        switch (block.type) {
-            case 'strength':
-                return <Dumbbell className="w-5 h-5" />;
-            case 'cardio':
-                return <Heart className="w-5 h-5" />;
-            case 'timer':
-                return <Timer className="w-5 h-5" />;
-            case 'note':
-                return <FileText className="w-5 h-5" />;
-            default:
-                return <Dumbbell className="w-5 h-5" />;
-        }
-    };
-
-    const getBlockSummary = () => {
-        if (!block.config) return '';
-
-        const parts: string[] = [];
-        if (block.config.sets) parts.push(`${block.config.sets} подх.`);
-        if (block.config.reps) parts.push(`${block.config.reps} повт.`);
-        if (block.config.weight) parts.push(`${block.config.weight} кг`);
-        if (block.config.duration) parts.push(`${block.config.duration} мин`);
-        if (block.config.restSeconds) parts.push(`${block.config.restSeconds} сек отдых`);
-
-        return parts.join(' • ');
-    };
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={cn(
-                'tg-card flex items-center gap-3 p-3',
-                'transition-shadow duration-200',
-                isDragging && 'shadow-lg ring-2 ring-primary/30'
-            )}
-        >
-            {/* Drag Handle */}
-            <button
-                {...attributes}
-                {...listeners}
-                className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg cursor-grab active:cursor-grabbing"
-                aria-label="Перетащить для сортировки"
-            >
-                <GripVertical className="w-5 h-5" />
-            </button>
-
-            {/* Number Badge */}
-            <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-semibold">
-                {index + 1}
-            </div>
-
-            {/* Icon */}
-            <div className="w-10 h-10 rounded-xl bg-telegram-secondary-bg flex items-center justify-center text-telegram-text">
-                {getBlockIcon()}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-telegram-text truncate">
-                    {block.exercise?.name || (block.type === 'note' ? 'Заметка' : 'Таймер')}
-                </h4>
-                <p className="text-sm text-telegram-hint truncate">
-                    {getBlockSummary() || block.config?.note || 'Без настроек'}
-                </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1">
-                <button
-                    onClick={() => onMoveUp(index)}
-                    disabled={isFirst}
-                    className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg disabled:opacity-30"
-                    aria-label="Переместить вверх"
-                >
-                    <ChevronUp className="w-4 h-4" />
-                </button>
-                <button
-                    onClick={() => onMoveDown(index)}
-                    disabled={isLast}
-                    className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg disabled:opacity-30"
-                    aria-label="Переместить вниз"
-                >
-                    <ChevronDown className="w-4 h-4" />
-                </button>
-                <button
-                    onClick={() => onEdit(block)}
-                    className="p-1.5 rounded-lg text-telegram-hint hover:text-primary hover:bg-primary/10"
-                    aria-label="Редактировать"
-                >
-                    <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                    onClick={() => onDelete(block.id)}
-                    className="p-1.5 rounded-lg text-telegram-hint hover:text-danger hover:bg-danger/10"
-                    aria-label="Удалить"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// ============================================
 // Main Component
 // ============================================
 
@@ -306,17 +75,18 @@ export const WorkoutBuilder: React.FC = () => {
     const tg = useTelegramWebApp()
     const queryClient = useQueryClient()
     const navigate = useNavigate()
+    const { id: templateIdParam } = useParams<{ id?: string }>()
     const [searchParams] = useSearchParams()
     const createTemplateMutation = useCreateWorkoutTemplateMutation()
     const updateTemplateMutation = useUpdateWorkoutTemplateMutation()
     const hydratedTemplateIdRef = useRef<number | null>(null)
 
     const editTemplateId = useMemo(() => {
-        const raw = searchParams.get('templateId')
+        const raw = searchParams.get('templateId') ?? templateIdParam ?? null
         if (!raw) return null
         const parsed = Number.parseInt(raw, 10)
         return Number.isNaN(parsed) ? null : parsed
-    }, [searchParams])
+    }, [searchParams, templateIdParam])
 
     const isEditMode = editTemplateId != null
 
@@ -618,12 +388,22 @@ export const WorkoutBuilder: React.FC = () => {
         );
     };
 
-    // Filtered exercises
-    const filteredExercises = mockExercises.filter((ex) => {
-        const matchesSearch = ex.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = selectedCategory === 'all' || ex.category === selectedCategory;
-        return matchesSearch && matchesCategory;
-    });
+    // Filtered exercises from real catalog
+    const { data: catalogExercises = [] } = useExercisesCatalogQuery();
+    const filteredExercises: WorkoutBuilderExercise[] = useMemo(() => {
+        return catalogExercises
+            .filter((ex) => {
+                const matchesSearch = ex.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesCategory = selectedCategory === 'all' || ex.category === selectedCategory;
+                return matchesSearch && matchesCategory;
+            })
+            .map((ex) => ({
+                id: String(ex.id),
+                name: ex.name,
+                category: ex.category,
+                muscleGroups: [...ex.primaryMuscles, ...ex.secondaryMuscles],
+            }));
+    }, [catalogExercises, searchQuery, selectedCategory]);
 
     // ============================================
     // Render
@@ -749,7 +529,7 @@ export const WorkoutBuilder: React.FC = () => {
                         >
                             <div className="space-y-2">
                                 {blocks.map((block, index) => (
-                                    <SortableItem
+                                    <SortableTemplateBlock
                                         key={block.id}
                                         block={block}
                                         index={index}
