@@ -781,7 +781,7 @@ export const Catalog: React.FC = () => {
 
         tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
         handleCloseDetail()
-        navigate('/workouts/builder')
+        navigate('/workouts/templates/new')
     }, [handleCloseDetail, navigate, tg.hapticFeedback]);
 
     const handleAddExercise = useCallback(() => {

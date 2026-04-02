@@ -9,29 +9,7 @@ import { useWorkoutSessionDraftStore } from '@/state/local'
 import { WorkoutModePageView } from '@features/workouts/workoutMode/WorkoutModePageView'
 import { getWorkoutModePageConfig } from '@features/workouts/workoutMode/workoutModePageModel'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
-import type { CompletedExercise, WorkoutHistoryItem, WorkoutSessionUpdateRequest } from '@features/workouts/types/workouts'
-
-function buildRepeatExercises(exercises: WorkoutHistoryItem['exercises']): CompletedExercise[] {
-    return exercises.map((exercise) => ({
-        ...exercise,
-        sets_completed: exercise.sets_completed.map((setItem) => ({
-            ...setItem,
-            completed: false,
-            rpe: undefined,
-            rir: undefined,
-        })),
-    }))
-}
-
-function buildSessionUpdatePayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequest {
-    return {
-        exercises: buildRepeatExercises(workout.exercises),
-        comments: workout.comments,
-        tags: workout.tags ?? [],
-        glucose_before: undefined,
-        glucose_after: undefined,
-    }
-}
+import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHelpers'
 
 export function WorkoutModePage() {
     const { mode } = useParams<{ mode: string }>()
@@ -79,7 +57,7 @@ export function WorkoutModePage() {
                 type: config.backendType,
             })
             setWorkoutSessionDraft(started.id, sessionTitle)
-            navigate(`/workouts/${started.id}`)
+            navigate(`/workouts/active/${started.id}`)
         } catch (error) {
             console.error('Failed to start workout mode:', error)
         }
@@ -94,10 +72,10 @@ export function WorkoutModePage() {
             })
             await updateWorkoutSessionMutation.mutateAsync({
                 workoutId: started.id,
-                payload: buildSessionUpdatePayload(recentWorkout),
+                payload: buildRepeatSessionPayload(recentWorkout),
             })
             setWorkoutSessionDraft(started.id, recentWorkout.comments?.trim() || config.title)
-            navigate(`/workouts/${started.id}`)
+            navigate(`/workouts/active/${started.id}`)
         } catch (error) {
             console.error('Failed to repeat workout mode:', error)
         }

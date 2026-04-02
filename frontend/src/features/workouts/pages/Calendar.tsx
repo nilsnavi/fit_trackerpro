@@ -6,96 +6,10 @@ import { Card } from '@shared/ui/Card';
 import { Modal } from '@shared/ui/Modal';
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState';
 import type { CalendarDayData, CalendarMonthStats } from '@features/workouts/types/calendarPage';
-import type { CalendarWorkout } from '@features/workouts/types/workouts';
 import { WORKOUT_TYPE_LABELS } from '@features/workouts/config/workoutTypeConfigs';
 import { useWorkoutCalendarQuery } from '@features/workouts/hooks/useWorkoutCalendarQuery';
-
-// Constants
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const MONTH_NAMES = [
-    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-];
-
-const STATUS_CONFIG = {
-    completed: { color: 'bg-success', label: 'Выполнена', icon: '✓' },
-    partial: { color: 'bg-warning', label: 'Частично', icon: '◐' },
-    missed: { color: 'bg-danger', label: 'Пропущена', icon: '✕' },
-    planned: { color: 'bg-neutral-300 dark:bg-neutral-600', label: 'Запланирована', icon: '○' }
-};
-
-// Helper functions
-const isSameDay = (date1: Date, date2: Date): boolean => {
-    return date1.getFullYear() === date2.getFullYear() &&
-        date1.getMonth() === date2.getMonth() &&
-        date1.getDate() === date2.getDate();
-};
-
-const getStartOfMonth = (date: Date): Date => {
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-};
-
-const getEndOfMonth = (date: Date): Date => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-};
-
-const getCalendarDays = (currentMonth: Date): CalendarDayData[] => {
-    const startOfMonth = getStartOfMonth(currentMonth);
-    const endOfMonth = getEndOfMonth(currentMonth);
-    const startDay = startOfMonth.getDay() || 7; // 1 = Monday, 7 = Sunday
-    const daysInMonth = endOfMonth.getDate();
-
-    const days: CalendarDayData[] = [];
-    const today = new Date();
-
-    // Previous month days
-    const prevMonthDays = startDay - 1;
-    const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0);
-    for (let i = prevMonthDays - 1; i >= 0; i--) {
-        const date = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), prevMonth.getDate() - i);
-        days.push({ date, workouts: [], isCurrentMonth: false, isToday: isSameDay(date, today) });
-    }
-
-    // Current month days
-    for (let i = 1; i <= daysInMonth; i++) {
-        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
-        days.push({ date, workouts: [], isCurrentMonth: true, isToday: isSameDay(date, today) });
-    }
-
-    // Next month days to fill 6 rows (42 cells)
-    const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, i);
-        days.push({ date, workouts: [], isCurrentMonth: false, isToday: isSameDay(date, today) });
-    }
-
-    return days;
-};
-
-const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-};
-
-const calculateStreak = (workoutList: CalendarWorkout[]): number => {
-    const today = new Date();
-    let streak = 0;
-    const checkDate = new Date(today);
-    let shouldContinue = true;
-
-    while (shouldContinue) {
-        const hasWorkout = workoutList.some(
-            (w) => w.status === 'completed' && isSameDay(new Date(w.scheduled_at), checkDate),
-        );
-        if (hasWorkout) {
-            streak++;
-            checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-            shouldContinue = false;
-        }
-    }
-
-    return streak;
-};
+import { isSameDay, getCalendarDays, formatCalendarDate, calculateStreak } from '@features/workouts/lib/calendarUtils';
+import { WEEKDAYS, MONTH_NAMES, STATUS_CONFIG } from '@features/workouts/config/calendarConfig';
 
 // Components
 const MonthNavigator: React.FC<{
@@ -271,7 +185,7 @@ const DayDetailSheet: React.FC<{
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={formatDate(day.date)}
+            title={formatCalendarDate(day.date)}
             size="full"
         >
             <div className="space-y-4">

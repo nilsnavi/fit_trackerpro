@@ -1,18 +1,23 @@
 import * as Sentry from '@sentry/react'
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { PwaUpdatePrompt } from './app/components/PwaUpdatePrompt'
 import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
 import { AppShell } from './app/layouts/AppShell'
-import { RouteErrorBoundary } from '@shared/ui/RouteErrorBoundary'
-import { ProtectedRoute } from '@shared/auth/ProtectedRoute'
+import { RouteGuard } from '@shared/auth/RouteGuard'
 import {
+    ActiveWorkoutSkeleton,
     AnalyticsPageSkeleton,
     CatalogPageSkeleton,
     ProfilePageSkeleton,
+    ProgressExercisesSkeleton,
+    ProgressRecoverySkeleton,
     RouteFallbackSpinner,
+    TemplateBuilderSkeleton,
+    TemplatesPageSkeleton,
+    WorkoutHistorySkeleton,
     WorkoutsPageSkeleton,
 } from '@shared/ui/page-skeletons'
 
@@ -68,15 +73,6 @@ function SentryErrorFallback({
     )
 }
 
-function RoutePageFallback() {
-    const { pathname } = useLocation()
-    if (pathname === '/profile') return <ProfilePageSkeleton />
-    if (pathname === '/exercises') return <CatalogPageSkeleton />
-    if (pathname === '/workouts') return <WorkoutsPageSkeleton />
-    if (pathname === '/analytics') return <AnalyticsPageSkeleton />
-    return <RouteFallbackSpinner />
-}
-
 export default function App() {
     return (
         <QueryProvider>
@@ -85,149 +81,191 @@ export default function App() {
                     <ThemeProvider>
                         <BrowserRouter>
                             <PwaUpdatePrompt />
-                            <Suspense fallback={<RoutePageFallback />}>
+                            <Suspense fallback={<RouteFallbackSpinner />}>
                                 <Routes>
                                     <Route element={<AppShell />}>
                                         <Route
                                             path="/"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Главная">
+                                                <RouteGuard screenTitle="Главная" isPublic>
                                                     <Home />
-                                                </RouteErrorBoundary>
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/workouts"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Тренировки">
-                                                        <WorkoutsPage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Тренировки" skeleton={<WorkoutsPageSkeleton />}>
+                                                    <WorkoutsPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
-                                            path="/workouts/builder"
+                                            path="/workouts/templates"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Конструктор тренировки">
-                                                        <WorkoutBuilderPage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Шаблоны тренировок" skeleton={<TemplatesPageSkeleton />}>
+                                                    <WorkoutsPage />
+                                                </RouteGuard>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/templates/new"
+                                            element={
+                                                <RouteGuard screenTitle="Конструктор тренировки" skeleton={<TemplateBuilderSkeleton />}>
+                                                    <WorkoutBuilderPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/workouts/mode/:mode"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Режим тренировки">
-                                                        <WorkoutModePage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Режим тренировки">
+                                                    <WorkoutModePage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
-                                            path="/workouts/calendar"
+                                            path="/workouts/templates/:id"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Календарь">
-                                                        <WorkoutCalendarPage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Шаблон тренировки" skeleton={<TemplateBuilderSkeleton />}>
+                                                    <WorkoutBuilderPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
-                                            path="/workouts/:id/edit"
+                                            path="/workouts/templates/:id/edit"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Редактирование тренировки">
-                                                        <WorkoutEditPage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Редактирование шаблона" skeleton={<TemplateBuilderSkeleton />}>
+                                                    <WorkoutBuilderPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
-                                            path="/workouts/:id"
+                                            path="/workouts/history"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Тренировка">
-                                                        <WorkoutDetailPage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Календарь" skeleton={<WorkoutHistorySkeleton />}>
+                                                    <WorkoutCalendarPage />
+                                                </RouteGuard>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/active/:id"
+                                            element={
+                                                <RouteGuard screenTitle="Тренировка" skeleton={<ActiveWorkoutSkeleton />}>
+                                                    <WorkoutDetailPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/login"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Вход">
+                                                <RouteGuard screenTitle="Вход" isPublic>
                                                     <LoginPage />
-                                                </RouteErrorBoundary>
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/exercises"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Каталог упражнений">
-                                                        <Catalog />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Каталог упражнений" skeleton={<CatalogPageSkeleton />}>
+                                                    <Catalog />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/exercises/add"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Новое упражнение">
-                                                        <AddExercise />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Новое упражнение">
+                                                    <AddExercise />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/health"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Здоровье">
+                                                <RouteGuard screenTitle="Здоровье" isPublic>
                                                     <HealthPage />
-                                                </RouteErrorBoundary>
+                                                </RouteGuard>
+                                            }
+                                        />
+                                        <Route
+                                            path="/progress/exercises"
+                                            element={
+                                                <RouteGuard screenTitle="Прогресс упражнений" skeleton={<ProgressExercisesSkeleton />}>
+                                                    <AnalyticsPage />
+                                                </RouteGuard>
+                                            }
+                                        />
+                                        <Route
+                                            path="/progress/recovery"
+                                            element={
+                                                <RouteGuard screenTitle="Восстановление" skeleton={<ProgressRecoverySkeleton />}>
+                                                    <AnalyticsPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/analytics"
+                                            element={<Navigate to="/progress/exercises" replace />}
+                                        />
+                                        <Route
+                                            path="/progress"
+                                            element={<Navigate to="/progress/exercises" replace />}
+                                        />
+                                        <Route
+                                            path="/workouts/builder"
+                                            element={<Navigate to="/workouts/templates/new" replace />}
+                                        />
+                                        <Route
+                                            path="/workouts/calendar"
+                                            element={<Navigate to="/workouts/history" replace />}
+                                        />
+                                        <Route
+                                            path="/workouts/:id"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Аналитика">
-                                                        <AnalyticsPage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Тренировка" skeleton={<ActiveWorkoutSkeleton />}>
+                                                    <WorkoutDetailPage />
+                                                </RouteGuard>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/:id/edit"
+                                            element={
+                                                <RouteGuard screenTitle="Редактирование тренировки">
+                                                    <WorkoutEditPage />
+                                                </RouteGuard>
+                                            }
+                                        />
+                                        <Route
+                                            path="/workouts/active/:id/edit"
+                                            element={
+                                                <RouteGuard screenTitle="Редактирование тренировки">
+                                                    <WorkoutEditPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/profile"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Профиль">
-                                                        <ProfilePage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Профиль" skeleton={<ProfilePageSkeleton />}>
+                                                    <ProfilePage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/achievements"
                                             element={
-                                                <ProtectedRoute>
-                                                    <RouteErrorBoundary screenTitle="Достижения">
-                                                        <AchievementsPage />
-                                                    </RouteErrorBoundary>
-                                                </ProtectedRoute>
+                                                <RouteGuard screenTitle="Достижения">
+                                                    <AchievementsPage />
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route
                                             path="/sandbox/rest-timer"
                                             element={
-                                                <RouteErrorBoundary screenTitle="Sandbox · Rest timer">
+                                                <RouteGuard screenTitle="Sandbox · Rest timer" isPublic>
                                                     <RestTimerSandboxPage />
-                                                </RouteErrorBoundary>
+                                                </RouteGuard>
                                             }
                                         />
                                         <Route path="*" element={<Navigate to="/" replace />} />

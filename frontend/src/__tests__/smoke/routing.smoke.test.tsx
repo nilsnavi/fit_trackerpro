@@ -116,14 +116,19 @@ describe('smoke: app routing', () => {
     it.each([
         '/',
         '/workouts',
+        '/workouts/templates',
+        '/workouts/templates/new',
+        '/workouts/templates/1',
+        '/workouts/templates/1/edit',
+        '/workouts/active/1',
+        '/workouts/history',
         '/exercises',
-        '/analytics',
+        '/progress/exercises',
+        '/progress/recovery',
         '/health',
         '/profile',
         '/login',
         '/exercises/add',
-        '/workouts/builder',
-        '/workouts/calendar',
     ])('opens critical route %s without crash', async (path) => {
         renderAt(path)
         await expectAppShellVisible()

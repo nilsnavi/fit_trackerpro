@@ -40,3 +40,32 @@ export type {
     SectionEmptyStateTone,
     SectionEmptyStateAction,
 } from './SectionEmptyState';
+
+// ── Layout primitives ──────────────────────────────────────────────────────
+export { PageSection } from './PageSection';
+export type { PageSectionProps } from './PageSection';
+
+export { StickyBottomBar } from './StickyBottomBar';
+export type { StickyBottomBarProps } from './StickyBottomBar';
+
+export { EmptyStateCard } from './EmptyStateCard';
+export type { EmptyStateCardProps } from './EmptyStateCard';
+
+export { InlineError } from './InlineError';
+export type { InlineErrorProps } from './InlineError';
+
+export { BottomSheetSelect } from './BottomSheetSelect';
+export type { BottomSheetSelectProps, BottomSheetOption } from './BottomSheetSelect';
+
+// ── Route guards ───────────────────────────────────────────────────────────
+export { RouteGuard } from '../auth/RouteGuard';
+
+// ── Page-level skeletons ───────────────────────────────────────────────────
+export {
+    TemplatesPageSkeleton,
+    TemplateBuilderSkeleton,
+    ActiveWorkoutSkeleton,
+    WorkoutHistorySkeleton,
+    ProgressExercisesSkeleton,
+    ProgressRecoverySkeleton,
+} from './page-skeletons';

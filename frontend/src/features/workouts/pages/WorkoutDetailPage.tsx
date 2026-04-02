@@ -14,10 +14,8 @@ import {
     SortableContext,
     arrayMove,
     sortableKeyboardCoordinates,
-    useSortable,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
@@ -26,7 +24,6 @@ import {
     CalendarDays,
     Clock3,
     Dumbbell,
-    GripVertical,
     HeartPulse,
     MessageSquare,
     PencilRuler,
@@ -50,6 +47,16 @@ import { queryKeys } from '@shared/api/queryKeys'
 import { Modal } from '@shared/ui/Modal'
 import { Chip, ChipGroup } from '@shared/ui/Chip'
 import { Input } from '@shared/ui/Input'
+import {
+    formatDate,
+    formatDurationMinutes,
+    parseOptionalNumber,
+    pluralizeRu,
+    getExerciseSummaryMeta,
+    formatExerciseStructureSummary,
+} from '@features/workouts/lib/workoutDetailFormatters'
+import { buildRepeatExercises } from '@features/workouts/lib/workoutModeHelpers'
+import { SortableExerciseCard } from '@features/workouts/components/SortableExerciseCard'
 import type {
     CompletedExercise,
     WorkoutCompleteRequest,
@@ -57,129 +64,6 @@ import type {
     WorkoutSessionUpdateRequest,
 } from '@features/workouts/types/workouts'
 import type { Exercise as CatalogExercise } from '@features/exercises/types/catalogUi'
-
-const formatDate = (value: string): string => {
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-    })
-}
-
-const formatDurationMinutes = (duration?: number): string => {
-    if (typeof duration !== 'number' || duration <= 0) {
-        return '—'
-    }
-    return `${duration} мин`
-}
-
-const formatSetValue = (value?: number, unit?: string): string => {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        return '—'
-    }
-    return unit ? `${value} ${unit}` : `${value}`
-}
-
-function parseOptionalNumber(raw: string): number | undefined {
-    if (raw.trim() === '') return undefined
-    const n = Number(raw)
-    return Number.isFinite(n) ? n : undefined
-}
-
-function pluralizeRu(value: number, forms: [string, string, string]): string {
-    const absValue = Math.abs(value)
-    const mod10 = absValue % 10
-    const mod100 = absValue % 100
-
-    if (mod100 >= 11 && mod100 <= 14) {
-        return forms[2]
-    }
-    if (mod10 === 1) {
-        return forms[0]
-    }
-    if (mod10 >= 2 && mod10 <= 4) {
-        return forms[1]
-    }
-    return forms[2]
-}
-
-type ExerciseSummaryTone = 'strength' | 'cardio' | 'timer'
-
-function getExerciseSummaryMeta(exercise: CompletedExercise): {
-    tone: ExerciseSummaryTone
-    label: string
-    reason: string
-    mobileReason: string
-    icon: typeof Dumbbell
-    className: string
-    borderClass: string
-} {
-    const setsCount = exercise.sets_completed.length
-    const firstSet = exercise.sets_completed[0]
-    const hasWeight = firstSet?.weight != null && firstSet.weight > 0
-    const hasReps = firstSet?.reps != null && firstSet.reps > 0
-    const hasDuration = firstSet?.duration != null && firstSet.duration > 0
-
-    if (hasDuration && !hasWeight && !hasReps) {
-        return {
-            tone: 'timer',
-            label: setsCount > 1 ? 'Интервал' : 'Таймер',
-            reason: setsCount > 1
-                ? 'Есть несколько временных отрезков без повторов и рабочего веса.'
-                : 'Есть длительность подхода без повторов и рабочего веса.',
-            mobileReason: setsCount > 1 ? 'По времени, без веса' : 'Только время, без веса',
-            icon: Timer,
-            className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-            borderClass: 'border-l-4 border-l-amber-400 dark:border-l-amber-500',
-        }
-    }
-    if (hasDuration && !hasWeight) {
-        return {
-            tone: 'cardio',
-            label: setsCount > 1 ? 'Интервалы' : 'Кардио',
-            reason: hasReps
-                ? 'Есть длительность подходов и работа строится по времени, а не по весу.'
-                : 'Есть длительность активности без рабочего веса.',
-            mobileReason: hasReps ? 'Работа по времени' : 'Длительность без веса',
-            icon: HeartPulse,
-            className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-            borderClass: 'border-l-4 border-l-rose-400 dark:border-l-rose-500',
-        }
-    }
-    return {
-        tone: 'strength',
-        label: hasWeight ? 'Силовая' : 'Повторы',
-        reason: hasWeight
-            ? 'Карточка считается силовой, потому что в подходах указан рабочий вес.'
-            : 'Карточка считается силовой, потому что в подходах есть повторы без временного интервала.',
-        mobileReason: hasWeight ? 'Есть рабочий вес' : 'Повторы без таймера',
-        icon: Dumbbell,
-        className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-        borderClass: 'border-l-4 border-l-blue-400 dark:border-l-blue-500',
-    }
-}
-
-function formatExerciseStructureSummary(exercise: CompletedExercise): string {
-    const setsCount = exercise.sets_completed.length
-    const firstSet = exercise.sets_completed[0]
-    const parts: string[] = [
-        `${setsCount} ${pluralizeRu(setsCount, ['подход', 'подхода', 'подходов'])}`,
-    ]
-
-    if (firstSet?.reps != null) {
-        parts.push(`${firstSet.reps} ${pluralizeRu(firstSet.reps, ['повтор', 'повтора', 'повторов'])}`)
-    }
-    if (firstSet?.weight != null) {
-        parts.push(`${firstSet.weight} ${pluralizeRu(firstSet.weight, ['килограмм', 'килограмма', 'килограммов'])}`)
-    }
-    if (firstSet?.duration != null) {
-        parts.push(`${firstSet.duration} ${pluralizeRu(firstSet.duration, ['секунда', 'секунды', 'секунд'])}`)
-    }
-
-    return parts.join(' • ')
-}
 
 type AddItemKind = 'exercise' | 'timer'
 type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility'
@@ -192,47 +76,7 @@ type StructureEditorState = {
     duration: string
 } | null
 
-type SortableExerciseCardProps = {
-    id: string
-    children: React.ReactNode
-    isActive: boolean
-}
-
-function SortableExerciseCard({ id, children, isActive }: SortableExerciseCardProps) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-        id,
-        disabled: !isActive,
-    })
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={{
-                transform: CSS.Transform.toString(transform),
-                transition,
-                zIndex: isDragging ? 30 : 1,
-            }}
-            className={isDragging ? 'opacity-90' : undefined}
-        >
-            <div className="flex items-start gap-2">
-                {isActive && (
-                    <button
-                        type="button"
-                        className="mt-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-telegram-bg text-telegram-hint touch-none"
-                        aria-label="Перетащить упражнение"
-                        {...attributes}
-                        {...listeners}
-                    >
-                        <GripVertical className="w-4 h-4" />
-                    </button>
-                )}
-                <div className="min-w-0 flex-1">{children}</div>
-            </div>
-        </div>
-    )
-}
-
-function buildSessionUpdatePayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequest {
+function buildSyncPayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequest {
     return {
         exercises: workout.exercises,
         comments: workout.comments,
@@ -240,18 +84,6 @@ function buildSessionUpdatePayload(workout: WorkoutHistoryItem): WorkoutSessionU
         glucose_before: workout.glucose_before,
         glucose_after: workout.glucose_after,
     }
-}
-
-function buildRepeatExercises(exercises: CompletedExercise[]): CompletedExercise[] {
-    return exercises.map((exercise) => ({
-        ...exercise,
-        sets_completed: exercise.sets_completed.map((setItem) => ({
-            ...setItem,
-            completed: false,
-            rpe: undefined,
-            rir: undefined,
-        })),
-    }))
 }
 
 export function WorkoutDetailPage() {
@@ -343,7 +175,7 @@ export function WorkoutDetailPage() {
     const detailQueryKey = queryKeys.workouts.historyItem(workoutId)
 
     const activeSessionPayload = useMemo(
-        () => (isActiveDraft && workout ? buildSessionUpdatePayload(workout) : null),
+        () => (isActiveDraft && workout ? buildSyncPayload(workout) : null),
         [isActiveDraft, workout],
     )
 

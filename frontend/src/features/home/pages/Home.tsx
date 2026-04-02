@@ -85,7 +85,7 @@ export function Home() {
         if (tg.isTelegram) {
             tg.showMainButton('Начать тренировку', () => {
                 tg.hapticFeedback({ type: 'impact', style: 'medium' })
-                navigate('/workouts/builder')
+                navigate('/workouts/templates/new')
             })
         }
 
@@ -117,7 +117,7 @@ export function Home() {
     const handleTemplateStart = async (id: string) => {
         tg.hapticFeedback({ type: 'selection' })
         if (id === 'custom') {
-            navigate('/workouts/builder')
+            navigate('/workouts/templates/new')
             return
         }
         const templateId = Number.parseInt(id, 10)
@@ -126,7 +126,7 @@ export function Home() {
             const started = await startWorkoutMutation.mutateAsync({ template_id: templateId })
             const templateName = templates.find((t) => t.id === id)?.name
             setWorkoutSessionDraft(started.id, templateName ?? `Тренировка #${started.id}`)
-            navigate(`/workouts/${started.id}`)
+            navigate(`/workouts/active/${started.id}`)
         } catch {
             // errors are surfaced via global error handlers
         }
@@ -283,13 +283,13 @@ export function Home() {
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ' ') {
                                             e.preventDefault()
-                                            navigate(`/workouts/${workout.id}`)
+                                            navigate(`/workouts/active/${workout.id}`)
                                         }
                                     }}
                                     className="flex cursor-pointer items-center gap-3 rounded-xl bg-gray-50 p-4 transition-colors active:scale-[0.98] dark:bg-neutral-800"
                                     onClick={() => {
                                         tg.hapticFeedback({ type: 'impact', style: 'light' })
-                                        navigate(`/workouts/${workout.id}`)
+                                        navigate(`/workouts/active/${workout.id}`)
                                     }}
                                 >
                                     <div
