@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { queryKeys } from '@shared/api/queryKeys'
 import type { QueryClient } from '@tanstack/react-query'
 import type { ActiveWorkoutSyncState } from '@/state/local'
@@ -10,7 +10,9 @@ import { toast } from '@shared/stores/toastStore'
 
 // Aggressive debounce causes redundant requests; use a wider window instead.
 const DEBOUNCE_MS = 2000
-const RETRY_DELAY_MS = 5000
+const RETRY_BASE_DELAY_MS = 3000
+const RETRY_MAX_DELAY_MS = 15000
+const MAX_RETRY_ATTEMPTS = 3
 
 type UpdateSessionMutation = {
     mutate: (
@@ -49,6 +51,11 @@ interface UseActiveWorkoutSyncParams {
 interface UseActiveWorkoutSyncResult {
     /** Immediately cancel any pending debounce and fire sync now. Use before navigation / finish. */
     flushNow: () => void
+    syncState: ActiveWorkoutSyncState
+    lastSyncedPayload: WorkoutSessionUpdateRequest | null
+    pendingPayload: WorkoutSessionUpdateRequest | null
+    isOffline: boolean
+    hasPendingChanges: boolean
 }
 
 export function useActiveWorkoutSync({
@@ -69,11 +76,18 @@ export function useActiveWorkoutSync({
     buildSyncPayload,
 }: UseActiveWorkoutSyncParams): UseActiveWorkoutSyncResult {
     const detailQueryKey = queryKeys.workouts.historyItem(workoutId)
+    const getIsOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine)
+
+    const [syncState, setSyncState] = useState<ActiveWorkoutSyncState>('idle')
+    const [lastSyncedPayload, setLastSyncedPayload] = useState<WorkoutSessionUpdateRequest | null>(null)
+    const [pendingPayload, setPendingPayload] = useState<WorkoutSessionUpdateRequest | null>(null)
+    const [isOffline, setIsOffline] = useState<boolean>(() => !getIsOnline())
 
     // ── Snapshot tracking ──────────────────────────────────────────────────
     const lastPersistedSnapshotRef = useRef<string | null>(null)
     const hadSyncIssueRef = useRef(false)
     const hasShownOfflineToastRef = useRef(false)
+    const retryAttemptRef = useRef(0)
 
     // ── Race condition guards ──────────────────────────────────────────────
     // inFlightRef prevents launching a second request while one is running.
@@ -106,6 +120,33 @@ export function useActiveWorkoutSync({
     // other without circular useCallback dependencies.
     const executeSyncRef = useRef<() => void>(() => undefined)
     const scheduleDebouncedRef = useRef<() => void>(() => undefined)
+    const updateSyncStateRef = useRef<(nextState: ActiveWorkoutSyncState) => void>(() => undefined)
+    updateSyncStateRef.current = (nextState) => {
+        setSyncState(nextState)
+        setActiveSyncStateRef.current(nextState)
+    }
+
+    const scheduleRetry = useCallback(() => {
+        if (retryTimerRef.current !== null) {
+            window.clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = null
+        }
+
+        if (retryAttemptRef.current >= MAX_RETRY_ATTEMPTS) {
+            return
+        }
+
+        retryAttemptRef.current += 1
+        const retryDelay = Math.min(
+            RETRY_BASE_DELAY_MS * 2 ** (retryAttemptRef.current - 1),
+            RETRY_MAX_DELAY_MS,
+        )
+
+        retryTimerRef.current = window.setTimeout(() => {
+            retryTimerRef.current = null
+            executeSyncRef.current()
+        }, retryDelay)
+    }, [])
 
     // ── Core sync execution (stable identity) ─────────────────────────────
     const executeSync = useCallback(() => {
@@ -121,9 +162,12 @@ export function useActiveWorkoutSync({
         // Nothing new to persist.
         if (snapshot === lastPersistedSnapshotRef.current) return
 
+        setPendingPayload(payload)
+
         // Offline: mark as queued; the 'online' listener will retry.
-        if (!navigator.onLine) {
-            setActiveSyncStateRef.current('offline-queued')
+        if (!getIsOnline()) {
+            setIsOffline(true)
+            updateSyncStateRef.current('offline-queued')
             if (!hasShownOfflineToastRef.current) {
                 toast.info('Офлайн: изменения поставлены в очередь синхронизации')
                 hasShownOfflineToastRef.current = true
@@ -133,16 +177,19 @@ export function useActiveWorkoutSync({
         }
 
         inFlightRef.current = true
-        setActiveSyncStateRef.current('syncing')
+        updateSyncStateRef.current('syncing')
 
         updateSessionMutationRef.current.mutate(
             { workoutId: workoutIdRef.current, payload },
             {
                 onSuccess: (data) => {
                     inFlightRef.current = false
+                    setIsOffline(false)
                     lastPersistedSnapshotRef.current = snapshot
+                    retryAttemptRef.current = 0
+                    setLastSyncedPayload(payload)
                     queryClientRef.current.setQueryData(detailQueryKeyRef.current, data)
-                    setActiveSyncStateRef.current('synced')
+                    updateSyncStateRef.current('synced')
                     if (hadSyncIssueRef.current) {
                         toast.success('Синхронизация восстановлена, изменения сохранены')
                     }
@@ -152,26 +199,27 @@ export function useActiveWorkoutSync({
                     // New changes arrived while the request was in flight → flush them.
                     const latestWorkout = workoutRef.current
                     if (latestWorkout && isActiveDraftRef.current) {
-                        const latestSnapshot = JSON.stringify(buildSyncPayloadRef.current(latestWorkout))
+                        const latestPayload = buildSyncPayloadRef.current(latestWorkout)
+                        const latestSnapshot = JSON.stringify(latestPayload)
                         if (latestSnapshot !== lastPersistedSnapshotRef.current) {
+                            setPendingPayload(latestPayload)
                             scheduleDebouncedRef.current()
+                            return
                         }
                     }
+
+                    setPendingPayload(null)
                 },
                 onError: () => {
                     inFlightRef.current = false
-                    setActiveSyncStateRef.current('error')
+                    updateSyncStateRef.current('error')
                     hadSyncIssueRef.current = true
                     toast.retry('Ошибка синхронизации. Повторим автоматически')
-                    // Auto-retry after a delay; cleared if new changes arrive first.
-                    retryTimerRef.current = window.setTimeout(() => {
-                        retryTimerRef.current = null
-                        executeSyncRef.current()
-                    }, RETRY_DELAY_MS)
+                    scheduleRetry()
                 },
             },
         )
-    }, []) // intentionally empty — reads everything via refs
+    }, [scheduleRetry]) // reads mutable inputs via refs
 
     executeSyncRef.current = executeSync
 
@@ -185,6 +233,7 @@ export function useActiveWorkoutSync({
             window.clearTimeout(retryTimerRef.current)
             retryTimerRef.current = null
         }
+        retryAttemptRef.current = 0
         debounceTimerRef.current = window.setTimeout(() => {
             debounceTimerRef.current = null
             executeSyncRef.current()
@@ -203,8 +252,25 @@ export function useActiveWorkoutSync({
             window.clearTimeout(retryTimerRef.current)
             retryTimerRef.current = null
         }
+        retryAttemptRef.current = 0
         executeSyncRef.current()
     }, []) // stable
+
+    const hasUnsyncedChanges = useCallback(() => {
+        const currentWorkout = workoutRef.current
+        if (!isActiveDraftRef.current || !currentWorkout || lastPersistedSnapshotRef.current === null) {
+            return false
+        }
+
+        const latestSnapshot = JSON.stringify(buildSyncPayloadRef.current(currentWorkout))
+        return latestSnapshot !== lastPersistedSnapshotRef.current
+    }, [])
+
+    const flushPendingChanges = useCallback(() => {
+        if (hasUnsyncedChanges()) {
+            flushNow()
+        }
+    }, [flushNow, hasUnsyncedChanges])
 
     // ── Timer cleanup on unmount ───────────────────────────────────────────
     useEffect(() => {
@@ -218,6 +284,10 @@ export function useActiveWorkoutSync({
     useEffect(() => {
         lastPersistedSnapshotRef.current = null
         inFlightRef.current = false
+        retryAttemptRef.current = 0
+        setLastSyncedPayload(null)
+        setPendingPayload(null)
+        updateSyncStateRef.current('idle')
     }, [workoutId])
 
     // ── Session housekeeping (unchanged from original) ────────────────────
@@ -282,22 +352,36 @@ export function useActiveWorkoutSync({
     // ── Watch workout snapshot → schedule debounced sync ──────────────────
     // Compare by serialised string so the effect only fires on real data changes,
     // not on every re-render (avoids the new-object-reference pitfall).
-    const activeSessionSnapshot = isActiveDraft && workout ? JSON.stringify(buildSyncPayload(workout)) : null
+    const activeSessionPayload = useMemo(
+        () => (isActiveDraft && workout ? buildSyncPayload(workout) : null),
+        [buildSyncPayload, isActiveDraft, workout],
+    )
+    const activeSessionSnapshot = useMemo(
+        () => (activeSessionPayload ? JSON.stringify(activeSessionPayload) : null),
+        [activeSessionPayload],
+    )
 
     useEffect(() => {
-        if (!isActiveDraft || !activeSessionSnapshot) return
+        if (!isActiveDraft || !activeSessionSnapshot || !activeSessionPayload) return
 
         // Establish baseline on first load — nothing to persist yet.
         if (lastPersistedSnapshotRef.current === null) {
             lastPersistedSnapshotRef.current = activeSessionSnapshot
+            setLastSyncedPayload(activeSessionPayload)
+            setPendingPayload(null)
+            updateSyncStateRef.current('idle')
             return
         }
 
         // Already up-to-date.
-        if (activeSessionSnapshot === lastPersistedSnapshotRef.current) return
+        if (activeSessionSnapshot === lastPersistedSnapshotRef.current) {
+            setPendingPayload(null)
+            return
+        }
 
+        setPendingPayload(activeSessionPayload)
         scheduleDebounced()
-    }, [activeSessionSnapshot, isActiveDraft, scheduleDebounced])
+    }, [activeSessionPayload, activeSessionSnapshot, isActiveDraft, scheduleDebounced])
 
     // ── Flush triggers: blur / hidden tab / page unload ───────────────────
     useEffect(() => {
@@ -305,15 +389,15 @@ export function useActiveWorkoutSync({
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
-                flushNow()
+                flushPendingChanges()
             }
         }
 
-        const handleBlur = () => flushNow()
+        const handleBlur = () => flushPendingChanges()
 
         const handleBeforeUnload = () => {
             // Best-effort — async requests may not complete but the debounce is cleared.
-            flushNow()
+            flushPendingChanges()
         }
 
         document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -325,27 +409,43 @@ export function useActiveWorkoutSync({
             window.removeEventListener('blur', handleBlur)
             window.removeEventListener('beforeunload', handleBeforeUnload)
         }
-    }, [isActiveDraft, flushNow])
+    }, [isActiveDraft, flushPendingChanges])
 
     // ── Online recovery ────────────────────────────────────────────────────
     useEffect(() => {
         if (!isActiveDraft) return
 
         const handleOnline = () => {
+            setIsOffline(false)
             // Flush queued changes as soon as the connection is restored.
-            if (
-                lastPersistedSnapshotRef.current !== null &&
-                workoutRef.current &&
-                JSON.stringify(buildSyncPayloadRef.current(workoutRef.current)) !==
-                    lastPersistedSnapshotRef.current
-            ) {
+            if (hasUnsyncedChanges()) {
                 executeSyncRef.current()
             }
         }
 
-        window.addEventListener('online', handleOnline)
-        return () => window.removeEventListener('online', handleOnline)
-    }, [isActiveDraft])
+        const handleOffline = () => {
+            setIsOffline(true)
+            if (hasUnsyncedChanges()) {
+                updateSyncStateRef.current('offline-queued')
+            }
+        }
 
-    return { flushNow }
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+        }
+    }, [isActiveDraft, hasUnsyncedChanges])
+
+    const hasPendingChanges = pendingPayload !== null
+
+    return {
+        flushNow,
+        syncState,
+        lastSyncedPayload,
+        pendingPayload,
+        isOffline,
+        hasPendingChanges,
+    }
 }
