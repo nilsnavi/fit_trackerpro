@@ -19,6 +19,13 @@ interface ExerciseModeConfigFormProps {
     isLoading?: boolean
 }
 
+function focusFirstInvalidInput() {
+    const invalidInput = document.querySelector<HTMLInputElement>('input[aria-invalid="true"]')
+    if (!invalidInput) return
+    invalidInput.focus({ preventScroll: true })
+    invalidInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
 // ── Strength ─────────────────────────────────────────────────────────────────
 
 function StrengthForm({
@@ -49,6 +56,7 @@ function StrengthForm({
         if (isNaN(parsedRest) || parsedRest < 0) errs.rest = 'Укажите корректный отдых'
         if (Object.keys(errs).length) {
             setErrors(errs)
+            requestAnimationFrame(focusFirstInvalidInput)
             return null
         }
         return {
@@ -67,14 +75,20 @@ function StrengthForm({
                     label="Подходов"
                     type="number"
                     value={sets}
-                    onChange={(e) => setSets(e.target.value)}
+                    onChange={(e) => {
+                        setSets(e.target.value)
+                        setErrors((prev) => ({ ...prev, sets: '' }))
+                    }}
                     error={errors.sets}
                 />
                 <Input
                     label="Повторений"
                     type="number"
                     value={reps}
-                    onChange={(e) => setReps(e.target.value)}
+                    onChange={(e) => {
+                        setReps(e.target.value)
+                        setErrors((prev) => ({ ...prev, reps: '' }))
+                    }}
                     error={errors.reps}
                 />
                 <Input
@@ -88,7 +102,10 @@ function StrengthForm({
                     label="Отдых (сек)"
                     type="number"
                     value={rest}
-                    onChange={(e) => setRest(e.target.value)}
+                    onChange={(e) => {
+                        setRest(e.target.value)
+                        setErrors((prev) => ({ ...prev, rest: '' }))
+                    }}
                     error={errors.rest}
                 />
             </div>
@@ -144,14 +161,26 @@ function CardioForm({
     const validate = (): CardioExerciseParams | null => {
         const errs: Record<string, string> = {}
         const parsedMin = parseFloat(durationMin)
-        if (!parsedMin || parsedMin <= 0) errs.duration = 'Укажите длительность'
+        const parsedDistance = distance.trim() === '' ? null : parseFloat(distance)
+        const hasDuration = Number.isFinite(parsedMin) && parsedMin > 0
+        const hasDistance = Number.isFinite(parsedDistance) && (parsedDistance as number) > 0
+
+        if (!hasDuration && !hasDistance) {
+            errs.duration = 'Укажите длительность > 0 или дистанцию > 0'
+            errs.distance = 'Укажите длительность > 0 или дистанцию > 0'
+        }
+        if (parsedDistance != null && (!Number.isFinite(parsedDistance) || parsedDistance <= 0)) {
+            errs.distance = 'Дистанция должна быть больше 0'
+        }
+
         if (Object.keys(errs).length) {
             setErrors(errs)
+            requestAnimationFrame(focusFirstInvalidInput)
             return null
         }
         return {
-            durationSeconds: Math.round(parsedMin * 60),
-            distance: distance ? parseFloat(distance) : undefined,
+            durationSeconds: hasDuration ? Math.round(parsedMin * 60) : 0,
+            distance: hasDistance ? parsedDistance ?? undefined : undefined,
             intensity,
             note: note.trim() || undefined,
         }
@@ -164,15 +193,22 @@ function CardioForm({
                     label="Длительность (мин)"
                     type="number"
                     value={durationMin}
-                    onChange={(e) => setDurationMin(e.target.value)}
+                    onChange={(e) => {
+                        setDurationMin(e.target.value)
+                        setErrors((prev) => ({ ...prev, duration: '', distance: '' }))
+                    }}
                     error={errors.duration}
                 />
                 <Input
                     label="Дистанция (км)"
                     type="number"
                     value={distance}
-                    onChange={(e) => setDistance(e.target.value)}
+                    onChange={(e) => {
+                        setDistance(e.target.value)
+                        setErrors((prev) => ({ ...prev, duration: '', distance: '' }))
+                    }}
                     placeholder="—"
+                    error={errors.distance}
                 />
             </div>
             <div className="space-y-1">
@@ -240,6 +276,7 @@ function FunctionalForm({
     const validate = (): FunctionalExerciseParams | null => {
         const errs: Record<string, string> = {}
         const parsedRounds = parseInt(rounds, 10)
+        const parsedRest = parseInt(rest, 10)
         if (!parsedRounds || parsedRounds < 1) errs.rounds = 'Мин. 1 раунд'
         if (mode === 'reps') {
             const parsedReps = parseInt(reps, 10)
@@ -248,15 +285,17 @@ function FunctionalForm({
             const parsedDur = parseInt(durationSec, 10)
             if (!parsedDur || parsedDur < 1) errs.duration = 'Мин. 1 секунда'
         }
+        if (isNaN(parsedRest) || parsedRest < 0) errs.rest = 'Отдых не может быть меньше 0'
         if (Object.keys(errs).length) {
             setErrors(errs)
+            requestAnimationFrame(focusFirstInvalidInput)
             return null
         }
         return {
             rounds: parsedRounds,
             reps: mode === 'reps' ? parseInt(reps, 10) : undefined,
             durationSeconds: mode === 'duration' ? parseInt(durationSec, 10) : undefined,
-            restSeconds: parseInt(rest, 10) || 30,
+            restSeconds: parsedRest,
             note: note.trim() || undefined,
         }
     }
@@ -287,7 +326,10 @@ function FunctionalForm({
                     label="Раундов"
                     type="number"
                     value={rounds}
-                    onChange={(e) => setRounds(e.target.value)}
+                    onChange={(e) => {
+                        setRounds(e.target.value)
+                        setErrors((prev) => ({ ...prev, rounds: '' }))
+                    }}
                     error={errors.rounds}
                 />
                 {mode === 'reps' ? (
@@ -295,7 +337,10 @@ function FunctionalForm({
                         label="Повторений"
                         type="number"
                         value={reps}
-                        onChange={(e) => setReps(e.target.value)}
+                        onChange={(e) => {
+                            setReps(e.target.value)
+                            setErrors((prev) => ({ ...prev, reps: '' }))
+                        }}
                         error={errors.reps}
                     />
                 ) : (
@@ -303,7 +348,10 @@ function FunctionalForm({
                         label="Секунд"
                         type="number"
                         value={durationSec}
-                        onChange={(e) => setDurationSec(e.target.value)}
+                        onChange={(e) => {
+                            setDurationSec(e.target.value)
+                            setErrors((prev) => ({ ...prev, duration: '' }))
+                        }}
                         error={errors.duration}
                     />
                 )}
@@ -311,7 +359,11 @@ function FunctionalForm({
                     label="Отдых (сек)"
                     type="number"
                     value={rest}
-                    onChange={(e) => setRest(e.target.value)}
+                    onChange={(e) => {
+                        setRest(e.target.value)
+                        setErrors((prev) => ({ ...prev, rest: '' }))
+                    }}
+                    error={errors.rest}
                 />
             </div>
             <Input
@@ -355,6 +407,7 @@ function YogaForm({
         const parsed = parseInt(durationSec, 10)
         if (!parsed || parsed < 1) {
             setErrors({ duration: 'Мин. 1 секунда' })
+            requestAnimationFrame(focusFirstInvalidInput)
             return null
         }
         return { durationSeconds: parsed, note: note.trim() || undefined }
@@ -366,7 +419,10 @@ function YogaForm({
                 label="Длительность (сек)"
                 type="number"
                 value={durationSec}
-                onChange={(e) => setDurationSec(e.target.value)}
+                onChange={(e) => {
+                    setDurationSec(e.target.value)
+                    setErrors((prev) => ({ ...prev, duration: '' }))
+                }}
                 error={errors.duration}
                 fullWidth
             />

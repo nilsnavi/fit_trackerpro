@@ -30,14 +30,14 @@ export function parseFastApiDetail(detail: unknown): {
     if (Array.isArray(detail)) {
         const items = detail.filter(isValidationItem)
         if (items.length === 0) {
-            return { message: 'Request validation failed' }
+            return { message: 'Ошибка валидации запроса' }
         }
         const fieldErrors: ClientFieldError[] = items.map((item) => ({
             field: formatLoc(item.loc),
             message: item.msg,
         }))
         const message =
-            fieldErrors.map((f) => `${f.field}: ${f.message}`).join('; ') || 'Request validation failed'
+            fieldErrors.map((f) => `${f.field}: ${f.message}`).join('; ') || 'Ошибка валидации запроса'
         return { message, fieldErrors }
     }
 
@@ -51,5 +51,5 @@ export function parseFastApiDetail(detail: unknown): {
         }
     }
 
-    return { message: 'Request failed' }
+    return { message: 'Запрос не выполнен' }
 }

@@ -5,12 +5,12 @@ import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 type MetricType = 'weight' | 'steps' | 'heart_rate' | 'sleep' | 'water' | 'calories'
 
 const metrics: { type: MetricType; label: string; unit: string; icon: string }[] = [
-    { type: 'weight', label: 'Weight', unit: 'kg', icon: '⚖️' },
-    { type: 'steps', label: 'Steps', unit: 'steps', icon: '👟' },
-    { type: 'heart_rate', label: 'Heart Rate', unit: 'bpm', icon: '❤️' },
-    { type: 'sleep', label: 'Sleep', unit: 'hours', icon: '😴' },
-    { type: 'water', label: 'Water', unit: 'ml', icon: '💧' },
-    { type: 'calories', label: 'Calories', unit: 'kcal', icon: '🔥' },
+    { type: 'weight', label: 'Вес', unit: 'кг', icon: '⚖️' },
+    { type: 'steps', label: 'Шаги', unit: 'шаг', icon: '👟' },
+    { type: 'heart_rate', label: 'Пульс', unit: 'уд/мин', icon: '❤️' },
+    { type: 'sleep', label: 'Сон', unit: 'ч', icon: '😴' },
+    { type: 'water', label: 'Вода', unit: 'мл', icon: '💧' },
+    { type: 'calories', label: 'Калории', unit: 'ккал', icon: '🔥' },
 ]
 
 const mockData: Record<MetricType, { current: number; previous: number; target: number }> = {

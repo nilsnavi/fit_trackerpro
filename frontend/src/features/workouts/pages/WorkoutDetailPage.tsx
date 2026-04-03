@@ -164,7 +164,7 @@ export function WorkoutDetailPage() {
             {!isFetching && !errorMessage && workout && !isCompletedWorkout && (
                 <div className="space-y-3 rounded-xl border border-border bg-telegram-secondary-bg p-4">
                     <p className="text-sm text-telegram-hint">
-                        Эта сессия еще не завершена. Для изменения подходов и выполнения откройте active session detail.
+                            Эта сессия еще не завершена. Для изменения подходов и выполнения откройте страницу активной тренировки.
                     </p>
                     <Button type="button" onClick={() => navigate(`/workouts/active/${workout.id}`)}>
                         Открыть активную тренировку
@@ -175,7 +175,7 @@ export function WorkoutDetailPage() {
             {!isFetching && !errorMessage && workout && isCompletedWorkout && (
                 <>
                     <section className="space-y-3 rounded-xl bg-telegram-secondary-bg p-4">
-                        <h2 className="text-base font-semibold text-telegram-text">Summary</h2>
+                            <h2 className="text-base font-semibold text-telegram-text">Итоги</h2>
                         <div className="flex items-center gap-2 text-sm text-telegram-hint">
                             <CalendarDays className="h-4 w-4" />
                             <span>{formatDate(workout.date)}</span>
@@ -207,7 +207,7 @@ export function WorkoutDetailPage() {
                             <div className="flex items-start gap-2 rounded-lg bg-telegram-bg/50 p-3 text-sm text-telegram-text">
                                 <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-telegram-hint" />
                                 <div>
-                                    <div className="text-xs uppercase tracking-wide text-telegram-hint">Notes</div>
+                                     <div className="text-xs uppercase tracking-wide text-telegram-hint">Заметки</div>
                                     <div className="mt-1">{workout.comments}</div>
                                 </div>
                             </div>
@@ -217,7 +217,7 @@ export function WorkoutDetailPage() {
                             <div className="flex items-start gap-2 rounded-lg bg-telegram-bg/50 p-3 text-sm text-telegram-text">
                                 <Tags className="mt-0.5 h-4 w-4 shrink-0 text-telegram-hint" />
                                 <div>
-                                    <div className="text-xs uppercase tracking-wide text-telegram-hint">Tags</div>
+                                     <div className="text-xs uppercase tracking-wide text-telegram-hint">Теги</div>
                                     <div className="mt-1">{workout.tags.join(', ')}</div>
                                 </div>
                             </div>
@@ -225,7 +225,7 @@ export function WorkoutDetailPage() {
                     </section>
 
                     <section className="space-y-2">
-                        <h2 className="text-base font-semibold text-telegram-text">Actions</h2>
+                            <h2 className="text-base font-semibold text-telegram-text">Действия</h2>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <Button
                                 type="button"
@@ -234,7 +234,7 @@ export function WorkoutDetailPage() {
                                 isLoading={startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending}
                                 disabled={startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending}
                             >
-                                Repeat
+                                    Повторить
                             </Button>
                             <Button
                                 type="button"
@@ -244,7 +244,7 @@ export function WorkoutDetailPage() {
                                 isLoading={createTemplateMutation.isPending}
                                 disabled={createTemplateMutation.isPending}
                             >
-                                Save as template
+                                    Сохранить как шаблон
                             </Button>
                         </div>
                         {templateSavedName && (
@@ -254,7 +254,7 @@ export function WorkoutDetailPage() {
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-base font-semibold text-telegram-text">Exercises</h2>
+                            <h2 className="text-base font-semibold text-telegram-text">Упражнения</h2>
                         {workout.exercises.map((exercise, exerciseIndex) => (
                             <article
                                 key={`${exercise.exercise_id}-${exerciseIndex}`}
@@ -268,7 +268,7 @@ export function WorkoutDetailPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <div className="text-xs uppercase tracking-wide text-telegram-hint">Sets</div>
+                                     <div className="text-xs uppercase tracking-wide text-telegram-hint">Подходы</div>
                                     {exercise.sets_completed.map((set) => (
                                         <div
                                             key={set.set_number}
@@ -312,7 +312,7 @@ export function WorkoutDetailPage() {
 
                                 {exercise.notes && (
                                     <div className="rounded-lg bg-telegram-bg/50 p-3 text-sm text-telegram-text">
-                                        <div className="text-xs uppercase tracking-wide text-telegram-hint">Notes</div>
+                                        <div className="text-xs uppercase tracking-wide text-telegram-hint">Заметки</div>
                                         <div className="mt-1">{exercise.notes}</div>
                                     </div>
                                 )}

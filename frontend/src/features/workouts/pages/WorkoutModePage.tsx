@@ -19,7 +19,52 @@ import { useWorkoutModeInit } from '@features/workouts/mode/hooks/useWorkoutMode
 import { useWorkoutModeHandlers } from '@features/workouts/mode/hooks/useWorkoutModeHandlers'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
-import type { EditorWorkoutMode, ModeExerciseParams } from '@features/workouts/workoutMode/workoutModeEditorTypes'
+import type {
+    CardioExerciseParams,
+    EditorWorkoutMode,
+    FunctionalExerciseParams,
+    ModeExerciseParams,
+    StrengthExerciseParams,
+    WorkoutModeExerciseItem,
+    YogaExerciseParams,
+} from '@features/workouts/workoutMode/workoutModeEditorTypes'
+
+function isExerciseFormValid(item: WorkoutModeExerciseItem): boolean {
+    if (item.mode === 'strength') {
+        const params = item.params as StrengthExerciseParams
+        return Number.isFinite(params.sets)
+            && params.sets >= 1
+            && Number.isFinite(params.reps)
+            && params.reps >= 1
+            && Number.isFinite(params.restSeconds)
+            && params.restSeconds >= 0
+    }
+
+    if (item.mode === 'cardio') {
+        const params = item.params as CardioExerciseParams
+        const hasDuration = Number.isFinite(params.durationSeconds) && params.durationSeconds > 0
+        const hasDistance = Number.isFinite(params.distance) && (params.distance as number) > 0
+        return hasDuration || hasDistance
+    }
+
+    if (item.mode === 'functional') {
+        const params = item.params as FunctionalExerciseParams
+        const hasReps = Number.isFinite(params.reps) && (params.reps as number) > 0
+        const hasDuration = Number.isFinite(params.durationSeconds) && (params.durationSeconds as number) > 0
+        return Number.isFinite(params.rounds)
+            && params.rounds >= 1
+            && Number.isFinite(params.restSeconds)
+            && params.restSeconds >= 0
+            && (hasReps || hasDuration)
+    }
+
+    if (item.mode === 'yoga') {
+        const params = item.params as YogaExerciseParams
+        return Number.isFinite(params.durationSeconds) && params.durationSeconds > 0
+    }
+
+    return true
+}
 
 function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
     const navigate = useNavigate()
@@ -53,6 +98,7 @@ function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
     const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
         isDirty,
         onConfirmedLeave: resetEditor,
+        enableRouteBlock: true,
     })
 
     const { data: historyData } = useWorkoutHistoryQuery()
@@ -99,7 +145,11 @@ function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
         onSaveAndStartError: setSaveAndStartError,
     })
 
-    const isClearlyInvalid = editorTitle.trim().length === 0 || editorExercises.length === 0
+    const isEditorInvalid = useMemo(() => {
+        if (!editorTitle.trim()) return true
+        if (editorExercises.length === 0) return true
+        return editorExercises.some((exercise) => !isExerciseFormValid(exercise))
+    }, [editorExercises, editorTitle])
 
     const handleOpenAddSheet = useCallback(() => {
         setAddSheetOpen(true)
@@ -123,10 +173,13 @@ function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
 
     const scrollToFirstInvalidField = () => {
         const { validationErrors: currentErrors } = useWorkoutModeEditorStore.getState()
-        const targetId = currentErrors.title ? 'workout-mode-title' : currentErrors.exercises ? 'workout-mode-exercises' : null
+        const targetId = currentErrors.title ? 'workout-mode-title-input' : currentErrors.exercises ? 'workout-mode-exercises' : null
         if (!targetId) return
         const target = document.getElementById(targetId)
         if (!target) return
+        if (target instanceof HTMLElement) {
+            target.focus({ preventScroll: true })
+        }
         target.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
 
@@ -164,6 +217,9 @@ function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
                 isOpen={isLeaveConfirmOpen}
                 onLeave={onLeave}
                 onStay={onStay}
+                title="У вас есть несохраненные изменения"
+                description={undefined}
+                actionOrder="leave-first"
             />
 
             <WorkoutModePageView
@@ -216,7 +272,7 @@ function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
                 onSaveAndStart={handleSaveAndStartWithValidationUx}
                 isSaving={isSaving}
                 isStarting={isStarting}
-                disabled={isMutating || isClearlyInvalid}
+                disabled={isMutating || isEditorInvalid}
             />
 
             <AddExerciseSheet

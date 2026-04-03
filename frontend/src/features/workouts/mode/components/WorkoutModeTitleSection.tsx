@@ -26,8 +26,9 @@ export function WorkoutModeTitleSection({
     onToggleDesc,
 }: WorkoutModeTitleSectionProps) {
     return (
-        <div id={containerId} className="space-y-2">
+        <div id={containerId} data-invalid={Boolean(validationErrors.title)} className="space-y-2">
             <Input
+                id="workout-mode-title-input"
                 label="Название тренировки"
                 type="text"
                 value={title}

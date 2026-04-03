@@ -15,6 +15,7 @@ import {
     mapEditorExercisesToCompleted,
     mapEditorExercisesToTemplate,
 } from '@features/workouts/lib/workoutModeEditorMappers'
+import { useWorkoutModeEditorStore } from '@features/workouts/model/useWorkoutModeEditorStore'
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue'
 import { toast } from '@shared/stores/toastStore'
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
@@ -72,6 +73,11 @@ export function useWorkoutModeHandlers({
     const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
     const createTemplateMutation = useCreateWorkoutTemplateMutation()
     const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
+
+    const markEditorCleanAndNavigate = useCallback((to: string) => {
+        useWorkoutModeEditorStore.getState().markClean()
+        navigate(to)
+    }, [navigate])
 
     const handleRepeat = useCallback(async () => {
         if (!recentWorkout) return
@@ -137,19 +143,26 @@ export function useWorkoutModeHandlers({
             {
                 onSuccess: () => {
                     toast.success('Шаблон тренировки сохранён')
-                    navigate('/workouts')
+                    markEditorCleanAndNavigate('/workouts')
                 },
                 onError: (err) => {
                     if (isOfflineMutationQueuedError(err)) {
                         toast.info('Шаблон сохранится при подключении к сети')
-                        navigate('/workouts')
+                        markEditorCleanAndNavigate('/workouts')
                         return
                     }
                     toast.error('Не удалось сохранить шаблон. Попробуйте ещё раз.')
                 },
             },
         )
-    }, [validate, editorTitle, config.backendType, editorExercises, createTemplateMutation, navigate])
+    }, [
+        validate,
+        editorTitle,
+        config.backendType,
+        editorExercises,
+        createTemplateMutation,
+        markEditorCleanAndNavigate,
+    ])
 
     const handleSaveAndStart = useCallback(async () => {
         if (!validate()) return
@@ -171,10 +184,10 @@ export function useWorkoutModeHandlers({
                 })
             }
             setWorkoutSessionDraft(started.id, editorTitle.trim())
-            navigate(`/workouts/active/${started.id}`)
+            markEditorCleanAndNavigate(`/workouts/active/${started.id}`)
         } catch (err) {
             if (isOfflineMutationQueuedError(err)) {
-                navigate('/workouts')
+                markEditorCleanAndNavigate('/workouts')
                 return
             }
             onSaveAndStartError('Не удалось запустить тренировку. Попробуйте ещё раз.')
@@ -189,7 +202,7 @@ export function useWorkoutModeHandlers({
         startWorkoutMutation,
         updateWorkoutSessionMutation,
         setWorkoutSessionDraft,
-        navigate,
+        markEditorCleanAndNavigate,
         onSaveAndStartError,
     ])
 

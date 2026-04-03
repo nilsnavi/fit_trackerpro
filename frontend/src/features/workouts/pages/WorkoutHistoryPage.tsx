@@ -160,7 +160,7 @@ export function WorkoutHistoryPage() {
                                 : 'bg-telegram-bg text-telegram-text'
                         }`}
                     >
-                        <span>Completed only</span>
+                            <span>Только завершённые</span>
                         <span
                             className={`h-2.5 w-2.5 rounded-full ${
                                 completedOnly ? 'bg-primary' : 'bg-telegram-hint'

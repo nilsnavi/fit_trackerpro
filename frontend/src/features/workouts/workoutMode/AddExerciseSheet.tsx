@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Dumbbell, Search, X } from 'lucide-react'
+import { Dumbbell, History, Search, Sparkles, Star, X } from 'lucide-react'
 import { Modal } from '@shared/ui/Modal'
 import { Skeleton } from '@shared/ui/Skeleton'
 import { ExerciseModeConfigForm } from './ExerciseModeConfigForm'
 import { defaultParamsForMode } from './workoutModeEditorTypes'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
+import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import type { Exercise as CatalogExercise } from '@features/exercises/types/catalogUi'
 import type { EquipmentType } from '@features/exercises/types/catalogUi'
 import type { EditorWorkoutMode, ModeExerciseParams } from './workoutModeEditorTypes'
@@ -42,9 +43,77 @@ type EquipmentFilter = (typeof EQUIPMENT_FILTERS)[number]['id']
 
 const INITIAL_VISIBLE_ITEMS = 120
 const LOAD_MORE_STEP = 120
+const QUICK_PICK_LIMIT = 6
 
-function CatalogStep({ onSelect }: { onSelect: (exercise: CatalogExercise) => void }) {
+const MODE_SUGGESTED_CATEGORIES: Record<EditorWorkoutMode, CategoryFilter[]> = {
+    strength: ['strength', 'core'],
+    cardio: ['cardio'],
+    functional: ['strength', 'cardio', 'core'],
+    yoga: ['flexibility', 'core'],
+}
+
+function getExerciseLookup(exercises: CatalogExercise[]) {
+    return new Map(
+        exercises.map((exercise) => [exercise.name.trim().toLowerCase(), exercise] as const),
+    )
+}
+
+function uniqueExercises(exercises: CatalogExercise[], limit: number = QUICK_PICK_LIMIT): CatalogExercise[] {
+    const seen = new Set<number>()
+    const result: CatalogExercise[] = []
+
+    for (const exercise of exercises) {
+        if (seen.has(exercise.id)) continue
+        seen.add(exercise.id)
+        result.push(exercise)
+        if (result.length >= limit) {
+            break
+        }
+    }
+
+    return result
+}
+
+function QuickPickSection({
+    icon,
+    title,
+    exercises,
+    onSelect,
+}: {
+    icon: React.ReactNode
+    title: string
+    exercises: CatalogExercise[]
+    onSelect: (exercise: CatalogExercise) => void
+}) {
+    if (exercises.length === 0) {
+        return null
+    }
+
+    return (
+        <div className="space-y-1.5">
+            <p className="flex items-center gap-1.5 text-xs text-telegram-hint">
+                {icon}
+                {title}
+            </p>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {exercises.map((exercise) => (
+                    <button
+                        key={`${title}-${exercise.id}`}
+                        type="button"
+                        className="shrink-0 rounded-full border border-border bg-telegram-secondary-bg px-3 py-1 text-xs text-telegram-text transition-colors hover:border-primary/50 hover:bg-primary/5"
+                        onClick={() => onSelect(exercise)}
+                    >
+                        {exercise.name}
+                    </button>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function CatalogStep({ mode, onSelect }: { mode: EditorWorkoutMode; onSelect: (exercise: CatalogExercise) => void }) {
     const { data: exercises = [], isLoading, isError } = useExercisesCatalogQuery()
+    const { data: historyData } = useWorkoutHistoryQuery()
     const [search, setSearch] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')
     const [category, setCategory] = useState<CategoryFilter>('all')
@@ -86,6 +155,8 @@ function CatalogStep({ onSelect }: { onSelect: (exercise: CatalogExercise) => vo
         [exercises],
     )
 
+    const exerciseLookup = useMemo(() => getExerciseLookup(exercises), [exercises])
+
     const filtered = useMemo(() => {
         const q = debouncedSearch.trim().toLowerCase()
         return indexedExercises
@@ -97,6 +168,64 @@ function CatalogStep({ onSelect }: { onSelect: (exercise: CatalogExercise) => vo
             })
             .map(({ ex }) => ex)
     }, [indexedExercises, debouncedSearch, category, equipment])
+
+    const favoriteExercises = useMemo(() => {
+        const counts = new Map<string, number>()
+
+        for (const item of historyData?.items ?? []) {
+            for (const exercise of item.exercises) {
+                const key = exercise.name.trim().toLowerCase()
+                if (!key) continue
+                counts.set(key, (counts.get(key) ?? 0) + 1)
+            }
+        }
+
+        return uniqueExercises(
+            [...counts.entries()]
+                .filter(([, count]) => count > 1)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name]) => exerciseLookup.get(name))
+                .filter((exercise): exercise is CatalogExercise => Boolean(exercise)),
+        )
+    }, [exerciseLookup, historyData?.items])
+
+    const recentExercises = useMemo(() => {
+        const recentNames: string[] = []
+        const seenNames = new Set<string>()
+
+        for (const item of historyData?.items ?? []) {
+            for (const exercise of item.exercises) {
+                const key = exercise.name.trim().toLowerCase()
+                if (!key || seenNames.has(key)) continue
+                seenNames.add(key)
+                recentNames.push(key)
+                if (recentNames.length >= QUICK_PICK_LIMIT) {
+                    return uniqueExercises(
+                        recentNames
+                            .map((name) => exerciseLookup.get(name))
+                            .filter((catalogExercise): catalogExercise is CatalogExercise => Boolean(catalogExercise)),
+                    )
+                }
+            }
+        }
+
+        return uniqueExercises(
+            recentNames
+                .map((name) => exerciseLookup.get(name))
+                .filter((catalogExercise): catalogExercise is CatalogExercise => Boolean(catalogExercise)),
+        )
+    }, [exerciseLookup, historyData?.items])
+
+    const suggestedExercises = useMemo(() => {
+        const preferredCategories = MODE_SUGGESTED_CATEGORIES[mode]
+
+        return uniqueExercises(
+            exercises.filter((exercise) => preferredCategories.includes((exercise.category as CategoryFilter) ?? 'all')),
+        )
+    }, [exercises, mode])
+
+    const hasSearchContext = debouncedSearch.trim().length > 0
+    const quickSectionsVisible = !hasSearchContext && category === 'all' && equipment === 'all'
 
     const visibleExercises = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount])
     const canLoadMore = visibleCount < filtered.length
@@ -169,6 +298,29 @@ function CatalogStep({ onSelect }: { onSelect: (exercise: CatalogExercise) => vo
                     </button>
                 ))}
             </div>
+
+            {quickSectionsVisible && (
+                <div className="space-y-3 rounded-2xl border border-border/80 bg-telegram-bg/40 p-3">
+                    <QuickPickSection
+                        icon={<Sparkles className="h-3.5 w-3.5" />}
+                        title="Подборка по режиму"
+                        exercises={suggestedExercises}
+                        onSelect={onSelect}
+                    />
+                    <QuickPickSection
+                        icon={<Star className="h-3.5 w-3.5" />}
+                        title="Избранное"
+                        exercises={favoriteExercises}
+                        onSelect={onSelect}
+                    />
+                    <QuickPickSection
+                        icon={<History className="h-3.5 w-3.5" />}
+                        title="Недавние"
+                        exercises={recentExercises}
+                        onSelect={onSelect}
+                    />
+                </div>
+            )}
 
             <div className="max-h-[55vh] overflow-y-auto space-y-1.5 pr-1">
                 {isLoading &&
@@ -254,7 +406,7 @@ export function AddExerciseSheet({ isOpen, mode, onClose, onAdd }: AddExerciseSh
 
     return (
         <Modal isOpen={isOpen} onClose={handleClose} title={title} size="md" haptic showHandle>
-            {step === 'catalog' && <CatalogStep onSelect={handleSelectExercise} />}
+            {step === 'catalog' && <CatalogStep mode={mode} onSelect={handleSelectExercise} />}
             {step === 'config' && selectedExercise && (
                 <ExerciseModeConfigForm
                     mode={mode}

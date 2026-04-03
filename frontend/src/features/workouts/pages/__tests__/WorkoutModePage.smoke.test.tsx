@@ -5,8 +5,8 @@
  * Goal: verify the page mounts and renders key interactive elements without
  * touching real network / Telegram API / offline queue.
  */
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 
 // ── Dependency mocks ──────────────────────────────────────────────────────────
 
@@ -41,6 +41,8 @@ jest.mock('@/state/local', () => ({
 jest.mock('@shared/hooks/useTelegramWebApp', () => ({
     useTelegramWebApp: () => ({
         isTelegram: false,
+        showBackButton: jest.fn(),
+        hideBackButton: jest.fn(),
         hapticFeedback: { impactOccurred: jest.fn(), notificationOccurred: jest.fn() },
     }),
 }))
@@ -64,11 +66,29 @@ jest.mock('lucide-react', () => {
 // WorkoutModePage is a default export
 import WorkoutModePage from '../WorkoutModePage'
 
+function NavigateAwayButton() {
+    const navigate = useNavigate()
+
+    return (
+        <button type="button" onClick={() => navigate('/workouts')}>
+            Перейти к списку
+        </button>
+    )
+}
+
 function renderPage(mode = 'strength') {
     return render(
         <MemoryRouter initialEntries={[`/workouts/mode/${mode}`]}>
             <Routes>
-                <Route path="/workouts/mode/:mode" element={<WorkoutModePage />} />
+                <Route
+                    path="/workouts/mode/:mode"
+                    element={(
+                        <>
+                            <WorkoutModePage />
+                            <NavigateAwayButton />
+                        </>
+                    )}
+                />
                 <Route path="/workouts" element={<div>Workouts list</div>} />
             </Routes>
         </MemoryRouter>,
@@ -114,5 +134,23 @@ describe('WorkoutModePage smoke', () => {
     it('shows fallback UI for unknown mode', () => {
         renderPage('unknown_xyz')
         expect(screen.getByText(/неизвестный режим/i)).toBeInTheDocument()
+    })
+
+    it('blocks route leave while editor has unsaved changes', async () => {
+        renderPage('strength')
+
+        fireEvent.change(screen.getByLabelText(/название тренировки/i), {
+            target: { value: 'Силовая тренировка' },
+        })
+        fireEvent.click(screen.getByRole('button', { name: /перейти к списку/i }))
+
+        expect(screen.getByText('У вас есть несохраненные изменения')).toBeInTheDocument()
+        expect(screen.queryByText('Workouts list')).not.toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Выйти' }))
+
+        await waitFor(() => {
+            expect(screen.getByText('Workouts list')).toBeInTheDocument()
+        })
     })
 })
