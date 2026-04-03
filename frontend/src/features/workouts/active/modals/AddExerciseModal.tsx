@@ -1,0 +1,183 @@
+import { Search } from 'lucide-react'
+import { Button } from '@shared/ui/Button'
+import { Chip, ChipGroup } from '@shared/ui/Chip'
+import { Input } from '@shared/ui/Input'
+import { Modal } from '@shared/ui/Modal'
+import type { Exercise as CatalogExercise } from '@features/exercises/types/catalogUi'
+
+type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility'
+
+interface AddExerciseModalProps {
+    isOpen: boolean
+    isCatalogLoading: boolean
+    catalogFilter: ExerciseCatalogFilter
+    searchQuery: string
+    selectedExercise: CatalogExercise | null
+    filteredCatalogExercises: CatalogExercise[]
+    sets: string
+    reps: string
+    weight: string
+    duration: string
+    notes: string
+    onClose: () => void
+    onChangeFilter: (next: ExerciseCatalogFilter) => void
+    onChangeSearch: (value: string) => void
+    onSelectExercise: (exercise: CatalogExercise) => void
+    onChangeSets: (value: string) => void
+    onChangeReps: (value: string) => void
+    onChangeWeight: (value: string) => void
+    onChangeDuration: (value: string) => void
+    onChangeNotes: (value: string) => void
+    onSubmit: () => void
+}
+
+export function AddExerciseModal({
+    isOpen,
+    isCatalogLoading,
+    catalogFilter,
+    searchQuery,
+    selectedExercise,
+    filteredCatalogExercises,
+    sets,
+    reps,
+    weight,
+    duration,
+    notes,
+    onClose,
+    onChangeFilter,
+    onChangeSearch,
+    onSelectExercise,
+    onChangeSets,
+    onChangeReps,
+    onChangeWeight,
+    onChangeDuration,
+    onChangeNotes,
+    onSubmit,
+}: AddExerciseModalProps) {
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Добавить упражнение" size="md">
+            <div className="space-y-4">
+                <div className="space-y-3">
+                    <ChipGroup wrap gap="sm">
+                        {[
+                            { id: 'all', label: 'Все' },
+                            { id: 'strength', label: 'Силовые' },
+                            { id: 'cardio', label: 'Кардио' },
+                            { id: 'flexibility', label: 'Гибкость' },
+                        ].map((filter) => (
+                            <Chip
+                                key={filter.id}
+                                label={filter.label}
+                                active={catalogFilter === filter.id}
+                                onClick={() => onChangeFilter(filter.id as ExerciseCatalogFilter)}
+                                size="sm"
+                                variant="outlined"
+                            />
+                        ))}
+                    </ChipGroup>
+
+                    <Input
+                        type="search"
+                        value={searchQuery}
+                        onChange={(e) => onChangeSearch(e.target.value)}
+                        leftIcon={<Search className="h-4 w-4" />}
+                        placeholder="Поиск по каталогу упражнений"
+                    />
+
+                    <div className="max-h-64 space-y-2 overflow-y-auto">
+                        {isCatalogLoading && <p className="text-sm text-telegram-hint">Загрузка каталога...</p>}
+                        {!isCatalogLoading && filteredCatalogExercises.length === 0 && (
+                            <p className="text-sm text-telegram-hint">Ничего не найдено</p>
+                        )}
+                        {filteredCatalogExercises.map((exercise) => {
+                            const isSelected = selectedExercise?.id === exercise.id
+                            return (
+                                <button
+                                    key={exercise.id}
+                                    type="button"
+                                    onClick={() => onSelectExercise(exercise)}
+                                    className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                                        isSelected
+                                            ? 'border-primary bg-primary/10 text-primary'
+                                            : 'border-border bg-telegram-secondary-bg text-telegram-text'
+                                    }`}
+                                >
+                                    <div className="font-medium">{exercise.name}</div>
+                                    <div className="mt-1 text-xs opacity-80">
+                                        {exercise.primaryMuscles.join(', ') || exercise.category}
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <label className="text-sm font-medium text-telegram-text">
+                        Подходы
+                        <input
+                            type="number"
+                            min={1}
+                            max={20}
+                            value={sets}
+                            onChange={(e) => onChangeSets(e.target.value)}
+                            className="mt-1 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
+                        />
+                    </label>
+                    <label className="text-sm font-medium text-telegram-text">
+                        Повторы
+                        <input
+                            type="number"
+                            min={0}
+                            value={reps}
+                            onChange={(e) => onChangeReps(e.target.value)}
+                            className="mt-1 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
+                        />
+                    </label>
+                    <label className="text-sm font-medium text-telegram-text">
+                        Вес (кг)
+                        <input
+                            type="number"
+                            min={0}
+                            step="0.5"
+                            value={weight}
+                            onChange={(e) => onChangeWeight(e.target.value)}
+                            className="mt-1 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
+                        />
+                    </label>
+                </div>
+
+                <label className="block text-sm font-medium text-telegram-text">
+                    Длительность (сек)
+                    <input
+                        type="number"
+                        min={0}
+                        value={duration}
+                        onChange={(e) => onChangeDuration(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
+                        placeholder="Необязательно"
+                    />
+                </label>
+
+                <label className="block text-sm font-medium text-telegram-text">
+                    Заметки
+                    <textarea
+                        value={notes}
+                        onChange={(e) => onChangeNotes(e.target.value)}
+                        rows={2}
+                        className="mt-1 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
+                    />
+                </label>
+
+                <div className="flex gap-2">
+                    <Button variant="secondary" fullWidth onClick={onClose}>
+                        Отмена
+                    </Button>
+                    <Button fullWidth onClick={onSubmit}>
+                        Добавить
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    )
+}
