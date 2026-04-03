@@ -767,7 +767,7 @@ export const WorkoutBuilder: React.FC = () => {
                             <p className="text-telegram-text font-medium">{previewTypeLabel}</p>
                         </div>
                         <div>
-                            <p className="text-telegram-hint">Total blocks</p>
+                            <p className="text-telegram-hint">Всего блоков</p>
                             <p className="text-telegram-text font-medium">{blocks.length}</p>
                         </div>
                         <div className="col-span-2">

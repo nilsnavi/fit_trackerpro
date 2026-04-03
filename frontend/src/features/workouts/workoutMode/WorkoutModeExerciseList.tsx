@@ -116,7 +116,7 @@ export const WorkoutModeExerciseList = memo(function WorkoutModeExerciseList({
     }, [exercises, onReorder])
 
     return (
-        <div id={containerId} className="space-y-3">
+        <div id={containerId} data-invalid={Boolean(error)} tabIndex={-1} className="space-y-3 outline-none">
             <div className="flex items-center justify-between">
                 <h2 className="text-sm font-medium text-telegram-text">
                     Упражнения{exercises.length > 0 && ` (${exercises.length})`}

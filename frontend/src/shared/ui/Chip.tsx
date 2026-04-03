@@ -219,7 +219,7 @@ export const ChipGroup: React.FC<ChipGroupProps> = ({
                 className
             )}
             role="group"
-            aria-label="Chip group"
+            aria-label="Группа чипов"
         >
             {children}
         </div>

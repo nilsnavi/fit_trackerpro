@@ -74,13 +74,13 @@ function SentryErrorFallback({
 }) {
     return (
         <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-            <p className="text-lg font-medium text-foreground">Something went wrong</p>
+                <p className="text-lg font-medium text-foreground">Что-то пошло не так</p>
             <button
                 type="button"
                 onClick={resetError}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
-                Try again
+                    Попробовать снова
             </button>
         </div>
     )

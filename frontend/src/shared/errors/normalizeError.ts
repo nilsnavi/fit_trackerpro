@@ -53,7 +53,7 @@ function normalizeAxiosError(error: AxiosError<unknown>): ClientError {
         return {
             status: null,
             code: ErrorCodes.TIMEOUT,
-            message: 'Request timed out',
+            message: 'Превышено время ожидания запроса',
             requestUrl: fullUrl,
         }
     }
@@ -68,7 +68,7 @@ function normalizeAxiosError(error: AxiosError<unknown>): ClientError {
         return {
             status: null,
             code: ErrorCodes.NETWORK_ERROR,
-            message: 'Network error — check your connection',
+            message: 'Ошибка сети — проверьте подключение',
             requestUrl: fullUrl,
         }
     }
@@ -76,7 +76,7 @@ function normalizeAxiosError(error: AxiosError<unknown>): ClientError {
     return {
         status: null,
         code: ErrorCodes.CLIENT_ERROR,
-        message: error.message || 'Request failed',
+            message: error.message || 'Запрос не выполнен',
         requestUrl: fullUrl,
     }
 }
@@ -104,7 +104,7 @@ export function normalizeError(error: unknown): ClientError {
     return {
         status: null,
         code: ErrorCodes.UNKNOWN_ERROR,
-        message: 'Something went wrong',
+        message: 'Что-то пошло не так',
     }
 }
 
