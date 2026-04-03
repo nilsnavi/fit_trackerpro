@@ -6,6 +6,7 @@ import type {
     WorkoutHistoryItem,
     WorkoutSessionUpdateRequest,
 } from '@features/workouts/types/workouts'
+import { toast } from '@shared/stores/toastStore'
 
 // Aggressive debounce causes redundant requests; use a wider window instead.
 const DEBOUNCE_MS = 2000
@@ -71,6 +72,8 @@ export function useActiveWorkoutSync({
 
     // ── Snapshot tracking ──────────────────────────────────────────────────
     const lastPersistedSnapshotRef = useRef<string | null>(null)
+    const hadSyncIssueRef = useRef(false)
+    const hasShownOfflineToastRef = useRef(false)
 
     // ── Race condition guards ──────────────────────────────────────────────
     // inFlightRef prevents launching a second request while one is running.
@@ -121,6 +124,11 @@ export function useActiveWorkoutSync({
         // Offline: mark as queued; the 'online' listener will retry.
         if (!navigator.onLine) {
             setActiveSyncStateRef.current('offline-queued')
+            if (!hasShownOfflineToastRef.current) {
+                toast.info('Офлайн: изменения поставлены в очередь синхронизации')
+                hasShownOfflineToastRef.current = true
+            }
+            hadSyncIssueRef.current = true
             return
         }
 
@@ -135,6 +143,11 @@ export function useActiveWorkoutSync({
                     lastPersistedSnapshotRef.current = snapshot
                     queryClientRef.current.setQueryData(detailQueryKeyRef.current, data)
                     setActiveSyncStateRef.current('synced')
+                    if (hadSyncIssueRef.current) {
+                        toast.success('Синхронизация восстановлена, изменения сохранены')
+                    }
+                    hadSyncIssueRef.current = false
+                    hasShownOfflineToastRef.current = false
 
                     // New changes arrived while the request was in flight → flush them.
                     const latestWorkout = workoutRef.current
@@ -148,6 +161,8 @@ export function useActiveWorkoutSync({
                 onError: () => {
                     inFlightRef.current = false
                     setActiveSyncStateRef.current('error')
+                    hadSyncIssueRef.current = true
+                    toast.retry('Ошибка синхронизации. Повторим автоматически')
                     // Auto-retry after a delay; cleared if new changes arrive first.
                     retryTimerRef.current = window.setTimeout(() => {
                         retryTimerRef.current = null

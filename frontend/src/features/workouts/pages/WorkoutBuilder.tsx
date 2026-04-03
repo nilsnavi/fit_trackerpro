@@ -24,6 +24,8 @@ import { queryKeys } from '@shared/api/queryKeys';
 import { workoutsApi } from '@shared/api/domains/workoutsApi';
 import { workoutTemplatesDefaultListParams } from '@features/workouts/lib/workoutQueryOptimistic';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
+import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard';
+import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal';
 import {
     mapWorkoutTypeToBackend,
     mapBackendTypeToSelectedTypes,
@@ -39,6 +41,7 @@ import {
 } from '@features/workouts/config/workoutTypeConfigs';
 import { getErrorMessage } from '@shared/errors';
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue';
+import { toast } from '@shared/stores/toastStore';
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery';
 import { cn } from '@shared/lib/cn';
 import { useTemplateEditorStore } from '@features/workouts/stores/useTemplateEditorStore';
@@ -148,12 +151,19 @@ export const WorkoutBuilder: React.FC = () => {
         clearValidationErrors,
     } = useTemplateEditorStore();
 
+    const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
+        isDirty,
+    })
+
     // Modal states
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isCustomExerciseOpen, setIsCustomExerciseOpen] = useState(false);
     const [currentBlockType, setCurrentBlockType] = useState<WorkoutBlock['type'] | null>(null);
     const [editingBlock, setEditingBlock] = useState<WorkoutBlock | null>(null);
+    const [isClearPlanConfirmOpen, setIsClearPlanConfirmOpen] = useState(false);
+    const [isDeleteBlockConfirmOpen, setIsDeleteBlockConfirmOpen] = useState(false);
+    const [pendingDeleteBlockId, setPendingDeleteBlockId] = useState<string | null>(null);
 
     // Exercise selector state
     const [searchQuery, setSearchQuery] = useState('');
@@ -178,13 +188,23 @@ export const WorkoutBuilder: React.FC = () => {
         const { isTelegram, showBackButton, hideBackButton } = tg
         if (isTelegram) {
             showBackButton(() => {
-                window.history.back()
+                guardedAction(() => window.history.back())
             })
         }
         return () => {
             hideBackButton()
         }
-    }, [tg])
+    }, [tg, guardedAction])
+
+    useEffect(() => {
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (!isDirty) return
+            event.preventDefault()
+            event.returnValue = ''
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [isDirty])
 
     // ============================================
     // Effects
@@ -420,8 +440,31 @@ export const WorkoutBuilder: React.FC = () => {
     };
 
     const handleDeleteBlock = (id: string) => {
-        tg.hapticFeedback({ type: 'impact', style: 'heavy' })
-        removeBlock(id);
+        setPendingDeleteBlockId(id);
+        setIsDeleteBlockConfirmOpen(true);
+    };
+
+    const handleConfirmDeleteBlock = () => {
+        if (!pendingDeleteBlockId) {
+            setIsDeleteBlockConfirmOpen(false);
+            return;
+        }
+
+        tg.hapticFeedback({ type: 'impact', style: 'heavy' });
+        removeBlock(pendingDeleteBlockId);
+        setPendingDeleteBlockId(null);
+        setIsDeleteBlockConfirmOpen(false);
+        toast.info('Блок удалён');
+    };
+
+    const handleClearPlanRequest = () => {
+        setIsClearPlanConfirmOpen(true);
+    };
+
+    const handleConfirmClearPlan = () => {
+        clearBlocks();
+        setIsClearPlanConfirmOpen(false);
+        toast.info('План очищен');
     };
 
     /** Основной сохранение тренировки как шаблона на бэке */
@@ -572,6 +615,12 @@ export const WorkoutBuilder: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-telegram-bg pb-[calc(var(--app-shell-nav-h)+7rem+env(safe-area-inset-bottom,0px))]">
+            <UnsavedChangesModal
+                isOpen={isLeaveConfirmOpen}
+                onLeave={onLeave}
+                onStay={onStay}
+            />
+
             {/* Header */}
             <div className="sticky top-0 z-10 bg-telegram-bg/95 backdrop-blur-sm border-b border-border px-4 py-4">
                 <div className="space-y-4">
@@ -682,7 +731,7 @@ export const WorkoutBuilder: React.FC = () => {
                     </h3>
                     {blocks.length > 0 && (
                         <button
-                            onClick={clearBlocks}
+                            onClick={handleClearPlanRequest}
                             className="text-xs text-danger hover:underline"
                         >
                             Очистить
@@ -1112,6 +1161,58 @@ export const WorkoutBuilder: React.FC = () => {
                         </Button>
                         <Button fullWidth onClick={handleConfigSave}>
                             {editingBlock ? 'Сохранить' : 'Добавить в тренировку'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={isDeleteBlockConfirmOpen}
+                onClose={() => {
+                    setIsDeleteBlockConfirmOpen(false);
+                    setPendingDeleteBlockId(null);
+                }}
+                title="Удалить блок?"
+                size="sm"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-telegram-text">
+                        Блок будет удалён из плана тренировки.
+                    </p>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="secondary"
+                            fullWidth
+                            onClick={() => {
+                                setIsDeleteBlockConfirmOpen(false);
+                                setPendingDeleteBlockId(null);
+                            }}
+                        >
+                            Остаться
+                        </Button>
+                        <Button variant="emergency" fullWidth onClick={handleConfirmDeleteBlock}>
+                            Удалить
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={isClearPlanConfirmOpen}
+                onClose={() => setIsClearPlanConfirmOpen(false)}
+                title="Очистить план?"
+                size="sm"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-telegram-text">
+                        Все блоки текущего плана будут удалены.
+                    </p>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" fullWidth onClick={() => setIsClearPlanConfirmOpen(false)}>
+                            Остаться
+                        </Button>
+                        <Button variant="emergency" fullWidth onClick={handleConfirmClearPlan}>
+                            Очистить
                         </Button>
                     </div>
                 </div>

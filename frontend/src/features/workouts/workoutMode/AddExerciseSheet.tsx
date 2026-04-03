@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Search, X } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Dumbbell, Search, X } from 'lucide-react'
 import { Modal } from '@shared/ui/Modal'
 import { Skeleton } from '@shared/ui/Skeleton'
 import { ExerciseModeConfigForm } from './ExerciseModeConfigForm'
@@ -50,11 +50,20 @@ function CatalogStep({
 }) {
     const { data: exercises = [], isLoading, isError } = useExercisesCatalogQuery()
     const [search, setSearch] = useState('')
+        const [debouncedSearch, setDebouncedSearch] = useState('')
     const [category, setCategory] = useState<CategoryFilter>('all')
     const [equipment, setEquipment] = useState<EquipmentFilter>('all')
 
+    const debounceRef = useRef<number | null>(null)
+    const handleSearchChange = (value: string) => {
+        setSearch(value)
+        if (debounceRef.current !== null) window.clearTimeout(debounceRef.current)
+        debounceRef.current = window.setTimeout(() => setDebouncedSearch(value), 300)
+    }
+    useEffect(() => () => { if (debounceRef.current !== null) window.clearTimeout(debounceRef.current) }, [])
+
     const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase()
+        const q = debouncedSearch.trim().toLowerCase()
         return exercises.filter((ex) => {
             const matchSearch =
                 !q ||
@@ -87,13 +96,13 @@ function CatalogStep({
                     className="w-full rounded-xl border border-border bg-telegram-secondary-bg pl-9 pr-10 py-2.5 text-sm text-telegram-text placeholder-telegram-hint outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     placeholder="Поиск упражнения..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     autoComplete="off"
                 />
                 {search && (
                     <button
                         type="button"
-                        onClick={() => setSearch('')}
+                        onClick={() => { setSearch(''); setDebouncedSearch('') }}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-telegram-hint"
                     >
                         <X className="h-4 w-4" />
@@ -145,9 +154,17 @@ function CatalogStep({
                     ))}
 
                 {!isLoading && filtered.length === 0 && (
-                    <p className="py-6 text-center text-sm text-telegram-hint">
-                        Упражнения не найдены
-                    </p>
+                    <div className="flex flex-col items-center gap-2 py-10 text-center text-telegram-hint">
+                        <Dumbbell className="h-8 w-8 opacity-30" />
+                        <p className="text-sm font-medium">
+                            {debouncedSearch.trim()
+                                ? `Ничего не найдено по запросу «${debouncedSearch.trim()}»`
+                                : 'Упражнения не найдены'}
+                        </p>
+                        {debouncedSearch.trim() && (
+                            <p className="text-xs">Попробуйте другое название или очистите фильтры</p>
+                        )}
+                    </div>
                 )}
 
                 {!isLoading &&

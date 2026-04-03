@@ -20,6 +20,7 @@ import {
     WorkoutHistorySkeleton,
     WorkoutsPageSkeleton,
 } from '@shared/ui/page-skeletons'
+import { Toaster } from '@shared/ui/Toaster'
 
 const Home = lazy(() =>
     import('@features/home/pages/Home').then((m) => ({ default: m.Home })),
@@ -292,6 +293,7 @@ export default function App() {
                                     </Route>
                                 </Routes>
                             </Suspense>
+                                                    <Toaster />
                         </BrowserRouter>
                     </ThemeProvider>
                 </TelegramProvider>

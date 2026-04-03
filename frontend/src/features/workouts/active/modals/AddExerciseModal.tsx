@@ -1,8 +1,10 @@
-import { Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Search, Sparkles, Star, History } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import { Chip, ChipGroup } from '@shared/ui/Chip'
 import { Input } from '@shared/ui/Input'
 import { Modal } from '@shared/ui/Modal'
+import { Skeleton } from '@shared/ui/Skeleton'
 import type { Exercise as CatalogExercise } from '@features/exercises/types/catalogUi'
 
 type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility'
@@ -19,6 +21,9 @@ interface AddExerciseModalProps {
     weight: string
     duration: string
     notes: string
+    recentExercises?: CatalogExercise[]
+    favoriteExercises?: CatalogExercise[]
+    suggestedExercises?: CatalogExercise[]
     onClose: () => void
     onChangeFilter: (next: ExerciseCatalogFilter) => void
     onChangeSearch: (value: string) => void
@@ -43,6 +48,9 @@ export function AddExerciseModal({
     weight,
     duration,
     notes,
+    recentExercises = [],
+    favoriteExercises = [],
+    suggestedExercises = [],
     onClose,
     onChangeFilter,
     onChangeSearch,
@@ -54,6 +62,24 @@ export function AddExerciseModal({
     onChangeNotes,
     onSubmit,
 }: AddExerciseModalProps) {
+    const [localSearch, setLocalSearch] = useState(searchQuery)
+
+    useEffect(() => {
+        if (isOpen) {
+            setLocalSearch(searchQuery)
+        }
+    }, [isOpen, searchQuery])
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            if (localSearch !== searchQuery) {
+                onChangeSearch(localSearch)
+            }
+        }, 300)
+
+        return () => window.clearTimeout(timeout)
+    }, [localSearch, onChangeSearch, searchQuery])
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Добавить упражнение" size="md">
             <div className="space-y-4">
@@ -78,16 +104,95 @@ export function AddExerciseModal({
 
                     <Input
                         type="search"
-                        value={searchQuery}
-                        onChange={(e) => onChangeSearch(e.target.value)}
+                        value={localSearch}
+                        onChange={(e) => setLocalSearch(e.target.value)}
                         leftIcon={<Search className="h-4 w-4" />}
                         placeholder="Поиск по каталогу упражнений"
                     />
 
+                    {(suggestedExercises.length > 0 || recentExercises.length > 0 || favoriteExercises.length > 0) && (
+                        <div className="space-y-3">
+                            {suggestedExercises.length > 0 && (
+                                <div className="space-y-1.5">
+                                    <p className="flex items-center gap-1.5 text-xs text-telegram-hint">
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        Рекомендуем
+                                    </p>
+                                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                        {suggestedExercises.map((exercise) => (
+                                            <button
+                                                key={`suggested-${exercise.id}`}
+                                                type="button"
+                                                className="shrink-0 rounded-full border border-border bg-telegram-secondary-bg px-3 py-1 text-xs text-telegram-text"
+                                                onClick={() => onSelectExercise(exercise)}
+                                            >
+                                                {exercise.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {favoriteExercises.length > 0 && (
+                                <div className="space-y-1.5">
+                                    <p className="flex items-center gap-1.5 text-xs text-telegram-hint">
+                                        <Star className="h-3.5 w-3.5" />
+                                        Часто используемые
+                                    </p>
+                                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                        {favoriteExercises.map((exercise) => (
+                                            <button
+                                                key={`favorite-${exercise.id}`}
+                                                type="button"
+                                                className="shrink-0 rounded-full border border-border bg-telegram-secondary-bg px-3 py-1 text-xs text-telegram-text"
+                                                onClick={() => onSelectExercise(exercise)}
+                                            >
+                                                {exercise.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {recentExercises.length > 0 && (
+                                <div className="space-y-1.5">
+                                    <p className="flex items-center gap-1.5 text-xs text-telegram-hint">
+                                        <History className="h-3.5 w-3.5" />
+                                        Недавние
+                                    </p>
+                                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                        {recentExercises.map((exercise) => (
+                                            <button
+                                                key={`recent-${exercise.id}`}
+                                                type="button"
+                                                className="shrink-0 rounded-full border border-border bg-telegram-secondary-bg px-3 py-1 text-xs text-telegram-text"
+                                                onClick={() => onSelectExercise(exercise)}
+                                            >
+                                                {exercise.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="max-h-64 space-y-2 overflow-y-auto">
-                        {isCatalogLoading && <p className="text-sm text-telegram-hint">Загрузка каталога...</p>}
+                        {isCatalogLoading && (
+                            <div className="space-y-2">
+                                {Array.from({ length: 5 }).map((_, index) => (
+                                    <Skeleton key={`catalog-skeleton-${index}`} className="h-14 w-full rounded-xl" />
+                                ))}
+                            </div>
+                        )}
                         {!isCatalogLoading && filteredCatalogExercises.length === 0 && (
-                            <p className="text-sm text-telegram-hint">Ничего не найдено</p>
+                            <div className="rounded-xl border border-dashed border-border bg-telegram-bg/40 px-3 py-4 text-center">
+                                <p className="text-sm text-telegram-hint">
+                                    {searchQuery.trim()
+                                        ? `Ничего не найдено по запросу «${searchQuery.trim()}»`
+                                        : 'Каталог пуст или не содержит подходящих упражнений'}
+                                </p>
+                            </div>
                         )}
                         {filteredCatalogExercises.map((exercise) => {
                             const isSelected = selectedExercise?.id === exercise.id

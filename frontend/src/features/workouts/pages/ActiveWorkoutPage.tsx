@@ -4,7 +4,9 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
+import { Modal } from '@shared/ui/Modal'
 import { Plus, Timer } from 'lucide-react'
+import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
@@ -14,6 +16,8 @@ import {
     useUpdateWorkoutSessionMutation,
 } from '@features/workouts/hooks/useWorkoutMutations'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
+import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
+import { toast } from '@shared/stores/toastStore'
 import { getErrorMessage } from '@shared/errors'
 import { queryKeys } from '@shared/api/queryKeys'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
@@ -132,11 +136,17 @@ export function ActiveWorkoutPage() {
     const [isFinishSheetOpen, setIsFinishSheetOpen] = useState(false)
     const [finishTagsDraft, setFinishTagsDraft] = useState('')
     const [isAbandonConfirmOpen, setIsAbandonConfirmOpen] = useState(false)
+    const [isDeleteExerciseConfirmOpen, setIsDeleteExerciseConfirmOpen] = useState(false)
+    const [pendingDeleteExerciseIndex, setPendingDeleteExerciseIndex] = useState<number | null>(null)
 
     const isActiveDraft =
         workout != null &&
         draftWorkoutId === workout.id &&
         (workout.duration == null || workout.duration <= 0)
+
+    const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
+        isDirty: isActiveDraft,
+    })
 
     const { patchItem, updateSet, updateSessionFields } = useOptimisticWorkoutSession(workoutId, Boolean(isActiveDraft))
 
@@ -348,6 +358,58 @@ export function ActiveWorkoutPage() {
         })
     }, [catalogExercises, exerciseCatalogFilter, exerciseSearchQuery])
 
+    const favoriteCatalogExercises = useMemo(() => {
+        const counts = new Map<string, number>()
+        for (const item of historyData?.items ?? []) {
+            for (const exercise of item.exercises) {
+                const key = exercise.name.trim().toLowerCase()
+                if (!key) continue
+                counts.set(key, (counts.get(key) ?? 0) + 1)
+            }
+        }
+
+        return [...catalogExercises]
+            .sort((a, b) => (
+                (counts.get(b.name.trim().toLowerCase()) ?? 0) - (counts.get(a.name.trim().toLowerCase()) ?? 0)
+            ))
+            .filter((exercise) => (counts.get(exercise.name.trim().toLowerCase()) ?? 0) > 1)
+            .slice(0, 6)
+    }, [catalogExercises, historyData?.items])
+
+    const recentCatalogExercises = useMemo(() => {
+        const recentNames = new Set<string>()
+        const items = historyData?.items ?? []
+
+        for (const item of items.slice(0, 5)) {
+            for (const exercise of item.exercises) {
+                if (recentNames.size >= 8) break
+                const key = exercise.name.trim().toLowerCase()
+                if (key) recentNames.add(key)
+            }
+        }
+
+        if (recentNames.size === 0) return [] as CatalogExercise[]
+
+        return catalogExercises
+            .filter((exercise) => recentNames.has(exercise.name.trim().toLowerCase()))
+            .slice(0, 6)
+    }, [catalogExercises, historyData?.items])
+
+    const suggestedCatalogExercises = useMemo(() => {
+        const title = workout?.comments?.toLowerCase() ?? ''
+        const preferredCategories: ExerciseCatalogFilter[] = title.includes('кардио')
+            ? ['cardio']
+            : title.includes('йога') || title.includes('мобил')
+                ? ['flexibility']
+                : title.includes('функц')
+                    ? ['strength', 'cardio']
+                    : ['strength']
+
+        return catalogExercises
+            .filter((exercise) => preferredCategories.includes((exercise.category as ExerciseCatalogFilter) ?? 'all'))
+            .slice(0, 6)
+    }, [catalogExercises, workout?.comments])
+
     const resetAddItemForm = (kind: AddItemKind) => {
         setAddItemKind(kind)
         setAddItemName('')
@@ -509,7 +571,30 @@ export function ActiveWorkoutPage() {
         abandonWorkoutSessionDraft()
         queryClient.removeQueries({ queryKey: detailQueryKey, exact: true })
         void queryClient.invalidateQueries({ queryKey: ['workouts'] })
+        toast.info('Тренировка отменена')
         navigate('/workouts', { replace: true })
+    }
+
+    const handleDeleteExerciseRequest = (exerciseIndex: number) => {
+        setPendingDeleteExerciseIndex(exerciseIndex)
+        setIsDeleteExerciseConfirmOpen(true)
+    }
+
+    const handleConfirmDeleteExercise = () => {
+        if (pendingDeleteExerciseIndex == null) {
+            setIsDeleteExerciseConfirmOpen(false)
+            return
+        }
+
+        tg.hapticFeedback({ type: 'impact', style: 'heavy' })
+        patchItem((prev) => ({
+            ...prev,
+            exercises: prev.exercises.filter((_, index) => index !== pendingDeleteExerciseIndex),
+        }))
+
+        setPendingDeleteExerciseIndex(null)
+        setIsDeleteExerciseConfirmOpen(false)
+        toast.info('Упражнение удалено')
     }
 
     const handleCompleteSession = (tagsOverride?: string[]) => {
@@ -551,7 +636,13 @@ export function ActiveWorkoutPage() {
             {
                 onSuccess: (data) => {
                     setIsFinishSheetOpen(false)
+                    toast.success('Тренировка успешно завершена')
                     navigate(`/workouts/${data.id}`)
+                },
+                onError: (error) => {
+                    const message = getErrorMessage(error)
+                    setSessionError(message)
+                    toast.error(message)
                 },
             },
         )
@@ -591,7 +682,13 @@ export function ActiveWorkoutPage() {
 
     return (
         <div className="p-4 space-y-4">
-            <ActiveWorkoutHeader onBack={() => navigate('/workouts')} />
+            <UnsavedChangesModal
+                isOpen={isLeaveConfirmOpen}
+                onLeave={onLeave}
+                onStay={onStay}
+            />
+
+            <ActiveWorkoutHeader onBack={() => guardedAction(() => navigate('/workouts'))} />
 
             {isLoading && <div className="text-sm text-telegram-hint">Загрузка...</div>}
             {!isLoading && errorMessage && <div className="text-sm text-danger">{errorMessage}</div>}
@@ -717,13 +814,7 @@ export function ActiveWorkoutPage() {
                         canReorder={isActiveDraft}
                         onDragEnd={handleDragEnd}
                         onOpenStructureEditor={openStructureEditor}
-                        onDeleteExercise={(exerciseIndex) => {
-                            tg.hapticFeedback({ type: 'impact', style: 'heavy' })
-                            patchItem((prev) => ({
-                                ...prev,
-                                exercises: prev.exercises.filter((_, index) => index !== exerciseIndex),
-                            }))
-                        }}
+                        onDeleteExercise={handleDeleteExerciseRequest}
                         onSetCurrentPosition={setCurrentPosition}
                         onToggleSetCompleted={(exerciseIndex, setNumber, nextCompleted) => {
                             tg.hapticFeedback({ type: 'selection' })
@@ -764,6 +855,66 @@ export function ActiveWorkoutPage() {
                         onClose={() => setIsAbandonConfirmOpen(false)}
                         onConfirm={handleConfirmAbandonDraft}
                     />
+                    <Modal
+                        isOpen={isDeleteExerciseConfirmOpen}
+                        onClose={() => {
+                            setIsDeleteExerciseConfirmOpen(false)
+                            setPendingDeleteExerciseIndex(null)
+                        }}
+                        title="Удалить упражнение?"
+                        size="sm"
+                    >
+                        <div className="space-y-4">
+                            <p className="text-sm text-telegram-text">
+                                Упражнение будет удалено из текущей тренировки.
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="secondary"
+                                    fullWidth
+                                    onClick={() => {
+                                        setIsDeleteExerciseConfirmOpen(false)
+                                        setPendingDeleteExerciseIndex(null)
+                                    }}
+                                >
+                                    Остаться
+                                </Button>
+                                <Button variant="emergency" fullWidth onClick={handleConfirmDeleteExercise}>
+                                    Удалить
+                                </Button>
+                            </div>
+                        </div>
+                    </Modal>
+                    <Modal
+                        isOpen={isDeleteExerciseConfirmOpen}
+                        onClose={() => {
+                            setIsDeleteExerciseConfirmOpen(false)
+                            setPendingDeleteExerciseIndex(null)
+                        }}
+                        title="Удалить упражнение?"
+                        size="sm"
+                    >
+                        <div className="space-y-4">
+                            <p className="text-sm text-telegram-text">
+                                Упражнение будет удалено из текущей тренировки.
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="secondary"
+                                    fullWidth
+                                    onClick={() => {
+                                        setIsDeleteExerciseConfirmOpen(false)
+                                        setPendingDeleteExerciseIndex(null)
+                                    }}
+                                >
+                                    Остаться
+                                </Button>
+                                <Button variant="emergency" fullWidth onClick={handleConfirmDeleteExercise}>
+                                    Удалить
+                                </Button>
+                            </div>
+                        </div>
+                    </Modal>
 
                     <AddExerciseModal
                         isOpen={addItemKind === 'exercise'}
@@ -772,6 +923,9 @@ export function ActiveWorkoutPage() {
                         searchQuery={exerciseSearchQuery}
                         selectedExercise={selectedCatalogExercise}
                         filteredCatalogExercises={filteredCatalogExercises}
+                        recentExercises={recentCatalogExercises}
+                        favoriteExercises={favoriteCatalogExercises}
+                        suggestedExercises={suggestedCatalogExercises}
                         sets={addItemSets}
                         reps={addItemReps}
                         weight={addItemWeight}
