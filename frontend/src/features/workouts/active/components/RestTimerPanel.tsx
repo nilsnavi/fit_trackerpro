@@ -43,10 +43,10 @@ export function RestTimerPanel({
                     </Button>
                 )}
                 <Button type="button" variant="secondary" size="sm" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={onRestart}>
-                    Restart
+                    Сбросить
                 </Button>
                 <Button type="button" variant="secondary" size="sm" leftIcon={<SkipForward className="h-4 w-4" />} onClick={onSkip}>
-                    Skip
+                    Пропустить
                 </Button>
             </div>
         </div>

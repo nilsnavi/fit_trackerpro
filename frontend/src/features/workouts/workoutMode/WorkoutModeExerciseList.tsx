@@ -80,6 +80,7 @@ function EmptyExercises({ onAdd }: { onAdd: () => void }) {
 // ── Public component ──────────────────────────────────────────────────────────
 
 interface WorkoutModeExerciseListProps {
+    containerId?: string
     exercises: WorkoutModeExerciseItem[]
     error?: string
     onAdd: () => void
@@ -89,6 +90,7 @@ interface WorkoutModeExerciseListProps {
 }
 
 export function WorkoutModeExerciseList({
+    containerId,
     exercises,
     error,
     onAdd,
@@ -111,7 +113,7 @@ export function WorkoutModeExerciseList({
     }
 
     return (
-        <div className="space-y-3">
+        <div id={containerId} className="space-y-3">
             <div className="flex items-center justify-between">
                 <h2 className="text-sm font-medium text-telegram-text">
                     Упражнения{exercises.length > 0 && ` (${exercises.length})`}

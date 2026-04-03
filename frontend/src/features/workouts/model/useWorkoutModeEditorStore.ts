@@ -9,6 +9,10 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import type {
     EditorWorkoutMode,
+    CardioExerciseParams,
+    FunctionalExerciseParams,
+    StrengthExerciseParams,
+    YogaExerciseParams,
     ModeExerciseParams,
     WorkoutModeEditorValidationErrors,
     WorkoutModeEditorValidationKey,
@@ -54,6 +58,66 @@ const initialState = {
     exercises: [] as WorkoutModeExerciseItem[],
     isDirty: false,
     validationErrors: {} as WorkoutModeEditorValidationErrors,
+}
+
+function validateModeExercise(item: WorkoutModeExerciseItem, index: number): string | null {
+    const position = index + 1
+    const name = item.name || `упражнение #${position}`
+
+    if (item.mode === 'strength') {
+        const params = item.params as StrengthExerciseParams
+        if (!Number.isFinite(params.sets) || params.sets < 1) {
+            return `Укажите корректные подходы для «${name}» (минимум 1).`
+        }
+        if (!Number.isFinite(params.reps) || params.reps < 1) {
+            return `Укажите корректные повторы для «${name}» (минимум 1).`
+        }
+        if (!Number.isFinite(params.restSeconds) || params.restSeconds < 0) {
+            return `Укажите корректный отдых для «${name}» (не меньше 0 сек).`
+        }
+        return null
+    }
+
+    if (item.mode === 'cardio') {
+        const params = item.params as CardioExerciseParams
+        if (!Number.isFinite(params.durationSeconds) || params.durationSeconds < 30) {
+            return `Для «${name}» в кардио задайте длительность не меньше 30 сек.`
+        }
+        if (params.distance != null && (!Number.isFinite(params.distance) || params.distance <= 0)) {
+            return `Для «${name}» дистанция должна быть больше 0.`
+        }
+        return null
+    }
+
+    if (item.mode === 'functional') {
+        const params = item.params as FunctionalExerciseParams
+        if (!Number.isFinite(params.rounds) || params.rounds < 1) {
+            return `Для «${name}» укажите раунды (минимум 1).`
+        }
+        if (params.reps != null && (!Number.isFinite(params.reps) || params.reps < 1)) {
+            return `Для «${name}» повторы должны быть не меньше 1.`
+        }
+        if (params.durationSeconds != null && (!Number.isFinite(params.durationSeconds) || params.durationSeconds < 10)) {
+            return `Для «${name}» длительность должна быть не меньше 10 сек.`
+        }
+        if (!Number.isFinite(params.restSeconds) || params.restSeconds < 0) {
+            return `Для «${name}» отдых должен быть не меньше 0 сек.`
+        }
+        if (params.reps == null && params.durationSeconds == null) {
+            return `Для «${name}» укажите либо повторы, либо длительность.`
+        }
+        return null
+    }
+
+    if (item.mode === 'yoga') {
+        const params = item.params as YogaExerciseParams
+        if (!Number.isFinite(params.durationSeconds) || params.durationSeconds < 10) {
+            return `Для «${name}» в йоге задайте длительность не меньше 10 сек.`
+        }
+        return null
+    }
+
+    return null
 }
 
 // ── Store ────────────────────────────────────────────────────────────────────
@@ -131,6 +195,16 @@ export const useWorkoutModeEditorStore = create<WorkoutModeEditorState>()((set, 
         if (exercises.length === 0) {
             setValidationError('exercises', 'Добавьте хотя бы одно упражнение')
             valid = false
+        }
+        if (exercises.length > 0) {
+            const invalidExerciseMessage = exercises
+                .map((exercise, index) => validateModeExercise(exercise, index))
+                .find((message): message is string => Boolean(message))
+
+            if (invalidExerciseMessage) {
+                setValidationError('exercises', invalidExerciseMessage)
+                valid = false
+            }
         }
         return valid
     },

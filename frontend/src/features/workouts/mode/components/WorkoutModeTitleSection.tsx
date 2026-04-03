@@ -5,6 +5,7 @@ import type { WorkoutModeEditorValidationErrors } from '@features/workouts/worko
 import { Input } from '@shared/ui/Input'
 
 interface WorkoutModeTitleSectionProps {
+    containerId?: string
     title: string
     description: string
     descOpen: boolean
@@ -15,6 +16,7 @@ interface WorkoutModeTitleSectionProps {
 }
 
 export function WorkoutModeTitleSection({
+    containerId,
     title,
     description,
     descOpen,
@@ -24,7 +26,7 @@ export function WorkoutModeTitleSection({
     onToggleDesc,
 }: WorkoutModeTitleSectionProps) {
     return (
-        <div className="space-y-2">
+        <div id={containerId} className="space-y-2">
             <Input
                 label="Название тренировки"
                 type="text"

@@ -1,12 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
+import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
+import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { WorkoutModePageView } from '@features/workouts/workoutMode/WorkoutModePageView'
 import { getWorkoutModePageConfig } from '@features/workouts/workoutMode/workoutModePageModel'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import {
     useWorkoutModeEditorStateSlice,
     useWorkoutModeEditorActions,
+    useWorkoutModeEditorStore,
 } from '@features/workouts/model/useWorkoutModeEditorStore'
 import { AddExerciseSheet } from '@features/workouts/workoutMode/AddExerciseSheet'
 import { WorkoutModeExerciseList } from '@features/workouts/workoutMode/WorkoutModeExerciseList'
@@ -14,11 +17,13 @@ import { WorkoutModeStickyFooter } from '@features/workouts/workoutMode/WorkoutM
 import { WorkoutModeTitleSection } from '@features/workouts/mode/components/WorkoutModeTitleSection'
 import { useWorkoutModeInit } from '@features/workouts/mode/hooks/useWorkoutModeInit'
 import { useWorkoutModeHandlers } from '@features/workouts/mode/hooks/useWorkoutModeHandlers'
+import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import type { EditorWorkoutMode } from '@features/workouts/workoutMode/workoutModeEditorTypes'
 
 export function WorkoutModePage() {
     const { mode } = useParams<{ mode: string }>()
     const navigate = useNavigate()
+    const tg = useTelegramWebApp()
     const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
     const [addSheetOpen, setAddSheetOpen] = useState(false)
     const [descOpen, setDescOpen] = useState(false)
@@ -26,11 +31,16 @@ export function WorkoutModePage() {
     const [saveAndStartError, setSaveAndStartError] = useState<string | null>(null)
 
     // Editor state (single subscription via useShallow)
-    const { title: editorTitle, description: editorDescription, exercises: editorExercises, validationErrors } =
+    const { title: editorTitle, description: editorDescription, exercises: editorExercises, validationErrors, isDirty } =
         useWorkoutModeEditorStateSlice()
     // Editor actions (stable — never triggers re-render)
     const { setMode: storeSetMode, setTitle, setDescription, addExercise, updateExercise, removeExercise, reorderExercises, validate, reset: resetEditor } =
         useWorkoutModeEditorActions()
+
+    const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
+        isDirty,
+        onConfirmedLeave: resetEditor,
+    })
 
     const { data: historyData } = useWorkoutHistoryQuery()
 
@@ -92,8 +102,56 @@ export function WorkoutModePage() {
         onSaveAndStartError: setSaveAndStartError,
     })
 
+    const isClearlyInvalid = editorTitle.trim().length === 0 || editorExercises.length === 0
+
+    const scrollToFirstInvalidField = () => {
+        const { validationErrors: currentErrors } = useWorkoutModeEditorStore.getState()
+        const targetId = currentErrors.title ? 'workout-mode-title' : currentErrors.exercises ? 'workout-mode-exercises' : null
+        if (!targetId) return
+        const target = document.getElementById(targetId)
+        if (!target) return
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    const handleSaveWithValidationUx = () => {
+        const isValid = validate()
+        if (!isValid) {
+            // Wait for state/error paint, then scroll.
+            requestAnimationFrame(scrollToFirstInvalidField)
+            return
+        }
+        handleSave()
+    }
+
+    const handleSaveAndStartWithValidationUx = async () => {
+        const isValid = validate()
+        if (!isValid) {
+            requestAnimationFrame(scrollToFirstInvalidField)
+            return
+        }
+        await handleSaveAndStart()
+    }
+
+    // Guard Telegram back button when editor is dirty
+    useEffect(() => {
+        const { isTelegram, showBackButton, hideBackButton } = tg
+        if (isTelegram) {
+            showBackButton(() => guardedAction(() => navigate('/workouts')))
+        }
+        return () => {
+            hideBackButton()
+        }
+    }, [tg, navigate, guardedAction])
+
     return (
         <>
+            {/* Unsaved changes guard */}
+            <UnsavedChangesModal
+                isOpen={isLeaveConfirmOpen}
+                onLeave={onLeave}
+                onStay={onStay}
+            />
+
             {/* Mode info header + preset picker + repeat section */}
             <WorkoutModePageView
                 config={config}
@@ -122,6 +180,7 @@ export function WorkoutModePage() {
 
                 {/* Title + Description */}
                 <WorkoutModeTitleSection
+                    containerId="workout-mode-title"
                     title={editorTitle}
                     description={editorDescription}
                     descOpen={descOpen}
@@ -138,6 +197,7 @@ export function WorkoutModePage() {
 
                 {/* Exercise list */}
                 <WorkoutModeExerciseList
+                    containerId="workout-mode-exercises"
                     exercises={editorExercises}
                     error={validationErrors.exercises}
                     onAdd={() => setAddSheetOpen(true)}
@@ -149,11 +209,11 @@ export function WorkoutModePage() {
 
             {/* Sticky footer */}
             <WorkoutModeStickyFooter
-                onSave={handleSave}
-                onSaveAndStart={handleSaveAndStart}
+                onSave={handleSaveWithValidationUx}
+                onSaveAndStart={handleSaveAndStartWithValidationUx}
                 isSaving={isSaving}
                 isStarting={isStarting}
-                disabled={isMutating}
+                disabled={isMutating || isClearlyInvalid}
             />
 
             {/* Add exercise bottom sheet */}

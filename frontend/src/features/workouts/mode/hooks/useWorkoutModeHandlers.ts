@@ -16,6 +16,7 @@ import {
     mapEditorExercisesToTemplate,
 } from '@features/workouts/lib/workoutModeEditorMappers'
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue'
+import { toast } from '@shared/stores/toastStore'
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
 import type {
     EditorWorkoutMode,
@@ -134,9 +135,17 @@ export function useWorkoutModeHandlers({
                 is_public: false,
             },
             {
-                onSuccess: () => navigate('/workouts'),
+                onSuccess: () => {
+                    toast.success('Шаблон тренировки сохранён')
+                    navigate('/workouts')
+                },
                 onError: (err) => {
-                    if (isOfflineMutationQueuedError(err)) navigate('/workouts')
+                    if (isOfflineMutationQueuedError(err)) {
+                        toast.info('Шаблон сохранится при подключении к сети')
+                        navigate('/workouts')
+                        return
+                    }
+                    toast.error('Не удалось сохранить шаблон. Попробуйте ещё раз.')
                 },
             },
         )
