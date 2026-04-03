@@ -15,6 +15,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { memo, useCallback, useMemo } from 'react'
 import { Dumbbell, Plus } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import { WorkoutModeExerciseCard } from './WorkoutModeExerciseCard'
@@ -22,7 +23,7 @@ import type { ModeExerciseParams, WorkoutModeExerciseItem } from './workoutModeE
 
 // ── Sortable wrapper ──────────────────────────────────────────────────────────
 
-function SortableExerciseItem({
+const SortableExerciseItem = memo(function SortableExerciseItem({
     item,
     index,
     onUpdate,
@@ -54,11 +55,11 @@ function SortableExerciseItem({
             />
         </div>
     )
-}
+})
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyExercises({ onAdd }: { onAdd: () => void }) {
+const EmptyExercises = memo(function EmptyExercises({ onAdd }: { onAdd: () => void }) {
     return (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border bg-telegram-secondary-bg px-6 py-10">
             <div className="rounded-2xl bg-telegram-bg p-4">
@@ -75,7 +76,7 @@ function EmptyExercises({ onAdd }: { onAdd: () => void }) {
             </Button>
         </div>
     )
-}
+})
 
 // ── Public component ──────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ interface WorkoutModeExerciseListProps {
     onReorder: (fromIndex: number, toIndex: number) => void
 }
 
-export function WorkoutModeExerciseList({
+export const WorkoutModeExerciseList = memo(function WorkoutModeExerciseList({
     containerId,
     exercises,
     error,
@@ -104,13 +105,15 @@ export function WorkoutModeExerciseList({
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     )
 
-    const handleDragEnd = (event: DragEndEvent) => {
+    const sortableIds = useMemo(() => exercises.map((ex) => ex.id), [exercises])
+
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event
         if (!over || active.id === over.id) return
         const from = exercises.findIndex((ex) => ex.id === active.id)
         const to = exercises.findIndex((ex) => ex.id === over.id)
         if (from !== -1 && to !== -1) onReorder(from, to)
-    }
+    }, [exercises, onReorder])
 
     return (
         <div id={containerId} className="space-y-3">
@@ -145,7 +148,7 @@ export function WorkoutModeExerciseList({
                     onDragEnd={handleDragEnd}
                 >
                     <SortableContext
-                        items={exercises.map((ex) => ex.id)}
+                        items={sortableIds}
                         strategy={verticalListSortingStrategy}
                     >
                         <div className="space-y-2">
@@ -164,4 +167,8 @@ export function WorkoutModeExerciseList({
             )}
         </div>
     )
-}
+})
+
+SortableExerciseItem.displayName = 'SortableExerciseItem'
+EmptyExercises.displayName = 'EmptyExercises'
+WorkoutModeExerciseList.displayName = 'WorkoutModeExerciseList'

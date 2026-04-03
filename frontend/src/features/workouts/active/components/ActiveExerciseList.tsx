@@ -13,6 +13,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
+import { memo, useMemo } from 'react'
 import { PencilRuler, Trash2 } from 'lucide-react'
 import { SortableExerciseCard } from '@features/workouts/components/SortableExerciseCard'
 import {
@@ -36,7 +37,7 @@ interface ActiveExerciseListProps {
     onNotesChange: (exerciseIndex: number, notes: string | undefined) => void
 }
 
-export function ActiveExerciseList({
+export const ActiveExerciseList = memo(function ActiveExerciseList({
     exercises,
     canReorder,
     onDragEnd,
@@ -55,11 +56,16 @@ export function ActiveExerciseList({
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     )
 
+    const sortableIds = useMemo(
+        () => exercises.map((exercise, index) => `${exercise.exercise_id}-${index}`),
+        [exercises],
+    )
+
     return (
         <div className="space-y-3">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext
-                    items={exercises.map((exercise, index) => `${exercise.exercise_id}-${index}`)}
+                    items={sortableIds}
                     strategy={verticalListSortingStrategy}
                 >
                     {exercises.map((exercise, exerciseIndex) => {
@@ -149,4 +155,6 @@ export function ActiveExerciseList({
             </DndContext>
         </div>
     )
-}
+})
+
+ActiveExerciseList.displayName = 'ActiveExerciseList'

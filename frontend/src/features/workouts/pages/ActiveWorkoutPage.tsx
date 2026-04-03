@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
@@ -23,7 +23,7 @@ import { queryKeys } from '@shared/api/queryKeys'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatExercises } from '@features/workouts/lib/workoutModeHelpers'
 import { CurrentExerciseCard } from '@features/workouts/components'
-import { useActiveWorkoutActions, useActiveWorkoutStateSlice, useWorkoutSessionDraftStore } from '@/state/local'
+import { useActiveWorkoutActions, useActiveWorkoutStore, useWorkoutSessionDraftStore } from '@/state/local'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
 import { WorkoutSyncIndicator } from '@features/workouts/active/components/WorkoutSyncIndicator'
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
@@ -39,7 +39,6 @@ import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveW
 import { useRestTimer } from '@features/workouts/active/hooks/useRestTimer'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWorkoutStructureEditor } from '@features/workouts/active/hooks/useWorkoutStructureEditor'
-import type { ActiveWorkoutSyncState } from '@/state/local'
 import type {
     CompletedSet,
     CompletedExercise,
@@ -71,6 +70,64 @@ function buildSyncPayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequ
     }
 }
 
+const ActiveWorkoutSyncIndicator = memo(function ActiveWorkoutSyncIndicator() {
+    const syncState = useActiveWorkoutStore((s) => s.syncState)
+    return <WorkoutSyncIndicator state={syncState} />
+})
+
+interface ActiveCurrentExerciseCardProps {
+    exerciseName: string
+    previousBest: string
+    currentSet: string
+    remainingSets: number
+}
+
+const ActiveCurrentExerciseCard = memo(function ActiveCurrentExerciseCard({
+    exerciseName,
+    previousBest,
+    currentSet,
+    remainingSets,
+}: ActiveCurrentExerciseCardProps) {
+    const syncState = useActiveWorkoutStore((s) => s.syncState)
+
+    return (
+        <CurrentExerciseCard
+            exerciseName={exerciseName}
+            previousBest={previousBest}
+            currentSet={currentSet}
+            remainingSets={remainingSets}
+            syncState={syncState}
+        />
+    )
+})
+
+const ActiveRestTimerSection = memo(function ActiveRestTimerSection() {
+    const restTimer = useActiveWorkoutStore((s) => s.restTimer)
+    const {
+        tickRestTimer,
+        pauseRestTimer,
+        resumeRestTimer,
+        restartRestTimer,
+        skipRestTimer,
+    } = useActiveWorkoutActions()
+
+    const { formatRestTime } = useRestTimer({
+        isRunning: restTimer.isRunning,
+        tick: tickRestTimer,
+    })
+
+    return (
+        <RestTimerPanel
+            restTimer={restTimer}
+            formatRestTime={formatRestTime}
+            onPause={pauseRestTimer}
+            onResume={resumeRestTimer}
+            onRestart={restartRestTimer}
+            onSkip={skipRestTimer}
+        />
+    )
+})
+
 export function ActiveWorkoutPage() {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -81,18 +138,12 @@ export function ActiveWorkoutPage() {
     const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
     const abandonWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.abandonDraft)
 
-    // Active workout state — single subscription via useShallow
-    const {
-        exercises: activeExercises,
-        currentExerciseIndex,
-        currentSetIndex,
-        syncState,
-        restTimer,
-        restDefaultSeconds,
-        startedAt,
-    } = useActiveWorkoutStateSlice()
+    const activeExercises = useActiveWorkoutStore((s) => s.exercises)
+    const currentExerciseIndex = useActiveWorkoutStore((s) => s.currentExerciseIndex)
+    const currentSetIndex = useActiveWorkoutStore((s) => s.currentSetIndex)
+    const restDefaultSeconds = useActiveWorkoutStore((s) => s.restDefaultSeconds)
+    const startedAt = useActiveWorkoutStore((s) => s.startedAt)
 
-    // Active workout actions — stable function refs, single subscription
     const {
         initializeSession: initializeActiveSession,
         setExercises: setActiveExercises,
@@ -100,10 +151,6 @@ export function ActiveWorkoutPage() {
         setSyncState: setActiveSyncState,
         setCurrentPosition,
         startRestTimer,
-        tickRestTimer,
-        pauseRestTimer,
-        resumeRestTimer,
-        restartRestTimer,
         skipRestTimer,
         setRestDefaultSeconds,
         reset: resetActiveWorkoutState,
@@ -171,11 +218,6 @@ export function ActiveWorkoutPage() {
         clearWorkoutSessionDraft,
         updateSessionMutation,
         buildSyncPayload,
-    })
-
-    const { formatRestTime } = useRestTimer({
-        isRunning: restTimer.isRunning,
-        tick: tickRestTimer,
     })
 
     const {
@@ -308,7 +350,6 @@ export function ActiveWorkoutPage() {
             previousBest: 'Нет данных',
             currentSetLabel: '—',
             remainingSets: 0,
-            syncState,
         }
 
         if (!currentExercise || !currentSet) return fallback
@@ -333,7 +374,6 @@ export function ActiveWorkoutPage() {
             previousBest: bestParts.length > 0 ? bestParts.join(' • ') : 'Нет данных',
             currentSetLabel: `Подход ${normalizedCurrentSetIndex + 1}/${currentExercise.sets_completed.length}${currentParts.length > 0 ? ` • ${currentParts.join(' • ')}` : ''}`,
             remainingSets,
-            syncState,
         }
     }, [
         currentExercise,
@@ -341,7 +381,6 @@ export function ActiveWorkoutPage() {
         normalizedCurrentSetIndex,
         previousBestByExercise,
         remainingSets,
-        syncState,
     ])
 
     const filteredCatalogExercises = useMemo(() => {
@@ -479,7 +518,7 @@ export function ActiveWorkoutPage() {
         closeAddItemModal()
     }
 
-    const handleDragEnd = (event: DragEndEvent) => {
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
         if (!isActiveDraft) return
         const { active, over } = event
         if (!over || active.id === over.id) return
@@ -493,7 +532,7 @@ export function ActiveWorkoutPage() {
                 exercises: arrayMove(prev.exercises, oldIndex, newIndex),
             }
         })
-    }
+    }, [isActiveDraft, patchItem])
 
     const getPreviousSetValues = (exercise: CompletedExercise, setNumber: number): Partial<CompletedSet> => {
         const previousInExercise = exercise.sets_completed[setNumber - 2]
@@ -663,6 +702,24 @@ export function ActiveWorkoutPage() {
         handleCompleteSession(parsedTags)
     }
 
+    const handleToggleSetCompleted = useCallback((exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
+        tg.hapticFeedback({ type: 'selection' })
+        setCurrentPosition(exerciseIndex, setNumber - 1)
+        updateSet(exerciseIndex, setNumber, { completed: nextCompleted })
+        if (nextCompleted) {
+            startRestTimer(restDefaultSeconds)
+        }
+    }, [restDefaultSeconds, setCurrentPosition, startRestTimer, tg, updateSet])
+
+    const handleExerciseNotesChange = useCallback((exerciseIndex: number, notes: string | undefined) => {
+        patchItem((prev) => ({
+            ...prev,
+            exercises: prev.exercises.map((item, index) => (
+                index === exerciseIndex ? { ...item, notes } : item
+            )),
+        }))
+    }, [patchItem])
+
     if (!isLoading && !errorMessage && workout && !isActiveDraft) {
         return (
             <div className="p-4 space-y-4">
@@ -695,7 +752,7 @@ export function ActiveWorkoutPage() {
 
             {!isLoading && !errorMessage && workout && (
                 <>
-                    <WorkoutSyncIndicator state={syncState} />
+                    <ActiveWorkoutSyncIndicator />
 
                     {isActiveDraft && (
                         <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/50 dark:bg-amber-950/40 p-4 space-y-3">
@@ -758,21 +815,13 @@ export function ActiveWorkoutPage() {
                         <p className="text-sm text-danger">{getErrorMessage(updateSessionMutation.error)}</p>
                     )}
 
-                    <RestTimerPanel
-                        restTimer={restTimer}
-                        formatRestTime={formatRestTime}
-                        onPause={pauseRestTimer}
-                        onResume={resumeRestTimer}
-                        onRestart={restartRestTimer}
-                        onSkip={skipRestTimer}
-                    />
+                    <ActiveRestTimerSection />
 
-                    <CurrentExerciseCard
+                    <ActiveCurrentExerciseCard
                         exerciseName={currentContextCard.exerciseName}
                         previousBest={currentContextCard.previousBest}
                         currentSet={currentContextCard.currentSetLabel}
                         remainingSets={currentContextCard.remainingSets}
-                        syncState={currentContextCard.syncState as ActiveWorkoutSyncState}
                     />
 
                     <SessionNavigationPanel
@@ -816,45 +865,35 @@ export function ActiveWorkoutPage() {
                         onOpenStructureEditor={openStructureEditor}
                         onDeleteExercise={handleDeleteExerciseRequest}
                         onSetCurrentPosition={setCurrentPosition}
-                        onToggleSetCompleted={(exerciseIndex, setNumber, nextCompleted) => {
-                            tg.hapticFeedback({ type: 'selection' })
-                            setCurrentPosition(exerciseIndex, setNumber - 1)
-                            updateSet(exerciseIndex, setNumber, { completed: nextCompleted })
-                            if (nextCompleted) {
-                                startRestTimer(restDefaultSeconds)
-                            }
-                        }}
+                        onToggleSetCompleted={handleToggleSetCompleted}
                         onCopyPreviousSet={handleCopyPreviousSet}
                         onAdjustWeight={handleAdjustWeight}
                         onUpdateSet={updateSet}
-                        onNotesChange={(exerciseIndex, notes) => {
-                            patchItem((prev) => ({
-                                ...prev,
-                                exercises: prev.exercises.map((item, index) => (
-                                    index === exerciseIndex ? { ...item, notes } : item
-                                )),
-                            }))
-                        }}
+                        onNotesChange={handleExerciseNotesChange}
                     />
 
-                    <FinishWorkoutModal
-                        isOpen={isFinishSheetOpen}
-                        durationMinutes={durationMinutes}
-                        completedExercises={completedExercises}
-                        comment={workout.comments ?? ''}
-                        tagsDraft={finishTagsDraft}
-                        isPending={completeMutation.isPending}
-                        errorMessage={sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
-                        onClose={() => setIsFinishSheetOpen(false)}
-                        onConfirm={handleConfirmFinishFromSheet}
-                        onChangeTagsDraft={setFinishTagsDraft}
-                    />
+                    {isFinishSheetOpen && (
+                        <FinishWorkoutModal
+                            isOpen={isFinishSheetOpen}
+                            durationMinutes={durationMinutes}
+                            completedExercises={completedExercises}
+                            comment={workout.comments ?? ''}
+                            tagsDraft={finishTagsDraft}
+                            isPending={completeMutation.isPending}
+                            errorMessage={sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
+                            onClose={() => setIsFinishSheetOpen(false)}
+                            onConfirm={handleConfirmFinishFromSheet}
+                            onChangeTagsDraft={setFinishTagsDraft}
+                        />
+                    )}
 
-                    <AbandonWorkoutConfirmModal
-                        isOpen={isAbandonConfirmOpen}
-                        onClose={() => setIsAbandonConfirmOpen(false)}
-                        onConfirm={handleConfirmAbandonDraft}
-                    />
+                    {isAbandonConfirmOpen && (
+                        <AbandonWorkoutConfirmModal
+                            isOpen={isAbandonConfirmOpen}
+                            onClose={() => setIsAbandonConfirmOpen(false)}
+                            onConfirm={handleConfirmAbandonDraft}
+                        />
+                    )}
                     <Modal
                         isOpen={isDeleteExerciseConfirmOpen}
                         onClose={() => {
@@ -885,83 +924,58 @@ export function ActiveWorkoutPage() {
                             </div>
                         </div>
                     </Modal>
-                    <Modal
-                        isOpen={isDeleteExerciseConfirmOpen}
-                        onClose={() => {
-                            setIsDeleteExerciseConfirmOpen(false)
-                            setPendingDeleteExerciseIndex(null)
-                        }}
-                        title="Удалить упражнение?"
-                        size="sm"
-                    >
-                        <div className="space-y-4">
-                            <p className="text-sm text-telegram-text">
-                                Упражнение будет удалено из текущей тренировки.
-                            </p>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="secondary"
-                                    fullWidth
-                                    onClick={() => {
-                                        setIsDeleteExerciseConfirmOpen(false)
-                                        setPendingDeleteExerciseIndex(null)
-                                    }}
-                                >
-                                    Остаться
-                                </Button>
-                                <Button variant="emergency" fullWidth onClick={handleConfirmDeleteExercise}>
-                                    Удалить
-                                </Button>
-                            </div>
-                        </div>
-                    </Modal>
+                    {addItemKind === 'exercise' && (
+                        <AddExerciseModal
+                            isOpen
+                            isCatalogLoading={isCatalogLoading}
+                            catalogFilter={exerciseCatalogFilter}
+                            searchQuery={exerciseSearchQuery}
+                            selectedExercise={selectedCatalogExercise}
+                            filteredCatalogExercises={filteredCatalogExercises}
+                            recentExercises={recentCatalogExercises}
+                            favoriteExercises={favoriteCatalogExercises}
+                            suggestedExercises={suggestedCatalogExercises}
+                            sets={addItemSets}
+                            reps={addItemReps}
+                            weight={addItemWeight}
+                            duration={addItemDuration}
+                            notes={addItemNotes}
+                            onClose={closeAddItemModal}
+                            onChangeFilter={setExerciseCatalogFilter}
+                            onChangeSearch={setExerciseSearchQuery}
+                            onSelectExercise={setSelectedCatalogExercise}
+                            onChangeSets={setAddItemSets}
+                            onChangeReps={setAddItemReps}
+                            onChangeWeight={setAddItemWeight}
+                            onChangeDuration={setAddItemDuration}
+                            onChangeNotes={setAddItemNotes}
+                            onSubmit={handleCreateItem}
+                        />
+                    )}
 
-                    <AddExerciseModal
-                        isOpen={addItemKind === 'exercise'}
-                        isCatalogLoading={isCatalogLoading}
-                        catalogFilter={exerciseCatalogFilter}
-                        searchQuery={exerciseSearchQuery}
-                        selectedExercise={selectedCatalogExercise}
-                        filteredCatalogExercises={filteredCatalogExercises}
-                        recentExercises={recentCatalogExercises}
-                        favoriteExercises={favoriteCatalogExercises}
-                        suggestedExercises={suggestedCatalogExercises}
-                        sets={addItemSets}
-                        reps={addItemReps}
-                        weight={addItemWeight}
-                        duration={addItemDuration}
-                        notes={addItemNotes}
-                        onClose={closeAddItemModal}
-                        onChangeFilter={setExerciseCatalogFilter}
-                        onChangeSearch={setExerciseSearchQuery}
-                        onSelectExercise={setSelectedCatalogExercise}
-                        onChangeSets={setAddItemSets}
-                        onChangeReps={setAddItemReps}
-                        onChangeWeight={setAddItemWeight}
-                        onChangeDuration={setAddItemDuration}
-                        onChangeNotes={setAddItemNotes}
-                        onSubmit={handleCreateItem}
-                    />
+                    {addItemKind === 'timer' && (
+                        <AddTimerModal
+                            isOpen
+                            name={addItemName}
+                            duration={addItemDuration}
+                            notes={addItemNotes}
+                            onClose={closeAddItemModal}
+                            onChangeName={setAddItemName}
+                            onChangeDuration={setAddItemDuration}
+                            onChangeNotes={setAddItemNotes}
+                            onSubmit={handleCreateItem}
+                        />
+                    )}
 
-                    <AddTimerModal
-                        isOpen={addItemKind === 'timer'}
-                        name={addItemName}
-                        duration={addItemDuration}
-                        notes={addItemNotes}
-                        onClose={closeAddItemModal}
-                        onChangeName={setAddItemName}
-                        onChangeDuration={setAddItemDuration}
-                        onChangeNotes={setAddItemNotes}
-                        onSubmit={handleCreateItem}
-                    />
-
-                    <ExerciseStructureEditorModal
-                        isOpen={structureEditor != null}
-                        editorState={structureEditor}
-                        onClose={closeStructureEditor}
-                        onChange={setStructureEditor}
-                        onSave={handleSaveStructure}
-                    />
+                    {structureEditor != null && (
+                        <ExerciseStructureEditorModal
+                            isOpen
+                            editorState={structureEditor}
+                            onClose={closeStructureEditor}
+                            onChange={setStructureEditor}
+                            onSave={handleSaveStructure}
+                        />
+                    )}
                 </>
             )}
         </div>
