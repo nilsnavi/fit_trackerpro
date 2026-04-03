@@ -19,6 +19,7 @@ function formatSyncState(syncState: ActiveWorkoutSyncState): string {
     if (syncState === 'syncing') return 'Синхронизация...'
     if (syncState === 'error') return 'Ошибка синхронизации'
     if (syncState === 'synced') return 'Сохранено'
+    if (syncState === 'offline-queued') return 'Офлайн'
     return 'Локально'
 }
 
