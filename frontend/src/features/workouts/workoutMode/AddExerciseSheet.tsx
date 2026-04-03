@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Dumbbell, Search, X } from 'lucide-react'
 import { Modal } from '@shared/ui/Modal'
 import { Skeleton } from '@shared/ui/Skeleton'
@@ -40,56 +40,82 @@ const EQUIPMENT_FILTERS: Array<{ id: 'all' | EquipmentType; label: string }> = [
 
 type EquipmentFilter = (typeof EQUIPMENT_FILTERS)[number]['id']
 
-// ── Catalog step ──────────────────────────────────────────────────────────────
+const INITIAL_VISIBLE_ITEMS = 120
+const LOAD_MORE_STEP = 120
 
-function CatalogStep({
-    onSelect,
-}: {
-    mode?: EditorWorkoutMode
-    onSelect: (exercise: CatalogExercise) => void
-}) {
+function CatalogStep({ onSelect }: { onSelect: (exercise: CatalogExercise) => void }) {
     const { data: exercises = [], isLoading, isError } = useExercisesCatalogQuery()
     const [search, setSearch] = useState('')
-        const [debouncedSearch, setDebouncedSearch] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
     const [category, setCategory] = useState<CategoryFilter>('all')
     const [equipment, setEquipment] = useState<EquipmentFilter>('all')
+    const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
 
     const debounceRef = useRef<number | null>(null)
-    const handleSearchChange = (value: string) => {
+
+    const handleSearchChange = useCallback((value: string) => {
         setSearch(value)
-        if (debounceRef.current !== null) window.clearTimeout(debounceRef.current)
+        if (debounceRef.current !== null) {
+            window.clearTimeout(debounceRef.current)
+        }
         debounceRef.current = window.setTimeout(() => setDebouncedSearch(value), 300)
-    }
-    useEffect(() => () => { if (debounceRef.current !== null) window.clearTimeout(debounceRef.current) }, [])
+    }, [])
+
+    useEffect(
+        () => () => {
+            if (debounceRef.current !== null) {
+                window.clearTimeout(debounceRef.current)
+            }
+        },
+        [],
+    )
+
+    useEffect(() => {
+        setVisibleCount(INITIAL_VISIBLE_ITEMS)
+    }, [debouncedSearch, category, equipment])
+
+    const indexedExercises = useMemo(
+        () =>
+            exercises.map((ex) => ({
+                ex,
+                nameLower: ex.name.toLowerCase(),
+                categoryLower: ex.category?.toLowerCase(),
+                equipmentList: ex.equipment ?? [],
+                musclesLower: (ex.primaryMuscles ?? []).map((m) => m.toLowerCase()),
+            })),
+        [exercises],
+    )
 
     const filtered = useMemo(() => {
         const q = debouncedSearch.trim().toLowerCase()
-        return exercises.filter((ex) => {
-            const matchSearch =
-                !q ||
-                ex.name.toLowerCase().includes(q) ||
-                (ex.primaryMuscles ?? []).some((m) => m.toLowerCase().includes(q))
-            const matchCat =
-                category === 'all' ||
-                ex.category?.toLowerCase() === category
-            const matchEquip =
-                equipment === 'all' ||
-                (ex.equipment ?? []).includes(equipment as EquipmentType)
-            return matchSearch && matchCat && matchEquip
-        })
-    }, [exercises, search, category, equipment])
+        return indexedExercises
+            .filter(({ nameLower, musclesLower, categoryLower, equipmentList }) => {
+                const matchSearch = !q || nameLower.includes(q) || musclesLower.some((m) => m.includes(q))
+                const matchCat = category === 'all' || categoryLower === category
+                const matchEquip = equipment === 'all' || equipmentList.includes(equipment as EquipmentType)
+                return matchSearch && matchCat && matchEquip
+            })
+            .map(({ ex }) => ex)
+    }, [indexedExercises, debouncedSearch, category, equipment])
+
+    const visibleExercises = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount])
+    const canLoadMore = visibleCount < filtered.length
+
+    const handleClearSearch = useCallback(() => {
+        setSearch('')
+        setDebouncedSearch('')
+    }, [])
+
+    const handleLoadMore = useCallback(() => {
+        setVisibleCount((prev) => prev + LOAD_MORE_STEP)
+    }, [])
 
     if (isError) {
-        return (
-            <p className="py-8 text-center text-sm text-danger">
-                Не удалось загрузить упражнения
-            </p>
-        )
+        return <p className="py-8 text-center text-sm text-danger">Не удалось загрузить упражнения</p>
     }
 
     return (
         <div className="flex flex-col gap-3">
-            {/* Search */}
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-telegram-hint" />
                 <input
@@ -102,7 +128,7 @@ function CatalogStep({
                 {search && (
                     <button
                         type="button"
-                        onClick={() => { setSearch(''); setDebouncedSearch('') }}
+                        onClick={handleClearSearch}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-telegram-hint"
                     >
                         <X className="h-4 w-4" />
@@ -110,7 +136,6 @@ function CatalogStep({
                 )}
             </div>
 
-            {/* Category chips */}
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {CATEGORY_FILTERS.map((f) => (
                     <button
@@ -128,7 +153,6 @@ function CatalogStep({
                 ))}
             </div>
 
-            {/* Equipment chips */}
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {EQUIPMENT_FILTERS.map((f) => (
                     <button
@@ -146,12 +170,9 @@ function CatalogStep({
                 ))}
             </div>
 
-            {/* List */}
             <div className="max-h-[55vh] overflow-y-auto space-y-1.5 pr-1">
                 {isLoading &&
-                    Array.from({ length: 6 }).map((_, i) => (
-                        <Skeleton key={i} className="h-14 w-full rounded-xl" />
-                    ))}
+                    Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
 
                 {!isLoading && filtered.length === 0 && (
                     <div className="flex flex-col items-center gap-2 py-10 text-center text-telegram-hint">
@@ -168,7 +189,7 @@ function CatalogStep({
                 )}
 
                 {!isLoading &&
-                    filtered.map((ex) => (
+                    visibleExercises.map((ex) => (
                         <button
                             key={ex.id}
                             type="button"
@@ -176,23 +197,29 @@ function CatalogStep({
                             className="flex w-full items-center gap-3 rounded-xl border border-border bg-telegram-secondary-bg px-3 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 active:scale-[0.99]"
                         >
                             <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium text-telegram-text">
-                                    {ex.name}
-                                </p>
+                                <p className="truncate text-sm font-medium text-telegram-text">{ex.name}</p>
                                 {ex.category && (
-                                    <p className="mt-0.5 text-xs capitalize text-telegram-hint">
-                                        {ex.category}
-                                    </p>
+                                    <p className="mt-0.5 text-xs capitalize text-telegram-hint">{ex.category}</p>
                                 )}
                             </div>
                         </button>
                     ))}
+
+                {!isLoading && canLoadMore && (
+                    <div className="sticky bottom-0 pt-2">
+                        <button
+                            type="button"
+                            onClick={handleLoadMore}
+                            className="w-full rounded-xl border border-border bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint"
+                        >
+                            Показать еще ({Math.min(LOAD_MORE_STEP, filtered.length - visibleCount)} из {filtered.length - visibleCount})
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )
 }
-
-// ── Public component ──────────────────────────────────────────────────────────
 
 export function AddExerciseSheet({ isOpen, mode, onClose, onAdd }: AddExerciseSheetProps) {
     const [step, setStep] = useState<StepKind>('catalog')
@@ -211,14 +238,12 @@ export function AddExerciseSheet({ isOpen, mode, onClose, onAdd }: AddExerciseSh
             selectedExercise.category ?? undefined,
             params,
         )
-        // Reset for next use
         setStep('catalog')
         setSelectedExercise(null)
     }
 
     const handleClose = () => {
         onClose()
-        // Defer reset so animation finishes
         setTimeout(() => {
             setStep('catalog')
             setSelectedExercise(null)
@@ -228,17 +253,8 @@ export function AddExerciseSheet({ isOpen, mode, onClose, onAdd }: AddExerciseSh
     const title = step === 'catalog' ? 'Добавить упражнение' : 'Параметры упражнения'
 
     return (
-        <Modal
-            isOpen={isOpen}
-            onClose={handleClose}
-            title={title}
-            size="md"
-            haptic
-            showHandle
-        >
-            {step === 'catalog' && (
-                <CatalogStep onSelect={handleSelectExercise} />
-            )}
+        <Modal isOpen={isOpen} onClose={handleClose} title={title} size="md" haptic showHandle>
+            {step === 'catalog' && <CatalogStep onSelect={handleSelectExercise} />}
             {step === 'config' && selectedExercise && (
                 <ExerciseModeConfigForm
                     mode={mode}

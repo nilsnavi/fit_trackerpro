@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedSet } from '@features/workouts/types/workouts'
 
@@ -14,7 +15,7 @@ interface ExerciseSetRowProps {
     onUpdateSet: (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
 }
 
-export function ExerciseSetRow({
+export const ExerciseSetRow = memo(function ExerciseSetRow({
     set,
     exerciseIndex,
     onFocusSet,
@@ -174,4 +175,6 @@ export function ExerciseSetRow({
             </div>
         </div>
     )
-}
+})
+
+ExerciseSetRow.displayName = 'ExerciseSetRow'

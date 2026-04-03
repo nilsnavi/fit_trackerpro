@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
@@ -18,10 +18,10 @@ import { WorkoutModeTitleSection } from '@features/workouts/mode/components/Work
 import { useWorkoutModeInit } from '@features/workouts/mode/hooks/useWorkoutModeInit'
 import { useWorkoutModeHandlers } from '@features/workouts/mode/hooks/useWorkoutModeHandlers'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-import type { EditorWorkoutMode } from '@features/workouts/workoutMode/workoutModeEditorTypes'
+import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
+import type { EditorWorkoutMode, ModeExerciseParams } from '@features/workouts/workoutMode/workoutModeEditorTypes'
 
-export function WorkoutModePage() {
-    const { mode } = useParams<{ mode: string }>()
+function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
     const navigate = useNavigate()
     const tg = useTelegramWebApp()
     const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
@@ -30,12 +30,25 @@ export function WorkoutModePage() {
     const [repeatError, setRepeatError] = useState<string | null>(null)
     const [saveAndStartError, setSaveAndStartError] = useState<string | null>(null)
 
-    // Editor state (single subscription via useShallow)
-    const { title: editorTitle, description: editorDescription, exercises: editorExercises, validationErrors, isDirty } =
-        useWorkoutModeEditorStateSlice()
-    // Editor actions (stable — never triggers re-render)
-    const { setMode: storeSetMode, setTitle, setDescription, addExercise, updateExercise, removeExercise, reorderExercises, validate, reset: resetEditor } =
-        useWorkoutModeEditorActions()
+    const {
+        title: editorTitle,
+        description: editorDescription,
+        exercises: editorExercises,
+        validationErrors,
+        isDirty,
+    } = useWorkoutModeEditorStateSlice()
+
+    const {
+        setMode: storeSetMode,
+        setTitle,
+        setDescription,
+        addExercise,
+        updateExercise,
+        removeExercise,
+        reorderExercises,
+        validate,
+        reset: resetEditor,
+    } = useWorkoutModeEditorActions()
 
     const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
         isDirty,
@@ -44,9 +57,6 @@ export function WorkoutModePage() {
 
     const { data: historyData } = useWorkoutHistoryQuery()
 
-    const config = getWorkoutModePageConfig(mode)
-
-    // Initialization effects (mode setup, preset title sync, cleanup)
     useWorkoutModeInit({
         config,
         selectedPresetId,
@@ -56,18 +66,6 @@ export function WorkoutModePage() {
         reset: resetEditor,
     })
 
-    if (!config) {
-        return (
-            <div className="p-4">
-                <p className="text-sm text-telegram-hint">Неизвестный режим тренировки</p>
-                <Button className="mt-4" onClick={() => navigate('/workouts')}>
-                    Назад к тренировкам
-                </Button>
-            </div>
-        )
-    }
-
-    // ── Recent workout (for repeat) ──────────────────────────────────────────
     const recentWorkout = useMemo(() => {
         const items = historyData?.items ?? []
         const modePrefix = config.title.trim().toLowerCase()
@@ -79,7 +77,6 @@ export function WorkoutModePage() {
         )
     }, [config.title, historyData])
 
-    // ── Business handlers ────────────────────────────────────────────────────
     const {
         handleRepeat,
         handleAddExercise,
@@ -104,6 +101,26 @@ export function WorkoutModePage() {
 
     const isClearlyInvalid = editorTitle.trim().length === 0 || editorExercises.length === 0
 
+    const handleOpenAddSheet = useCallback(() => {
+        setAddSheetOpen(true)
+    }, [])
+
+    const handleCloseAddSheet = useCallback(() => {
+        setAddSheetOpen(false)
+    }, [])
+
+    const handleUpdateExerciseParams = useCallback((id: string, params: ModeExerciseParams) => {
+        updateExercise(id, { params })
+    }, [updateExercise])
+
+    const handleSelectPreset = useCallback((id: string) => {
+        setSelectedPresetId(id)
+        const preset = config.presets.find((p) => p.id === id)
+        if (preset) {
+            setTitle(`${config.title} • ${preset.label}`)
+        }
+    }, [config.presets, config.title, setTitle])
+
     const scrollToFirstInvalidField = () => {
         const { validationErrors: currentErrors } = useWorkoutModeEditorStore.getState()
         const targetId = currentErrors.title ? 'workout-mode-title' : currentErrors.exercises ? 'workout-mode-exercises' : null
@@ -116,7 +133,6 @@ export function WorkoutModePage() {
     const handleSaveWithValidationUx = () => {
         const isValid = validate()
         if (!isValid) {
-            // Wait for state/error paint, then scroll.
             requestAnimationFrame(scrollToFirstInvalidField)
             return
         }
@@ -132,7 +148,6 @@ export function WorkoutModePage() {
         await handleSaveAndStart()
     }
 
-    // Guard Telegram back button when editor is dirty
     useEffect(() => {
         const { isTelegram, showBackButton, hideBackButton } = tg
         if (isTelegram) {
@@ -145,22 +160,16 @@ export function WorkoutModePage() {
 
     return (
         <>
-            {/* Unsaved changes guard */}
             <UnsavedChangesModal
                 isOpen={isLeaveConfirmOpen}
                 onLeave={onLeave}
                 onStay={onStay}
             />
 
-            {/* Mode info header + preset picker + repeat section */}
             <WorkoutModePageView
                 config={config}
                 selectedPresetId={selectedPresetId}
-                onSelectPreset={(id) => {
-                    setSelectedPresetId(id)
-                    const preset = config.presets.find((p) => p.id === id)
-                    if (preset) setTitle(`${config.title} • ${preset.label}`)
-                }}
+                onSelectPreset={handleSelectPreset}
                 onStart={handleSaveAndStart}
                 onRepeat={recentWorkout ? handleRepeat : undefined}
                 isStarting={false}
@@ -169,16 +178,13 @@ export function WorkoutModePage() {
                 hideStartButton
             />
 
-            {/* Editor section */}
             <div className="px-4 pb-40 space-y-5">
-                {/* Repeat error */}
                 {repeatError && (
                     <p className="rounded-xl bg-danger/10 px-3 py-2 text-xs text-danger">
                         {repeatError}
                     </p>
                 )}
 
-                {/* Title + Description */}
                 <WorkoutModeTitleSection
                     containerId="workout-mode-title"
                     title={editorTitle}
@@ -190,24 +196,21 @@ export function WorkoutModePage() {
                     onToggleDesc={() => setDescOpen((v) => !v)}
                 />
 
-                {/* Save-and-start error */}
                 {saveAndStartError && (
                     <p className="text-xs text-danger">{saveAndStartError}</p>
                 )}
 
-                {/* Exercise list */}
                 <WorkoutModeExerciseList
                     containerId="workout-mode-exercises"
                     exercises={editorExercises}
                     error={validationErrors.exercises}
-                    onAdd={() => setAddSheetOpen(true)}
-                    onUpdate={(id, params) => updateExercise(id, { params })}
+                    onAdd={handleOpenAddSheet}
+                    onUpdate={handleUpdateExerciseParams}
                     onRemove={removeExercise}
                     onReorder={reorderExercises}
                 />
             </div>
 
-            {/* Sticky footer */}
             <WorkoutModeStickyFooter
                 onSave={handleSaveWithValidationUx}
                 onSaveAndStart={handleSaveAndStartWithValidationUx}
@@ -216,15 +219,33 @@ export function WorkoutModePage() {
                 disabled={isMutating || isClearlyInvalid}
             />
 
-            {/* Add exercise bottom sheet */}
             <AddExerciseSheet
                 isOpen={addSheetOpen}
                 mode={config.mode as EditorWorkoutMode}
-                onClose={() => setAddSheetOpen(false)}
+                onClose={handleCloseAddSheet}
                 onAdd={handleAddExercise}
             />
         </>
     )
+}
+
+export function WorkoutModePage() {
+    const { mode } = useParams<{ mode: string }>()
+    const navigate = useNavigate()
+    const config = getWorkoutModePageConfig(mode)
+
+    if (!config) {
+        return (
+            <div className="p-4">
+                <p className="text-sm text-telegram-hint">Неизвестный режим тренировки</p>
+                <Button className="mt-4" onClick={() => navigate('/workouts')}>
+                    Назад к тренировкам
+                </Button>
+            </div>
+        )
+    }
+
+    return <WorkoutModePageContent config={config} />
 }
 
 export default WorkoutModePage

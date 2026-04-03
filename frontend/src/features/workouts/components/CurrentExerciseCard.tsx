@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { ActiveWorkoutSyncState } from '@/state/local'
 
 interface CurrentExerciseCardProps {
@@ -23,7 +24,7 @@ function formatSyncState(syncState: ActiveWorkoutSyncState): string {
     return 'Локально'
 }
 
-export function CurrentExerciseCard({
+export const CurrentExerciseCard = memo(function CurrentExerciseCard({
     exerciseName,
     previousBest,
     currentSet,
@@ -58,4 +59,6 @@ export function CurrentExerciseCard({
             </div>
         </section>
     )
-}
+})
+
+CurrentExerciseCard.displayName = 'CurrentExerciseCard'

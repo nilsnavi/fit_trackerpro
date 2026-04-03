@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { AlertCircle, CheckCircle2, CloudOff, Loader2 } from 'lucide-react'
 import type { ActiveWorkoutSyncState } from '@/state/local'
 
@@ -52,7 +53,7 @@ const SYNC_CONFIG: Partial<Record<ActiveWorkoutSyncState, SyncConfig>> = {
  * Shows syncing, synced, offline-queued, or error states.
  * Returns null for `idle` state to avoid visual noise during normal use.
  */
-export function WorkoutSyncIndicator({ state }: WorkoutSyncIndicatorProps) {
+export const WorkoutSyncIndicator = memo(function WorkoutSyncIndicator({ state }: WorkoutSyncIndicatorProps) {
     const config = SYNC_CONFIG[state]
     if (!config) return null
 
@@ -72,4 +73,6 @@ export function WorkoutSyncIndicator({ state }: WorkoutSyncIndicatorProps) {
             </div>
         </div>
     )
-}
+})
+
+WorkoutSyncIndicator.displayName = 'WorkoutSyncIndicator'

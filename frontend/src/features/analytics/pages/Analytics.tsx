@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useMemo, useCallback, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -40,7 +40,6 @@ import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
-import { OneRMCalculator } from '@features/analytics/components';
 import { useTelegramWebApp, UseTelegramWebAppReturn } from '@shared/hooks/useTelegramWebApp';
 import { trackBusinessMetric } from '@shared/lib/businessMetrics';
 import { AnalyticsPageSkeleton } from '@shared/ui/page-skeletons';
@@ -55,6 +54,8 @@ import {
     mapKeyMetrics,
     mapProgressToExercises,
 } from '@features/analytics/mappers/analyticsMappers';
+
+const OneRMCalculator = lazy(() => import('@features/analytics/components/OneRMCalculator'))
 
 // ============================================
 // Types
@@ -1366,7 +1367,9 @@ const Analytics: React.FC = () => {
 
             {isExerciseScreen && activeTab === 'calculator' && (
                 <div className="p-4">
-                    <OneRMCalculator />
+                    <Suspense fallback={<AnalyticsPageSkeleton />}>
+                        <OneRMCalculator />
+                    </Suspense>
                 </div>
             )}
 

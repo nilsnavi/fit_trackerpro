@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { GripVertical, Pencil, Trash2 } from 'lucide-react'
 import { Modal } from '@shared/ui/Modal'
 import { ExerciseModeConfigForm } from './ExerciseModeConfigForm'
@@ -68,7 +68,7 @@ function ExerciseSummary({ item }: { item: WorkoutModeExerciseItem }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function WorkoutModeExerciseCard({
+export const WorkoutModeExerciseCard = memo(function WorkoutModeExerciseCard({
     item,
     index,
     onUpdate,
@@ -77,6 +77,13 @@ export function WorkoutModeExerciseCard({
     dragHandleProps,
 }: WorkoutModeExerciseCardProps) {
     const [editOpen, setEditOpen] = useState(false)
+    const handleOpenEdit = useCallback(() => setEditOpen(true), [])
+    const handleCloseEdit = useCallback(() => setEditOpen(false), [])
+    const handleRemove = useCallback(() => onRemove(item.id), [item.id, onRemove])
+    const handleConfirm = useCallback((params: ModeExerciseParams) => {
+        onUpdate(item.id, params)
+        setEditOpen(false)
+    }, [item.id, onUpdate])
 
     return (
         <>
@@ -114,7 +121,7 @@ export function WorkoutModeExerciseCard({
                 <div className="flex gap-1">
                     <button
                         type="button"
-                        onClick={() => setEditOpen(true)}
+                        onClick={handleOpenEdit}
                         className="rounded-lg p-2 text-telegram-hint transition-colors hover:bg-telegram-bg hover:text-primary"
                         aria-label="Редактировать"
                     >
@@ -122,7 +129,7 @@ export function WorkoutModeExerciseCard({
                     </button>
                     <button
                         type="button"
-                        onClick={() => onRemove(item.id)}
+                        onClick={handleRemove}
                         className="rounded-lg p-2 text-telegram-hint transition-colors hover:bg-telegram-bg hover:text-danger"
                         aria-label="Удалить"
                     >
@@ -134,7 +141,7 @@ export function WorkoutModeExerciseCard({
             {/* Edit modal */}
             <Modal
                 isOpen={editOpen}
-                onClose={() => setEditOpen(false)}
+                onClose={handleCloseEdit}
                 title="Редактировать упражнение"
                 size="md"
                 haptic
@@ -143,13 +150,12 @@ export function WorkoutModeExerciseCard({
                     mode={item.mode}
                     exerciseName={item.name}
                     initial={item.params}
-                    onConfirm={(params) => {
-                        onUpdate(item.id, params)
-                        setEditOpen(false)
-                    }}
-                    onCancel={() => setEditOpen(false)}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCloseEdit}
                 />
             </Modal>
         </>
     )
-}
+})
+
+WorkoutModeExerciseCard.displayName = 'WorkoutModeExerciseCard'
