@@ -80,11 +80,11 @@ function validateModeExercise(item: WorkoutModeExerciseItem, index: number): str
 
     if (item.mode === 'cardio') {
         const params = item.params as CardioExerciseParams
-        if (!Number.isFinite(params.durationSeconds) || params.durationSeconds < 30) {
-            return `Для «${name}» в кардио задайте длительность не меньше 30 сек.`
-        }
-        if (params.distance != null && (!Number.isFinite(params.distance) || params.distance <= 0)) {
-            return `Для «${name}» дистанция должна быть больше 0.`
+        const hasValidDuration = Number.isFinite(params.durationSeconds) && params.durationSeconds > 0
+        const hasValidDistance = Number.isFinite(params.distance) && (params.distance as number) > 0
+
+        if (!hasValidDuration && !hasValidDistance) {
+            return `Для «${name}» в кардио укажите длительность больше 0 или дистанцию больше 0.`
         }
         return null
     }
@@ -94,25 +94,28 @@ function validateModeExercise(item: WorkoutModeExerciseItem, index: number): str
         if (!Number.isFinite(params.rounds) || params.rounds < 1) {
             return `Для «${name}» укажите раунды (минимум 1).`
         }
-        if (params.reps != null && (!Number.isFinite(params.reps) || params.reps < 1)) {
+        const hasReps = Number.isFinite(params.reps) && (params.reps as number) > 0
+        const hasDuration = Number.isFinite(params.durationSeconds) && (params.durationSeconds as number) > 0
+
+        if (params.reps != null && !hasReps) {
             return `Для «${name}» повторы должны быть не меньше 1.`
         }
-        if (params.durationSeconds != null && (!Number.isFinite(params.durationSeconds) || params.durationSeconds < 10)) {
-            return `Для «${name}» длительность должна быть не меньше 10 сек.`
+        if (params.durationSeconds != null && !hasDuration) {
+            return `Для «${name}» длительность должна быть больше 0 сек.`
         }
         if (!Number.isFinite(params.restSeconds) || params.restSeconds < 0) {
             return `Для «${name}» отдых должен быть не меньше 0 сек.`
         }
-        if (params.reps == null && params.durationSeconds == null) {
-            return `Для «${name}» укажите либо повторы, либо длительность.`
+        if (!hasReps && !hasDuration) {
+            return `Для «${name}» укажите повторы или длительность.`
         }
         return null
     }
 
     if (item.mode === 'yoga') {
         const params = item.params as YogaExerciseParams
-        if (!Number.isFinite(params.durationSeconds) || params.durationSeconds < 10) {
-            return `Для «${name}» в йоге задайте длительность не меньше 10 сек.`
+        if (!Number.isFinite(params.durationSeconds) || params.durationSeconds <= 0) {
+            return `Для «${name}» в йоге задайте длительность больше 0 сек.`
         }
         return null
     }

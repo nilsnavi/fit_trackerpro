@@ -3,49 +3,47 @@ import { AlertCircle, CheckCircle2, CloudOff, Loader2 } from 'lucide-react'
 import type { ActiveWorkoutSyncState } from '@/state/local'
 
 interface WorkoutSyncIndicatorProps {
-    state: ActiveWorkoutSyncState
+    state: ActiveWorkoutSyncState | WorkoutSyncIndicatorState
 }
+
+export type WorkoutSyncIndicatorState = 'syncing' | 'synced' | 'offline' | 'error'
 
 type SyncConfig = {
     icon: React.ReactNode
     text: string
-    hint?: string
-    iconClassName: string
-    textClassName: string
-    containerClassName: string
+    className: string
 }
 
-const SYNC_CONFIG: Partial<Record<ActiveWorkoutSyncState, SyncConfig>> = {
+const SYNC_CONFIG: Record<WorkoutSyncIndicatorState, SyncConfig> = {
     syncing: {
         icon: <Loader2 className="h-4 w-4 animate-spin" />,
-        text: 'Синхронизация...',
-        iconClassName: 'text-telegram-hint',
-        textClassName: 'text-telegram-text',
-        containerClassName: 'bg-transparent',
+        text: 'Синхронизация',
+        className: 'text-telegram-hint bg-telegram-secondary-bg/80',
     },
     synced: {
-        icon: <CheckCircle2 className="h-4 w-4" />,
+        icon: <CheckCircle2 className="h-3.5 w-3.5" />,
         text: 'Сохранено',
-        iconClassName: 'text-green-600 dark:text-green-400',
-        textClassName: 'text-green-600 dark:text-green-400',
-        containerClassName: 'bg-transparent',
+        className: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/30',
     },
-    'offline-queued': {
-        icon: <CloudOff className="h-4 w-4" />,
+    offline: {
+        icon: <CloudOff className="h-3.5 w-3.5" />,
         text: 'Офлайн',
-        hint: 'Изменения будут отправлены при подключении',
-        iconClassName: 'text-amber-600 dark:text-amber-400',
-        textClassName: 'text-amber-600 dark:text-amber-400',
-        containerClassName: 'bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-900/50',
+        className: 'text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30',
     },
     error: {
-        icon: <AlertCircle className="h-4 w-4" />,
-        text: 'Ошибка синхронизации',
-        hint: 'Автоматический повтор в процессе',
-        iconClassName: 'text-red-600 dark:text-red-400',
-        textClassName: 'text-red-600 dark:text-red-400',
-        containerClassName: 'bg-red-50/70 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/50',
+        icon: <AlertCircle className="h-3.5 w-3.5" />,
+        text: 'Ошибка',
+        className: 'text-red-600 dark:text-red-400 bg-red-50/80 dark:bg-red-950/30',
     },
+}
+
+function normalizeState(
+    state: ActiveWorkoutSyncState | WorkoutSyncIndicatorState,
+): WorkoutSyncIndicatorState | null {
+    if (state === 'offline-queued') return 'offline'
+    if (state === 'idle') return null
+    if (state === 'offline') return 'offline'
+    return state
 }
 
 /**
@@ -54,7 +52,10 @@ const SYNC_CONFIG: Partial<Record<ActiveWorkoutSyncState, SyncConfig>> = {
  * Returns null for `idle` state to avoid visual noise during normal use.
  */
 export const WorkoutSyncIndicator = memo(function WorkoutSyncIndicator({ state }: WorkoutSyncIndicatorProps) {
-    const config = SYNC_CONFIG[state]
+    const normalizedState = normalizeState(state)
+    if (!normalizedState) return null
+
+    const config = SYNC_CONFIG[normalizedState]
     if (!config) return null
 
     return (
@@ -62,15 +63,10 @@ export const WorkoutSyncIndicator = memo(function WorkoutSyncIndicator({ state }
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className={`rounded-lg px-3 py-2 flex items-center gap-2 text-sm ${config.containerClassName}`}
+            className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium ${config.className}`}
         >
-            <div className={config.iconClassName}>{config.icon}</div>
-            <div className="flex flex-col gap-0.5">
-                <span className={`font-medium ${config.textClassName}`}>{config.text}</span>
-                {config.hint && (
-                    <span className={`text-xs opacity-80 ${config.textClassName}`}>{config.hint}</span>
-                )}
-            </div>
+            {config.icon}
+            <span className="leading-none">{config.text}</span>
         </div>
     )
 })

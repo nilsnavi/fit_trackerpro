@@ -25,7 +25,6 @@ import { buildRepeatExercises } from '@features/workouts/lib/workoutModeHelpers'
 import { CurrentExerciseCard } from '@features/workouts/components'
 import { useActiveWorkoutActions, useActiveWorkoutStore, useWorkoutSessionDraftStore } from '@/state/local'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
-import { WorkoutSyncIndicator } from '@features/workouts/active/components/WorkoutSyncIndicator'
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
 import { SessionNavigationPanel } from '@features/workouts/active/components/SessionNavigationPanel'
@@ -84,7 +83,6 @@ export function ActiveWorkoutPage() {
     const currentSetIndex = useActiveWorkoutStore((s) => s.currentSetIndex)
     const restDefaultSeconds = useActiveWorkoutStore((s) => s.restDefaultSeconds)
     const startedAt = useActiveWorkoutStore((s) => s.startedAt)
-    const syncState = useActiveWorkoutStore((s) => s.syncState)
 
     const {
         initializeSession: initializeActiveSession,
@@ -144,7 +142,7 @@ export function ActiveWorkoutPage() {
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
-    const { flushNow: flushWorkoutSync } = useActiveWorkoutSync({
+    const { flushNow: flushWorkoutSync, syncState } = useActiveWorkoutSync({
         workoutId,
         workout,
         draftWorkoutId,
@@ -687,15 +685,16 @@ export function ActiveWorkoutPage() {
                 onStay={onStay}
             />
 
-            <ActiveWorkoutHeader onBack={() => guardedAction(() => navigate('/workouts'))} />
+            <ActiveWorkoutHeader
+                onBack={() => guardedAction(() => navigate('/workouts'))}
+                syncState={syncState}
+            />
 
             {isLoading && <div className="text-sm text-telegram-hint">Загрузка...</div>}
             {!isLoading && errorMessage && <div className="text-sm text-danger">{errorMessage}</div>}
 
             {!isLoading && !errorMessage && workout && (
                 <>
-                    <WorkoutSyncIndicator state={syncState} />
-
                     {isActiveDraft && (
                         <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/50 dark:bg-amber-950/40 p-4 space-y-3">
                             <p className="text-sm text-gray-800 dark:text-amber-100/90">
