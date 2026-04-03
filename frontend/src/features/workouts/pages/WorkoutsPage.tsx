@@ -10,8 +10,6 @@ import {
     BarChart3,
     CalendarDays,
     LayoutTemplate,
-    Dumbbell,
-    Sparkles,
     Zap,
     Timer,
     Pin,
