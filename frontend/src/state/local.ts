@@ -15,3 +15,7 @@ export { useWorkoutSessionDraftStore } from '../stores/workoutSessionDraftStore'
 export { useWorkoutTemplatePinsStore } from '../stores/workoutTemplatePinsStore'
 export { useActiveWorkoutStore } from '../stores/activeWorkoutStore'
 export type { ActiveWorkoutSyncState, ActiveWorkoutRestTimerState } from '../stores/activeWorkoutStore'
+export {
+    useActiveWorkoutStateSlice,
+    useActiveWorkoutActions,
+} from '../stores/activeWorkoutStore'

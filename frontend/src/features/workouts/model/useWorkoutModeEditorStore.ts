@@ -6,6 +6,7 @@
  * compatibility with existing tests.
  */
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 import type {
     EditorWorkoutMode,
     ModeExerciseParams,
@@ -148,4 +149,40 @@ export const selectExerciseById =
 /** Imperative helper for non-React call sites (e.g. DnD callbacks). */
 export function updateExerciseParams(id: string, params: ModeExerciseParams): void {
     useWorkoutModeEditorStore.getState().updateExercise(id, { params })
+}
+
+/**
+ * Selects mutable editor state fields in a single subscription.
+ * Uses shallow equality so a re-render only occurs when any field value changes.
+ */
+export function useWorkoutModeEditorStateSlice() {
+    return useWorkoutModeEditorStore(
+        useShallow((s) => ({
+            title: s.title,
+            description: s.description,
+            exercises: s.exercises,
+            isDirty: s.isDirty,
+            validationErrors: s.validationErrors,
+        })),
+    )
+}
+
+/**
+ * Returns all store actions in a single shallow-stable subscription.
+ * Zustand actions are stable — this never triggers a re-render.
+ */
+export function useWorkoutModeEditorActions() {
+    return useWorkoutModeEditorStore(
+        useShallow((s) => ({
+            setMode: s.setMode,
+            setTitle: s.setTitle,
+            setDescription: s.setDescription,
+            addExercise: s.addExercise,
+            updateExercise: s.updateExercise,
+            removeExercise: s.removeExercise,
+            reorderExercises: s.reorderExercises,
+            validate: s.validate,
+            reset: s.reset,
+        })),
+    )
 }

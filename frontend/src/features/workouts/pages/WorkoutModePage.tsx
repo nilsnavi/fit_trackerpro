@@ -1,27 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { Input } from '@shared/ui/Input'
-import {
-    useCreateWorkoutTemplateMutation,
-    useStartWorkoutMutation,
-    useUpdateWorkoutSessionMutation,
-} from '@features/workouts/hooks/useWorkoutMutations'
-import { useWorkoutSessionDraftStore } from '@/state/local'
 import { WorkoutModePageView } from '@features/workouts/workoutMode/WorkoutModePageView'
 import { getWorkoutModePageConfig } from '@features/workouts/workoutMode/workoutModePageModel'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
-import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHelpers'
-import { useWorkoutModeEditorStore } from '@features/workouts/model/useWorkoutModeEditorStore'
+import {
+    useWorkoutModeEditorStateSlice,
+    useWorkoutModeEditorActions,
+} from '@features/workouts/model/useWorkoutModeEditorStore'
 import { AddExerciseSheet } from '@features/workouts/workoutMode/AddExerciseSheet'
 import { WorkoutModeExerciseList } from '@features/workouts/workoutMode/WorkoutModeExerciseList'
 import { WorkoutModeStickyFooter } from '@features/workouts/workoutMode/WorkoutModeStickyFooter'
-import {
-    mapEditorExercisesToCompleted,
-    mapEditorExercisesToTemplate,
-} from '@features/workouts/lib/workoutModeEditorMappers'
-import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue'
-import type { EditorWorkoutMode, ModeExerciseParams } from '@features/workouts/workoutMode/workoutModeEditorTypes'
+import { WorkoutModeTitleSection } from '@features/workouts/mode/components/WorkoutModeTitleSection'
+import { useWorkoutModeInit } from '@features/workouts/mode/hooks/useWorkoutModeInit'
+import { useWorkoutModeHandlers } from '@features/workouts/mode/hooks/useWorkoutModeHandlers'
+import type { EditorWorkoutMode } from '@features/workouts/workoutMode/workoutModeEditorTypes'
 
 export function WorkoutModePage() {
     const { mode } = useParams<{ mode: string }>()
@@ -32,56 +25,26 @@ export function WorkoutModePage() {
     const [repeatError, setRepeatError] = useState<string | null>(null)
     const [saveAndStartError, setSaveAndStartError] = useState<string | null>(null)
 
-    // Mutations
-    const startWorkoutMutation = useStartWorkoutMutation()
-    const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
-    const createTemplateMutation = useCreateWorkoutTemplateMutation()
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
-
-    // Editor store
-    const editorTitle = useWorkoutModeEditorStore((s) => s.title)
-    const editorDescription = useWorkoutModeEditorStore((s) => s.description)
-    const editorExercises = useWorkoutModeEditorStore((s) => s.exercises)
-    const validationErrors = useWorkoutModeEditorStore((s) => s.validationErrors)
-    const {
-        setMode: storeSetMode,
-        setTitle,
-        setDescription,
-        addExercise,
-        updateExercise,
-        removeExercise,
-        reorderExercises,
-        validate,
-        reset: resetEditor,
-    } = useWorkoutModeEditorStore.getState()
+    // Editor state (single subscription via useShallow)
+    const { title: editorTitle, description: editorDescription, exercises: editorExercises, validationErrors } =
+        useWorkoutModeEditorStateSlice()
+    // Editor actions (stable — never triggers re-render)
+    const { setMode: storeSetMode, setTitle, setDescription, addExercise, updateExercise, removeExercise, reorderExercises, validate, reset: resetEditor } =
+        useWorkoutModeEditorActions()
 
     const { data: historyData } = useWorkoutHistoryQuery()
 
     const config = getWorkoutModePageConfig(mode)
 
-    // Initialise store mode and preset
-    useEffect(() => {
-        if (config) {
-            storeSetMode(config.mode as EditorWorkoutMode)
-        }
-        if (config?.presets.length) {
-            setSelectedPresetId(config.presets[0].id)
-        }
-        return () => {
-            resetEditor()
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [config?.mode])
-
-    // Keep title in sync when preset changes
-    useEffect(() => {
-        if (!config) return
-        const preset = config.presets.find((p) => p.id === selectedPresetId) ?? config.presets[0]
-        if (!editorTitle || editorTitle === '') {
-            setTitle(preset ? `${config.title} • ${preset.label}` : config.title)
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedPresetId, config?.mode])
+    // Initialization effects (mode setup, preset title sync, cleanup)
+    useWorkoutModeInit({
+        config,
+        selectedPresetId,
+        editorTitle,
+        setMode: storeSetMode,
+        setTitle,
+        reset: resetEditor,
+    })
 
     if (!config) {
         return (
@@ -106,108 +69,28 @@ export function WorkoutModePage() {
         )
     }, [config.title, historyData])
 
-    // ── Repeat handler ───────────────────────────────────────────────────────
-    const handleRepeat = async () => {
-        if (!recentWorkout) return
-        setRepeatError(null)
-        try {
-            const started = await startWorkoutMutation.mutateAsync({
-                name: recentWorkout.comments?.trim() || `${config.title} • повтор`,
-                type: config.backendType,
-            })
-            await updateWorkoutSessionMutation.mutateAsync({
-                workoutId: started.id,
-                payload: buildRepeatSessionPayload(recentWorkout),
-            })
-            setWorkoutSessionDraft(started.id, recentWorkout.comments?.trim() || config.title)
-            navigate(`/workouts/active/${started.id}`)
-        } catch (err) {
-            if (isOfflineMutationQueuedError(err)) {
-                navigate('/workouts')
-                return
-            }
-            setRepeatError('Не удалось повторить тренировку. Попробуйте ещё раз.')
-        }
-    }
-
-    // ── Add exercise from sheet ──────────────────────────────────────────────
-    const handleAddExercise = (
-        exerciseId: number,
-        name: string,
-        category: string | undefined,
-        params: ModeExerciseParams,
-    ) => {
-        addExercise({
-            id: crypto.randomUUID(),
-            exerciseId,
-            name,
-            category,
-            mode: config.mode as EditorWorkoutMode,
-            params,
-        })
-        setAddSheetOpen(false)
-    }
-
-    // ── Save as template (optimistic: navigate immediately) ─────────────────
-    const handleSave = () => {
-        if (!validate()) return
-        createTemplateMutation.mutate(
-            {
-                name: editorTitle.trim(),
-                type: config.backendType,
-                exercises: mapEditorExercisesToTemplate(editorExercises),
-                is_public: false,
-            },
-            {
-                onSuccess: () => navigate('/workouts'),
-                onError: (err) => {
-                    // When offline the mutation is queued and the optimistic
-                    // record stays in the cache — navigate same as success.
-                    if (isOfflineMutationQueuedError(err)) navigate('/workouts')
-                    // Otherwise the optimistic item was rolled back; stay on
-                    // the page so the user can retry.
-                },
-            },
-        )
-    }
-
-    // ── Save template + start active session ────────────────────────────────
-    const handleSaveAndStart = async () => {
-        if (!validate()) return
-        setSaveAndStartError(null)
-        try {
-            const started = await startWorkoutMutation.mutateAsync({
-                name: editorTitle.trim(),
-                type: config.backendType,
-            })
-            const completedExercises = mapEditorExercisesToCompleted(editorExercises)
-            if (completedExercises.length > 0) {
-                await updateWorkoutSessionMutation.mutateAsync({
-                    workoutId: started.id,
-                    payload: {
-                        exercises: completedExercises,
-                        tags: config.tags,
-                        comments: editorTitle.trim(),
-                    },
-                })
-            }
-            setWorkoutSessionDraft(started.id, editorTitle.trim())
-            navigate(`/workouts/active/${started.id}`)
-        } catch (err) {
-            if (isOfflineMutationQueuedError(err)) {
-                // Операция поставлена в очередь синхронизации — уйдём на список
-                navigate('/workouts')
-                return
-            }
-            setSaveAndStartError('Не удалось запустить тренировку. Попробуйте ещё раз.')
-            console.error('Failed to save and start workout:', err)
-        }
-    }
-
-    const isMutating =
-        startWorkoutMutation.isPending ||
-        updateWorkoutSessionMutation.isPending ||
-        createTemplateMutation.isPending
+    // ── Business handlers ────────────────────────────────────────────────────
+    const {
+        handleRepeat,
+        handleAddExercise,
+        handleSave,
+        handleSaveAndStart,
+        isMutating,
+        isSaving,
+        isStarting,
+        isRepeating,
+    } = useWorkoutModeHandlers({
+        config,
+        selectedPresetId,
+        editorTitle,
+        editorExercises,
+        recentWorkout,
+        validate,
+        addExercise,
+        onAddSheetClose: () => setAddSheetOpen(false),
+        onRepeatError: setRepeatError,
+        onSaveAndStartError: setSaveAndStartError,
+    })
 
     return (
         <>
@@ -223,7 +106,7 @@ export function WorkoutModePage() {
                 onStart={handleSaveAndStart}
                 onRepeat={recentWorkout ? handleRepeat : undefined}
                 isStarting={false}
-                isRepeating={updateWorkoutSessionMutation.isPending && !startWorkoutMutation.isPending}
+                isRepeating={isRepeating}
                 recentWorkoutTitle={recentWorkout?.comments ?? null}
                 hideStartButton
             />
@@ -238,45 +121,15 @@ export function WorkoutModePage() {
                 )}
 
                 {/* Title + Description */}
-                <div className="space-y-2">
-                    <Input
-                        label="Название тренировки"
-                        type="text"
-                        value={editorTitle}
-                        onChange={(e) => setTitle(e.target.value)}
-                        error={validationErrors.title}
-                        fullWidth
-                        placeholder="Например: Силовая • 4 круга"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setDescOpen((v) => !v)}
-                        className="flex items-center gap-1 text-xs text-telegram-hint hover:text-telegram-text transition-colors"
-                    >
-                        <span>{descOpen ? 'Скрыть описание' : 'Добавить описание'}</span>
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className={`transition-transform ${descOpen ? 'rotate-180' : ''}`}
-                        >
-                            <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                    </button>
-                    {descOpen && (
-                        <textarea
-                            rows={3}
-                            value={editorDescription}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Описание тренировки (необязательно)"
-                            className="w-full rounded-xl border border-border bg-telegram-secondary-bg px-3 py-2.5 text-sm text-telegram-text placeholder-telegram-hint outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
-                        />
-                    )}
-                </div>
+                <WorkoutModeTitleSection
+                    title={editorTitle}
+                    description={editorDescription}
+                    descOpen={descOpen}
+                    validationErrors={validationErrors}
+                    onTitleChange={setTitle}
+                    onDescriptionChange={setDescription}
+                    onToggleDesc={() => setDescOpen((v) => !v)}
+                />
 
                 {/* Save-and-start error */}
                 {saveAndStartError && (
@@ -298,8 +151,8 @@ export function WorkoutModePage() {
             <WorkoutModeStickyFooter
                 onSave={handleSave}
                 onSaveAndStart={handleSaveAndStart}
-                isSaving={createTemplateMutation.isPending}
-                isStarting={startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending}
+                isSaving={isSaving}
+                isStarting={isStarting}
                 disabled={isMutating}
             />
 

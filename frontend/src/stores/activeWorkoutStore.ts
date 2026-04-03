@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
 
 export type ActiveWorkoutSyncState = 'idle' | 'syncing' | 'synced' | 'error'
@@ -161,3 +162,52 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set) => ({
 
     reset: () => set(initialState),
 }))
+
+// ── Composite selector hooks ──────────────────────────────────────────────────
+
+/**
+ * Selects mutable session state fields in a single subscription.
+ * Uses shallow equality — re-renders only when any field reference changes.
+ */
+export function useActiveWorkoutStateSlice() {
+    return useActiveWorkoutStore(
+        useShallow((s) => ({
+            sessionId: s.sessionId,
+            exercises: s.exercises,
+            currentExerciseIndex: s.currentExerciseIndex,
+            currentSetIndex: s.currentSetIndex,
+            startedAt: s.startedAt,
+            elapsedSeconds: s.elapsedSeconds,
+            syncState: s.syncState,
+            restTimer: s.restTimer,
+            restDefaultSeconds: s.restDefaultSeconds,
+        })),
+    )
+}
+
+/**
+ * Returns all store actions in a single shallow-stable subscription.
+ * Since Zustand actions are stable function references, this never triggers
+ * a re-render — it is equivalent to calling `getState()` at render time but
+ * participates in the React subscription model correctly.
+ */
+export function useActiveWorkoutActions() {
+    return useActiveWorkoutStore(
+        useShallow((s) => ({
+            initializeSession: s.initializeSession,
+            setCurrentPosition: s.setCurrentPosition,
+            setElapsedSeconds: s.setElapsedSeconds,
+            setSyncState: s.setSyncState,
+            setExercises: s.setExercises,
+            setRestDefaultSeconds: s.setRestDefaultSeconds,
+            startRestTimer: s.startRestTimer,
+            tickRestTimer: s.tickRestTimer,
+            pauseRestTimer: s.pauseRestTimer,
+            resumeRestTimer: s.resumeRestTimer,
+            restartRestTimer: s.restartRestTimer,
+            skipRestTimer: s.skipRestTimer,
+            stopRestTimer: s.stopRestTimer,
+            reset: s.reset,
+        })),
+    )
+}
