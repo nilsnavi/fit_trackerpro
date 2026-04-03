@@ -3,4 +3,7 @@ tunnels:
   fittracker-frontend:
     proto: http
     addr: 18080
+  fittracker-backend:
+    proto: http
+    addr: 18000
 
