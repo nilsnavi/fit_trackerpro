@@ -12,6 +12,11 @@ export interface WorkoutModePageViewProps {
     isStarting: boolean
     isRepeating?: boolean
     recentWorkoutTitle?: string | null
+    /**
+     * When true the bottom "Начать тренировку" button is hidden.
+     * Use when the parent renders its own sticky footer (e.g. the editor flow).
+     */
+    hideStartButton?: boolean
 }
 
 export function WorkoutModePageView({
@@ -23,6 +28,7 @@ export function WorkoutModePageView({
     isStarting,
     isRepeating = false,
     recentWorkoutTitle,
+    hideStartButton = false,
 }: WorkoutModePageViewProps) {
     const ModeIcon = config.icon
 
@@ -114,17 +120,19 @@ export function WorkoutModePageView({
                 </div>
             )}
 
-            <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                isLoading={isStarting}
-                disabled={isRepeating}
-                leftIcon={selectedPresetId ? <Flag className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                onClick={onStart}
-            >
-                Начать тренировку
-            </Button>
+            {!hideStartButton && (
+                <Button
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    isLoading={isStarting}
+                    disabled={isRepeating}
+                    leftIcon={selectedPresetId ? <Flag className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                    onClick={onStart}
+                >
+                    Начать тренировку
+                </Button>
+            )}
         </div>
     )
 }

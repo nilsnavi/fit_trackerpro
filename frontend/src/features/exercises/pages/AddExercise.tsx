@@ -421,23 +421,23 @@ export const AddExercise: React.FC = () => {
         <div className="min-h-screen bg-telegram-bg pb-8">
             {/* Header */}
             <header className="sticky top-0 z-10 bg-telegram-bg border-b border-border px-4 py-4">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-xl font-bold text-telegram-text">
                     Добавить упражнение
                 </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-sm text-telegram-hint mt-1">
                     Поделитесь упражнением с сообществом
                 </p>
             </header>
 
             {/* Info Banner */}
-            <div className="mx-4 mt-4 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+            <div className="mx-4 mt-4 p-4 bg-primary/10 rounded-xl border border-primary/30">
                 <div className="flex items-start gap-3">
                     <span className="text-2xl">ℹ️</span>
                     <div>
-                        <p className="font-medium text-primary-700 dark:text-primary-300">
+                        <p className="font-medium text-primary">
                             Модерация контента
                         </p>
-                        <p className="text-sm text-primary-600 dark:text-primary-400 mt-1">
+                        <p className="text-sm text-primary mt-1 opacity-80">
                             Все упражнения проходят проверку в течение 24-48 часов.
                             Вы получите уведомление, когда упражнение будет одобрено.
                         </p>
@@ -460,15 +460,15 @@ export const AddExercise: React.FC = () => {
                         validationState={touched.name && errors.name ? 'error' : 'default'}
                         disabled={isSubmitting}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-telegram-hint mt-1">
                         {formData.name.length}/50 символов
                     </p>
                 </div>
 
                 {/* Category Field */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Категория <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-telegram-text mb-2">
+                        Категория <span className="text-danger">*</span>
                     </label>
                     <select
                         ref={categorySelectRef}
@@ -477,13 +477,13 @@ export const AddExercise: React.FC = () => {
                         onBlur={() => handleFieldBlur('category')}
                         disabled={isSubmitting}
                         className={cn(
-                            'w-full bg-gray-100 rounded-xl px-4 py-3',
-                            'text-gray-900',
+                            'w-full bg-telegram-secondary-bg rounded-xl px-4 py-3',
+                            'text-telegram-text',
                             'border-2 transition-all duration-200',
-                            'focus:outline-none focus:ring-2 focus:ring-blue-200',
+                            'focus:outline-none focus:ring-2 focus:ring-primary/20',
                             touched.category && errors.category
-                                ? 'border-red-500'
-                                : 'border-transparent focus:border-blue-500',
+                                ? 'border-danger'
+                                : 'border-border focus:border-primary',
                             isSubmitting && 'opacity-50 cursor-not-allowed'
                         )}
                     >
@@ -495,14 +495,14 @@ export const AddExercise: React.FC = () => {
                         ))}
                     </select>
                     {touched.category && errors.category && (
-                        <p className="text-sm text-red-500 mt-1">{errors.category}</p>
+                        <p className="text-sm text-danger mt-1">{errors.category}</p>
                     )}
                 </div>
 
                 {/* Description Field */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Описание техники <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-telegram-text mb-2">
+                        Описание техники <span className="text-danger">*</span>
                     </label>
                     <textarea
                         ref={descriptionTextareaRef}
@@ -513,27 +513,27 @@ export const AddExercise: React.FC = () => {
                         disabled={isSubmitting}
                         rows={4}
                         className={cn(
-                            'w-full bg-gray-100 rounded-xl px-4 py-3',
-                            'text-gray-900 placeholder:text-gray-400',
+                            'w-full bg-telegram-secondary-bg rounded-xl px-4 py-3',
+                            'text-telegram-text placeholder:text-telegram-hint',
                             'border-2 transition-all duration-200',
-                            'focus:outline-none focus:ring-2 focus:ring-blue-200',
+                            'focus:outline-none focus:ring-2 focus:ring-primary/20',
                             'resize-none',
                             touched.description && errors.description
-                                ? 'border-red-500'
-                                : 'border-transparent focus:border-blue-500',
+                                ? 'border-danger'
+                                : 'border-border focus:border-primary',
                             isSubmitting && 'opacity-50 cursor-not-allowed'
                         )}
                     />
                     <div className="flex justify-between mt-1">
                         <p className={cn(
                             'text-xs',
-                            formData.description.length < 20 ? 'text-gray-500' : 'text-green-600'
+                            formData.description.length < 20 ? 'text-telegram-hint' : 'text-success'
                         )}>
                             {formData.description.length}/20 мин. символов
                         </p>
                     </div>
                     {touched.description && errors.description && (
-                        <p className="text-sm text-red-500 mt-1.5" role="alert">
+                        <p className="text-sm text-danger mt-1.5" role="alert">
                             {errors.description}
                         </p>
                     )}
@@ -541,8 +541,8 @@ export const AddExercise: React.FC = () => {
 
                 {/* Equipment Field */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-3">
-                        Оборудование <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-telegram-text mb-3">
+                        Оборудование <span className="text-danger">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                         {EQUIPMENT_OPTIONS.map(option => (
@@ -554,20 +554,20 @@ export const AddExercise: React.FC = () => {
                                 className={cn(
                                     'flex items-center gap-2 p-3 rounded-xl',
                                     'border-2 transition-all duration-200',
-                                    'focus:outline-none focus:ring-2 focus:ring-blue-200',
+                                    'focus:outline-none focus:ring-2 focus:ring-primary/20',
                                     formData.equipment.includes(option.value)
-                                        ? 'bg-blue-50 border-blue-500'
-                                        : 'bg-gray-100 border-transparent hover:border-blue-300',
+                                        ? 'bg-primary/10 border-primary'
+                                        : 'bg-telegram-secondary-bg border-border hover:border-primary/50',
                                     isSubmitting && 'opacity-50 cursor-not-allowed'
                                 )}
                             >
                                 <span className="text-xl">{option.icon}</span>
-                                <span className="text-sm font-medium text-gray-900">
+                                <span className="text-sm font-medium text-telegram-text">
                                     {option.label}
                                 </span>
                                 {formData.equipment.includes(option.value) && (
                                     <svg
-                                        className="w-4 h-4 ml-auto text-blue-500"
+                                        className="w-4 h-4 ml-auto text-primary"
                                         viewBox="0 0 24 24"
                                         fill="none"
                                         stroke="currentColor"
@@ -580,15 +580,15 @@ export const AddExercise: React.FC = () => {
                         ))}
                     </div>
                     {touched.equipment && errors.equipment && (
-                        <p className="text-sm text-red-500 mt-2">{errors.equipment}</p>
+                        <p className="text-sm text-danger mt-2">{errors.equipment}</p>
                     )}
                 </div>
 
                 {/* Target Muscles Field */}
                 {formData.category && (
                     <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-3">
-                            Целевые мышцы <span className="text-red-500">*</span>
+                        <label className="block text-sm font-medium text-telegram-text mb-3">
+                            Целевые мышцы <span className="text-danger">*</span>
                         </label>
                         <ChipGroup wrap gap="md">
                             {availableMuscles.map((muscle: string) => (
@@ -603,14 +603,14 @@ export const AddExercise: React.FC = () => {
                             ))}
                         </ChipGroup>
                         {touched.targetMuscles && errors.targetMuscles && (
-                            <p className="text-sm text-red-500 mt-2">{errors.targetMuscles}</p>
+                            <p className="text-sm text-danger mt-2">{errors.targetMuscles}</p>
                         )}
                     </div>
                 )}
 
                 {/* Risk Flags Field */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-3">
+                    <label className="block text-sm font-medium text-telegram-text mb-3">
                         Флаги рисков (опционально)
                     </label>
                     <div className="space-y-2">
@@ -619,9 +619,9 @@ export const AddExercise: React.FC = () => {
                                 key={option.value}
                                 className={cn(
                                     'flex items-start gap-3 p-3 rounded-xl cursor-pointer',
-                                    'bg-gray-100',
+                                    'bg-telegram-secondary-bg',
                                     'transition-all duration-200',
-                                    'hover:bg-gray-200',
+                                    'hover:bg-telegram-bg',
                                     isSubmitting && 'opacity-50 cursor-not-allowed'
                                 )}
                             >
@@ -630,19 +630,19 @@ export const AddExercise: React.FC = () => {
                                     checked={formData.risks.includes(option.value)}
                                     onChange={() => handleRiskToggle(option.value)}
                                     disabled={isSubmitting}
-                                    className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-500 focus:ring-blue-200"
+                                    className="mt-1 w-5 h-5 rounded border-border text-primary focus:ring-primary/20"
                                 />
                                 <div className="flex-1">
-                                    <span className="font-medium text-gray-900">
+                                    <span className="font-medium text-telegram-text">
                                         {option.label}
                                     </span>
-                                    <p className="text-xs text-gray-500 mt-0.5">
+                                    <p className="text-xs text-telegram-hint mt-0.5">
                                         {option.description}
                                     </p>
                                 </div>
                                 <button
                                     type="button"
-                                    className="text-gray-400 hover:text-gray-900"
+                                    className="text-telegram-hint hover:text-telegram-text"
                                     title={option.description}
                                 >
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -658,7 +658,7 @@ export const AddExercise: React.FC = () => {
 
                 {/* Difficulty Field */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-3">
+                    <label className="block text-sm font-medium text-telegram-text mb-3">
                         Уровень сложности
                     </label>
                     <div className="flex gap-2">
@@ -672,10 +672,10 @@ export const AddExercise: React.FC = () => {
                                     'flex-1 py-2 px-4 rounded-xl',
                                     'border-2 transition-all duration-200',
                                     'font-medium text-sm',
-                                    'focus:outline-none focus:ring-2 focus:ring-blue-200',
+                                    'focus:outline-none focus:ring-2 focus:ring-primary/20',
                                     formData.difficulty === option.value
-                                        ? 'bg-blue-50 border-blue-500'
-                                        : 'bg-gray-100 border-transparent hover:border-blue-300',
+                                        ? 'bg-primary/10 border-primary'
+                                        : 'bg-telegram-secondary-bg border-border hover:border-primary/50',
                                     isSubmitting && 'opacity-50 cursor-not-allowed'
                                 )}
                             >
@@ -687,10 +687,10 @@ export const AddExercise: React.FC = () => {
 
                 {/* Media Upload Field */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-3">
+                    <label className="block text-sm font-medium text-telegram-text mb-3">
                         Медиа (опционально)
                     </label>
-                    <p className="text-xs text-gray-500 mb-2">
+                    <p className="text-xs text-telegram-hint mb-2">
                         GIF или видео до 10MB
                     </p>
 
@@ -703,13 +703,13 @@ export const AddExercise: React.FC = () => {
                                 'border-2 border-dashed transition-all duration-200',
                                 'cursor-pointer',
                                 touched.media && errors.media
-                                    ? 'border-red-500 bg-red-50'
-                                    : 'border-gray-300 hover:border-blue-300 hover:bg-blue-50',
+                                    ? 'border-danger bg-danger/10'
+                                    : 'border-border hover:border-primary/50 hover:bg-primary/5',
                                 isSubmitting && 'opacity-50 cursor-not-allowed'
                             )}
                         >
                             <svg
-                                className="w-10 h-10 text-gray-400 mb-2"
+                                className="w-10 h-10 text-telegram-hint mb-2"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -719,15 +719,15 @@ export const AddExercise: React.FC = () => {
                                 <polyline points="17 8 12 3 7 8" />
                                 <line x1="12" y1="3" x2="12" y2="15" />
                             </svg>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-telegram-hint">
                                 Нажмите для выбора файла
                             </p>
-                            <p className="text-xs text-gray-400 mt-1">
+                            <p className="text-xs text-telegram-hint mt-1 opacity-70">
                                 GIF, MP4, WebM, MOV
                             </p>
                         </div>
                     ) : (
-                        <div className="relative rounded-xl overflow-hidden bg-gray-100">
+                        <div className="relative rounded-xl overflow-hidden bg-telegram-secondary-bg">
                             {formData.mediaFile?.type.startsWith('video/') ? (
                                 <video
                                     src={mediaPreview}
@@ -772,7 +772,7 @@ export const AddExercise: React.FC = () => {
                     />
 
                     {touched.media && errors.media && (
-                        <p className="text-sm text-red-500 mt-2">{errors.media}</p>
+                        <p className="text-sm text-danger mt-2">{errors.media}</p>
                     )}
                 </div>
 
@@ -786,7 +786,7 @@ export const AddExercise: React.FC = () => {
                             showLabel
                             labelFormat="percent"
                         />
-                        <p className="text-xs text-gray-500 text-center">
+                        <p className="text-xs text-telegram-hint text-center">
                             Загрузка упражнения...
                         </p>
                     </div>
@@ -795,11 +795,11 @@ export const AddExercise: React.FC = () => {
                 {/* Submit Error */}
                 {submitError && (
                     <div
-                        className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl"
+                        className="p-3 bg-danger/10 border border-danger rounded-xl"
                         role="alert"
                         aria-live="polite"
                     >
-                        <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+                        <p className="text-sm text-danger">{submitError}</p>
                     </div>
                 )}
 
@@ -826,9 +826,9 @@ export const AddExercise: React.FC = () => {
             >
                 <div className="text-center py-4">
                     {/* Success Icon */}
-                    <div className="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                    <div className="w-20 h-20 mx-auto mb-4 bg-success/15 rounded-full flex items-center justify-center">
                         <svg
-                            className="w-10 h-10 text-green-600"
+                            className="w-10 h-10 text-success"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -839,14 +839,14 @@ export const AddExercise: React.FC = () => {
                     </div>
 
                     {/* Reward Banner */}
-                    <div className="bg-blue-50 rounded-xl p-4 mb-4">
+                    <div className="bg-primary/10 rounded-xl p-4 mb-4">
                         <div className="flex items-center justify-center gap-3">
                             <span className="text-3xl">🎉</span>
                             <div className="text-left">
-                                <p className="font-bold text-blue-600">
+                                <p className="font-bold text-primary">
                                     +10 XP
                                 </p>
-                                <p className="text-sm text-blue-500">
+                                <p className="text-sm text-primary opacity-80">
                                     За вклад в развитие сообщества
                                 </p>
                             </div>
@@ -854,17 +854,17 @@ export const AddExercise: React.FC = () => {
                     </div>
 
                     {/* Contributor Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full mb-4">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-warning/15 rounded-full mb-4">
                         <span className="text-xl">🏆</span>
-                        <span className="font-medium text-amber-600">
-                            Бейдж "Контрибьютор"
+                        <span className="font-medium text-warning">
+                            Бейдж &quot;Контрибьютор&quot;
                         </span>
                     </div>
 
-                    <p className="text-gray-900 mb-2">
-                        Ваше упражнение <strong>"{formData.name}"</strong> отправлено на модерацию.
+                    <p className="text-telegram-text mb-2">
+                        Ваше упражнение <strong>&quot;{formData.name}&quot;</strong> отправлено на модерацию.
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-telegram-hint">
                         Срок проверки: 24-48 часов. Вы получите уведомление о результате.
                     </p>
 
