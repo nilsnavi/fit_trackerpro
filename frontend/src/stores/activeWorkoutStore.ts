@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
 
-export type ActiveWorkoutSyncState = 'idle' | 'syncing' | 'synced' | 'error'
+export type ActiveWorkoutSyncState = 'idle' | 'syncing' | 'synced' | 'error' | 'offline-queued'
 
 export interface ActiveWorkoutRestTimerState {
     isRunning: boolean

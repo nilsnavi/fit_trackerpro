@@ -21,6 +21,7 @@ import { buildRepeatExercises } from '@features/workouts/lib/workoutModeHelpers'
 import { CurrentExerciseCard } from '@features/workouts/components'
 import { useActiveWorkoutActions, useActiveWorkoutStateSlice, useWorkoutSessionDraftStore } from '@/state/local'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
+import { WorkoutSyncIndicator } from '@features/workouts/active/components/WorkoutSyncIndicator'
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
 import { SessionNavigationPanel } from '@features/workouts/active/components/SessionNavigationPanel'
@@ -144,7 +145,7 @@ export function ActiveWorkoutPage() {
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
-    useActiveWorkoutSync({
+    const { flushNow: flushWorkoutSync } = useActiveWorkoutSync({
         workoutId,
         workout,
         draftWorkoutId,
@@ -558,6 +559,8 @@ export function ActiveWorkoutPage() {
 
     const handleOpenFinishSheet = () => {
         if (!workout) return
+        // Flush any pending debounced changes before the user confirms finish.
+        flushWorkoutSync()
         setSessionError(null)
         setFinishTagsDraft((workout.tags ?? []).join(', '))
         setIsFinishSheetOpen(true)
@@ -595,6 +598,8 @@ export function ActiveWorkoutPage() {
 
             {!isLoading && !errorMessage && workout && (
                 <>
+                    <WorkoutSyncIndicator state={syncState} />
+
                     {isActiveDraft && (
                         <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/50 dark:bg-amber-950/40 p-4 space-y-3">
                             <p className="text-sm text-gray-800 dark:text-amber-100/90">
