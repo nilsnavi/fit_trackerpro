@@ -1,24 +1,24 @@
+import { memo } from 'react'
 import { Pause, Play, RotateCcw, SkipForward } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
-import type { ActiveWorkoutRestTimerState } from '@/state/local'
+import { useActiveWorkoutActions, useActiveWorkoutStore } from '@/state/local'
+import { useRestTimer } from '@features/workouts/active/hooks/useRestTimer'
 
-interface RestTimerPanelProps {
-    restTimer: ActiveWorkoutRestTimerState
-    formatRestTime: (seconds: number) => string
-    onPause: () => void
-    onResume: () => void
-    onRestart: () => void
-    onSkip: () => void
-}
+export const RestTimerPanel = memo(function RestTimerPanel() {
+    const restTimer = useActiveWorkoutStore((s) => s.restTimer)
+    const {
+        tickRestTimer,
+        pauseRestTimer,
+        resumeRestTimer,
+        restartRestTimer,
+        skipRestTimer,
+    } = useActiveWorkoutActions()
 
-export function RestTimerPanel({
-    restTimer,
-    formatRestTime,
-    onPause,
-    onResume,
-    onRestart,
-    onSkip,
-}: RestTimerPanelProps) {
+    const { formatRestTime } = useRestTimer({
+        isRunning: restTimer.isRunning,
+        tick: tickRestTimer,
+    })
+
     if (!restTimer.isRunning && !restTimer.isPaused) {
         return null
     }
@@ -34,21 +34,23 @@ export function RestTimerPanel({
             </div>
             <div className="flex flex-wrap gap-2">
                 {restTimer.isPaused ? (
-                    <Button type="button" variant="secondary" size="sm" leftIcon={<Play className="h-4 w-4" />} onClick={onResume}>
+                    <Button type="button" variant="secondary" size="sm" leftIcon={<Play className="h-4 w-4" />} onClick={resumeRestTimer}>
                         Продолжить
                     </Button>
                 ) : (
-                    <Button type="button" variant="secondary" size="sm" leftIcon={<Pause className="h-4 w-4" />} onClick={onPause}>
+                    <Button type="button" variant="secondary" size="sm" leftIcon={<Pause className="h-4 w-4" />} onClick={pauseRestTimer}>
                         Пауза
                     </Button>
                 )}
-                <Button type="button" variant="secondary" size="sm" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={onRestart}>
+                <Button type="button" variant="secondary" size="sm" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={restartRestTimer}>
                     Сбросить
                 </Button>
-                <Button type="button" variant="secondary" size="sm" leftIcon={<SkipForward className="h-4 w-4" />} onClick={onSkip}>
+                <Button type="button" variant="secondary" size="sm" leftIcon={<SkipForward className="h-4 w-4" />} onClick={skipRestTimer}>
                     Пропустить
                 </Button>
             </div>
         </div>
     )
-}
+})
+
+RestTimerPanel.displayName = 'RestTimerPanel'

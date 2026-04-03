@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
@@ -36,7 +36,6 @@ import { ExerciseStructureEditorModal } from '@features/workouts/active/modals/E
 import { FinishWorkoutModal } from '@features/workouts/active/modals/FinishWorkoutModal'
 import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
-import { useRestTimer } from '@features/workouts/active/hooks/useRestTimer'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWorkoutStructureEditor } from '@features/workouts/active/hooks/useWorkoutStructureEditor'
 import type {
@@ -70,64 +69,6 @@ function buildSyncPayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequ
     }
 }
 
-const ActiveWorkoutSyncIndicator = memo(function ActiveWorkoutSyncIndicator() {
-    const syncState = useActiveWorkoutStore((s) => s.syncState)
-    return <WorkoutSyncIndicator state={syncState} />
-})
-
-interface ActiveCurrentExerciseCardProps {
-    exerciseName: string
-    previousBest: string
-    currentSet: string
-    remainingSets: number
-}
-
-const ActiveCurrentExerciseCard = memo(function ActiveCurrentExerciseCard({
-    exerciseName,
-    previousBest,
-    currentSet,
-    remainingSets,
-}: ActiveCurrentExerciseCardProps) {
-    const syncState = useActiveWorkoutStore((s) => s.syncState)
-
-    return (
-        <CurrentExerciseCard
-            exerciseName={exerciseName}
-            previousBest={previousBest}
-            currentSet={currentSet}
-            remainingSets={remainingSets}
-            syncState={syncState}
-        />
-    )
-})
-
-const ActiveRestTimerSection = memo(function ActiveRestTimerSection() {
-    const restTimer = useActiveWorkoutStore((s) => s.restTimer)
-    const {
-        tickRestTimer,
-        pauseRestTimer,
-        resumeRestTimer,
-        restartRestTimer,
-        skipRestTimer,
-    } = useActiveWorkoutActions()
-
-    const { formatRestTime } = useRestTimer({
-        isRunning: restTimer.isRunning,
-        tick: tickRestTimer,
-    })
-
-    return (
-        <RestTimerPanel
-            restTimer={restTimer}
-            formatRestTime={formatRestTime}
-            onPause={pauseRestTimer}
-            onResume={resumeRestTimer}
-            onRestart={restartRestTimer}
-            onSkip={skipRestTimer}
-        />
-    )
-})
-
 export function ActiveWorkoutPage() {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -143,6 +84,7 @@ export function ActiveWorkoutPage() {
     const currentSetIndex = useActiveWorkoutStore((s) => s.currentSetIndex)
     const restDefaultSeconds = useActiveWorkoutStore((s) => s.restDefaultSeconds)
     const startedAt = useActiveWorkoutStore((s) => s.startedAt)
+    const syncState = useActiveWorkoutStore((s) => s.syncState)
 
     const {
         initializeSession: initializeActiveSession,
@@ -752,7 +694,7 @@ export function ActiveWorkoutPage() {
 
             {!isLoading && !errorMessage && workout && (
                 <>
-                    <ActiveWorkoutSyncIndicator />
+                    <WorkoutSyncIndicator state={syncState} />
 
                     {isActiveDraft && (
                         <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/50 dark:bg-amber-950/40 p-4 space-y-3">
@@ -815,13 +757,14 @@ export function ActiveWorkoutPage() {
                         <p className="text-sm text-danger">{getErrorMessage(updateSessionMutation.error)}</p>
                     )}
 
-                    <ActiveRestTimerSection />
+                    <RestTimerPanel />
 
-                    <ActiveCurrentExerciseCard
+                    <CurrentExerciseCard
                         exerciseName={currentContextCard.exerciseName}
                         previousBest={currentContextCard.previousBest}
                         currentSet={currentContextCard.currentSetLabel}
                         remainingSets={currentContextCard.remainingSets}
+                        syncState={syncState}
                     />
 
                     <SessionNavigationPanel
