@@ -13,6 +13,9 @@ ENV HTTP_PROXY=$HTTP_PROXY \
 
 WORKDIR /app
 
+# Disable husky in CI/Docker — no .git dir available and hooks are not needed.
+ENV HUSKY=0
+
 # NODE_ENV must not be production during install (devDependencies include Vite).
 COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
@@ -37,6 +40,6 @@ RUN sed -i 's/\r$//' /startup.sh && chmod +x /startup.sh
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -fsS http://127.0.0.1/health || exit 1
+    CMD curl -fsS http://127.0.0.1/healthz || exit 1
 
 ENTRYPOINT ["/startup.sh"]

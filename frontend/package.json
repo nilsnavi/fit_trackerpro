@@ -10,7 +10,7 @@
     "lint:precommit": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 9999",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "prepare": "husky install ../.husky",
+    "prepare": "node -e \"if(process.env.HUSKY==='0'||process.env.CI){process.exit(0)}\" || husky",
     "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
     "test": "jest",
     "test:watch": "jest --watch",

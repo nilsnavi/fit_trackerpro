@@ -65,6 +65,7 @@ services:
       - DEBUG=false
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
       - SENTRY_DSN=${SENTRY_DSN}
+      - TELEGRAM_BOT_ENABLED=false
     healthcheck:
       test:
         [
@@ -104,9 +105,7 @@ services:
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - SENTRY_RELEASE=${SENTRY_RELEASE:-}
       - SENTRY_DIST=${SENTRY_DIST:-}
-    depends_on:
-      backend:
-        condition: service_healthy
+    # Frontend healthcheck is self-contained (/healthz) — no backend dependency needed.
     networks:
       - fittracker-network
     deploy:

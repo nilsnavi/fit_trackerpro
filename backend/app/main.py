@@ -113,7 +113,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="FitTracker Pro API",
+    title=settings.APP_NAME,
     description="""
     Backend API for FitTracker Pro Telegram Mini App
     
@@ -135,7 +135,7 @@ app = FastAPI(
     Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``, ``X-RateLimit-Reset``,
     ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and matching ``RateLimit-*`` headers.
     """,
-    version="1.0.0",
+    version=settings.APP_VERSION,
     lifespan=lifespan,
     openapi_tags=OPENAPI_TAGS,
     docs_url="/docs" if settings.DEBUG else None,
@@ -187,8 +187,8 @@ async def health_probe():
 @app.get("/", tags=[TAG_SYSTEM])
 async def root():
     return {
-        "message": "FitTracker Pro API",
-        "version": "1.0.0",
+        "message": f"{settings.APP_NAME} API",
+        "version": settings.APP_VERSION,
         "docs": "/docs"
     }
 
