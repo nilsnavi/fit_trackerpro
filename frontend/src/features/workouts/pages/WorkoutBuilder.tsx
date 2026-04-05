@@ -44,7 +44,10 @@ import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue';
 import { toast } from '@shared/stores/toastStore';
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery';
 import { cn } from '@shared/lib/cn';
-import { useTemplateEditorStore } from '@features/workouts/stores/useTemplateEditorStore';
+import {
+    useTemplateEditorActions,
+    useTemplateEditorStateSlice,
+} from '@features/workouts/stores/useTemplateEditorStore';
 import type { WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
 import {
     clearTemplateEditorDraft,
@@ -136,6 +139,9 @@ export const WorkoutBuilder: React.FC = () => {
         blocks,
         isDirty,
         validationErrors,
+    } = useTemplateEditorStateSlice();
+
+    const {
         hydrate,
         markClean,
         setName: setWorkoutName,
@@ -149,7 +155,7 @@ export const WorkoutBuilder: React.FC = () => {
         setValidationError,
         clearValidationError,
         clearValidationErrors,
-    } = useTemplateEditorStore();
+    } = useTemplateEditorActions();
 
     const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
         isDirty,

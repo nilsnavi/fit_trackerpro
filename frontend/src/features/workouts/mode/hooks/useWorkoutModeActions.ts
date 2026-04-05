@@ -3,7 +3,6 @@ import { useWorkoutModeHandlers } from './useWorkoutModeHandlers'
 import type {
     EditorWorkoutMode,
     ModeExerciseParams,
-    WorkoutModeExerciseItem,
 } from '@features/workouts/workoutMode/workoutModeEditorTypes'
 import type {
     UseWorkoutModeActionsParams,
