@@ -7,10 +7,10 @@ import { queryKeys } from '@shared/api/queryKeys'
 import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
-import { estimateTemplateDurationMinutes } from '@features/workouts/components/WorkoutTemplateCard'
+import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
+import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { Button } from '@shared/ui/Button'
-import { Modal } from '@shared/ui/Modal'
 import { getErrorMessage } from '@shared/errors'
 
 function formatExerciseDetails(exercise: {
@@ -230,38 +230,42 @@ export function WorkoutTemplateDetailPage() {
                 </Button>
             </div>
 
-            <Modal
+            <WorkoutModal
                 isOpen={isStartOptionsOpen}
                 onClose={() => setIsStartOptionsOpen(false)}
                 title="Старт тренировки"
+                description="Выберите вариант старта по шаблону."
                 size="sm"
+                bodyClassName="space-y-0"
+                footer={(
+                    <div className="grid grid-cols-1 gap-2">
+                        <Button
+                            fullWidth
+                            size="lg"
+                            onClick={handleStartNow}
+                            isLoading={isStarting}
+                            disabled={isStarting}
+                            leftIcon={<Play className="h-5 w-5" />}
+                        >
+                            Сразу начать
+                        </Button>
+                        <Button
+                            fullWidth
+                            variant="secondary"
+                            size="lg"
+                            onClick={handleEditBeforeStart}
+                            disabled={isStarting}
+                            leftIcon={<Pencil className="h-5 w-5" />}
+                        >
+                            Изменить перед стартом
+                        </Button>
+                    </div>
+                )}
             >
-                <div className="space-y-3 p-1">
-                    <p className="text-sm text-telegram-hint">
-                        Выберите вариант старта по шаблону.
-                    </p>
-                    <Button
-                        fullWidth
-                        size="lg"
-                        onClick={handleStartNow}
-                        isLoading={isStarting}
-                        disabled={isStarting}
-                        leftIcon={<Play className="h-5 w-5" />}
-                    >
-                        Сразу начать
-                    </Button>
-                    <Button
-                        fullWidth
-                        variant="secondary"
-                        size="lg"
-                        onClick={handleEditBeforeStart}
-                        disabled={isStarting}
-                        leftIcon={<Pencil className="h-5 w-5" />}
-                    >
-                        Изменить перед стартом
-                    </Button>
+                <div className="rounded-xl bg-telegram-secondary-bg px-3 py-3 text-sm text-telegram-hint">
+                    После мгновенного старта шаблон откроется как активная тренировка. Если нужен кастомный порядок или состав, сначала перейдите в режим редактирования.
                 </div>
-            </Modal>
+            </WorkoutModal>
         </div>
     )
 }

@@ -4,7 +4,6 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { Modal } from '@shared/ui/Modal'
 import { Plus, Timer } from 'lucide-react'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
@@ -34,6 +33,7 @@ import { AddTimerModal } from '@features/workouts/active/modals/AddTimerModal'
 import { ExerciseStructureEditorModal } from '@features/workouts/active/modals/ExerciseStructureEditorModal'
 import { FinishWorkoutModal } from '@features/workouts/active/modals/FinishWorkoutModal'
 import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
+import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWorkoutStructureEditor } from '@features/workouts/active/hooks/useWorkoutStructureEditor'
@@ -836,36 +836,19 @@ export function ActiveWorkoutPage() {
                             onConfirm={handleConfirmAbandonDraft}
                         />
                     )}
-                    <Modal
+                    <WorkoutConfirmModal
                         isOpen={isDeleteExerciseConfirmOpen}
                         onClose={() => {
                             setIsDeleteExerciseConfirmOpen(false)
                             setPendingDeleteExerciseIndex(null)
                         }}
+                        onConfirm={handleConfirmDeleteExercise}
                         title="Удалить упражнение?"
-                        size="sm"
-                    >
-                        <div className="space-y-4">
-                            <p className="text-sm text-telegram-text">
-                                Упражнение будет удалено из текущей тренировки.
-                            </p>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="secondary"
-                                    fullWidth
-                                    onClick={() => {
-                                        setIsDeleteExerciseConfirmOpen(false)
-                                        setPendingDeleteExerciseIndex(null)
-                                    }}
-                                >
-                                    Остаться
-                                </Button>
-                                <Button variant="emergency" fullWidth onClick={handleConfirmDeleteExercise}>
-                                    Удалить
-                                </Button>
-                            </div>
-                        </div>
-                    </Modal>
+                        description="Упражнение будет удалено из текущей тренировки."
+                        cancelLabel="Остаться"
+                        confirmLabel="Удалить"
+                        confirmVariant="emergency"
+                    />
                     {addItemKind === 'exercise' && (
                         <AddExerciseModal
                             isOpen

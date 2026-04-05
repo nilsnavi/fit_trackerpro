@@ -116,7 +116,7 @@ export function useProfile(): UseProfileReturn {
 
     const profile = profileQuery.data ?? null
     const stats = statsQuery.data ?? null
-    const coachAccesses = coachAccessQuery.data ?? []
+    const coachAccesses = useMemo(() => coachAccessQuery.data ?? [], [coachAccessQuery.data])
 
     const isLoading =
         profileQuery.isPending || statsQuery.isPending || coachAccessQuery.isPending

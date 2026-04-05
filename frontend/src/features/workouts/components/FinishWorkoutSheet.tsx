@@ -1,5 +1,4 @@
-import { Button } from '@shared/ui/Button'
-import { Modal } from '@shared/ui/Modal'
+import { WorkoutModal } from './WorkoutModal'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
 
 interface FinishWorkoutSheetProps {
@@ -28,8 +27,25 @@ export function FinishWorkoutSheet({
     onChangeTagsDraft,
 }: FinishWorkoutSheetProps) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Завершение тренировки" size="md">
-            <div className="space-y-4">
+        <WorkoutModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Завершение тренировки"
+            description="Проверьте итог сессии перед сохранением результата в историю."
+            size="md"
+            bodyClassName="space-y-4"
+            secondaryAction={{
+                label: 'Вернуться к сессии',
+                onClick: onClose,
+                variant: 'secondary',
+                disabled: isPending,
+            }}
+            primaryAction={{
+                label: isPending ? 'Сохраняем…' : 'Подтвердить завершение',
+                onClick: onConfirm,
+                disabled: isPending,
+            }}
+        >
                 <div className="rounded-lg bg-telegram-bg/60 p-3 space-y-2">
                     <div className="flex items-center justify-between text-sm">
                         <span className="text-telegram-hint">Длительность</span>
@@ -74,15 +90,6 @@ export function FinishWorkoutSheet({
                     <p className="text-sm text-danger">{errorMessage}</p>
                 )}
 
-                <div className="flex gap-2">
-                    <Button variant="secondary" fullWidth onClick={onClose} disabled={isPending}>
-                        Вернуться к сессии
-                    </Button>
-                    <Button fullWidth disabled={isPending} onClick={onConfirm}>
-                        {isPending ? 'Сохраняем…' : 'Подтвердить завершение'}
-                    </Button>
-                </div>
-            </div>
-        </Modal>
+        </WorkoutModal>
     )
 }

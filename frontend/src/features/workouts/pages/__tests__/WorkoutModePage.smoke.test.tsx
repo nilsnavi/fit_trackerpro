@@ -57,7 +57,7 @@ jest.mock('@shared/offline/syncQueue', () => ({
 // Avoid rendering SVG icons crashing jsdom
 jest.mock('lucide-react', () => {
     const React = require('react')
-    const Icon = (_props: object) => React.createElement('span')
+    const Icon = () => React.createElement('span')
     return new Proxy({}, { get: () => Icon })
 })
 

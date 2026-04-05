@@ -121,6 +121,7 @@ const validateFile = (file: File | null): string | undefined => {
 
 export const AddExercise: React.FC = () => {
     const tg = useTelegramWebApp()
+    const { isTelegram, showBackButton, hideBackButton, hapticFeedback } = tg
     const createCustomMutation = useCreateCustomExerciseMutation()
 
     // Form state
@@ -150,15 +151,15 @@ export const AddExercise: React.FC = () => {
 
     // Setup Telegram back button
     useEffect(() => {
-        if (tg.isTelegram) {
-            tg.showBackButton(() => {
+        if (isTelegram) {
+            showBackButton(() => {
                 window.history.back()
             })
         }
         return () => {
-            tg.hideBackButton()
+            hideBackButton()
         }
-    }, [tg.isTelegram, tg.showBackButton, tg.hideBackButton])
+    }, [isTelegram, showBackButton, hideBackButton])
 
     // Available muscles based on category
     const availableMuscles = formData.category && formData.category !== 'all'
@@ -241,7 +242,7 @@ export const AddExercise: React.FC = () => {
 
     const handleEquipmentToggle = (equipment: EquipmentType) => {
         setSubmitError(null);
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFormData(prev => ({
             ...prev,
             equipment: prev.equipment.includes(equipment)
@@ -253,7 +254,7 @@ export const AddExercise: React.FC = () => {
 
     const handleMuscleToggle = (muscle: string) => {
         setSubmitError(null);
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFormData(prev => ({
             ...prev,
             targetMuscles: prev.targetMuscles.includes(muscle)
@@ -264,7 +265,7 @@ export const AddExercise: React.FC = () => {
     };
 
     const handleRiskToggle = (risk: RiskType) => {
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFormData(prev => ({
             ...prev,
             risks: prev.risks.includes(risk)
@@ -274,7 +275,7 @@ export const AddExercise: React.FC = () => {
     };
 
     const handleDifficultyChange = (difficulty: DifficultyLevel) => {
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFormData(prev => ({ ...prev, difficulty }));
     };
 
@@ -384,12 +385,12 @@ export const AddExercise: React.FC = () => {
 
             // Show success modal
             setShowSuccessModal(true);
-            tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
+            hapticFeedback({ type: 'notification', notificationType: 'success' })
 
         } catch (error) {
             console.error('Submit error:', error);
             setSubmitError('Не удалось отправить упражнение. Попробуйте позже.');
-            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
+            hapticFeedback({ type: 'notification', notificationType: 'error' })
             setUploadProgress(0);
         } finally {
             setIsSubmitting(false);

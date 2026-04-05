@@ -1,5 +1,4 @@
-import { Button } from '@shared/ui/Button'
-import { Modal } from '@shared/ui/Modal'
+import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 
 interface AbandonWorkoutConfirmModalProps {
     isOpen: boolean
@@ -13,20 +12,15 @@ export function AbandonWorkoutConfirmModal({
     onConfirm,
 }: AbandonWorkoutConfirmModalProps) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Отменить тренировку?" size="sm">
-            <div className="space-y-4">
-                <p className="text-sm text-telegram-text">
-                    Текущая сессия будет отменена локально: черновик и активное состояние очистятся.
-                </p>
-                <div className="flex gap-2">
-                    <Button variant="secondary" fullWidth onClick={onClose}>
-                        Продолжить тренировку
-                    </Button>
-                    <Button variant="emergency" fullWidth onClick={onConfirm}>
-                        Подтвердить отмену
-                    </Button>
-                </div>
-            </div>
-        </Modal>
+        <WorkoutConfirmModal
+            isOpen={isOpen}
+            onClose={onClose}
+            onConfirm={onConfirm}
+            title="Отменить тренировку?"
+            description="Текущая сессия будет отменена локально: черновик и активное состояние очистятся."
+            cancelLabel="Продолжить тренировку"
+            confirmLabel="Подтвердить отмену"
+            confirmVariant="emergency"
+        />
     )
 }

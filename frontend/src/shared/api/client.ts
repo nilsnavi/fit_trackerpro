@@ -1,9 +1,11 @@
-import axios, { AxiosInstance, isAxiosError } from 'axios'
+import axios, { AxiosInstance, isAxiosError, type InternalAxiosRequestConfig } from 'axios'
 import * as Sentry from '@sentry/react'
 import { isSentryEnabled } from '@app/sentry'
 import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, normalizeError } from '@shared/errors'
 import { getAuthTokens, useAuthStore } from '@/stores/authStore'
+
+type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean }
 
 class ApiService {
     private client: AxiosInstance
@@ -43,18 +45,20 @@ class ApiService {
             (response) => response,
             async (error: unknown) => {
                 const clientError = normalizeError(error)
-                const originalConfig = isAxiosError(error) ? error.config : undefined
+                const originalConfig = isAxiosError(error)
+                    ? (error.config as RetryableRequestConfig | undefined)
+                    : undefined
 
                 // Refresh-once strategy: if access token expired, try refresh token and retry request.
                 if (
                     clientError.status === 401 &&
                     originalConfig &&
-                    !(originalConfig as any)._retry
+                    !originalConfig._retry
                 ) {
                     const { refreshToken } = getAuthTokens()
                     if (refreshToken) {
                         try {
-                            (originalConfig as any)._retry = true
+                            originalConfig._retry = true
                             const res = await this.client.post<{
                                 access_token: string
                                 refresh_token: string

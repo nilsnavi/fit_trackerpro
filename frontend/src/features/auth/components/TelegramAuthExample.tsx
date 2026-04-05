@@ -17,6 +17,7 @@ interface AuthState {
 
 export function TelegramAuthExample() {
     const tg = useTelegramWebApp()
+    const { isTelegram, init, getTheme, webApp } = tg
     const [authState, setAuthState] = useState<AuthState>({
         isAuthenticated: false,
         isLoading: false,
@@ -27,16 +28,16 @@ export function TelegramAuthExample() {
 
     // Initialize WebApp on mount
     useEffect(() => {
-        if (tg.isTelegram) {
-            tg.init()
+        if (isTelegram) {
+            init()
 
             // Apply Telegram theme
-            const theme = tg.getTheme()
+            const theme = getTheme()
             if (theme) {
                 applyTheme(theme)
             }
         }
-    }, [tg.isTelegram, tg.init, tg.getTheme])
+    }, [isTelegram, init, getTheme])
 
     // Apply Telegram theme colors to CSS variables
     const applyTheme = (theme: ThemeParams) => {
@@ -61,7 +62,7 @@ export function TelegramAuthExample() {
 
     // Authenticate with backend
     const handleAuthenticate = async () => {
-        if (!tg.webApp) {
+        if (!webApp) {
             setAuthState(prev => ({
                 ...prev,
                 error: 'Not running in Telegram WebApp'

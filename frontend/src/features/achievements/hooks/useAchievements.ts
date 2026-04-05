@@ -2,7 +2,7 @@
  * useAchievements — серверные данные достижений через TanStack Query;
  * подписки на разблокировки и смена категории списка остаются в хуке (UI-слой).
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { queryKeys } from '@shared/api/queryKeys'
@@ -96,7 +96,7 @@ export function useAchievements(): UseAchievementsReturn {
         },
     })
 
-    const achievements = achievementsQuery.data?.items ?? []
+    const achievements = useMemo(() => achievementsQuery.data?.items ?? [], [achievementsQuery.data?.items])
     const userStats = userStatsQuery.data ?? null
 
     const fetchAchievements = useCallback((category?: AchievementCategory) => {

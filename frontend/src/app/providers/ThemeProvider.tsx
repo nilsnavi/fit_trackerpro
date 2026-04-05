@@ -14,26 +14,28 @@ const ThemeContext = createContext<ThemeProviderValue | null>(null)
 export function ThemeProvider({ children }: PropsWithChildren) {
     const themeState = useTheme()
     const { isTelegram, colorScheme } = useTelegramContext()
+    const { theme, resolvedTheme, setTheme, toggleTheme } = themeState
 
     useEffect(() => {
         if (isTelegram && colorScheme) {
-            themeState.setTheme(colorScheme)
+            setTheme(colorScheme)
         }
-    }, [isTelegram, colorScheme, themeState.setTheme])
+    }, [isTelegram, colorScheme, setTheme])
 
     const value = useMemo(
         () => ({
-            theme: themeState.theme,
-            resolvedTheme: themeState.resolvedTheme,
-            setTheme: themeState.setTheme,
-            toggleTheme: themeState.toggleTheme,
+            theme,
+            resolvedTheme,
+            setTheme,
+            toggleTheme,
         }),
-        [themeState],
+        [theme, resolvedTheme, setTheme, toggleTheme],
     )
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useThemeContext() {
     const context = useContext(ThemeContext)
     if (!context) {

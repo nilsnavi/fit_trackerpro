@@ -2,7 +2,11 @@ import {
     mapEditorExercisesToTemplate,
     mapEditorExercisesToCompleted,
 } from '../workoutModeEditorMappers'
-import type { WorkoutModeExerciseItem } from '@features/workouts/workoutMode/workoutModeEditorTypes'
+import type {
+    FunctionalExerciseParams,
+    StrengthExerciseParams,
+    WorkoutModeExerciseItem,
+} from '@features/workouts/workoutMode/workoutModeEditorTypes'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -91,9 +95,9 @@ describe('mapEditorExercisesToTemplate()', () => {
     })
 
     it('maps functional with duration (no reps)', () => {
-        const item = functionalItem()
-        ;(item.params as any).reps = undefined
-        ;(item.params as any).durationSeconds = 40
+        const item = functionalItem({
+            params: { rounds: 5, durationSeconds: 40, restSeconds: 30, note: '30с отдых' },
+        })
         const [ex] = mapEditorExercisesToTemplate([item])
         expect(ex.duration).toBe(40)
         expect(ex.reps).toBeUndefined()
@@ -120,15 +124,17 @@ describe('mapEditorExercisesToTemplate()', () => {
     })
 
     it('omits weight when undefined for strength', () => {
-        const item = strengthItem()
-        ;(item.params as any).weight = undefined
+        const item = strengthItem({
+            params: { sets: 4, reps: 8, restSeconds: 120, note: 'Медленно' } satisfies StrengthExerciseParams,
+        })
         const [ex] = mapEditorExercisesToTemplate([item])
         expect(ex.weight).toBeUndefined()
     })
 
     it('omits note when undefined', () => {
-        const item = strengthItem()
-        ;(item.params as any).note = undefined
+        const item = strengthItem({
+            params: { sets: 4, reps: 8, weight: 80, restSeconds: 120 } satisfies StrengthExerciseParams,
+        })
         const [ex] = mapEditorExercisesToTemplate([item])
         expect(ex.notes).toBeUndefined()
     })
@@ -176,9 +182,9 @@ describe('mapEditorExercisesToCompleted()', () => {
     })
 
     it('creates rounds sets for functional (duration variant)', () => {
-        const item = functionalItem()
-        ;(item.params as any).reps = undefined
-        ;(item.params as any).durationSeconds = 40
+        const item = functionalItem({
+            params: { rounds: 5, durationSeconds: 40, restSeconds: 30, note: '30с отдых' } satisfies FunctionalExerciseParams,
+        })
         const [ex] = mapEditorExercisesToCompleted([item])
         expect(ex.sets_completed[0].duration).toBe(40)
         expect(ex.sets_completed[0].reps).toBeUndefined()
