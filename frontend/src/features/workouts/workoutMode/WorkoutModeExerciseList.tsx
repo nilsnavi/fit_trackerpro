@@ -71,7 +71,7 @@ const EmptyExercises = memo(function EmptyExercises({ onAdd }: { onAdd: () => vo
                     Добавьте упражнения, чтобы составить тренировку
                 </p>
             </div>
-            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />} onClick={onAdd}>
+            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />} onClick={onAdd} data-testid="add-exercise-btn">
                 Добавить упражнение
             </Button>
         </div>

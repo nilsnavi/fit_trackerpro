@@ -796,7 +796,7 @@ export function ActiveWorkoutPage() {
                         </div>
                     </div>
 
-                    <Button type="button" className="w-full" disabled={completeMutation.isPending} onClick={handleOpenFinishSheet}>
+                    <Button type="button" className="w-full" data-testid="finish-workout-btn" disabled={completeMutation.isPending} onClick={handleOpenFinishSheet}>
                         Завершить тренировку
                     </Button>
 
