@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { getErrorMessage } from '@shared/errors'
+import { toast } from '@shared/stores/toastStore'
 import { queryKeys } from '@shared/api/queryKeys'
 import { authApi } from '@features/profile/api/authApi'
 import { usersApi } from '@shared/api/domains/usersApi'
@@ -61,7 +62,7 @@ export interface UseProfileReturn {
 
 export function useProfile(): UseProfileReturn {
     const queryClient = useQueryClient()
-    const { hapticFeedback, showAlert } = useTelegramWebApp()
+    const { hapticFeedback } = useTelegramWebApp()
 
     const profileQuery = useQuery({
         queryKey: queryKeys.profile.me,
@@ -134,11 +135,11 @@ export function useProfile(): UseProfileReturn {
             } catch (err) {
                 console.error('Failed to update profile:', err)
                 hapticFeedback({ type: 'notification', notificationType: 'error' })
-                await showAlert(`Не удалось сохранить профиль: ${getErrorMessage(err)}`)
+                toast.error(`Не удалось сохранить профиль: ${getErrorMessage(err)}`)
                 throw err
             }
         },
-        [updateProfileMutation, hapticFeedback, showAlert],
+        [updateProfileMutation, hapticFeedback],
     )
 
     const updateSettings = useCallback(
@@ -149,11 +150,11 @@ export function useProfile(): UseProfileReturn {
             } catch (err) {
                 console.error('Failed to update settings:', err)
                 hapticFeedback({ type: 'notification', notificationType: 'error' })
-                await showAlert(`Не удалось сохранить настройки: ${getErrorMessage(err)}`)
+                toast.error(`Не удалось сохранить настройки: ${getErrorMessage(err)}`)
                 throw err
             }
         },
-        [updateSettingsMutation, hapticFeedback, showAlert],
+        [updateSettingsMutation, hapticFeedback],
     )
 
     const updateWeight = useCallback(
