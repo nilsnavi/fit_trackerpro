@@ -122,7 +122,7 @@ class Settings(BaseSettings):
                 "Disable this if another bot instance already runs polling elsewhere; WebApp auth still works."
             )
         ),
-    ] = True
+    ] = False
 
     SECRET_KEY: Annotated[
         str,
@@ -162,10 +162,10 @@ class Settings(BaseSettings):
         Field(
             description=(
                 "Create database tables on startup (Base.metadata.create_all). "
-                "Intended for local development only; keep false in production."
+                "Intended for local development only; must not be enabled in production."
             )
         ),
-    ] = True
+    ] = False
 
     # --- Optional: email ---
     SMTP_HOST: str | None = None
@@ -346,6 +346,12 @@ class Settings(BaseSettings):
 
         if self.TELEGRAM_WEBAPP_URL.strip() == _DEV_TELEGRAM_WEBAPP_URL:
             errors.append("TELEGRAM_WEBAPP_URL must be set to your public Mini App URL in production")
+
+        if self.AUTO_CREATE_DB_SCHEMA:
+            errors.append(
+                "AUTO_CREATE_DB_SCHEMA must not be enabled in production; "
+                "run Alembic migrations instead"
+            )
 
         if errors:
             raise ValueError("; ".join(errors))

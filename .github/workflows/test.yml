@@ -236,3 +236,25 @@ jobs:
           flags: backend
           name: backend-coverage
 
+  docker-smoke:
+    name: Docker Smoke (build only)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: |
+          docker build \
+            --file backend/Dockerfile \
+            --tag fittracker-backend:smoke \
+            ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --file frontend/Dockerfile \
+            --tag fittracker-frontend:smoke \
+            ./frontend
+
