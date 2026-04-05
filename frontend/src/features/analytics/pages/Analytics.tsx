@@ -63,7 +63,7 @@ const OneRMCalculator = lazy(() => import('@features/analytics/components/OneRMC
 
 type PeriodType = '7d' | '30d' | '90d' | 'all' | 'custom';
 type ViewTab = 'chart' | 'calculator';
-type AnalyticsScreen = 'overview' | 'exercises' | 'recovery';
+export type AnalyticsScreen = 'overview' | 'exercises' | 'recovery';
 
 interface Exercise {
     id: number;
@@ -802,9 +802,16 @@ const ProgressScreenTabs: React.FC = () => {
 // Main Component
 // ============================================
 
-const Analytics: React.FC = () => {
+interface AnalyticsProps {
+    forcedScreen?: AnalyticsScreen;
+}
+
+const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
     const { pathname } = useLocation()
-    const screen = useMemo(() => resolveAnalyticsScreen(pathname), [pathname])
+    const screen = useMemo(
+        () => forcedScreen ?? resolveAnalyticsScreen(pathname),
+        [forcedScreen, pathname],
+    )
     const isOverviewScreen = screen === 'overview'
     const isExerciseScreen = screen === 'exercises'
     const isRecoveryScreen = screen === 'recovery'

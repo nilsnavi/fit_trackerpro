@@ -45,9 +45,17 @@ jest.mock('@features/health/pages/HealthPage', () => {
     const React = require('react')
     return { HealthPage: () => React.createElement('div', null, 'Health') }
 })
-jest.mock('@features/analytics/pages/AnalyticsPage', () => {
+jest.mock('@features/analytics/pages/ProgressOverviewPage', () => {
     const React = require('react')
-    return { default: () => React.createElement('div', null, 'Analytics') }
+    return { default: () => React.createElement('div', null, 'Progress overview') }
+})
+jest.mock('@features/analytics/pages/ExerciseProgressPage', () => {
+    const React = require('react')
+    return { default: () => React.createElement('div', null, 'Exercise progress') }
+})
+jest.mock('@features/analytics/pages/RecoveryPage', () => {
+    const React = require('react')
+    return { default: () => React.createElement('div', null, 'Recovery') }
 })
 jest.mock('@features/exercises/pages/Catalog', () => {
     const React = require('react')
