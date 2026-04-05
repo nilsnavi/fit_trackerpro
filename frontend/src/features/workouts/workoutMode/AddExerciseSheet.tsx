@@ -44,6 +44,10 @@ type EquipmentFilter = (typeof EQUIPMENT_FILTERS)[number]['id']
 const INITIAL_VISIBLE_ITEMS = 120
 const LOAD_MORE_STEP = 120
 const QUICK_PICK_LIMIT = 6
+const SEARCH_DEBOUNCE_MS = 250
+const VIRTUALIZATION_THRESHOLD = 80
+const EXERCISE_ROW_HEIGHT = 72
+const VIRTUAL_OVERSCAN_ROWS = 6
 
 const MODE_SUGGESTED_CATEGORIES: Record<EditorWorkoutMode, CategoryFilter[]> = {
     strength: ['strength', 'core'],
@@ -119,28 +123,43 @@ function CatalogStep({ mode, onSelect }: { mode: EditorWorkoutMode; onSelect: (e
     const [category, setCategory] = useState<CategoryFilter>('all')
     const [equipment, setEquipment] = useState<EquipmentFilter>('all')
     const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
+    const [scrollTop, setScrollTop] = useState(0)
+    const [viewportHeight, setViewportHeight] = useState(0)
+    const listContainerRef = useRef<HTMLDivElement | null>(null)
+    const searchCacheRef = useRef<{
+        query: string
+        source: Array<{
+            ex: CatalogExercise
+            nameLower: string
+            categoryLower: string | undefined
+            equipmentList: EquipmentType[]
+            musclesLower: string[]
+        }>
+        result: Array<{
+            ex: CatalogExercise
+            nameLower: string
+            categoryLower: string | undefined
+            equipmentList: EquipmentType[]
+            musclesLower: string[]
+        }>
+    } | null>(null)
 
-    const debounceRef = useRef<number | null>(null)
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDebouncedSearch(search)
+        }, SEARCH_DEBOUNCE_MS)
 
-    const handleSearchChange = useCallback((value: string) => {
-        setSearch(value)
-        if (debounceRef.current !== null) {
-            window.clearTimeout(debounceRef.current)
+        return () => {
+            window.clearTimeout(timeoutId)
         }
-        debounceRef.current = window.setTimeout(() => setDebouncedSearch(value), 300)
-    }, [])
-
-    useEffect(
-        () => () => {
-            if (debounceRef.current !== null) {
-                window.clearTimeout(debounceRef.current)
-            }
-        },
-        [],
-    )
+    }, [search])
 
     useEffect(() => {
         setVisibleCount(INITIAL_VISIBLE_ITEMS)
+        setScrollTop(0)
+        if (listContainerRef.current) {
+            listContainerRef.current.scrollTop = 0
+        }
     }, [debouncedSearch, category, equipment])
 
     const indexedExercises = useMemo(
@@ -155,19 +174,39 @@ function CatalogStep({ mode, onSelect }: { mode: EditorWorkoutMode; onSelect: (e
         [exercises],
     )
 
+    const staticFiltered = useMemo(
+        () =>
+            indexedExercises.filter(({ categoryLower, equipmentList }) => {
+                const matchCat = category === 'all' || categoryLower === category
+                const matchEquip = equipment === 'all' || equipmentList.includes(equipment as EquipmentType)
+                return matchCat && matchEquip
+            }),
+        [indexedExercises, category, equipment],
+    )
+
+    useEffect(() => {
+        searchCacheRef.current = null
+    }, [staticFiltered])
+
     const exerciseLookup = useMemo(() => getExerciseLookup(exercises), [exercises])
 
     const filtered = useMemo(() => {
         const q = debouncedSearch.trim().toLowerCase()
-        return indexedExercises
-            .filter(({ nameLower, musclesLower, categoryLower, equipmentList }) => {
-                const matchSearch = !q || nameLower.includes(q) || musclesLower.some((m) => m.includes(q))
-                const matchCat = category === 'all' || categoryLower === category
-                const matchEquip = equipment === 'all' || equipmentList.includes(equipment as EquipmentType)
-                return matchSearch && matchCat && matchEquip
-            })
-            .map(({ ex }) => ex)
-    }, [indexedExercises, debouncedSearch, category, equipment])
+        if (!q) {
+            searchCacheRef.current = null
+            return staticFiltered.map(({ ex }) => ex)
+        }
+
+        const cache = searchCacheRef.current
+        const canNarrowFromCache = Boolean(cache && cache.source === staticFiltered && q.startsWith(cache.query))
+        const source = canNarrowFromCache && cache ? cache.result : staticFiltered
+        const result = source.filter(({ nameLower, musclesLower }) => {
+            return nameLower.includes(q) || musclesLower.some((m) => m.includes(q))
+        })
+
+        searchCacheRef.current = { query: q, source: staticFiltered, result }
+        return result.map(({ ex }) => ex)
+    }, [staticFiltered, debouncedSearch])
 
     const favoriteExercises = useMemo(() => {
         const counts = new Map<string, number>()
@@ -229,14 +268,68 @@ function CatalogStep({ mode, onSelect }: { mode: EditorWorkoutMode; onSelect: (e
 
     const visibleExercises = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount])
     const canLoadMore = visibleCount < filtered.length
+    const shouldVirtualize = !isLoading && visibleExercises.length >= VIRTUALIZATION_THRESHOLD
+
+    const virtualWindow = useMemo(() => {
+        if (!shouldVirtualize) {
+            return {
+                startIndex: 0,
+                endIndex: visibleExercises.length,
+                topSpacerHeight: 0,
+                bottomSpacerHeight: 0,
+            }
+        }
+
+        const safeViewportHeight = Math.max(viewportHeight, EXERCISE_ROW_HEIGHT)
+        const startIndex = Math.max(Math.floor(scrollTop / EXERCISE_ROW_HEIGHT) - VIRTUAL_OVERSCAN_ROWS, 0)
+        const visibleRows = Math.ceil(safeViewportHeight / EXERCISE_ROW_HEIGHT) + VIRTUAL_OVERSCAN_ROWS * 2
+        const endIndex = Math.min(visibleExercises.length, startIndex + visibleRows)
+        const topSpacerHeight = startIndex * EXERCISE_ROW_HEIGHT
+        const bottomSpacerHeight = Math.max(0, (visibleExercises.length - endIndex) * EXERCISE_ROW_HEIGHT)
+
+        return { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight }
+    }, [shouldVirtualize, visibleExercises.length, viewportHeight, scrollTop])
+
+    const renderedExercises = useMemo(() => {
+        if (!shouldVirtualize) {
+            return visibleExercises
+        }
+
+        return visibleExercises.slice(virtualWindow.startIndex, virtualWindow.endIndex)
+    }, [shouldVirtualize, visibleExercises, virtualWindow.startIndex, virtualWindow.endIndex])
+
+    useEffect(() => {
+        if (!listContainerRef.current) {
+            return
+        }
+
+        const element = listContainerRef.current
+        const updateHeight = () => setViewportHeight(element.clientHeight)
+        updateHeight()
+
+        const resizeObserver = new ResizeObserver(updateHeight)
+        resizeObserver.observe(element)
+
+        return () => {
+            resizeObserver.disconnect()
+        }
+    }, [])
 
     const handleClearSearch = useCallback(() => {
         setSearch('')
         setDebouncedSearch('')
     }, [])
 
+    const handleSearchChange = useCallback((value: string) => {
+        setSearch(value)
+    }, [])
+
     const handleLoadMore = useCallback(() => {
         setVisibleCount((prev) => prev + LOAD_MORE_STEP)
+    }, [])
+
+    const handleListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+        setScrollTop(event.currentTarget.scrollTop)
     }, [])
 
     if (isError) {
@@ -322,7 +415,11 @@ function CatalogStep({ mode, onSelect }: { mode: EditorWorkoutMode; onSelect: (e
                 </div>
             )}
 
-            <div className="max-h-[55vh] overflow-y-auto space-y-1.5 pr-1">
+            <div
+                ref={listContainerRef}
+                className="max-h-[55vh] overflow-y-auto space-y-1.5 pr-1"
+                onScroll={handleListScroll}
+            >
                 {isLoading &&
                     Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
 
@@ -340,8 +437,12 @@ function CatalogStep({ mode, onSelect }: { mode: EditorWorkoutMode; onSelect: (e
                     </div>
                 )}
 
+                {!isLoading && shouldVirtualize && virtualWindow.topSpacerHeight > 0 && (
+                    <div aria-hidden style={{ height: virtualWindow.topSpacerHeight }} />
+                )}
+
                 {!isLoading &&
-                    visibleExercises.map((ex) => (
+                    renderedExercises.map((ex) => (
                         <button
                             key={ex.id}
                             type="button"
@@ -356,6 +457,10 @@ function CatalogStep({ mode, onSelect }: { mode: EditorWorkoutMode; onSelect: (e
                             </div>
                         </button>
                     ))}
+
+                {!isLoading && shouldVirtualize && virtualWindow.bottomSpacerHeight > 0 && (
+                    <div aria-hidden style={{ height: virtualWindow.bottomSpacerHeight }} />
+                )}
 
                 {!isLoading && canLoadMore && (
                     <div className="sticky bottom-0 pt-2">
