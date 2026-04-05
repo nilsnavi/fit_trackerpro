@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Plus, ChevronRight } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
+import { toast } from '@shared/stores/toastStore'
 
 type MetricType = 'weight' | 'steps' | 'heart_rate' | 'sleep' | 'water' | 'calories'
 
@@ -42,10 +43,7 @@ export function HealthPage() {
     const handleQuickLog = (type: 'weight' | 'water') => {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
 
-        // Show input dialog using Telegram API
-        if (tg.isTelegram) {
-            tg.showAlert(`Введите ${type === 'weight' ? 'вес' : 'количество воды'}`)
-        }
+        toast.info(`Введите ${type === 'weight' ? 'вес' : 'количество воды'}`)
     }
 
     return (

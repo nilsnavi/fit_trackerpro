@@ -2,6 +2,7 @@ import { AlertTriangle, Phone, X } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@shared/lib/cn'
 import { useTelegram } from '@shared/hooks/useTelegram'
+import { toast } from '@shared/stores/toastStore'
 
 interface EmergencyButtonProps {
     className?: string
@@ -20,7 +21,7 @@ export function EmergencyButton({ className }: EmergencyButtonProps) {
         hapticFeedback.error()
         // Here you would trigger the actual emergency action
         // e.g., call API, send Telegram message, etc.
-        alert('Вызов экстренной помощи!')
+        toast.error('Вызов экстренной помощи отправлен')
         setShowConfirm(false)
     }
 

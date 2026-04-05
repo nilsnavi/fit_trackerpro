@@ -214,7 +214,13 @@ export function useActiveWorkoutSync({
                     inFlightRef.current = false
                     updateSyncStateRef.current('error')
                     hadSyncIssueRef.current = true
-                    toast.retry('Ошибка синхронизации. Повторим автоматически')
+                    toast.retry('Ошибка синхронизации. Повторим автоматически', () => {
+                        if (retryTimerRef.current !== null) {
+                            window.clearTimeout(retryTimerRef.current)
+                            retryTimerRef.current = null
+                        }
+                        executeSyncRef.current()
+                    })
                     scheduleRetry()
                 },
             },

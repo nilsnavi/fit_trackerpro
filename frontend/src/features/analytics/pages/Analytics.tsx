@@ -48,6 +48,7 @@ import { queryKeys } from '@shared/api/queryKeys';
 import { analyticsApi } from '@shared/api/domains/analyticsApi';
 import { getErrorMessage } from '@shared/errors';
 import { useRealAnalytics } from '@shared/config/runtime';
+import { toast } from '@shared/stores/toastStore';
 import { buildMockAnalytics } from '@features/analytics/mocks/analyticsMock';
 import {
     buildChartDataFromProgress,
@@ -680,9 +681,10 @@ const ExportMenu: React.FC<{
             // Fallback: copy to clipboard
             try {
                 await navigator.clipboard.writeText(csv)
-                alert('Данные скопированы в буфер обмена')
+                toast.success('Данные скопированы в буфер обмена')
             } catch (err) {
                 console.error('Failed to copy:', err)
+                toast.error('Не удалось скопировать данные в буфер обмена')
             }
         }
 

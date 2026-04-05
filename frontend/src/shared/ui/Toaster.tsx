@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertCircle, CheckCircle2, Info, RefreshCw, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Info, RefreshCw, UploadCloud, X } from 'lucide-react'
 import { useToastStore } from '@shared/stores/toastStore'
 import type { ToastKind } from '@shared/stores/toastStore'
 
@@ -23,9 +23,28 @@ const KIND_CONFIG: Record<ToastKind, { icon: React.ReactNode; className: string 
         icon: <RefreshCw className="h-4 w-4 shrink-0" />,
         className: 'bg-amber-500 text-white',
     },
+    sync: {
+        icon: <UploadCloud className="h-4 w-4 shrink-0" />,
+        className: 'bg-primary-600 text-white',
+    },
 }
 
-function ToastItem({ id, kind, message, duration }: { id: string; kind: ToastKind; message: string; duration?: number }) {
+function ToastItem({
+    id,
+    kind,
+    message,
+    duration,
+    action,
+}: {
+    id: string
+    kind: ToastKind
+    message: string
+    duration?: number
+    action?: {
+        label: string
+        onClick: () => void
+    }
+}) {
     const dismiss = useToastStore((s) => s.dismiss)
     const ms = duration === 0 ? null : (duration ?? DEFAULT_DURATION_MS)
 
@@ -45,6 +64,18 @@ function ToastItem({ id, kind, message, duration }: { id: string; kind: ToastKin
         >
             {icon}
             <span className="flex-1">{message}</span>
+            {action ? (
+                <button
+                    type="button"
+                    className="rounded-md border border-white/30 px-2 py-0.5 text-xs font-semibold text-white hover:bg-white/10"
+                    onClick={() => {
+                        action.onClick()
+                        dismiss(id)
+                    }}
+                >
+                    {action.label}
+                </button>
+            ) : null}
             <button
                 type="button"
                 aria-label="Закрыть уведомление"
