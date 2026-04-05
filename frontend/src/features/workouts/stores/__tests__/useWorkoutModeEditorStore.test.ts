@@ -1,4 +1,8 @@
-import { useWorkoutModeEditorStore } from '../useWorkoutModeEditorStore'
+import {
+    selectExerciseById,
+    updateExerciseParams,
+    useWorkoutModeEditorStore,
+} from '../useWorkoutModeEditorStore'
 import type { WorkoutModeExerciseItem } from '@features/workouts/workoutMode/workoutModeEditorTypes'
 
 const store = () => useWorkoutModeEditorStore.getState()
@@ -55,6 +59,38 @@ describe('validate()', () => {
         expect(ok).toBe(true)
         expect(store().validationErrors.title).toBeUndefined()
         expect(store().validationErrors.exercises).toBeUndefined()
+    })
+
+    it('returns false for cardio exercise without duration and distance', () => {
+        store().setTitle('Кардио блок')
+        store().addExercise({
+            id: 'cardio-1',
+            exerciseId: 2,
+            name: 'Sprint',
+            mode: 'cardio',
+            params: { durationSeconds: 0, distance: 0 },
+        })
+
+        const ok = store().validate()
+
+        expect(ok).toBe(false)
+        expect(store().validationErrors.exercises).toContain('длительность больше 0 или дистанцию больше 0')
+    })
+
+    it('returns false for yoga exercise with non-positive duration', () => {
+        store().setTitle('Йога блок')
+        store().addExercise({
+            id: 'yoga-1',
+            exerciseId: 3,
+            name: 'Tree pose',
+            mode: 'yoga',
+            params: { durationSeconds: 0 },
+        })
+
+        const ok = store().validate()
+
+        expect(ok).toBe(false)
+        expect(store().validationErrors.exercises).toContain('длительность больше 0 сек')
     })
 })
 
@@ -157,6 +193,27 @@ describe('reset()', () => {
         expect(store().exercises).toHaveLength(0)
         expect(store().isDirty).toBe(false)
         expect(store().validationErrors).toEqual({})
+    })
+})
+
+// ── selector/helper exports ────────────────────────────────────────────────
+
+describe('selector and helper exports', () => {
+    it('selectExerciseById returns matching exercise from state', () => {
+        store().addExercise(makeExercise('ex-1', 'Row'))
+        store().addExercise(makeExercise('ex-2', 'Press'))
+
+        const selected = selectExerciseById('ex-2')(store())
+
+        expect(selected?.name).toBe('Press')
+    })
+
+    it('updateExerciseParams updates params imperatively', () => {
+        store().addExercise(makeExercise('ex-1'))
+
+        updateExerciseParams('ex-1', { sets: 5, reps: 5, restSeconds: 120 })
+
+        expect(store().exercises[0].params).toEqual({ sets: 5, reps: 5, restSeconds: 120 })
     })
 })
 
