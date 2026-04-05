@@ -15,7 +15,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 import { Dumbbell, Plus } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import { WorkoutModeExerciseCard } from './WorkoutModeExerciseCard'
@@ -106,14 +106,19 @@ export const WorkoutModeExerciseList = memo(function WorkoutModeExerciseList({
     )
 
     const sortableIds = useMemo(() => exercises.map((ex) => ex.id), [exercises])
+    
+    // Store exercises reference to avoid dependency in useCallback
+    const exercisesRef = useRef(exercises)
+    exercisesRef.current = exercises
 
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event
         if (!over || active.id === over.id) return
-        const from = exercises.findIndex((ex) => ex.id === active.id)
-        const to = exercises.findIndex((ex) => ex.id === over.id)
+        // Use ref to get current exercises without adding dependency
+        const from = exercisesRef.current.findIndex((ex) => ex.id === active.id)
+        const to = exercisesRef.current.findIndex((ex) => ex.id === over.id)
         if (from !== -1 && to !== -1) onReorder(from, to)
-    }, [exercises, onReorder])
+    }, [onReorder])
 
     return (
         <div id={containerId} data-invalid={Boolean(error)} tabIndex={-1} className="space-y-3 outline-none">
