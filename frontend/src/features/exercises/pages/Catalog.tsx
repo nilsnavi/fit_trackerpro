@@ -543,6 +543,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 export const Catalog: React.FC = () => {
     const navigate = useNavigate();
     const tg = useTelegramWebApp();
+    const { isTelegram, showBackButton, hideBackButton, hapticFeedback } = tg;
     const exercisesQuery = useExercisesCatalogQuery();
     const categoriesQuery = useExerciseCategoriesQuery();
     const equipmentQuery = useExerciseEquipmentQuery();
@@ -595,15 +596,15 @@ export const Catalog: React.FC = () => {
 
     // Setup Telegram back button
     useEffect(() => {
-        if (tg.isTelegram) {
-            tg.showBackButton(() => {
+        if (isTelegram) {
+            showBackButton(() => {
                 navigate(-1)
             })
         }
         return () => {
-            tg.hideBackButton()
+            hideBackButton()
         }
-    }, [tg.isTelegram, navigate, tg.showBackButton, tg.hideBackButton])
+    }, [isTelegram, navigate, showBackButton, hideBackButton])
 
     // Filter logic
     const filteredExercises = useMemo(() => {
@@ -660,7 +661,7 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleCategoryToggle = useCallback((categoryId: ExerciseCategory) => {
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFilters(prev => {
             if (categoryId === 'all') {
                 return { ...prev, categories: ['all'] };
@@ -675,37 +676,37 @@ export const Catalog: React.FC = () => {
                 categories: newCategories.length === 0 ? ['all'] : newCategories,
             };
         });
-    }, [tg.hapticFeedback]);
+    }, [hapticFeedback]);
 
     const handleEquipmentToggle = useCallback((equipment: EquipmentType) => {
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFilters(prev => ({
             ...prev,
             equipment: prev.equipment.includes(equipment)
                 ? prev.equipment.filter(e => e !== equipment)
                 : [...prev.equipment, equipment],
         }));
-    }, [tg.hapticFeedback]);
+    }, [hapticFeedback]);
 
     const handleRiskToggle = useCallback((risk: RiskType) => {
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFilters(prev => ({
             ...prev,
             risks: prev.risks.includes(risk)
                 ? prev.risks.filter(r => r !== risk)
                 : [...prev.risks, risk],
         }));
-    }, [tg.hapticFeedback]);
+    }, [hapticFeedback]);
 
     const handleDifficultyToggle = useCallback((difficulty: DifficultyLevel) => {
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         setFilters(prev => ({
             ...prev,
             difficulty: prev.difficulty.includes(difficulty)
                 ? prev.difficulty.filter(d => d !== difficulty)
                 : [...prev.difficulty, difficulty],
         }));
-    }, [tg.hapticFeedback]);
+    }, [hapticFeedback]);
 
     const handleApplyFilters = useCallback(() => {
         setIsFilterOpen(false);
@@ -723,10 +724,10 @@ export const Catalog: React.FC = () => {
     }, []);
 
     const handleViewExercise = useCallback((exercise: Exercise) => {
-        tg.hapticFeedback({ type: 'impact', style: 'light' })
+        hapticFeedback({ type: 'impact', style: 'light' })
         setSelectedExercise(exercise);
         setIsDetailOpen(true);
-    }, [tg.hapticFeedback]);
+    }, [hapticFeedback]);
 
     const handleCloseDetail = useCallback(() => {
         setIsDetailOpen(false);
@@ -779,15 +780,15 @@ export const Catalog: React.FC = () => {
         }
         localStorage.setItem(draftKey, JSON.stringify(draft))
 
-        tg.hapticFeedback({ type: 'notification', notificationType: 'success' })
+        hapticFeedback({ type: 'notification', notificationType: 'success' })
         handleCloseDetail()
         navigate('/workouts/templates/new')
-    }, [handleCloseDetail, navigate, tg.hapticFeedback]);
+    }, [handleCloseDetail, navigate, hapticFeedback]);
 
     const handleAddExercise = useCallback(() => {
-        tg.hapticFeedback({ type: 'impact', style: 'medium' })
+        hapticFeedback({ type: 'impact', style: 'medium' })
         navigate('/exercises/add');
-    }, [navigate, tg]);
+    }, [navigate, hapticFeedback]);
 
     const catalogHeaderActions = useMemo(
         () => (

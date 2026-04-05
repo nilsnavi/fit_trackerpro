@@ -1,5 +1,5 @@
 import { Archive, Trash2 } from 'lucide-react'
-import { Modal } from '@shared/ui/Modal'
+import { WorkoutModal } from './WorkoutModal'
 
 interface TemplateActionsSheetProps {
     isOpen: boolean
@@ -21,8 +21,14 @@ export function TemplateActionsSheet({
     onDelete,
 }: TemplateActionsSheetProps) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={templateName ?? 'Действия с шаблоном'} size="sm">
-            <div className="space-y-2 p-1">
+        <WorkoutModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={templateName ?? 'Действия с шаблоном'}
+            description="Выберите действие для текущего шаблона тренировки."
+            size="sm"
+            bodyClassName="space-y-2"
+        >
                 <button
                     type="button"
                     onClick={isArchived ? onUnarchive : onArchive}
@@ -39,7 +45,6 @@ export function TemplateActionsSheet({
                     <Trash2 className="h-4 w-4" />
                     Удалить
                 </button>
-            </div>
-        </Modal>
+        </WorkoutModal>
     )
 }

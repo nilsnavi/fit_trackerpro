@@ -32,6 +32,7 @@ const defaultStats: DashboardStats = {
 
 export function Home() {
     const tg = useTelegramWebApp()
+    const { isTelegram, user, showMainButton, hideMainButton, hapticFeedback } = tg
     const navigate = useNavigate()
     const { data: profile } = useCurrentUserQuery()
     const { data: userStats } = useUserStatsQuery()
@@ -78,24 +79,24 @@ export function Home() {
     const userName =
         profile?.first_name ||
         profile?.username ||
-        tg.user?.first_name ||
-        tg.user?.username ||
+        user?.first_name ||
+        user?.username ||
         'Атлет'
     const userInitial = userName?.[0]?.toUpperCase() || 'F'
-    const userPhoto = tg.user?.photo_url
+    const userPhoto = user?.photo_url
 
     useEffect(() => {
-        if (tg.isTelegram) {
-            tg.showMainButton('Начать тренировку', () => {
-                tg.hapticFeedback({ type: 'impact', style: 'medium' })
+        if (isTelegram) {
+            showMainButton('Начать тренировку', () => {
+                hapticFeedback({ type: 'impact', style: 'medium' })
                 navigate('/workouts/templates/new')
             })
         }
 
         return () => {
-            tg.hideMainButton()
+            hideMainButton()
         }
-    }, [tg.isTelegram, navigate, tg.showMainButton, tg.hideMainButton])
+    }, [isTelegram, navigate, showMainButton, hideMainButton, hapticFeedback])
 
     useEffect(() => {
         if (!pinFeedbackTemplateId) return
@@ -104,7 +105,7 @@ export function Home() {
     }, [pinFeedbackTemplateId])
 
     const handleQuickAction = (action: string) => {
-        tg.hapticFeedback({ type: 'impact', style: 'light' })
+        hapticFeedback({ type: 'impact', style: 'light' })
 
         switch (action) {
             case 'workout':
@@ -124,7 +125,7 @@ export function Home() {
     }
 
     const handleTemplateStart = async (id: string) => {
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
         if (id === 'custom') {
             navigate('/workouts/templates/new')
             return
@@ -160,12 +161,12 @@ export function Home() {
         const alreadyPinned = pinnedTemplateIds.includes(templateId)
         const pinLimitReached = pinnedTemplateIds.length >= 5 && !alreadyPinned
         if (pinLimitReached) {
-            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
+            hapticFeedback({ type: 'notification', notificationType: 'error' })
             return
         }
         togglePinnedTemplate(templateId)
         setPinFeedbackTemplateId(id)
-        tg.hapticFeedback({ type: 'selection' })
+        hapticFeedback({ type: 'selection' })
     }
 
     const getGreeting = () => {

@@ -18,7 +18,7 @@ export function PwaUpdatePrompt() {
     // Автоприменяем свежий SW, чтобы не застревать на старых ассетах/теме/локализации.
     useEffect(() => {
         if (!needRefresh) return
-        const isTelegram = typeof window !== 'undefined' && Boolean((window as any).Telegram?.WebApp)
+        const isTelegram = typeof window !== 'undefined' && Boolean(window.Telegram?.WebApp)
         if (!isTelegram) return
         void updateServiceWorker(true)
     }, [needRefresh, updateServiceWorker])

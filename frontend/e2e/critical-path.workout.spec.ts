@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { ensureLoggedIn, ensureLoggedInOptionsFromEnv } from './utils/auth'
+import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
 type Json = Record<string, unknown>
+type WorkoutCompletePayload = Pick<WorkoutHistoryItem, 'duration' | 'exercises' | 'comments' | 'tags'>
 
 function isoNow() {
     return new Date().toISOString()
@@ -72,8 +74,8 @@ test('critical path: login → open workout → complete → see in history', as
         created_at: startedAt,
     }
 
-    let historyItems: any[] = []
-    let detail: any = historyItemDraft
+    let historyItems: WorkoutHistoryItem[] = []
+    let detail: WorkoutHistoryItem = historyItemDraft
 
     await page.route('**/api/v1/**', async (route) => {
         const req = route.request()
@@ -138,7 +140,7 @@ test('critical path: login → open workout → complete → see in history', as
 
         // Complete workout
         if (method === 'POST' && path.endsWith('/workouts/complete')) {
-            const payload = (req.postDataJSON?.() ?? {}) as any
+            const payload = (req.postDataJSON?.() ?? {}) as Partial<WorkoutCompletePayload>
             const completedAt = isoNow()
 
             detail = {

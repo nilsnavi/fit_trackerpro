@@ -28,6 +28,7 @@ export function AppShellLayoutProvider({ children }: { children: ReactNode }) {
     return <AppShellLayoutContext.Provider value={value}>{children}</AppShellLayoutContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAppShellLayoutContext() {
     const ctx = useContext(AppShellLayoutContext)
     if (!ctx) {
@@ -39,6 +40,7 @@ export function useAppShellLayoutContext() {
 /**
  * Правая часть app header. Передавайте узел, стабилизированный через useMemo, чтобы не вызывать лишние перерисовки.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAppShellHeaderRight(node: ReactNode) {
     const { setHeaderRight } = useAppShellLayoutContext()
 

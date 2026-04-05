@@ -9,10 +9,20 @@ export interface ModalProps {
     onClose: () => void;
     /** Заголовок */
     title?: string;
+    /** Подзаголовок */
+    description?: React.ReactNode;
     /** Дочерние элементы */
     children: React.ReactNode;
     /** CSS класс контента */
     className?: string;
+    /** CSS класс шапки */
+    headerClassName?: string;
+    /** CSS класс тела */
+    bodyClassName?: string;
+    /** Футер модалки */
+    footer?: React.ReactNode;
+    /** CSS класс футера */
+    footerClassName?: string;
     /** Закрывать по клику на оверлей */
     closeOnOverlayClick?: boolean;
     /** Закрывать по Escape */
@@ -59,8 +69,13 @@ export const Modal: React.FC<ModalProps> = ({
     isOpen,
     onClose,
     title,
+    description,
     children,
     className,
+    headerClassName,
+    bodyClassName,
+    footer,
+    footerClassName,
     closeOnOverlayClick = true,
     closeOnEscape = true,
     showHandle = true,
@@ -199,6 +214,7 @@ export const Modal: React.FC<ModalProps> = ({
                     'w-full bg-telegram-bg',
                     'rounded-t-3xl sm:rounded-2xl',
                     'shadow-2xl',
+                    'flex max-h-[calc(100vh-1rem)] flex-col sm:max-h-[min(85vh,48rem)]',
                     'transition-all duration-300',
                     'touch-manipulation',
 
@@ -231,13 +247,26 @@ export const Modal: React.FC<ModalProps> = ({
 
                 {/* Заголовок */}
                 {title && (
-                    <div className="px-5 pt-2 pb-3 border-b border-border">
+                    <div
+                        className={cn(
+                            'border-b border-border px-5 pt-2 pb-3',
+                            headerClassName
+                        )}
+                    >
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-telegram-text">
-                                {title}
-                            </h2>
+                            <div className="min-w-0">
+                                <h2 className="text-lg font-semibold text-telegram-text">
+                                    {title}
+                                </h2>
+                                {description ? (
+                                    <p className="mt-1 text-sm text-telegram-hint">
+                                        {description}
+                                    </p>
+                                ) : null}
+                            </div>
                             {/* Кнопка закрытия */}
                             <button
+                                type="button"
                                 onClick={handleClose}
                                 className={cn(
                                     'p-2 -mr-2 rounded-full',
@@ -267,9 +296,25 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Контент */}
-                <div className="p-5 max-h-[70vh] overflow-y-auto no-scrollbar">
+                <div
+                    className={cn(
+                        'min-h-0 flex-1 overflow-y-auto p-5 no-scrollbar',
+                        bodyClassName
+                    )}
+                >
                     {children}
                 </div>
+
+                {footer ? (
+                    <div
+                        className={cn(
+                            'border-t border-border bg-telegram-bg px-5 py-4',
+                            footerClassName
+                        )}
+                    >
+                        {footer}
+                    </div>
+                ) : null}
             </div>
         </div>
     );

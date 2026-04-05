@@ -1,5 +1,4 @@
-import { Button } from '@shared/ui/Button'
-import { Modal } from '@shared/ui/Modal'
+import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 
 interface AddTimerModalProps {
     isOpen: boolean
@@ -25,8 +24,23 @@ export function AddTimerModal({
     onSubmit,
 }: AddTimerModalProps) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Добавить таймер" size="md">
-            <div className="space-y-4">
+        <WorkoutModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Добавить таймер"
+            description="Создайте отдельный таймер для отдыха, интервала или блока упражнения."
+            size="md"
+            bodyClassName="space-y-4"
+            secondaryAction={{
+                label: 'Отмена',
+                onClick: onClose,
+                variant: 'secondary',
+            }}
+            primaryAction={{
+                label: 'Добавить',
+                onClick: onSubmit,
+            }}
+        >
                 <label className="block text-sm font-medium text-telegram-text">
                     Название
                     <input
@@ -60,15 +74,6 @@ export function AddTimerModal({
                     />
                 </label>
 
-                <div className="flex gap-2">
-                    <Button variant="secondary" fullWidth onClick={onClose}>
-                        Отмена
-                    </Button>
-                    <Button fullWidth onClick={onSubmit}>
-                        Добавить
-                    </Button>
-                </div>
-            </div>
-        </Modal>
+        </WorkoutModal>
     )
 }

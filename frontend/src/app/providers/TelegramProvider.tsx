@@ -66,6 +66,7 @@ export function TelegramProvider({ children }: PropsWithChildren) {
     return <TelegramContext.Provider value={value}>{children}</TelegramContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTelegramContext() {
     const context = useContext(TelegramContext)
     if (!context) {

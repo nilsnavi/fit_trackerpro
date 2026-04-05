@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Search, Sparkles, Star, History } from 'lucide-react'
-import { Button } from '@shared/ui/Button'
 import { Chip, ChipGroup } from '@shared/ui/Chip'
 import { Input } from '@shared/ui/Input'
-import { Modal } from '@shared/ui/Modal'
 import { Skeleton } from '@shared/ui/Skeleton'
+import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 import type { Exercise as CatalogExercise } from '@features/exercises/types/catalogUi'
 
 type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility'
@@ -81,8 +80,23 @@ export function AddExerciseModal({
     }, [localSearch, onChangeSearch, searchQuery])
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Добавить упражнение" size="md">
-            <div className="space-y-4">
+        <WorkoutModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Добавить упражнение"
+            description="Выберите упражнение из каталога и задайте стартовые параметры."
+            size="md"
+            bodyClassName="space-y-4"
+            secondaryAction={{
+                label: 'Отмена',
+                onClick: onClose,
+                variant: 'secondary',
+            }}
+            primaryAction={{
+                label: 'Добавить',
+                onClick: onSubmit,
+            }}
+        >
                 <div className="space-y-3">
                     <ChipGroup wrap gap="sm">
                         {[
@@ -274,15 +288,6 @@ export function AddExerciseModal({
                     />
                 </label>
 
-                <div className="flex gap-2">
-                    <Button variant="secondary" fullWidth onClick={onClose}>
-                        Отмена
-                    </Button>
-                    <Button fullWidth onClick={onSubmit}>
-                        Добавить
-                    </Button>
-                </div>
-            </div>
-        </Modal>
+        </WorkoutModal>
     )
 }

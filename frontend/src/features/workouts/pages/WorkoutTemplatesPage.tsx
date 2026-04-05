@@ -27,8 +27,8 @@ import {
 } from '@features/workouts/components/TemplatesFiltersBar'
 import {
     WorkoutTemplateCard,
-    estimateTemplateDurationMinutes,
 } from '@features/workouts/components/WorkoutTemplateCard'
+import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
 import { TemplateActionsSheet } from '@features/workouts/components/TemplateActionsSheet'
 import { TemplateConfirmModal } from '@features/workouts/components/TemplateConfirmModal'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
@@ -72,7 +72,7 @@ export function WorkoutTemplatesPage() {
     const deleteTemplateMutation = useDeleteWorkoutTemplateMutation()
     const startWorkoutMutation = useStartWorkoutMutation()
 
-    const allTemplates = data?.items ?? []
+    const allTemplates = useMemo(() => data?.items ?? [], [data?.items])
 
     // ── автоочистка feedback ─────────────────────────────────────────────────
     useEffect(() => {

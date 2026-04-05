@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react'
 import { GripVertical, Pencil, Trash2 } from 'lucide-react'
-import { Modal } from '@shared/ui/Modal'
+import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 import { ExerciseModeConfigForm } from './ExerciseModeConfigForm'
 import type {
     CardioExerciseParams,
@@ -139,10 +139,11 @@ export const WorkoutModeExerciseCard = memo(function WorkoutModeExerciseCard({
             </div>
 
             {/* Edit modal */}
-            <Modal
+            <WorkoutModal
                 isOpen={editOpen}
                 onClose={handleCloseEdit}
                 title="Редактировать упражнение"
+                description="Измените параметры выполнения для выбранного упражнения."
                 size="md"
                 haptic
             >
@@ -153,7 +154,7 @@ export const WorkoutModeExerciseCard = memo(function WorkoutModeExerciseCard({
                     onConfirm={handleConfirm}
                     onCancel={handleCloseEdit}
                 />
-            </Modal>
+            </WorkoutModal>
         </>
     )
 })

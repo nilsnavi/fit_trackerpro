@@ -1,5 +1,4 @@
-import { Button } from '@shared/ui/Button'
-import { Modal } from '@shared/ui/Modal'
+import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 import type { StructureEditorState } from '@features/workouts/active/hooks/useWorkoutStructureEditor'
 
 interface ExerciseStructureEditorModalProps {
@@ -18,8 +17,23 @@ export function ExerciseStructureEditorModal({
     onSave,
 }: ExerciseStructureEditorModalProps) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Изменить структуру упражнения" size="md">
-            <div className="space-y-4">
+        <WorkoutModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Изменить структуру упражнения"
+            description="Обновите рабочие параметры для выбранного упражнения в текущей сессии."
+            size="md"
+            bodyClassName="space-y-4"
+            secondaryAction={{
+                label: 'Отмена',
+                onClick: onClose,
+                variant: 'secondary',
+            }}
+            primaryAction={{
+                label: 'Сохранить структуру',
+                onClick: onSave,
+            }}
+        >
                 <div className="grid grid-cols-2 gap-3">
                     <label className="text-sm font-medium text-telegram-text">
                         Подходы
@@ -77,15 +91,6 @@ export function ExerciseStructureEditorModal({
                     </label>
                 </div>
 
-                <div className="flex gap-2">
-                    <Button variant="secondary" fullWidth onClick={onClose}>
-                        Отмена
-                    </Button>
-                    <Button fullWidth onClick={onSave}>
-                        Сохранить структуру
-                    </Button>
-                </div>
-            </div>
-        </Modal>
+        </WorkoutModal>
     )
 }

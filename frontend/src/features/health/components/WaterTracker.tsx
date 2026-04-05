@@ -712,7 +712,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
 
     const goal = goalQuery.data ?? null;
     const reminder = reminderQuery.data ?? null;
-    const todayEntries = todayQuery.data ?? [];
+    const todayEntries = useMemo(() => todayQuery.data ?? [], [todayQuery.data]);
     const weeklyStats = weeklyStatsQuery.data ?? null;
 
     const currentAmount = useMemo(

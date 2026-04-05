@@ -57,7 +57,6 @@ export interface WorkoutModeHandlers {
 
 export function useWorkoutModeHandlers({
     config,
-    selectedPresetId: _selectedPresetId,
     editorTitle,
     editorExercises,
     recentWorkout,

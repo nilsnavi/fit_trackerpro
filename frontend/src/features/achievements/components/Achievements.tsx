@@ -623,7 +623,7 @@ export const Achievements: React.FC<AchievementsProps> = ({
     const achievementsQuery = useAchievementsListQuery(selectedCategory);
     const userStatsQuery = useAchievementUserStatsQuery();
 
-    const achievements = achievementsQuery.data?.items ?? [];
+    const achievements = useMemo(() => achievementsQuery.data?.items ?? [], [achievementsQuery.data?.items]);
     const userStats = userStatsQuery.data ?? null;
     const isLoading = achievementsQuery.isPending || userStatsQuery.isPending;
     const error =

@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import type { WebApp } from '@shared/types/telegram'
 
 type PasswordLoginOptions = {
     email: string
@@ -73,7 +74,7 @@ async function tryTelegramLogin(page: Page, opts: TelegramLoginOptions): Promise
 
     await page.addInitScript((initData: string) => {
         // Minimal stub for common Telegram WebApp usage patterns.
-        const w = window as any
+        const w = window as Window & { Telegram?: { WebApp?: Partial<WebApp> } }
         w.Telegram = w.Telegram ?? {}
         w.Telegram.WebApp = w.Telegram.WebApp ?? {}
         w.Telegram.WebApp.initData = initData

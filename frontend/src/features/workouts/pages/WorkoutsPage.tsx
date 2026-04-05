@@ -74,7 +74,7 @@ export function WorkoutsPage() {
         error: templatesError,
     } = useWorkoutTemplatesQuery()
 
-    const templates = templatesData?.items ?? []
+    const templates = useMemo(() => templatesData?.items ?? [], [templatesData?.items])
     const pinnedTemplateIds = useWorkoutTemplatePinsStore((s) => s.pinnedTemplateIds)
     const togglePinnedTemplate = useWorkoutTemplatePinsStore((s) => s.togglePinnedTemplate)
 
