@@ -1,222 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
-import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { WorkoutModePageView } from '@features/workouts/workoutMode/WorkoutModePageView'
 import { getWorkoutModePageConfig } from '@features/workouts/workoutMode/workoutModePageModel'
-import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
-import {
-    useWorkoutModeEditorStateSlice,
-    useWorkoutModeEditorActions,
-    useWorkoutModeEditorStore,
-} from '@features/workouts/model/useWorkoutModeEditorStore'
 import { AddExerciseSheet } from '@features/workouts/workoutMode/AddExerciseSheet'
 import { WorkoutModeExerciseList } from '@features/workouts/workoutMode/WorkoutModeExerciseList'
 import { WorkoutModeStickyFooter } from '@features/workouts/workoutMode/WorkoutModeStickyFooter'
 import { WorkoutModeTitleSection } from '@features/workouts/mode/components/WorkoutModeTitleSection'
-import { useWorkoutModeInit } from '@features/workouts/mode/hooks/useWorkoutModeInit'
-import { useWorkoutModeHandlers } from '@features/workouts/mode/hooks/useWorkoutModeHandlers'
-import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
+import { useWorkoutModePage } from '@features/workouts/mode/hooks'
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
-import type {
-    CardioExerciseParams,
-    EditorWorkoutMode,
-    FunctionalExerciseParams,
-    ModeExerciseParams,
-    StrengthExerciseParams,
-    WorkoutModeExerciseItem,
-    YogaExerciseParams,
-} from '@features/workouts/workoutMode/workoutModeEditorTypes'
-
-function isExerciseFormValid(item: WorkoutModeExerciseItem): boolean {
-    if (item.mode === 'strength') {
-        const params = item.params as StrengthExerciseParams
-        return Number.isFinite(params.sets)
-            && params.sets >= 1
-            && Number.isFinite(params.reps)
-            && params.reps >= 1
-            && Number.isFinite(params.restSeconds)
-            && params.restSeconds >= 0
-    }
-
-    if (item.mode === 'cardio') {
-        const params = item.params as CardioExerciseParams
-        const hasDuration = Number.isFinite(params.durationSeconds) && params.durationSeconds > 0
-        const hasDistance = Number.isFinite(params.distance) && (params.distance as number) > 0
-        return hasDuration || hasDistance
-    }
-
-    if (item.mode === 'functional') {
-        const params = item.params as FunctionalExerciseParams
-        const hasReps = Number.isFinite(params.reps) && (params.reps as number) > 0
-        const hasDuration = Number.isFinite(params.durationSeconds) && (params.durationSeconds as number) > 0
-        return Number.isFinite(params.rounds)
-            && params.rounds >= 1
-            && Number.isFinite(params.restSeconds)
-            && params.restSeconds >= 0
-            && (hasReps || hasDuration)
-    }
-
-    if (item.mode === 'yoga') {
-        const params = item.params as YogaExerciseParams
-        return Number.isFinite(params.durationSeconds) && params.durationSeconds > 0
-    }
-
-    return true
-}
 
 function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
-    const navigate = useNavigate()
-    const tg = useTelegramWebApp()
-    const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
-    const [addSheetOpen, setAddSheetOpen] = useState(false)
-    const [descOpen, setDescOpen] = useState(false)
-    const [repeatError, setRepeatError] = useState<string | null>(null)
-    const [saveAndStartError, setSaveAndStartError] = useState<string | null>(null)
-
-    const {
-        title: editorTitle,
-        description: editorDescription,
-        exercises: editorExercises,
-        validationErrors,
-        isDirty,
-    } = useWorkoutModeEditorStateSlice()
-
-    const {
-        setMode: storeSetMode,
-        setTitle,
-        setDescription,
-        addExercise,
-        updateExercise,
-        removeExercise,
-        reorderExercises,
-        validate,
-        reset: resetEditor,
-    } = useWorkoutModeEditorActions()
-
-    const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
-        isDirty,
-        onConfirmedLeave: resetEditor,
-        enableRouteBlock: true,
-    })
-
-    const { data: historyData } = useWorkoutHistoryQuery()
-
-    useWorkoutModeInit({
-        config,
-        selectedPresetId,
-        editorTitle,
-        setMode: storeSetMode,
-        setTitle,
-        reset: resetEditor,
-    })
-
-    const recentWorkout = useMemo(() => {
-        const items = historyData?.items ?? []
-        const modePrefix = config.title.trim().toLowerCase()
-        return (
-            items.find((item) => {
-                const comment = item.comments?.trim().toLowerCase() ?? ''
-                return comment.startsWith(modePrefix)
-            }) ?? null
-        )
-    }, [config.title, historyData])
-
-    const {
-        handleRepeat,
-        handleAddExercise,
-        handleSave,
-        handleSaveAndStart,
-        isMutating,
-        isSaving,
-        isStarting,
-        isRepeating,
-    } = useWorkoutModeHandlers({
-        config,
-        selectedPresetId,
-        editorTitle,
-        editorExercises,
-        recentWorkout,
-        validate,
-        addExercise,
-        onAddSheetClose: () => setAddSheetOpen(false),
-        onRepeatError: setRepeatError,
-        onSaveAndStartError: setSaveAndStartError,
-    })
-
-    const isEditorInvalid = useMemo(() => {
-        if (!editorTitle.trim()) return true
-        if (editorExercises.length === 0) return true
-        return editorExercises.some((exercise) => !isExerciseFormValid(exercise))
-    }, [editorExercises, editorTitle])
-
-    const handleOpenAddSheet = useCallback(() => {
-        setAddSheetOpen(true)
-    }, [])
-
-    const handleCloseAddSheet = useCallback(() => {
-        setAddSheetOpen(false)
-    }, [])
-
-    const handleUpdateExerciseParams = useCallback((id: string, params: ModeExerciseParams) => {
-        updateExercise(id, { params })
-    }, [updateExercise])
-
-    const handleSelectPreset = useCallback((id: string) => {
-        setSelectedPresetId(id)
-        const preset = config.presets.find((p) => p.id === id)
-        if (preset) {
-            setTitle(`${config.title} • ${preset.label}`)
-        }
-    }, [config.presets, config.title, setTitle])
-
-    const scrollToFirstInvalidField = () => {
-        const { validationErrors: currentErrors } = useWorkoutModeEditorStore.getState()
-        const targetId = currentErrors.title ? 'workout-mode-title-input' : currentErrors.exercises ? 'workout-mode-exercises' : null
-        if (!targetId) return
-        const target = document.getElementById(targetId)
-        if (!target) return
-        if (target instanceof HTMLElement) {
-            target.focus({ preventScroll: true })
-        }
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-
-    const handleSaveWithValidationUx = () => {
-        const isValid = validate()
-        if (!isValid) {
-            requestAnimationFrame(scrollToFirstInvalidField)
-            return
-        }
-        handleSave()
-    }
-
-    const handleSaveAndStartWithValidationUx = async () => {
-        const isValid = validate()
-        if (!isValid) {
-            requestAnimationFrame(scrollToFirstInvalidField)
-            return
-        }
-        await handleSaveAndStart()
-    }
-
-    useEffect(() => {
-        const { isTelegram, showBackButton, hideBackButton } = tg
-        if (isTelegram) {
-            showBackButton(() => guardedAction(() => navigate('/workouts')))
-        }
-        return () => {
-            hideBackButton()
-        }
-    }, [tg, navigate, guardedAction])
+    const vm = useWorkoutModePage(config)
 
     return (
         <>
             <UnsavedChangesModal
-                isOpen={isLeaveConfirmOpen}
-                onLeave={onLeave}
-                onStay={onStay}
+                isOpen={vm.isLeaveConfirmOpen}
+                onLeave={vm.onLeave}
+                onStay={vm.onStay}
                 title="У вас есть несохраненные изменения"
                 description={undefined}
                 actionOrder="leave-first"
@@ -224,62 +26,62 @@ function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
 
             <WorkoutModePageView
                 config={config}
-                selectedPresetId={selectedPresetId}
-                onSelectPreset={handleSelectPreset}
-                onStart={handleSaveAndStart}
-                onRepeat={recentWorkout ? handleRepeat : undefined}
-                isStarting={false}
-                isRepeating={isRepeating}
-                recentWorkoutTitle={recentWorkout?.comments ?? null}
+                selectedPresetId={vm.selectedPresetId}
+                onSelectPreset={vm.handleSelectPreset}
+                onStart={vm.handleSaveAndStartWithValidationUx}
+                onRepeat={vm.recentWorkoutTitle ? vm.handleRepeat : undefined}
+                isStarting={vm.isStarting}
+                isRepeating={vm.isRepeating}
+                recentWorkoutTitle={vm.recentWorkoutTitle}
                 hideStartButton
             />
 
             <div className="px-4 pb-40 space-y-5">
-                {repeatError && (
+                {vm.repeatError && (
                     <p className="rounded-xl bg-danger/10 px-3 py-2 text-xs text-danger">
-                        {repeatError}
+                        {vm.repeatError}
                     </p>
                 )}
 
                 <WorkoutModeTitleSection
                     containerId="workout-mode-title"
-                    title={editorTitle}
-                    description={editorDescription}
-                    descOpen={descOpen}
-                    validationErrors={validationErrors}
-                    onTitleChange={setTitle}
-                    onDescriptionChange={setDescription}
-                    onToggleDesc={() => setDescOpen((v) => !v)}
+                    title={vm.editorTitle}
+                    description={vm.editorDescription}
+                    descOpen={vm.descOpen}
+                    validationErrors={vm.validationErrors}
+                    onTitleChange={vm.setTitle}
+                    onDescriptionChange={vm.setDescription}
+                    onToggleDesc={vm.toggleDesc}
                 />
 
-                {saveAndStartError && (
-                    <p className="text-xs text-danger">{saveAndStartError}</p>
+                {vm.saveAndStartError && (
+                    <p className="text-xs text-danger">{vm.saveAndStartError}</p>
                 )}
 
                 <WorkoutModeExerciseList
                     containerId="workout-mode-exercises"
-                    exercises={editorExercises}
-                    error={validationErrors.exercises}
-                    onAdd={handleOpenAddSheet}
-                    onUpdate={handleUpdateExerciseParams}
-                    onRemove={removeExercise}
-                    onReorder={reorderExercises}
+                    exercises={vm.editorExercises}
+                    error={vm.validationErrors.exercises}
+                    onAdd={vm.handleOpenAddSheet}
+                    onUpdate={vm.handleUpdateExerciseParams}
+                    onRemove={vm.removeExercise}
+                    onReorder={vm.reorderExercises}
                 />
             </div>
 
             <WorkoutModeStickyFooter
-                onSave={handleSaveWithValidationUx}
-                onSaveAndStart={handleSaveAndStartWithValidationUx}
-                isSaving={isSaving}
-                isStarting={isStarting}
-                disabled={isMutating || isEditorInvalid}
+                onSave={vm.handleSaveWithValidationUx}
+                onSaveAndStart={vm.handleSaveAndStartWithValidationUx}
+                isSaving={vm.isSaving}
+                isStarting={vm.isStarting}
+                disabled={vm.isMutating || vm.isEditorInvalid}
             />
 
             <AddExerciseSheet
-                isOpen={addSheetOpen}
-                mode={config.mode as EditorWorkoutMode}
-                onClose={handleCloseAddSheet}
-                onAdd={handleAddExercise}
+                isOpen={vm.addSheetOpen}
+                mode={vm.mode}
+                onClose={vm.handleCloseAddSheet}
+                onAdd={vm.handleAddExercise}
             />
         </>
     )
