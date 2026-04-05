@@ -1,5 +1,6 @@
 import { GripVertical } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
@@ -9,7 +10,7 @@ type SortableExerciseCardProps = {
     isActive: boolean
 }
 
-export function SortableExerciseCard({ id, children, isActive }: SortableExerciseCardProps) {
+export const SortableExerciseCard = memo(function SortableExerciseCard({ id, children, isActive }: SortableExerciseCardProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id,
         disabled: !isActive,
@@ -41,4 +42,6 @@ export function SortableExerciseCard({ id, children, isActive }: SortableExercis
             </div>
         </div>
     )
-}
+})
+
+SortableExerciseCard.displayName = 'SortableExerciseCard'

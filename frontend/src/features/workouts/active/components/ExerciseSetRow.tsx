@@ -1,9 +1,10 @@
-import { memo } from 'react'
+import { memo, useCallback } from 'react'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedSet } from '@features/workouts/types/workouts'
 
 const RPE_OPTIONS = [6, 7, 8, 9, 10]
 const RIR_OPTIONS = [0, 1, 2, 3, 4]
+const WEIGHT_DELTAS = [1.25, 2.5, 5]
 
 interface ExerciseSetRowProps {
     set: CompletedSet
@@ -24,16 +25,92 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
     onAdjustWeight,
     onUpdateSet,
 }: ExerciseSetRowProps) {
+    const setIndex = set.set_number - 1
+
+    // Memoized callbacks to prevent unnecessary child re-renders
+    const handleToggleCompleted = useCallback(() => {
+        onFocusSet(exerciseIndex, setIndex)
+        onToggleCompleted(exerciseIndex, set.set_number, !set.completed)
+    }, [exerciseIndex, setIndex, set.set_number, set.completed, onFocusSet, onToggleCompleted])
+
+    const handleCopyPrevious = useCallback(() => {
+        onCopyPrevious(exerciseIndex, set.set_number)
+    }, [exerciseIndex, set.set_number, onCopyPrevious])
+
+    const handleAdjustWeight = useCallback(
+        (delta: number) => {
+            onAdjustWeight(exerciseIndex, set.set_number, delta)
+        },
+        [exerciseIndex, set.set_number, onAdjustWeight]
+    )
+
+    const handleRepsChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            onUpdateSet(exerciseIndex, set.set_number, {
+                reps: parseOptionalNumber(e.target.value),
+            })
+        },
+        [exerciseIndex, set.set_number, onUpdateSet]
+    )
+
+    const handleWeightChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            onUpdateSet(exerciseIndex, set.set_number, {
+                weight: parseOptionalNumber(e.target.value),
+            })
+        },
+        [exerciseIndex, set.set_number, onUpdateSet]
+    )
+
+    const handleDurationChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            onUpdateSet(exerciseIndex, set.set_number, {
+                duration: parseOptionalNumber(e.target.value),
+            })
+        },
+        [exerciseIndex, set.set_number, onUpdateSet]
+    )
+
+    const handleDistanceChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            onUpdateSet(exerciseIndex, set.set_number, {
+                distance: parseOptionalNumber(e.target.value),
+            })
+        },
+        [exerciseIndex, set.set_number, onUpdateSet]
+    )
+
+    const handleOnFocusSet = useCallback(() => {
+        onFocusSet(exerciseIndex, setIndex)
+    }, [exerciseIndex, setIndex, onFocusSet])
+
+    const handleRpeToggle = useCallback(
+        (value: number) => {
+            onFocusSet(exerciseIndex, setIndex)
+            onUpdateSet(exerciseIndex, set.set_number, {
+                rpe: set.rpe === value ? undefined : value,
+            })
+        },
+        [exerciseIndex, setIndex, set.set_number, set.rpe, onFocusSet, onUpdateSet]
+    )
+
+    const handleRirToggle = useCallback(
+        (value: number) => {
+            onFocusSet(exerciseIndex, setIndex)
+            onUpdateSet(exerciseIndex, set.set_number, {
+                rir: set.rir === value ? undefined : value,
+            })
+        },
+        [exerciseIndex, setIndex, set.set_number, set.rir, onFocusSet, onUpdateSet]
+    )
+
     return (
         <div className="rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text">
             <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">Подход {set.set_number}</span>
                 <button
                     type="button"
-                    onClick={() => {
-                        onFocusSet(exerciseIndex, set.set_number - 1)
-                        onToggleCompleted(exerciseIndex, set.set_number, !set.completed)
-                    }}
+                    onClick={handleToggleCompleted}
                     className={`px-2 py-0.5 rounded-full text-xs transition-colors ${set.completed
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
                         : 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'
@@ -46,16 +123,16 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
             <div className="mt-2 flex flex-wrap gap-1.5">
                 <button
                     type="button"
-                    onClick={() => onCopyPrevious(exerciseIndex, set.set_number)}
+                    onClick={handleCopyPrevious}
                     className="rounded-md bg-telegram-bg px-2 py-1 text-[11px] text-telegram-hint"
                 >
                     Копировать с прошлого
                 </button>
-                {[1.25, 2.5, 5].map((delta) => (
+                {WEIGHT_DELTAS.map((delta) => (
                     <button
                         key={delta}
                         type="button"
-                        onClick={() => onAdjustWeight(exerciseIndex, set.set_number, delta)}
+                        onClick={() => handleAdjustWeight(delta)}
                         className="rounded-md bg-telegram-bg px-2 py-1 text-[11px] text-telegram-hint"
                     >
                         +{delta}
@@ -70,12 +147,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         type="number"
                         min={0}
                         value={set.reps ?? ''}
-                        onFocus={() => onFocusSet(exerciseIndex, set.set_number - 1)}
-                        onChange={(e) =>
-                            onUpdateSet(exerciseIndex, set.set_number, {
-                                reps: parseOptionalNumber(e.target.value),
-                            })
-                        }
+                        onFocus={handleOnFocusSet}
+                        onChange={handleRepsChange}
                         className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
                     />
                 </label>
@@ -86,12 +159,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         min={0}
                         step="0.5"
                         value={set.weight ?? ''}
-                        onFocus={() => onFocusSet(exerciseIndex, set.set_number - 1)}
-                        onChange={(e) =>
-                            onUpdateSet(exerciseIndex, set.set_number, {
-                                weight: parseOptionalNumber(e.target.value),
-                            })
-                        }
+                        onFocus={handleOnFocusSet}
+                        onChange={handleWeightChange}
                         className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
                     />
                 </label>
@@ -101,12 +170,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         type="number"
                         min={0}
                         value={set.duration ?? ''}
-                        onFocus={() => onFocusSet(exerciseIndex, set.set_number - 1)}
-                        onChange={(e) =>
-                            onUpdateSet(exerciseIndex, set.set_number, {
-                                duration: parseOptionalNumber(e.target.value),
-                            })
-                        }
+                        onFocus={handleOnFocusSet}
+                        onChange={handleDurationChange}
                         className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
                     />
                 </label>
@@ -117,12 +182,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         min={0}
                         step="0.01"
                         value={set.distance ?? ''}
-                        onFocus={() => onFocusSet(exerciseIndex, set.set_number - 1)}
-                        onChange={(e) =>
-                            onUpdateSet(exerciseIndex, set.set_number, {
-                                distance: parseOptionalNumber(e.target.value),
-                            })
-                        }
+                        onFocus={handleOnFocusSet}
+                        onChange={handleDistanceChange}
                         className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
                     />
                 </label>
@@ -135,12 +196,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         <button
                             key={`rpe-${value}`}
                             type="button"
-                            onClick={() => {
-                                onFocusSet(exerciseIndex, set.set_number - 1)
-                                onUpdateSet(exerciseIndex, set.set_number, {
-                                    rpe: set.rpe === value ? undefined : value,
-                                })
-                            }}
+                            onClick={() => handleRpeToggle(value)}
                             className={`rounded-full px-2 py-1 text-[11px] transition-colors ${set.rpe === value
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-telegram-bg text-telegram-hint'
@@ -157,12 +213,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         <button
                             key={`rir-${value}`}
                             type="button"
-                            onClick={() => {
-                                onFocusSet(exerciseIndex, set.set_number - 1)
-                                onUpdateSet(exerciseIndex, set.set_number, {
-                                    rir: set.rir === value ? undefined : value,
-                                })
-                            }}
+                            onClick={() => handleRirToggle(value)}
                             className={`rounded-full px-2 py-1 text-[11px] transition-colors ${set.rir === value
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-telegram-bg text-telegram-hint'
