@@ -50,7 +50,9 @@ const ProfilePage = lazy(() => import('@features/profile/pages/ProfilePage'))
 const HealthPage = lazy(() =>
     import('@features/health/pages/HealthPage').then((m) => ({ default: m.HealthPage })),
 )
-const AnalyticsPage = lazy(() => import('@features/analytics/pages/AnalyticsPage'))
+const ProgressOverviewPage = lazy(() => import('@features/analytics/pages/ProgressOverviewPage'))
+const ExerciseProgressPage = lazy(() => import('@features/analytics/pages/ExerciseProgressPage'))
+const RecoveryPage = lazy(() => import('@features/analytics/pages/RecoveryPage'))
 const Catalog = lazy(() => import('@features/exercises/pages/Catalog'))
 const AddExercise = lazy(() => import('@features/exercises/pages/AddExercise'))
 const WorkoutModePage = lazy(() => import('@features/workouts/pages/WorkoutModePage'))
@@ -213,7 +215,7 @@ export default function App() {
                                             path="/progress/exercises"
                                             element={
                                                 <RouteGuard screenTitle="Прогресс упражнений" skeleton={<ProgressExercisesSkeleton />}>
-                                                    <AnalyticsPage />
+                                                    <ExerciseProgressPage />
                                                 </RouteGuard>
                                             }
                                         />
@@ -221,7 +223,7 @@ export default function App() {
                                             path="/progress/recovery"
                                             element={
                                                 <RouteGuard screenTitle="Восстановление" skeleton={<ProgressRecoverySkeleton />}>
-                                                    <AnalyticsPage />
+                                                    <RecoveryPage />
                                                 </RouteGuard>
                                             }
                                         />
@@ -233,7 +235,7 @@ export default function App() {
                                             path="/progress"
                                             element={
                                                 <RouteGuard screenTitle="Прогресс" skeleton={<ProgressOverviewSkeleton />}>
-                                                    <AnalyticsPage />
+                                                    <ProgressOverviewPage />
                                                 </RouteGuard>
                                             }
                                         />
