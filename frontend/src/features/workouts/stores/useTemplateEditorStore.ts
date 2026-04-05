@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 import type { WorkoutType } from '@shared/types'
 import type { WorkoutBlock } from '@features/workouts/types/workoutBuilder'
 
@@ -197,3 +198,50 @@ export const useTemplateEditorStore = create<TemplateEditorState>()((set) => ({
 
     clearValidationErrors: () => set({ validationErrors: {} }),
 }))
+
+/**
+ * Selects mutable editor state fields in a single subscription.
+ * Uses shallow equality to avoid re-rendering on unrelated store updates.
+ */
+export function useTemplateEditorStateSlice() {
+    return useTemplateEditorStore(
+        useShallow((s) => ({
+            id: s.id,
+            name: s.name,
+            description: s.description,
+            types: s.types,
+            blocks: s.blocks,
+            isDirty: s.isDirty,
+            validationErrors: s.validationErrors,
+        })),
+    )
+}
+
+/**
+ * Returns all store actions in one shallow-stable subscription.
+ * Actions are stable references, so this avoids unnecessary component updates.
+ */
+export function useTemplateEditorActions() {
+    return useTemplateEditorStore(
+        useShallow((s) => ({
+            hydrate: s.hydrate,
+            reset: s.reset,
+            markClean: s.markClean,
+            setName: s.setName,
+            setDescription: s.setDescription,
+            setTypes: s.setTypes,
+            toggleType: s.toggleType,
+            setBlocks: s.setBlocks,
+            clearBlocks: s.clearBlocks,
+            addBlock: s.addBlock,
+            updateBlock: s.updateBlock,
+            removeBlock: s.removeBlock,
+            reorderBlocks: s.reorderBlocks,
+            moveBlockUp: s.moveBlockUp,
+            moveBlockDown: s.moveBlockDown,
+            setValidationError: s.setValidationError,
+            clearValidationError: s.clearValidationError,
+            clearValidationErrors: s.clearValidationErrors,
+        })),
+    )
+}
