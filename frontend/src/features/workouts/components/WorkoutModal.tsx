@@ -5,6 +5,7 @@ import { cn } from '@shared/lib/cn'
 
 type WorkoutModalAction = Omit<ButtonProps, 'children'> & {
     label: ReactNode
+    'data-testid'?: string
 }
 
 interface WorkoutModalProps

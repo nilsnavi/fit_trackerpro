@@ -110,6 +110,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                 <span className="font-medium">Подход {set.set_number}</span>
                 <button
                     type="button"
+                    data-testid="set-toggle-btn"
                     onClick={handleToggleCompleted}
                     className={`px-2 py-0.5 rounded-full text-xs transition-colors ${set.completed
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'

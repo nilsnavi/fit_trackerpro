@@ -108,14 +108,31 @@ export const Modal: React.FC<ModalProps> = ({
             setIsClosing(false);
             // Блокируем скролл body
             document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
+
+            return () => {
+                document.body.style.overflow = '';
+            };
         }
 
+        document.body.style.overflow = '';
+
+        if (!isMounted) {
+            return () => {
+                document.body.style.overflow = '';
+            };
+        }
+
+        setIsClosing(true);
+        const timeoutId = window.setTimeout(() => {
+            setIsMounted(false);
+            setIsClosing(false);
+        }, 300);
+
         return () => {
+            window.clearTimeout(timeoutId);
             document.body.style.overflow = '';
         };
-    }, [isOpen]);
+    }, [isMounted, isOpen]);
 
     // Плавное закрытие
     const handleClose = useCallback(() => {

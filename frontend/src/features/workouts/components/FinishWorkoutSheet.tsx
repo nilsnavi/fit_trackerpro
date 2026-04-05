@@ -44,6 +44,7 @@ export function FinishWorkoutSheet({
                 label: isPending ? 'Сохраняем…' : 'Подтвердить завершение',
                 onClick: onConfirm,
                 disabled: isPending,
+                'data-testid': 'confirm-finish-btn',
             }}
         >
                 <div className="rounded-lg bg-telegram-bg/60 p-3 space-y-2">

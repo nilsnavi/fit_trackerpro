@@ -29,6 +29,7 @@ export function WorkoutModeStickyFooter({
                     disabled={disabled || isStarting}
                     onClick={onSave}
                     haptic="light"
+                    data-testid="save-btn"
                 >
                     Сохранить
                 </Button>
@@ -41,6 +42,7 @@ export function WorkoutModeStickyFooter({
                     disabled={disabled || isSaving}
                     onClick={onSaveAndStart}
                     haptic="medium"
+                    data-testid="save-and-start-btn"
                 >
                     Сохранить и начать
                 </Button>

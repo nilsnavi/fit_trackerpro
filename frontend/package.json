@@ -21,10 +21,14 @@
     "api:types:generate": "node scripts/generate-openapi-types.mjs",
     "api:contract:check": "node scripts/check-openapi-types.mjs",
     "e2e": "playwright test",
+    "e2e:regression": "playwright test --grep @regression",
+    "e2e:workout-flows": "playwright test --grep @workout-flows",
     "e2e:ui": "playwright test --ui",
     "e2e:headed": "playwright test --headed",
     "e2e:install": "playwright install",
-    "e2e:ci": "playwright test --reporter=line,html"
+    "e2e:ci": "playwright test --reporter=line,html",
+    "e2e:ci:regression": "playwright test --grep @regression --reporter=line,html",
+    "e2e:ci:workout-flows": "playwright test --grep @workout-flows --reporter=line,html"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

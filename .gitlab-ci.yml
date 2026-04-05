@@ -89,3 +89,45 @@ e2e_frontend:
       - frontend/playwright-report/
       - frontend/test-results/
 
+e2e_frontend_workout_flows:
+  stage: test
+  image: node:20-bookworm
+  variables:
+    PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/ms-playwright"
+  cache:
+    key: "playwright-browsers"
+    paths:
+      - .cache/ms-playwright/
+  script:
+    - cd frontend
+    - npm ci --legacy-peer-deps
+    - npx playwright install --with-deps chromium
+    - npm run e2e:ci:workout-flows
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - frontend/playwright-report/
+      - frontend/test-results/
+
+e2e_frontend_regression:
+  stage: test
+  image: node:20-bookworm
+  variables:
+    PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/ms-playwright"
+  cache:
+    key: "playwright-browsers"
+    paths:
+      - .cache/ms-playwright/
+  script:
+    - cd frontend
+    - npm ci --legacy-peer-deps
+    - npx playwright install --with-deps chromium
+    - npm run e2e:ci:regression
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - frontend/playwright-report/
+      - frontend/test-results/
+

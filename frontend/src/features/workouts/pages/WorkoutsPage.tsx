@@ -204,6 +204,7 @@ export function WorkoutsPage() {
                     onClick={handleResumeDraft}
                     className="w-full text-left rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-4 flex items-center gap-4 active:scale-[0.98] transition-transform shadow-sm"
                     aria-label="Продолжить тренировку"
+                    data-testid="resume-draft-btn"
                 >
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20">
                         <Play className="h-6 w-6 text-white" fill="currentColor" />
@@ -353,6 +354,7 @@ export function WorkoutsPage() {
                     disabled={isStartingWorkout || isRepeatingLast}
                     className="w-full rounded-2xl bg-telegram-secondary-bg p-4 text-left active:scale-[0.99] transition-transform disabled:opacity-60"
                     aria-label="Последняя тренировка, повторить"
+                    data-testid="repeat-last-workout-btn"
                 >
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">

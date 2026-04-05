@@ -75,7 +75,9 @@ export function useWorkoutModeHandlers({
 
     const markEditorCleanAndNavigate = useCallback((to: string) => {
         useWorkoutModeEditorStore.getState().markClean()
-        navigate(to)
+        window.setTimeout(() => {
+            navigate(to)
+        }, 0)
     }, [navigate])
 
     const handleRepeat = useCallback(async () => {

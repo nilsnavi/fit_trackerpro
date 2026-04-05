@@ -468,6 +468,7 @@ function FormActions({
                 className="flex-1"
                 isLoading={isLoading}
                 onClick={onConfirm}
+                data-testid="confirm-exercise-btn"
             >
                 Добавить
             </Button>
