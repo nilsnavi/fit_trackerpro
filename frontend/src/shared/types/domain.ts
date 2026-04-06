@@ -70,6 +70,7 @@ export type EquipmentType =
     | 'medicine_ball'
     | 'foam_roller'
     | 'yoga_mat'
+    | 'machine'
 export type RiskType = 'shoulder' | 'knee' | 'back' | 'wrist' | 'elbow'
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 

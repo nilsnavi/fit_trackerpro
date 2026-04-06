@@ -45,10 +45,11 @@ const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string; icon: string }[]
     { value: 'pull_up_bar', label: 'Турник', icon: '🔧' },
     { value: 'bench', label: 'Скамья', icon: '🪑' },
     { value: 'cable_machine', label: 'Блочный тренажёр', icon: '🔗' },
+    { value: 'machine', label: 'Тренажёр', icon: '⚙️' },
 ];
 
 const MUSCLE_GROUPS: Record<Exclude<ExerciseCategory, 'all'>, string[]> = {
-    strength: ['Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Кор'],
+    strength: ['Грудь', 'Спина', 'Плечи', 'Руки', 'Кор', 'Ягодицы', 'Задняя поверхность бедра', 'Передняя поверхность бедра'],
     cardio: ['Сердце', 'Всё тело', 'Ноги', 'Кор'],
     flexibility: ['Всё тело', 'Спина', 'Ноги', 'Плечи', 'Бёдра'],
     balance: ['Кор', 'Ноги', 'Ягодицы', 'Спина'],

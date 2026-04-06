@@ -6,8 +6,8 @@ import { useWorkoutSessionDraftStore } from '@/state/local'
 
 const navItems = [
     { path: '/', icon: Home, label: 'Главная' },
+    { path: '/exercises', icon: Library, label: 'Каталог' },
     { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
-    { path: '/workouts/templates', icon: Library, label: 'Шаблоны' },
     { path: '/progress', icon: BarChart3, label: 'Прогресс' },
     { path: '/profile', icon: User, label: 'Профиль' },
 ]
