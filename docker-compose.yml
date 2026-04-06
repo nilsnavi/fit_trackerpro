@@ -116,6 +116,7 @@ services:
     restart: unless-stopped
     environment:
       - VITE_API_URL=${VITE_API_URL:-/api/v1}
+      - VITE_ADMIN_USER_IDS=${VITE_ADMIN_USER_IDS:-}
       - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-}
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:-}
       - SENTRY_DSN=${SENTRY_DSN:-}

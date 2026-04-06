@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
+import { getAdminUserIdsRaw } from '@shared/config/runtime';
 import { Input } from '@shared/ui/Input';
 import { Button } from '@shared/ui/Button';
 import { Chip } from '@shared/ui/Chip';
@@ -10,6 +11,11 @@ import { Modal } from '@shared/ui/Modal';
 import { cn } from '@shared/lib/cn';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery';
+import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery';
+import {
+    useDeleteExerciseMutation,
+    useUpdateExerciseMutation,
+} from '@features/exercises/hooks/useExerciseMutations';
 import {
     useExerciseCategoriesQuery,
     useExerciseEquipmentQuery,
@@ -283,6 +289,11 @@ interface ExerciseDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAddToWorkout: (exercise: Exercise) => void;
+    canManageExercise: boolean;
+    onRenameExercise: (exerciseId: number, newName: string) => Promise<void>;
+    onDeleteExercise: (exerciseId: number) => Promise<void>;
+    isRenaming: boolean;
+    isDeleting: boolean;
     allExercises: Exercise[];
 }
 
@@ -291,13 +302,73 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
     isOpen,
     onClose,
     onAddToWorkout,
+    canManageExercise,
+    onRenameExercise,
+    onDeleteExercise,
+    isRenaming,
+    isDeleting,
     allExercises,
 }) => {
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [nameDraft, setNameDraft] = useState('');
+    const [actionError, setActionError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setIsEditingName(false);
+        setNameDraft(exercise?.name ?? '');
+        setActionError(null);
+    }, [exercise?.id, exercise?.name, isOpen]);
+
     if (!exercise) return null;
 
     const similarExercises = exercise.similarExercises
         ?.map(id => allExercises.find(e => e.id === id))
         .filter((e): e is Exercise => e !== undefined) || [];
+
+    const handleStartEditName = () => {
+        setNameDraft(exercise.name);
+        setActionError(null);
+        setIsEditingName(true);
+    };
+
+    const handleCancelEditName = () => {
+        setIsEditingName(false);
+        setNameDraft(exercise.name);
+        setActionError(null);
+    };
+
+    const handleSaveName = async () => {
+        const nextName = nameDraft.trim();
+        if (!nextName) {
+            setActionError('Название не может быть пустым.');
+            return;
+        }
+        if (nextName === exercise.name) {
+            setIsEditingName(false);
+            setActionError(null);
+            return;
+        }
+
+        try {
+            await onRenameExercise(exercise.id, nextName);
+            setIsEditingName(false);
+            setActionError(null);
+        } catch {
+            setActionError('Не удалось обновить название упражнения.');
+        }
+    };
+
+    const handleDelete = async () => {
+        const confirmed = window.confirm(`Удалить упражнение «${exercise.name}»? Это действие нельзя отменить.`);
+        if (!confirmed) return;
+
+        try {
+            await onDeleteExercise(exercise.id);
+            setActionError(null);
+        } catch {
+            setActionError('Не удалось удалить упражнение.');
+        }
+    };
 
     return (
         <Modal
@@ -352,6 +423,65 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                         </span>
                     )}
                 </div>
+
+                {canManageExercise && (
+                    <div className="rounded-xl border border-border bg-telegram-secondary-bg p-3 space-y-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-telegram-hint">Управление упражнением</p>
+
+                        {isEditingName ? (
+                            <div className="space-y-2">
+                                <Input
+                                    value={nameDraft}
+                                    onChange={(e) => setNameDraft(e.target.value)}
+                                    placeholder="Введите название"
+                                    disabled={isRenaming || isDeleting}
+                                />
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={handleCancelEditName}
+                                        disabled={isRenaming || isDeleting}
+                                    >
+                                        Отмена
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => void handleSaveName()}
+                                        isLoading={isRenaming}
+                                        disabled={isDeleting}
+                                    >
+                                        Сохранить название
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleStartEditName}
+                                    disabled={isRenaming || isDeleting}
+                                >
+                                    Редактировать название
+                                </Button>
+                                <Button
+                                    variant="emergency"
+                                    size="sm"
+                                    onClick={() => void handleDelete()}
+                                    isLoading={isDeleting}
+                                    disabled={isRenaming}
+                                >
+                                    Удалить упражнение
+                                </Button>
+                            </div>
+                        )}
+
+                        {actionError && (
+                            <p className="text-sm text-danger" role="alert">{actionError}</p>
+                        )}
+                    </div>
+                )}
 
                 {/* Description */}
                 <div>
@@ -543,10 +673,42 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 export const Catalog: React.FC = () => {
     const navigate = useNavigate();
     const tg = useTelegramWebApp();
-    const { isTelegram, showBackButton, hideBackButton, hapticFeedback } = tg;
+    const { isTelegram, showBackButton, hideBackButton, hapticFeedback, user } = tg;
     const exercisesQuery = useExercisesCatalogQuery();
+    const currentUserQuery = useCurrentUserQuery();
+    const updateExerciseMutation = useUpdateExerciseMutation();
+    const deleteExerciseMutation = useDeleteExerciseMutation();
     const categoriesQuery = useExerciseCategoriesQuery();
     const equipmentQuery = useExerciseEquipmentQuery();
+
+    const parseAdminIds = useCallback((raw: string | null | undefined): number[] => {
+        if (!raw) return [];
+        return raw
+            .replace(/[\[\]]/g, '')
+            .split(',')
+            .map((value) => Number.parseInt(value.trim(), 10))
+            .filter((value) => Number.isFinite(value) && value > 0);
+    }, []);
+
+    const adminTelegramIds = useMemo(() => {
+        const runtimeIdsRaw = getAdminUserIdsRaw();
+        const localOverrideRaw =
+            typeof window !== 'undefined'
+                ? window.localStorage.getItem('fittracker_admin_user_ids')
+                : null;
+
+        return new Set<number>([
+            ...parseAdminIds(import.meta.env.VITE_ADMIN_USER_IDS),
+            ...parseAdminIds(runtimeIdsRaw),
+            ...parseAdminIds(localOverrideRaw),
+        ]);
+    }, [parseAdminIds]);
+
+    const currentTelegramId = currentUserQuery.data?.telegram_id ?? user?.id ?? null;
+    const canManageExercises = useMemo(
+        () => currentTelegramId != null && adminTelegramIds.has(currentTelegramId),
+        [adminTelegramIds, currentTelegramId],
+    );
 
     const categories = useMemo((): { value: ExerciseCategory; label: string; icon: string }[] => {
         if (categoriesQuery.data?.categories?.length) {
@@ -789,6 +951,27 @@ export const Catalog: React.FC = () => {
         hapticFeedback({ type: 'impact', style: 'medium' })
         navigate('/exercises/add');
     }, [navigate, hapticFeedback]);
+
+    const handleRenameExercise = useCallback(async (exerciseId: number, newName: string) => {
+        await updateExerciseMutation.mutateAsync({
+            exerciseId,
+            payload: { name: newName },
+        });
+
+        setSelectedExercise((prev) =>
+            prev && prev.id === exerciseId
+                ? {
+                    ...prev,
+                    name: newName,
+                }
+                : prev,
+        );
+    }, [updateExerciseMutation]);
+
+    const handleDeleteExercise = useCallback(async (exerciseId: number) => {
+        await deleteExerciseMutation.mutateAsync(exerciseId);
+        handleCloseDetail();
+    }, [deleteExerciseMutation, handleCloseDetail]);
 
     const catalogHeaderActions = useMemo(
         () => (
@@ -1085,6 +1268,11 @@ export const Catalog: React.FC = () => {
                 isOpen={isDetailOpen}
                 onClose={handleCloseDetail}
                 onAddToWorkout={handleAddToWorkout}
+                canManageExercise={canManageExercises}
+                onRenameExercise={handleRenameExercise}
+                onDeleteExercise={handleDeleteExercise}
+                isRenaming={updateExerciseMutation.isPending}
+                isDeleting={deleteExerciseMutation.isPending}
                 allExercises={exercises}
             />
         </div>
