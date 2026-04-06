@@ -21,9 +21,13 @@ import {
     getExerciseSummaryMeta,
 } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedExercise, CompletedSet } from '@features/workouts/types/workouts'
+import { useWorkoutQuickIncrementsStore } from '@/state/local'
 import { ExerciseSetRow } from './ExerciseSetRow'
 
+const QUICK_INCREMENT_BASE_OPTIONS = [0.5, 1, 1.25, 2.5]
+
 interface ActiveExerciseListProps {
+    incrementScopePrefix: string
     exercises: CompletedExercise[]
     currentExerciseIndex: number
     currentSetIndex: number
@@ -44,6 +48,7 @@ interface ActiveExerciseListProps {
 }
 
 export const ActiveExerciseList = memo(function ActiveExerciseList({
+    incrementScopePrefix,
     exercises,
     currentExerciseIndex,
     currentSetIndex,
@@ -63,6 +68,8 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
     onNotesChange,
 }: ActiveExerciseListProps) {
     const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Record<string, true>>({})
+    const getIncrementBase = useWorkoutQuickIncrementsStore((s) => s.getIncrementBase)
+    const setIncrementBaseForScope = useWorkoutQuickIncrementsStore((s) => s.setIncrementBase)
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -87,6 +94,10 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
         })
     }
 
+    const setIncrementBase = (scopeKey: string, base: number) => {
+        setIncrementBaseForScope(scopeKey, base)
+    }
+
     return (
         <div className="space-y-3">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -102,6 +113,13 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                         const isCollapsed = Boolean(collapsedExerciseIds[itemId]) && !isCurrentExercise
                         const previousBestLabel =
                             previousBestLabelsByExercise.get(exercise.name.trim().toLowerCase()) ?? 'Нет данных'
+                        const incrementScopeKey = `${incrementScopePrefix}:${exercise.exercise_id}`
+                        const incrementBase = getIncrementBase(incrementScopeKey)
+                        const weightDeltas = [
+                            incrementBase,
+                            Number((incrementBase * 2).toFixed(2)),
+                            Number((incrementBase * 4).toFixed(2)),
+                        ]
 
                         return (
                             <SortableExerciseCard
@@ -178,6 +196,23 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                     {!isCollapsed && (
                                         <>
                                             <div className="mt-2 space-y-2">
+                                                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                                                    <span className="shrink-0 text-[11px] text-telegram-hint">Шаг веса:</span>
+                                                    {QUICK_INCREMENT_BASE_OPTIONS.map((option) => (
+                                                        <button
+                                                            key={`${itemId}-inc-${option}`}
+                                                            type="button"
+                                                            onClick={() => setIncrementBase(incrementScopeKey, option)}
+                                                            className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
+                                                                incrementBase === option
+                                                                    ? 'bg-primary text-primary-foreground'
+                                                                    : 'bg-telegram-bg text-telegram-hint'
+                                                            }`}
+                                                        >
+                                                            {option}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                                 {exercise.sets_completed.map((set) => (
                                                     <ExerciseSetRow
                                                         key={set.set_number}
@@ -194,6 +229,7 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                         onCopyPrevious={onCopyPreviousSet}
                                                         onAdjustWeight={onAdjustWeight}
                                                         onUpdateSet={onUpdateSet}
+                                                        weightDeltas={weightDeltas}
                                                     />
                                                 ))}
                                             </div>

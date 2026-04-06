@@ -109,6 +109,7 @@ export interface WorkoutCompleteResponse {
 
 export interface WorkoutHistoryItem {
     id: number
+    template_id?: number
     date: string
     duration?: number
     exercises: CompletedExercise[]

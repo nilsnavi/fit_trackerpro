@@ -103,7 +103,7 @@ export function useWorkoutsPageState() {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         const title = 'Свободная тренировка'
         const started = await startWorkoutMutation.mutateAsync({ name: title })
-        setWorkoutSessionDraft(started.id, title)
+        setWorkoutSessionDraft(started.id, title, started.template_id ?? null)
         navigate(`/workouts/active/${started.id}`)
     }, [tg, startWorkoutMutation, setWorkoutSessionDraft, navigate])
 
@@ -116,7 +116,7 @@ export function useWorkoutsPageState() {
                 workoutId: started.id,
                 payload: buildRepeatSessionPayload(lastItem),
             })
-            setWorkoutSessionDraft(started.id, title)
+            setWorkoutSessionDraft(started.id, title, started.template_id ?? null)
             navigate(`/workouts/active/${started.id}`)
         },
         [tg, startWorkoutMutation, updateWorkoutSessionMutation, setWorkoutSessionDraft, navigate],
@@ -129,6 +129,7 @@ export function useWorkoutsPageState() {
             setWorkoutSessionDraft(
                 started.id,
                 templateName ?? `Тренировка #${started.id}`,
+                started.template_id ?? templateId,
             )
             navigate(`/workouts/active/${started.id}`)
         },

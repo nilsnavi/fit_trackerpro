@@ -21,14 +21,14 @@ export function useWorkoutSessionDraftCloudSync(): void {
         const { isTelegram, cloudStorage } = telegramRef.current
         if (!isTelegram) return
 
-        const { workoutId, title, updatedAt } = useWorkoutSessionDraftStore.getState()
+        const { workoutId, templateId, title, updatedAt } = useWorkoutSessionDraftStore.getState()
         if (workoutId == null) {
             await cloudStorage.removeItem(WORKOUT_SESSION_DRAFT_CLOUD_KEY)
             return
         }
         await cloudStorage.setItem(
             WORKOUT_SESSION_DRAFT_CLOUD_KEY,
-            JSON.stringify({ workoutId, title: title ?? '', updatedAt }),
+            JSON.stringify({ workoutId, templateId, title: title ?? '', updatedAt }),
         )
     }, [])
 

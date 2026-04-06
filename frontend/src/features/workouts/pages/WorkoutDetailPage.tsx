@@ -92,7 +92,7 @@ export function WorkoutDetailPage() {
                 workoutId: started.id,
                 payload: buildRepeatSessionPayload(workout),
             })
-            setWorkoutSessionDraft(started.id, title)
+            setWorkoutSessionDraft(started.id, title, started.template_id ?? null)
             navigate(`/workouts/active/${started.id}`)
         } catch (e) {
             setSessionError(getErrorMessage(e))

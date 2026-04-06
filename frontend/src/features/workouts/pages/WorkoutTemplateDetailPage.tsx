@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, Clock3, Lock, Pencil, Play, Timer, Globe, Layers3 } from 'lucide-react'
+import { AlertCircle, Clock3, Copy, Lock, Pencil, Play, Timer, Globe, Layers3 } from 'lucide-react'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { queryKeys } from '@shared/api/queryKeys'
-import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import { useCreateWorkoutTemplateMutation, useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
@@ -12,6 +12,7 @@ import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { Button } from '@shared/ui/Button'
 import { getErrorMessage } from '@shared/errors'
+import { useWorkoutSessionDraftStore } from '@/state/local'
 
 function formatExerciseDetails(exercise: {
     sets: number
@@ -34,7 +35,10 @@ export function WorkoutTemplateDetailPage() {
     const { id } = useParams<{ id: string }>()
     const tg = useTelegramWebApp()
     const startWorkoutMutation = useStartWorkoutMutation()
+    const createTemplateMutation = useCreateWorkoutTemplateMutation()
+    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
     const [isStarting, setIsStarting] = useState(false)
+    const [isDuplicating, setIsDuplicating] = useState(false)
     const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false)
 
     const templateId = useMemo(() => {
@@ -86,7 +90,10 @@ export function WorkoutTemplateDetailPage() {
         startWorkoutMutation.mutate(
             { template_id: template.id, name: template.name },
             {
-                onSuccess: (res) => navigate(`/workouts/active/${res.id}`),
+                onSuccess: (res) => {
+                    setWorkoutSessionDraft(res.id, template.name, res.template_id ?? template.id)
+                    navigate(`/workouts/active/${res.id}`)
+                },
                 onSettled: () => {
                     setIsStarting(false)
                     setIsStartOptionsOpen(false)
@@ -100,6 +107,28 @@ export function WorkoutTemplateDetailPage() {
         tg.hapticFeedback({ type: 'selection' })
         setIsStartOptionsOpen(false)
         navigate(`/workouts/templates/${template.id}/edit`)
+    }
+
+    const handleDuplicateTemplate = () => {
+        if (!template) return
+        tg.hapticFeedback({ type: 'impact', style: 'light' })
+        setIsDuplicating(true)
+        createTemplateMutation.mutate(
+            {
+                name: `${template.name} (копия)`,
+                type: template.type,
+                exercises: template.exercises,
+                is_public: template.is_public,
+            },
+            {
+                onSuccess: (nextTemplate) => {
+                    navigate(`/workouts/templates/${nextTemplate.id}`)
+                },
+                onSettled: () => {
+                    setIsDuplicating(false)
+                },
+            },
+        )
     }
 
     if (templateId == null) {
@@ -148,6 +177,13 @@ export function WorkoutTemplateDetailPage() {
 
     return (
         <div className="space-y-4 p-4 pb-28">
+            <section className="rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Режим шаблона</p>
+                <p className="mt-1 text-sm text-telegram-text">
+                    Здесь вы редактируете заготовку. Подходы начнут записываться только после старта тренировки.
+                </p>
+            </section>
+
             <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                 <h1 className="text-base font-semibold text-telegram-text">{template.name}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-telegram-hint">
@@ -215,19 +251,30 @@ export function WorkoutTemplateDetailPage() {
             </section>
 
             <div className="fixed bottom-[max(16px,env(safe-area-inset-bottom))] left-0 right-0 px-4">
-                <Button
-                    fullWidth
-                    size="lg"
-                    onClick={() => {
-                        tg.hapticFeedback({ type: 'selection' })
-                        setIsStartOptionsOpen(true)
-                    }}
-                    isLoading={isStarting}
-                    disabled={isStarting}
-                    leftIcon={<Play className="h-5 w-5" />}
-                >
-                    Старт
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                    <Button
+                        variant="secondary"
+                        size="lg"
+                        onClick={handleDuplicateTemplate}
+                        isLoading={isDuplicating}
+                        disabled={isDuplicating || isStarting}
+                        leftIcon={<Copy className="h-5 w-5" />}
+                    >
+                        Дубликат
+                    </Button>
+                    <Button
+                        size="lg"
+                        onClick={() => {
+                            tg.hapticFeedback({ type: 'selection' })
+                            setIsStartOptionsOpen(true)
+                        }}
+                        isLoading={isStarting}
+                        disabled={isStarting || isDuplicating}
+                        leftIcon={<Play className="h-5 w-5" />}
+                    >
+                        Старт
+                    </Button>
+                </div>
             </div>
 
             <WorkoutModal

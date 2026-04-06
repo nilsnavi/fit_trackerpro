@@ -31,6 +31,7 @@ import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { Modal } from '@shared/ui/Modal'
 import { Button } from '@shared/ui/Button'
 import { useWorkoutTemplatePinsStore } from '@/state/local'
+import { WorkoutActionRail } from '@features/workouts/components/WorkoutActionRail'
 
 const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
     cardio: 'Кардио',
@@ -196,7 +197,7 @@ export function WorkoutsPage() {
     useAppShellHeaderRight(headerActions)
 
     return (
-        <div className="p-4 space-y-6">
+        <div className="p-4 pb-40 space-y-6">
             {/* ── 1. Resume workout ───────────────────────────────── */}
             {draftWorkoutId != null && (
                 <button
@@ -578,6 +579,37 @@ export function WorkoutsPage() {
                     </div>
                 </div>
             </Modal>
+
+            <WorkoutActionRail
+                className="space-y-2"
+                sections={[
+                    [
+                        {
+                            id: 'quick-start',
+                            label: 'Быстрый старт',
+                            onClick: () => void handleStartEmpty(),
+                            disabled: isStartingWorkout || isRepeatingLast,
+                            leftIcon: <Play className="h-4 w-4" />,
+                        },
+                        {
+                            id: 'templates',
+                            label: 'Шаблоны',
+                            onClick: () => navigate('/workouts/templates'),
+                            variant: 'secondary',
+                            leftIcon: <LayoutTemplate className="h-4 w-4" />,
+                        },
+                    ],
+                    [
+                        {
+                            id: 'history',
+                            label: 'История тренировок',
+                            onClick: () => navigate('/workouts/history'),
+                            variant: 'secondary',
+                            leftIcon: <Clock className="h-4 w-4" />,
+                        },
+                    ],
+                ]}
+            />
         </div>
     )
 }

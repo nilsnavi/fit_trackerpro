@@ -3,6 +3,7 @@ import { cn } from '@shared/lib/cn'
 import { useTelegramContext } from '../providers/TelegramProvider'
 import { useAppShellLayoutContext } from './AppShellLayoutContext'
 import { getAppShellTitle } from './appShellTitles'
+import { ActiveWorkoutHeaderPill } from '@app/components/ActiveWorkoutHeaderPill'
 
 export function AppShellHeader() {
     const { pathname } = useLocation()
@@ -23,7 +24,10 @@ export function AppShellHeader() {
                 <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight text-telegram-text">
                     {title}
                 </h1>
-                <div className="flex min-w-0 shrink-0 items-center justify-end">{headerRight}</div>
+                <div className="flex min-w-0 shrink-0 items-center justify-end gap-2">
+                    <ActiveWorkoutHeaderPill />
+                    {headerRight}
+                </div>
             </div>
         </header>
     )

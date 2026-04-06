@@ -1,10 +1,9 @@
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedSet } from '@features/workouts/types/workouts'
 
 const RPE_OPTIONS = [6, 7, 8, 9, 10]
 const RIR_OPTIONS = [0, 1, 2, 3, 4]
-const WEIGHT_DELTAS = [1.25, 2.5, 5]
 
 interface ExerciseSetRowProps {
     set: CompletedSet
@@ -17,6 +16,7 @@ interface ExerciseSetRowProps {
     onCopyPrevious: (exerciseIndex: number, setNumber: number) => void
     onAdjustWeight: (exerciseIndex: number, setNumber: number, delta: number) => void
     onUpdateSet: (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
+    weightDeltas: number[]
 }
 
 export const ExerciseSetRow = memo(function ExerciseSetRow({
@@ -30,15 +30,71 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
     onCopyPrevious,
     onAdjustWeight,
     onUpdateSet,
+    weightDeltas,
 }: ExerciseSetRowProps) {
     const setIndex = set.set_number - 1
     const [showEffort, setShowEffort] = useState(Boolean(set.rpe != null || set.rir != null))
+    const repsInputRef = useRef<HTMLInputElement | null>(null)
+    const weightInputRef = useRef<HTMLInputElement | null>(null)
+    const durationInputRef = useRef<HTMLInputElement | null>(null)
+    const distanceInputRef = useRef<HTMLInputElement | null>(null)
+    const didAutoFocusRef = useRef(false)
 
     useEffect(() => {
         if (set.rpe != null || set.rir != null) {
             setShowEffort(true)
         }
     }, [set.rir, set.rpe])
+
+    useEffect(() => {
+        if (!isCurrent) {
+            didAutoFocusRef.current = false
+            return
+        }
+        if (didAutoFocusRef.current) return
+
+        const target =
+            set.reps == null
+                ? repsInputRef.current
+                : set.weight == null
+                    ? weightInputRef.current
+                    : set.duration == null
+                        ? durationInputRef.current
+                        : distanceInputRef.current
+
+        if (!target) return
+
+        didAutoFocusRef.current = true
+        requestAnimationFrame(() => {
+            target.focus()
+            target.select()
+        })
+    }, [isCurrent, set.distance, set.duration, set.reps, set.weight])
+
+    const focusNext = useCallback((field: 'reps' | 'weight' | 'duration' | 'distance') => {
+        if (field === 'reps') {
+            weightInputRef.current?.focus()
+            weightInputRef.current?.select()
+            return
+        }
+        if (field === 'weight') {
+            durationInputRef.current?.focus()
+            durationInputRef.current?.select()
+            return
+        }
+        if (field === 'duration') {
+            distanceInputRef.current?.focus()
+            distanceInputRef.current?.select()
+            return
+        }
+        distanceInputRef.current?.blur()
+    }, [])
+
+    const handleNumericEnter = useCallback((event: React.KeyboardEvent<HTMLInputElement>, field: 'reps' | 'weight' | 'duration' | 'distance') => {
+        if (event.key !== 'Enter') return
+        event.preventDefault()
+        focusNext(field)
+    }, [focusNext])
 
     // Memoized callbacks to prevent unnecessary child re-renders
     const handleToggleCompleted = useCallback(() => {
@@ -163,7 +219,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                 >
                     Скопировать
                 </button>
-                {WEIGHT_DELTAS.map((delta) => (
+                {weightDeltas.map((delta) => (
                     <button
                         key={delta}
                         type="button"
@@ -179,6 +235,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                 <label className="text-xs text-telegram-hint">
                     Повторы
                     <input
+                        ref={repsInputRef}
                         type="number"
                         min={0}
                         inputMode="numeric"
@@ -186,12 +243,14 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         value={set.reps ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleRepsChange}
+                        onKeyDown={(event) => handleNumericEnter(event, 'reps')}
                         className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
                 <label className="text-xs text-telegram-hint">
                     Вес (кг)
                     <input
+                        ref={weightInputRef}
                         type="number"
                         min={0}
                         step="0.5"
@@ -200,12 +259,14 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         value={set.weight ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleWeightChange}
+                        onKeyDown={(event) => handleNumericEnter(event, 'weight')}
                         className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
                 <label className="text-xs text-telegram-hint">
                     Длительность (сек)
                     <input
+                        ref={durationInputRef}
                         type="number"
                         min={0}
                         inputMode="numeric"
@@ -213,12 +274,14 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         value={set.duration ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleDurationChange}
+                        onKeyDown={(event) => handleNumericEnter(event, 'duration')}
                         className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
                 <label className="text-xs text-telegram-hint">
                     Дистанция (км)
                     <input
+                        ref={distanceInputRef}
                         type="number"
                         min={0}
                         step="0.01"
@@ -227,6 +290,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         value={set.distance ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleDistanceChange}
+                        onKeyDown={(event) => handleNumericEnter(event, 'distance')}
                         className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
