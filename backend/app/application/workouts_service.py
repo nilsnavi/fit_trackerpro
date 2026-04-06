@@ -6,15 +6,26 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import (
+    WORKOUT_COMPLETE,
+    WORKOUT_START,
+    WORKOUT_TEMPLATE_ARCHIVE,
+    WORKOUT_TEMPLATE_CREATE,
+    WORKOUT_TEMPLATE_DELETE,
+    WORKOUT_TEMPLATE_UNARCHIVE,
+    WORKOUT_TEMPLATE_UPDATE,
+    WORKOUT_UPDATE,
+    audit_log,
+)
+from app.domain.exceptions import WorkoutNotFoundError
 from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
 from app.domain.training_load_daily import TrainingLoadDaily
 from app.domain.workout_log import WorkoutLog
 from app.domain.workout_template import WorkoutTemplate
-from app.domain.exceptions import WorkoutNotFoundError
-from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
+from app.infrastructure.cache import invalidate_user_analytics_cache
 from app.infrastructure.idempotency import run_idempotent
-from app.settings import settings
+from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
 from app.schemas.enums import WorkoutSessionType
 from app.schemas.workouts import (
     CompletedExercise,
@@ -29,18 +40,7 @@ from app.schemas.workouts import (
     WorkoutTemplateList,
     WorkoutTemplateResponse,
 )
-from app.infrastructure.cache import invalidate_user_analytics_cache
-from app.core.audit import (
-    WORKOUT_COMPLETE,
-    WORKOUT_START,
-    WORKOUT_TEMPLATE_ARCHIVE,
-    WORKOUT_TEMPLATE_CREATE,
-    WORKOUT_TEMPLATE_DELETE,
-    WORKOUT_TEMPLATE_UNARCHIVE,
-    WORKOUT_TEMPLATE_UPDATE,
-    WORKOUT_UPDATE,
-    audit_log,
-)
+from app.settings import settings
 
 
 class WorkoutsService:

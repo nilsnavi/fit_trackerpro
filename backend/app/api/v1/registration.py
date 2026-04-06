@@ -23,9 +23,6 @@ from app.api.v1.challenges import router as challenges_router
 from app.api.v1.emergency import router as emergency_router
 from app.api.v1.exercises import router as exercises_router
 from app.api.v1.health_metrics import router as health_metrics_router
-from app.api.v1.system import router as system_router
-from app.api.v1.users import protected_users_router, public_users_router
-from app.api.v1.workouts import router as workouts_router
 from app.api.v1.openapi_tags import (
     TAG_ACHIEVEMENTS,
     TAG_ANALYTICS,
@@ -38,6 +35,9 @@ from app.api.v1.openapi_tags import (
     TAG_USERS,
     TAG_WORKOUTS,
 )
+from app.api.v1.system import router as system_router
+from app.api.v1.users import protected_users_router, public_users_router
+from app.api.v1.workouts import router as workouts_router
 
 # Public so tests, docs, or tooling can assert the mounted API version prefix.
 API_V1_PREFIX = "/api/v1"

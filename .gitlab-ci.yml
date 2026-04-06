@@ -1,3 +1,18 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+default:
+  interruptible: true
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+
 stages:
   - test
 
@@ -13,11 +28,12 @@ lint_backend:
   script:
     - python --version
     - python -m pip install --upgrade pip
-    - pip install ruff
+    - pip install -r backend/requirements/dev.txt
     - ruff --version
     - ruff check backend/app
+    - python -m compileall -q backend/app
 
-unit_backend:
+backend_dep_consistency:
   stage: test
   image: python:3.12-slim
   cache:
@@ -30,8 +46,42 @@ unit_backend:
     - python --version
     - python -m pip install --upgrade pip
     - pip install -r backend/requirements/dev.txt
+    - python -m pip check
+
+backend_security_audit:
+  stage: test
+  image: python:3.12-slim
+  allow_failure: true
+  cache:
+    key: "pip-cache"
+    paths:
+      - .cache/pip/
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  script:
+    - python --version
+    - python -m pip install --upgrade pip
+    - pip install pip-audit
+    - pip-audit -r backend/requirements/dev.txt --progress-spinner off
+
+unit_backend:
+  stage: test
+  needs:
+    - lint_backend
+    - backend_dep_consistency
+  image: python:3.12-slim
+  cache:
+    key: "pip-cache"
+    paths:
+      - .cache/pip/
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  script:
+    - python --version
+    - python -m pip install --upgrade pip
+    - pip install -r backend/requirements/dev.txt
     - cd backend
-    - pytest
+    - pytest --junitxml=pytest-report.xml
     - python tools/check_coverage_thresholds.py coverage.xml
     - python tools/coverage_baseline.py check coverage.xml
   coverage: '/TOTAL.*\s(\d+)%/'
@@ -41,8 +91,12 @@ unit_backend:
     paths:
       - backend/htmlcov/
       - backend/coverage.xml
+      - backend/pytest-report.xml
     reports:
-      cobertura: backend/coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: backend/coverage.xml
+      junit: backend/pytest-report.xml
 
 unit_frontend:
   stage: test
@@ -56,6 +110,8 @@ unit_frontend:
   script:
     - cd frontend
     - npm ci --legacy-peer-deps
+    - npm run lint
+    - npm run typecheck
     - npm run test:ci
     - npm run coverage:baseline:check
   coverage: '/All files[^|]*\|[^|]*\s+(\d+)%/'
@@ -65,7 +121,9 @@ unit_frontend:
     paths:
       - frontend/coverage/
     reports:
-      cobertura: frontend/coverage/cobertura-coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: frontend/coverage/cobertura-coverage.xml
 
 e2e_frontend:
   stage: test

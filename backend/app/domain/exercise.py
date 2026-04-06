@@ -4,7 +4,7 @@ Exercise Model
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, DateTime, JSON, ForeignKey, Index, CheckConstraint
+from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 

@@ -4,15 +4,15 @@ UserAchievement Model (Association Table)
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, DateTime, JSON, ForeignKey, Index, CheckConstraint
+from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.domain.base import Base
 
 if TYPE_CHECKING:
-    from .user import User
     from .achievement import Achievement
+    from .user import User
 
 
 class UserAchievement(Base):

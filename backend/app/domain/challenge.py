@@ -1,19 +1,19 @@
 """
 Challenge Model
 """
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
-    Integer,
-    String,
-    DateTime,
-    Date,
     JSON,
     Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
     ForeignKey,
     Index,
-    CheckConstraint,
+    Integer,
+    String,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func

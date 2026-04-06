@@ -5,10 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.settings import settings
-
-from app.domain.base import Base  # noqa: F401
 import app.domain.registry  # noqa: F401 — attach all ORM models to Base.metadata
+from app.domain.base import Base  # noqa: F401
+from app.settings import settings
 
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 

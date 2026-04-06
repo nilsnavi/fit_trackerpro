@@ -5,11 +5,10 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import ACHIEVEMENT_CLAIM, audit_log
 from app.domain.exceptions import AchievementNotFoundError
 from app.infrastructure.idempotency import run_idempotent
-from app.settings import settings
 from app.infrastructure.repositories.achievements_repository import AchievementsRepository
-from app.core.audit import ACHIEVEMENT_CLAIM, audit_log
 from app.schemas.achievements import (
     AchievementLeaderboardEntry,
     AchievementLeaderboardResponse,
@@ -20,6 +19,7 @@ from app.schemas.achievements import (
     UserAchievementListResponse,
     UserAchievementResponse,
 )
+from app.settings import settings
 
 
 class AchievementsService:

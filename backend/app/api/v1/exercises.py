@@ -2,14 +2,14 @@
 Exercises API Router
 HTTP-only endpoints delegating business logic to services
 """
-from typing import Optional
-
 import json
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user, require_admin
+from app.application.exercises_service import ExercisesService
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.exercises import (
@@ -22,7 +22,6 @@ from app.schemas.exercises import (
     ExerciseUpdate,
     RiskFlags,
 )
-from app.application.exercises_service import ExercisesService
 
 router = APIRouter()
 

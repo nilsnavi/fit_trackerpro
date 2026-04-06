@@ -2,7 +2,9 @@
 # FitTracker Pro Deployment Script
 # Run this on your production server
 
-set -e
+set -Eeuo pipefail
+
+trap 'echo "❌ Deployment failed at line $LINENO"' ERR
 
 echo "🚀 Deploying FitTracker Pro..."
 
@@ -10,9 +12,15 @@ echo "🚀 Deploying FitTracker Pro..."
 DOMAIN=${1:-"fittrackpro.ru"}
 EMAIL=${2:-"admin@fittrackpro.ru"}
 
+COMPOSE_CMD="docker-compose"
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+fi
+
 # Update system
 echo "📦 Updating system packages..."
-sudo apt-get update && sudo apt-get upgrade -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
 # Install Docker if not installed
 if ! command -v docker &> /dev/null; then
@@ -23,9 +31,11 @@ fi
 
 # Install Docker Compose if not installed
 if ! command -v docker-compose &> /dev/null; then
-    echo "🐳 Installing Docker Compose..."
-    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
+    if ! docker compose version >/dev/null 2>&1; then
+        echo "🐳 Installing Docker Compose..."
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+    fi
 fi
 
 # Install certbot for SSL
@@ -41,12 +51,12 @@ sudo certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos --em
 
 # Copy certificates
 echo "📋 Copying SSL certificates..."
-sudo cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem nginx/ssl/
-sudo cp /etc/letsencrypt/live/$DOMAIN/privkey.pem nginx/ssl/
-sudo chmod 644 nginx/ssl/*.pem
+sudo install -m 644 "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "nginx/ssl/fullchain.pem"
+sudo install -m 600 "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "nginx/ssl/privkey.pem"
 
 # Update nginx config with domain
 echo "⚙️ Updating nginx configuration..."
+cp nginx/nginx.conf nginx/nginx.conf.bak
 sed -i "s/server_name _;/server_name $DOMAIN;/g" nginx/nginx.conf
 
 # Create .env file if not exists
@@ -64,24 +74,28 @@ if [ ! -f .env ]; then
     read -p "Press Enter after editing .env file..."
 fi
 
+chmod 600 .env
+
 # Pull images and apply migrations before switching running containers (matches CI order)
 echo "🐳 Pulling container images..."
-docker-compose -f docker-compose.prod.yml pull
+$COMPOSE_CMD -f docker-compose.prod.yml pull
 
 echo "📊 Running database migrations (before up -d)..."
-docker-compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+$COMPOSE_CMD -f docker-compose.prod.yml run --rm backend alembic upgrade head
 
 echo "🌱 Seeding reference data (idempotent)..."
-docker-compose -f docker-compose.prod.yml run --rm \
+$COMPOSE_CMD -f docker-compose.prod.yml run --rm \
   -e REFERENCE_DATA_DIR=/app/reference_data \
   backend python3 -m app.cli.seed_reference_data apply
 
 echo "🐳 Starting / updating containers..."
-docker-compose -f docker-compose.prod.yml up -d
+$COMPOSE_CMD -f docker-compose.prod.yml up -d
 
 # Set up SSL renewal cron job
 echo "⏰ Setting up SSL renewal cron job..."
-(crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet && cp /etc/letsencrypt/live/$DOMAIN/*.pem $(pwd)/nginx/ssl/ && docker-compose -f $(pwd)/docker-compose.prod.yml restart nginx") | crontab -
+DEPLOY_DIR=$(pwd)
+RENEW_CMD="certbot renew --quiet && install -m 644 /etc/letsencrypt/live/$DOMAIN/fullchain.pem $DEPLOY_DIR/nginx/ssl/fullchain.pem && install -m 600 /etc/letsencrypt/live/$DOMAIN/privkey.pem $DEPLOY_DIR/nginx/ssl/privkey.pem && cd $DEPLOY_DIR && $COMPOSE_CMD -f docker-compose.prod.yml restart nginx"
+(crontab -l 2>/dev/null | grep -v 'fittracker-renew'; echo "0 3 * * * $RENEW_CMD # fittracker-renew") | crontab -
 
 echo ""
 echo "✅ Deployment complete!"
@@ -90,6 +104,6 @@ echo "📱 Your WebApp is available at: https://$DOMAIN"
 echo "🤖 Telegram webhook: https://$DOMAIN/telegram/webhook"
 echo ""
 echo "📋 Useful commands:"
-echo "   docker-compose -f docker-compose.prod.yml logs -f    # View logs"
-echo "   docker-compose -f docker-compose.prod.yml restart    # Restart services"
-echo "   docker-compose -f docker-compose.prod.yml down       # Stop services"
+echo "   $COMPOSE_CMD -f docker-compose.prod.yml logs -f    # View logs"
+echo "   $COMPOSE_CMD -f docker-compose.prod.yml restart    # Restart services"
+echo "   $COMPOSE_CMD -f docker-compose.prod.yml down       # Stop services"

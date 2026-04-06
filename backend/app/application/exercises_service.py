@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.exceptions import ExerciseNotFoundError
 from app.domain.exercise import Exercise
 from app.domain.reference_data import RefEquipment, RefExerciseCategory, RefMuscleGroup
-from app.domain.exceptions import ExerciseNotFoundError
 from app.infrastructure.repositories.exercises_repository import ExercisesRepository
 from app.schemas.exercises import (
     ExerciseCategoriesResponse,

@@ -13,7 +13,6 @@ from sqlalchemy import text
 
 from app.infrastructure.database import AsyncSessionLocal
 
-
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[2] / "reference_data"
 
 

@@ -14,8 +14,14 @@ from app.domain.exceptions import (
     AnalyticsUnavailableError,
     AnalyticsValidationError,
 )
+from app.infrastructure.cache import (
+    get_cache_json,
+    invalidate_user_analytics_cache,
+    set_cache_json,
+)
+from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.analytics_repository import AnalyticsRepository
-from app.schemas.enums import DataExportStatus
+from app.infrastructure.repositories.feature_flags_repository import FeatureFlagsRepository
 from app.schemas.analytics import (
     AnalyticsSummaryResponse,
     CalendarDayEntry,
@@ -37,14 +43,8 @@ from app.schemas.analytics import (
     WorkoutCalendarResponse,
     WorkoutCalendarSummary,
 )
-from app.infrastructure.cache import (
-    get_cache_json,
-    invalidate_user_analytics_cache,
-    set_cache_json,
-)
-from app.infrastructure.idempotency import run_idempotent
+from app.schemas.enums import DataExportStatus
 from app.settings import settings
-from app.infrastructure.repositories.feature_flags_repository import FeatureFlagsRepository
 
 
 class AnalyticsService:

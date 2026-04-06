@@ -4,7 +4,7 @@ MuscleLoad Model
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, String, Date, ForeignKey, Index, Numeric, CheckConstraint
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.base import Base

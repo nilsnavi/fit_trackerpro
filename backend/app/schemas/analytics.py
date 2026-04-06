@@ -4,9 +4,8 @@ Pydantic models for analytics endpoints
 """
 from __future__ import annotations
 
-from typing import Any, List, Optional
-
 from datetime import date, datetime
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
