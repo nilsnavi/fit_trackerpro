@@ -61,22 +61,22 @@ export function LoginPage() {
                 <button
                     type="button"
                     onClick={() => navigate(-1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-neutral-800"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-telegram-secondary-bg"
                     aria-label="Назад"
                 >
                     <ArrowLeft className="h-4 w-4" />
                 </button>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Вход</h1>
+                <h1 className="text-xl font-bold text-telegram-text">Вход</h1>
             </div>
 
             {!tg.isTelegram && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-telegram-hint">
                     Для входа откройте Mini App из Telegram. В обычном браузере Telegram initData недоступна.
                 </p>
             )}
 
             {error && (
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                <p className="text-sm text-danger" role="alert">
                     {error}
                 </p>
             )}

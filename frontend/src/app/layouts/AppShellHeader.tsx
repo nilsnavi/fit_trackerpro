@@ -15,7 +15,7 @@ export function AppShellHeader() {
             className={cn(
                 'app-shell-header shrink-0 border-b border-border bg-telegram-bg/95 backdrop-blur-md',
                 'safe-area-top',
-                isTelegram && 'shadow-sm shadow-black/5 dark:shadow-black/20',
+                isTelegram && 'shadow-sm shadow-black/10',
             )}
             role="banner"
         >

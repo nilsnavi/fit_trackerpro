@@ -34,18 +34,18 @@ export const RestTimerPanel = memo(function RestTimerPanel() {
             </div>
             <div className="flex flex-wrap gap-2">
                 {restTimer.isPaused ? (
-                    <Button type="button" variant="secondary" size="sm" leftIcon={<Play className="h-4 w-4" />} onClick={resumeRestTimer}>
+                    <Button type="button" variant="secondary" size="md" leftIcon={<Play className="h-4 w-4" />} onClick={resumeRestTimer}>
                         Продолжить
                     </Button>
                 ) : (
-                    <Button type="button" variant="secondary" size="sm" leftIcon={<Pause className="h-4 w-4" />} onClick={pauseRestTimer}>
+                    <Button type="button" variant="secondary" size="md" leftIcon={<Pause className="h-4 w-4" />} onClick={pauseRestTimer}>
                         Пауза
                     </Button>
                 )}
-                <Button type="button" variant="secondary" size="sm" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={restartRestTimer}>
+                <Button type="button" variant="secondary" size="md" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={restartRestTimer}>
                     Сбросить
                 </Button>
-                <Button type="button" variant="secondary" size="sm" leftIcon={<SkipForward className="h-4 w-4" />} onClick={skipRestTimer}>
+                <Button type="button" variant="secondary" size="md" leftIcon={<SkipForward className="h-4 w-4" />} onClick={skipRestTimer}>
                     Пропустить
                 </Button>
             </div>

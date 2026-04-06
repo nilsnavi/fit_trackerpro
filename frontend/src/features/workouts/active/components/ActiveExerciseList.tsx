@@ -104,7 +104,7 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                             <button
                                                 type="button"
                                                 onClick={() => onOpenStructureEditor(exerciseIndex)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-full bg-telegram-bg text-telegram-hint"
+                                                className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg"
                                                 aria-label="Изменить структуру упражнения"
                                             >
                                                 <PencilRuler className="h-4 w-4" />
@@ -112,12 +112,12 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                             <button
                                                 type="button"
                                                 onClick={() => onDeleteExercise(exerciseIndex)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-full bg-telegram-bg text-danger"
+                                                className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-telegram-bg text-danger active:bg-danger/10"
                                                 aria-label="Удалить упражнение"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
-                                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
                                                 #{exercise.exercise_id}
                                             </span>
                                         </div>

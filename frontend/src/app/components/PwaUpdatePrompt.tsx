@@ -33,7 +33,7 @@ export function PwaUpdatePrompt() {
             aria-live="polite"
             className={cn(
                 'fixed left-0 right-0 z-[55] border-t border-border bg-telegram-bg/95 backdrop-blur-sm',
-                'safe-area-x shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.35)]',
+                'safe-area-x shadow-[0_-4px_24px_rgba(0,0,0,0.16)]',
                 'bottom-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px))]',
             )}
         >

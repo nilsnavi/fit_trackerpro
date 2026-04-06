@@ -27,7 +27,7 @@ export function SessionNavigationPanel({
                 <Button
                     type="button"
                     variant="secondary"
-                    size="sm"
+                    size="md"
                     leftIcon={<ChevronLeft className="h-4 w-4" />}
                     disabled={!hasPrev}
                     onClick={onBack}
@@ -37,7 +37,7 @@ export function SessionNavigationPanel({
                 <Button
                     type="button"
                     variant="secondary"
-                    size="sm"
+                    size="md"
                     leftIcon={<ChevronRight className="h-4 w-4" />}
                     disabled={!hasNextSet && !hasNextExercise}
                     onClick={onNextSet}
@@ -47,7 +47,7 @@ export function SessionNavigationPanel({
                 <Button
                     type="button"
                     variant="secondary"
-                    size="sm"
+                    size="md"
                     leftIcon={<SkipForward className="h-4 w-4" />}
                     disabled={!hasNextExercise}
                     onClick={onNextExercise}
@@ -57,7 +57,7 @@ export function SessionNavigationPanel({
                 <Button
                     type="button"
                     variant="secondary"
-                    size="sm"
+                    size="md"
                     leftIcon={<SkipForward className="h-4 w-4" />}
                     disabled={!hasNextSet && !hasNextExercise}
                     onClick={onSkip}

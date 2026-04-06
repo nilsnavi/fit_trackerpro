@@ -231,7 +231,7 @@ export const Modal: React.FC<ModalProps> = ({
                     'w-full bg-telegram-bg',
                     'rounded-t-3xl sm:rounded-2xl',
                     'shadow-2xl',
-                    'flex max-h-[calc(100vh-1rem)] flex-col sm:max-h-[min(85vh,48rem)]',
+                    'flex max-h-[calc(100vh-1rem)] max-h-[calc(100dvh-1rem)] flex-col sm:max-h-[min(85dvh,48rem)]',
                     'transition-all duration-300',
                     'touch-manipulation',
 
@@ -286,7 +286,7 @@ export const Modal: React.FC<ModalProps> = ({
                                 type="button"
                                 onClick={handleClose}
                                 className={cn(
-                                    'p-2 -mr-2 rounded-full',
+                                    'touch-target p-2 -mr-2 rounded-full',
                                     'text-telegram-hint hover:text-telegram-text',
                                     'hover:bg-telegram-secondary-bg',
                                     'transition-colors duration-200',

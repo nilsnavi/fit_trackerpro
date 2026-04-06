@@ -112,12 +112,12 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                     type="button"
                     data-testid="set-toggle-btn"
                     onClick={handleToggleCompleted}
-                    className={`px-2 py-0.5 rounded-full text-xs transition-colors ${set.completed
+                    className={`min-h-[44px] touch-manipulation rounded-xl px-4 py-2 text-sm font-medium transition-colors ${set.completed
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                        : 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'
+                        : 'bg-telegram-secondary-bg text-telegram-text'
                         }`}
                 >
-                    {set.completed ? 'Выполнен' : 'Отметить'}
+                    {set.completed ? '✓ Выполнен' : 'Отметить'}
                 </button>
             </div>
 
@@ -125,32 +125,34 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                 <button
                     type="button"
                     onClick={handleCopyPrevious}
-                    className="rounded-md bg-telegram-bg px-2 py-1 text-[11px] text-telegram-hint"
+                    className="min-h-[36px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs text-telegram-hint active:bg-telegram-secondary-bg"
                 >
-                    Копировать с прошлого
+                    Скопировать
                 </button>
                 {WEIGHT_DELTAS.map((delta) => (
                     <button
                         key={delta}
                         type="button"
                         onClick={() => handleAdjustWeight(delta)}
-                        className="rounded-md bg-telegram-bg px-2 py-1 text-[11px] text-telegram-hint"
+                        className="min-h-[36px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs text-telegram-hint active:bg-telegram-secondary-bg"
                     >
                         +{delta}
                     </button>
                 ))}
             </div>
 
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <label className="text-xs text-telegram-hint">
                     Повторы
                     <input
                         type="number"
                         min={0}
+                        inputMode="numeric"
+                        enterKeyHint="next"
                         value={set.reps ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleRepsChange}
-                        className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
+                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
                 <label className="text-xs text-telegram-hint">
@@ -159,10 +161,12 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         type="number"
                         min={0}
                         step="0.5"
+                        inputMode="decimal"
+                        enterKeyHint="next"
                         value={set.weight ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleWeightChange}
-                        className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
+                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
                 <label className="text-xs text-telegram-hint">
@@ -170,10 +174,12 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                     <input
                         type="number"
                         min={0}
+                        inputMode="numeric"
+                        enterKeyHint="next"
                         value={set.duration ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleDurationChange}
-                        className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
+                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
                 <label className="text-xs text-telegram-hint">
@@ -182,10 +188,12 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         type="number"
                         min={0}
                         step="0.01"
+                        inputMode="decimal"
+                        enterKeyHint="done"
                         value={set.distance ?? ''}
                         onFocus={handleOnFocusSet}
                         onChange={handleDistanceChange}
-                        className="mt-0.5 w-full rounded-md border border-border bg-telegram-bg px-2 py-1 text-sm text-telegram-text"
+                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
                     />
                 </label>
             </div>
@@ -198,9 +206,9 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                             key={`rpe-${value}`}
                             type="button"
                             onClick={() => handleRpeToggle(value)}
-                            className={`rounded-full px-2 py-1 text-[11px] transition-colors ${set.rpe === value
+                            className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rpe === value
                                 ? 'bg-primary text-primary-foreground'
-                                : 'bg-telegram-bg text-telegram-hint'
+                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
                                 }`}
                         >
                             {value}
@@ -215,9 +223,9 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                             key={`rir-${value}`}
                             type="button"
                             onClick={() => handleRirToggle(value)}
-                            className={`rounded-full px-2 py-1 text-[11px] transition-colors ${set.rir === value
+                            className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rir === value
                                 ? 'bg-primary text-primary-foreground'
-                                : 'bg-telegram-bg text-telegram-hint'
+                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
                                 }`}
                         >
                             {value}

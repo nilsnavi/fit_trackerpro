@@ -8,8 +8,9 @@
 
 :root {
     /* App shell (Telegram WebApp safe areas + tab bar) */
-    --app-shell-header-inner-h: 3.5rem;
+    --app-shell-header-inner-h: 3.25rem;
     --app-shell-nav-h: 4rem;
+    --active-workout-banner-h: 0px;
 
     /* Border Radius */
     --radius: 0.75rem;
@@ -133,6 +134,8 @@
     html {
         @apply antialiased;
         -webkit-tap-highlight-color: transparent;
+        text-size-adjust: 100%;
+        -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -140,6 +143,8 @@
         font-feature-settings: "rlig" 1, "calt" 1;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        overscroll-behavior-y: none;
+        overflow-x: hidden;
     }
 
     /* Mobile viewport fix */
@@ -352,6 +357,14 @@
         @apply safe-area-left safe-area-right;
     }
 
+    .pb-safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .pt-safe-top {
+        padding-top: env(safe-area-inset-top, 0px);
+    }
+
     /* Hide scrollbar but keep functionality */
     .no-scrollbar::-webkit-scrollbar {
         display: none;
@@ -365,6 +378,17 @@
     /* Touch action utilities */
     .touch-manipulation {
         touch-action: manipulation;
+    }
+
+    .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .telegram-viewport-stable {
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow-anchor: none;
     }
 
     .touch-none {

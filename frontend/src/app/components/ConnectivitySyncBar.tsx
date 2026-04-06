@@ -28,7 +28,7 @@ export function ConnectivitySyncBar() {
                 ? `Изменения сохранены локально. В очереди на отправку: ${queuedCount}.`
                 : 'Данные из кэша; новые запросы к серверу недоступны.'
         surfaceClass =
-            'border-amber-500/35 bg-amber-500/12 text-amber-950 dark:text-amber-100'
+            'border-warning/40 bg-warning/12 text-telegram-text'
     } else if (isFlushing) {
         icon = (
             <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
@@ -56,7 +56,7 @@ export function ConnectivitySyncBar() {
         title = 'Не удалось синхронизировать изменения'
         subtitle = `Требуется внимание: ${failedCount} ${pluralOps(failedCount)} не отправлены.`
         surfaceClass =
-            'border-rose-500/35 bg-rose-500/12 text-rose-950 dark:text-rose-100'
+            'border-danger/40 bg-danger/12 text-telegram-text'
     } else {
         return null
     }
