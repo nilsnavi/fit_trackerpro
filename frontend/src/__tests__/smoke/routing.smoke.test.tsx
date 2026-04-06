@@ -21,10 +21,6 @@ jest.mock('@features/workouts/pages/WorkoutDetailPage', () => {
     const React = require('react')
     return { WorkoutDetailPage: () => React.createElement('div', null, 'Workout detail') }
 })
-jest.mock('@features/workouts/pages/WorkoutEditPage', () => {
-    const React = require('react')
-    return { WorkoutEditPage: () => React.createElement('div', null, 'Workout edit') }
-})
 jest.mock('@features/workouts/pages/WorkoutModePage', () => {
     const React = require('react')
     return { default: () => React.createElement('div', null, 'Workout mode') }

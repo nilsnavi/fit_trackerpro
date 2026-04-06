@@ -56,9 +56,6 @@ const RecoveryPage = lazy(() => import('@features/analytics/pages/RecoveryPage')
 const Catalog = lazy(() => import('@features/exercises/pages/Catalog'))
 const AddExercise = lazy(() => import('@features/exercises/pages/AddExercise'))
 const WorkoutModePage = lazy(() => import('@features/workouts/pages/WorkoutModePage'))
-const WorkoutEditPage = lazy(() =>
-    import('@features/workouts/pages/WorkoutEditPage').then((m) => ({ default: m.WorkoutEditPage })),
-)
 const LoginPage = lazy(() =>
     import('@features/auth/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
@@ -252,19 +249,11 @@ export default function App() {
                                         />
                                         <Route
                                             path="/workouts/:id/edit"
-                                            element={
-                                                <RouteGuard screenTitle="Редактирование тренировки">
-                                                    <WorkoutEditPage />
-                                                </RouteGuard>
-                                            }
+                                            element={<Navigate to=".." relative="path" replace />}
                                         />
                                         <Route
                                             path="/workouts/active/:id/edit"
-                                            element={
-                                                <RouteGuard screenTitle="Редактирование тренировки">
-                                                    <WorkoutEditPage />
-                                                </RouteGuard>
-                                            }
+                                            element={<Navigate to=".." relative="path" replace />}
                                         />
                                         <Route
                                             path="/profile"

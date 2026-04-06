@@ -54,9 +54,6 @@ export type { EmptyStateCardProps } from './EmptyStateCard';
 export { InlineError } from './InlineError';
 export type { InlineErrorProps } from './InlineError';
 
-export { BottomSheetSelect } from './BottomSheetSelect';
-export type { BottomSheetSelectProps, BottomSheetOption } from './BottomSheetSelect';
-
 // ── Route guards ───────────────────────────────────────────────────────────
 export { RouteGuard } from '../auth/RouteGuard';
 
