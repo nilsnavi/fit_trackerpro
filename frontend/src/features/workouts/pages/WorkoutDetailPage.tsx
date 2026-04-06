@@ -10,10 +10,12 @@ import {
     LayoutTemplate,
 } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
+import { Modal } from '@shared/ui/Modal'
+import { Input } from '@shared/ui/Input'
 import { getErrorMessage } from '@shared/errors'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import {
-    useCreateWorkoutTemplateMutation,
+    useCreateTemplateFromWorkoutMutation,
     useStartWorkoutMutation,
     useUpdateWorkoutSessionMutation,
 } from '@features/workouts/hooks/useWorkoutMutations'
@@ -23,17 +25,8 @@ import {
     formatSetValue,
 } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHelpers'
-import { detectWorkoutType } from '@features/workouts/lib/workoutListItem'
 import { useWorkoutSessionDraftStore } from '@/state/local'
-import type { BackendWorkoutType, WorkoutHistoryItem } from '@features/workouts/types/workouts'
-
-const mapToBackendTemplateType = (workout: WorkoutHistoryItem): BackendWorkoutType => {
-    const workoutType = detectWorkoutType(workout)
-    if (workoutType === 'cardio' || workoutType === 'strength' || workoutType === 'flexibility') {
-        return workoutType
-    }
-    return 'mixed'
-}
+import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
 const buildTemplateName = (workout: WorkoutHistoryItem): string => {
     const base = workout.comments?.trim()
@@ -48,7 +41,7 @@ export function WorkoutDetailPage() {
 
     const startWorkoutMutation = useStartWorkoutMutation()
     const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
-    const createTemplateMutation = useCreateWorkoutTemplateMutation()
+    const createTemplateFromWorkoutMutation = useCreateTemplateFromWorkoutMutation()
 
     const workoutId = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId = Number.isFinite(workoutId)
@@ -62,6 +55,9 @@ export function WorkoutDetailPage() {
 
     const [templateSavedName, setTemplateSavedName] = useState<string | null>(null)
     const [sessionError, setSessionError] = useState<string | null>(null)
+    const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false)
+    const [templateNameDraft, setTemplateNameDraft] = useState('')
+    const [templateNameError, setTemplateNameError] = useState<string | null>(null)
 
     const isCompletedWorkout = typeof workout?.duration === 'number' && workout.duration > 0
 
@@ -99,37 +95,36 @@ export function WorkoutDetailPage() {
         }
     }
 
-    const handleSaveAsTemplate = async () => {
+    const handleOpenSaveAsTemplate = () => {
+        if (!workout || !isCompletedWorkout) return
+        setSessionError(null)
+        setTemplateNameDraft(buildTemplateName(workout))
+        setTemplateNameError(null)
+        setIsSaveTemplateOpen(true)
+    }
+
+    const handleSaveAsTemplate = async (openAfterSave: boolean) => {
         if (!workout || !isCompletedWorkout) return
         setSessionError(null)
 
-        const nextTemplateName = buildTemplateName(workout)
+        const nextTemplateName = templateNameDraft.trim()
+        if (!nextTemplateName) {
+            setTemplateNameError('Введите название шаблона')
+            return
+        }
 
         try {
-            await createTemplateMutation.mutateAsync({
+            const createdTemplate = await createTemplateFromWorkoutMutation.mutateAsync({
+                workout_id: workout.id,
                 name: nextTemplateName,
-                type: mapToBackendTemplateType(workout),
                 is_public: false,
-                exercises: workout.exercises.map((exercise, index) => {
-                    const firstSet = exercise.sets_completed[0]
-                    const nonEmptyWeights = exercise.sets_completed
-                        .map((setItem) => setItem.weight)
-                        .filter((weight): weight is number => typeof weight === 'number')
-
-                    return {
-                        exercise_id: exercise.exercise_id || index + 1,
-                        name: exercise.name,
-                        sets: Math.max(exercise.sets_completed.length, 1),
-                        reps: firstSet?.reps,
-                        duration: firstSet?.duration,
-                        rest_seconds: 60,
-                        weight: nonEmptyWeights[0],
-                        notes: exercise.notes,
-                    }
-                }),
             })
 
             setTemplateSavedName(nextTemplateName)
+            setIsSaveTemplateOpen(false)
+            if (openAfterSave) {
+                navigate(`/workouts/templates/${createdTemplate.id}`)
+            }
         } catch (e) {
             setSessionError(getErrorMessage(e))
         }
@@ -240,9 +235,9 @@ export function WorkoutDetailPage() {
                                 type="button"
                                 variant="secondary"
                                 leftIcon={<LayoutTemplate className="h-4 w-4" />}
-                                onClick={() => void handleSaveAsTemplate()}
-                                isLoading={createTemplateMutation.isPending}
-                                disabled={createTemplateMutation.isPending}
+                                onClick={handleOpenSaveAsTemplate}
+                                isLoading={createTemplateFromWorkoutMutation.isPending}
+                                disabled={createTemplateFromWorkoutMutation.isPending}
                             >
                                     Сохранить как шаблон
                             </Button>
@@ -319,6 +314,53 @@ export function WorkoutDetailPage() {
                             </article>
                         ))}
                     </section>
+
+                    <Modal
+                        isOpen={isSaveTemplateOpen}
+                        onClose={() => {
+                            setIsSaveTemplateOpen(false)
+                            setTemplateNameError(null)
+                        }}
+                        title="Сохранить как шаблон"
+                        description="Шаблон сохранится в библиотеке и будет доступен для повторного старта."
+                        size="md"
+                    >
+                        <div className="space-y-4">
+                            <Input
+                                type="text"
+                                value={templateNameDraft}
+                                onChange={(e) => {
+                                    setTemplateNameDraft(e.target.value)
+                                    if (templateNameError) setTemplateNameError(null)
+                                }}
+                                placeholder="Название шаблона"
+                                haptic={false}
+                            />
+                            {templateNameError ? (
+                                <p className="text-xs text-danger" role="alert">{templateNameError}</p>
+                            ) : null}
+
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => void handleSaveAsTemplate(false)}
+                                    isLoading={createTemplateFromWorkoutMutation.isPending}
+                                    disabled={createTemplateFromWorkoutMutation.isPending}
+                                >
+                                    Сохранить
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => void handleSaveAsTemplate(true)}
+                                    isLoading={createTemplateFromWorkoutMutation.isPending}
+                                    disabled={createTemplateFromWorkoutMutation.isPending}
+                                >
+                                    Сохранить и открыть
+                                </Button>
+                            </div>
+                        </div>
+                    </Modal>
                 </>
             )}
         </div>

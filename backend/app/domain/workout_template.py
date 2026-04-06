@@ -66,6 +66,13 @@ class WorkoutTemplate(Base):
         default=False,
         comment="Soft archive flag for template"
     )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+        comment="Optimistic concurrency revision"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -97,9 +104,14 @@ class WorkoutTemplate(Base):
             "type IN ('cardio','strength','flexibility','mixed')",
             name="ck_workout_templates_type_allowed",
         ),
+        CheckConstraint(
+            "version >= 1",
+            name="ck_workout_templates_version_positive",
+        ),
         Index('ix_workout_templates_type', 'type'),
         Index('ix_workout_templates_is_public', 'is_public'),
         Index('ix_workout_templates_is_archived', 'is_archived'),
+        Index('ix_workout_templates_version', 'version'),
         Index('ix_workout_templates_created_at', 'created_at'),
     )
 

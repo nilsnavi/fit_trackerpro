@@ -9,8 +9,11 @@ import {
     Clock3,
 } from 'lucide-react'
 import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
+import { Modal } from '@shared/ui/Modal'
+import { Input } from '@shared/ui/Input'
+import { Button } from '@shared/ui/Button'
 import {
-    useCreateWorkoutTemplateMutation,
+    useCloneWorkoutTemplateMutation,
     useArchiveWorkoutTemplateMutation,
     useUnarchiveWorkoutTemplateMutation,
     useDeleteWorkoutTemplateMutation,
@@ -60,6 +63,10 @@ export function WorkoutTemplatesPage() {
     const [duplicatingId, setDuplicatingId] = useState<number | null>(null)
     const [isStarting, setIsStarting] = useState(false)
     const [pinFeedback, setPinFeedback] = useState<{ id: number; message: string } | null>(null)
+    const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false)
+    const [quickTemplateName, setQuickTemplateName] = useState('')
+    const [quickTemplateType, setQuickTemplateType] = useState<BackendWorkoutType>('mixed')
+    const [quickTemplateNameError, setQuickTemplateNameError] = useState<string | null>(null)
 
     const pinnedIds = useWorkoutTemplatePinsStore((s) => s.pinnedTemplateIds)
     const togglePin = useWorkoutTemplatePinsStore((s) => s.togglePinnedTemplate)
@@ -67,7 +74,7 @@ export function WorkoutTemplatesPage() {
 
     const includeArchived = activeSection === 'archived'
     const { data, isPending, error } = useWorkoutTemplatesQuery({ includeArchived })
-    const createTemplateMutation = useCreateWorkoutTemplateMutation()
+    const cloneTemplateMutation = useCloneWorkoutTemplateMutation()
     const archiveTemplateMutation = useArchiveWorkoutTemplateMutation()
     const unarchiveTemplateMutation = useUnarchiveWorkoutTemplateMutation()
     const deleteTemplateMutation = useDeleteWorkoutTemplateMutation()
@@ -141,7 +148,7 @@ export function WorkoutTemplatesPage() {
                 type="button"
                 onClick={() => {
                     tg.hapticFeedback({ type: 'impact', style: 'medium' })
-                    navigate('/workouts/templates/new')
+                    setIsQuickCreateOpen(true)
                 }}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-transform active:scale-95"
                 aria-label="Создать шаблон"
@@ -149,7 +156,7 @@ export function WorkoutTemplatesPage() {
                 <Plus className="h-5 w-5" />
             </button>
         ),
-        [tg, navigate],
+        [tg],
     )
     useAppShellHeaderRight(headerRight)
 
@@ -167,6 +174,11 @@ export function WorkoutTemplatesPage() {
                 onSettled: () => setIsStarting(false),
             },
         )
+    }
+
+    const handleOpenTemplateDetails = (id: number) => {
+        tg.hapticFeedback({ type: 'selection' })
+        navigate(`/workouts/templates/${id}`)
     }
 
     const handleEdit = (id: number) => {
@@ -199,12 +211,13 @@ export function WorkoutTemplatesPage() {
 
         tg.hapticFeedback({ type: 'impact', style: 'light' })
         setDuplicatingId(id)
-        createTemplateMutation.mutate(
+        cloneTemplateMutation.mutate(
             {
-                name: buildDuplicateName(source.name),
-                type: source.type,
-                exercises: source.exercises,
-                is_public: source.is_public,
+                templateId: id,
+                payload: {
+                    name: buildDuplicateName(source.name),
+                    is_public: source.is_public,
+                },
             },
             {
                 onSuccess: () => {
@@ -277,6 +290,28 @@ export function WorkoutTemplatesPage() {
         togglePin(id)
         tg.hapticFeedback({ type: 'selection' })
         setPinFeedback({ id, message: wasPinned ? 'Убрано из избранного' : 'Закреплено' })
+    }
+
+    const handleQuickCreate = () => {
+        const name = quickTemplateName.trim()
+        if (!name) {
+            setQuickTemplateNameError('Введите название шаблона')
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
+            return
+        }
+
+        const params = new URLSearchParams({
+            name,
+            type: quickTemplateType,
+            quick: '1',
+        })
+
+        tg.hapticFeedback({ type: 'impact', style: 'light' })
+        setIsQuickCreateOpen(false)
+        setQuickTemplateName('')
+        setQuickTemplateNameError(null)
+        setQuickTemplateType('mixed')
+        navigate(`/workouts/templates/new?${params.toString()}`)
     }
 
     const isPinLimitReached = pinnedIds.length >= 5
@@ -418,6 +453,7 @@ export function WorkoutTemplatesPage() {
                                 <WorkoutTemplateCard
                                     key={t.id}
                                     template={t}
+                                    onOpenDetails={handleOpenTemplateDetails}
                                     isPinned={pinnedIds.includes(t.id)}
                                     isPinLimitReached={isPinLimitReached && !pinnedIds.includes(t.id)}
                                     pinFeedbackMessage={pinFeedback?.id === t.id ? pinFeedback.message : null}
@@ -435,6 +471,96 @@ export function WorkoutTemplatesPage() {
                     )}
                 </>
             )}
+
+            <Modal
+                isOpen={isQuickCreateOpen}
+                onClose={() => {
+                    setIsQuickCreateOpen(false)
+                    setQuickTemplateNameError(null)
+                }}
+                title="Быстрое создание шаблона"
+                description="Задайте название и тип. Затем откроется лёгкий конструктор с этими значениями."
+                size="md"
+            >
+                <div className="space-y-4">
+                    <Input
+                        type="text"
+                        value={quickTemplateName}
+                        onChange={(e) => {
+                            setQuickTemplateName(e.target.value)
+                            if (quickTemplateNameError) setQuickTemplateNameError(null)
+                        }}
+                        placeholder="Например: Ноги и кор"
+                        haptic={false}
+                    />
+                    {quickTemplateNameError ? (
+                        <p className="text-xs text-danger" role="alert">{quickTemplateNameError}</p>
+                    ) : null}
+
+                    <div className="space-y-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-telegram-hint">Тип шаблона</p>
+                        <div className="flex flex-wrap gap-2">
+                            {(
+                                [
+                                    { value: 'mixed', label: 'Смешанный' },
+                                    { value: 'strength', label: 'Силовой' },
+                                    { value: 'cardio', label: 'Кардио' },
+                                    { value: 'flexibility', label: 'Гибкость' },
+                                ] satisfies Array<{ value: BackendWorkoutType; label: string }>
+                            ).map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => {
+                                        tg.hapticFeedback({ type: 'selection' })
+                                        setQuickTemplateType(option.value)
+                                    }}
+                                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                                        quickTemplateType === option.value
+                                            ? 'bg-primary text-white'
+                                            : 'bg-telegram-secondary-bg text-telegram-text'
+                                    }`}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                                tg.hapticFeedback({ type: 'selection' })
+                                setIsQuickCreateOpen(false)
+                                setQuickTemplateNameError(null)
+                            }}
+                        >
+                            Отмена
+                        </Button>
+                        <Button type="button" onClick={handleQuickCreate} leftIcon={<Plus className="h-4 w-4" />}>
+                            Продолжить
+                        </Button>
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="tertiary"
+                        fullWidth
+                        onClick={() => {
+                            tg.hapticFeedback({ type: 'selection' })
+                            setIsQuickCreateOpen(false)
+                            setQuickTemplateName('')
+                            setQuickTemplateNameError(null)
+                            setQuickTemplateType('mixed')
+                            navigate('/workouts/templates/new')
+                        }}
+                    >
+                        Открыть полный конструктор
+                    </Button>
+                </div>
+            </Modal>
 
             <TemplateActionsSheet
                 isOpen={templateActionTarget != null}

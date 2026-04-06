@@ -17,7 +17,7 @@ from app.core.audit import (
     WORKOUT_UPDATE,
     audit_log,
 )
-from app.domain.exceptions import WorkoutNotFoundError
+from app.domain.exceptions import WorkoutConflictError, WorkoutNotFoundError
 from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
 from app.domain.training_load_daily import TrainingLoadDaily
@@ -29,15 +29,21 @@ from app.infrastructure.repositories.workouts_repository import WorkoutsReposito
 from app.schemas.enums import WorkoutSessionType
 from app.schemas.workouts import (
     CompletedExercise,
+    ExerciseInTemplate,
+    StartWorkoutTemplateOverrides,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
     WorkoutSessionUpdateRequest,
     WorkoutStartRequest,
+    WorkoutStartFromTemplateRequest,
     WorkoutStartResponse,
+    WorkoutTemplateCloneRequest,
     WorkoutTemplateCreate,
+    WorkoutTemplateFromWorkoutCreate,
     WorkoutTemplateList,
+    WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
 )
 from app.settings import settings
@@ -128,6 +134,63 @@ class WorkoutsService:
     def _clamp(value: float, lower: float = 0.0, upper: float = 100.0) -> float:
         return max(lower, min(upper, value))
 
+    @staticmethod
+    def _exercise_template_to_workout_draft(ex: dict, index: int) -> dict:
+        sets = int(ex.get("sets") or 0)
+        if sets < 1:
+            sets = 1
+        return {
+            "exercise_id": ex.get("exercise_id"),
+            "name": ex.get("name") or f"Exercise #{index + 1}",
+            "notes": ex.get("notes"),
+            "sets_completed": [
+                {
+                    "set_number": i + 1,
+                    "reps": ex.get("reps"),
+                    "weight": ex.get("weight"),
+                    "duration": ex.get("duration"),
+                    "completed": False,
+                }
+                for i in range(sets)
+            ],
+        }
+
+    @staticmethod
+    def _apply_reorder(existing: list[dict], order: list[int]) -> list[dict]:
+        if len(existing) != len(order):
+            raise WorkoutConflictError("exercise_order length must match existing exercises")
+        if sorted(order) != list(range(len(existing))):
+            raise WorkoutConflictError("exercise_order must be a full 0-based permutation")
+        return [existing[idx] for idx in order]
+
+    async def _build_clone_name(self, user_id: int, source_name: str) -> str:
+        existing = {name.strip().lower() for name in await self.repository.list_template_names(user_id=user_id)}
+        base = source_name.strip() or "Шаблон"
+        candidate = f"{base} (копия)"
+        if candidate.lower() not in existing:
+            return candidate
+        suffix = 2
+        while f"{candidate} {suffix}".lower() in existing:
+            suffix += 1
+        return f"{candidate} {suffix}"
+
+    def _resolve_start_overrides(
+        self,
+        template_exercises: list[dict],
+        overrides: StartWorkoutTemplateOverrides | None,
+    ) -> tuple[list[dict], str | None, list[str]]:
+        source_exercises: list[dict]
+        if overrides and overrides.exercises:
+            source_exercises = [ex.model_dump() for ex in overrides.exercises]
+        else:
+            source_exercises = template_exercises or []
+        initial_exercises = [
+            self._exercise_template_to_workout_draft(ex, idx) for idx, ex in enumerate(source_exercises)
+        ]
+        comments = overrides.comments if overrides else None
+        tags = list(overrides.tags) if overrides else []
+        return initial_exercises, comments, tags
+
     async def get_templates(
         self,
         user_id: int,
@@ -200,6 +263,7 @@ class WorkoutsService:
         template.type = data.type
         template.exercises = [ex.model_dump() for ex in data.exercises]
         template.is_public = data.is_public
+        template.version += 1
         template = await self.repository.update_template(template)
         audit_log(
             action=WORKOUT_TEMPLATE_UPDATE,
@@ -209,6 +273,138 @@ class WorkoutsService:
             client_ip=client_ip,
         )
         return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
+
+    async def patch_template(
+        self,
+        user_id: int,
+        template_id: int,
+        data: WorkoutTemplatePatchRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutTemplateResponse:
+        template = await self.repository.get_template(user_id=user_id, template_id=template_id)
+        if not template:
+            raise WorkoutNotFoundError("Template not found")
+
+        next_name = data.name if data.name is not None else template.name
+        next_type = data.type if data.type is not None else template.type
+        next_public = data.is_public if data.is_public is not None else template.is_public
+        next_exercises = template.exercises
+        if data.exercises is not None:
+            next_exercises = [ex.model_dump() for ex in data.exercises]
+        if data.exercise_order is not None:
+            next_exercises = self._apply_reorder(next_exercises or [], data.exercise_order)
+
+        updated = await self.repository.update_template_with_expected_version(
+            user_id=user_id,
+            template_id=template_id,
+            expected_version=data.expected_version,
+            values={
+                "name": next_name,
+                "type": next_type,
+                "is_public": next_public,
+                "exercises": next_exercises,
+            },
+        )
+        if not updated:
+            raise WorkoutConflictError("Template version mismatch. Refresh template and retry.")
+
+        audit_log(
+            action=WORKOUT_TEMPLATE_UPDATE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=template_id,
+            client_ip=client_ip,
+            meta={"mode": "patch", "expected_version": data.expected_version},
+        )
+        return WorkoutTemplateResponse.model_validate(updated, from_attributes=True)
+
+    async def create_template_from_workout(
+        self,
+        user_id: int,
+        data: WorkoutTemplateFromWorkoutCreate,
+        client_ip: str | None = None,
+    ) -> WorkoutTemplateResponse:
+        workout = await self.repository.get_completed_workout(user_id=user_id, workout_id=data.workout_id)
+        if not workout:
+            raise WorkoutNotFoundError("Completed workout not found")
+
+        exercises_raw = workout.exercises or []
+        template_exercises: list[ExerciseInTemplate] = []
+        for idx, raw in enumerate(exercises_raw):
+            ex = CompletedExercise.model_validate(raw)
+            first_set = ex.sets_completed[0]
+            weight = next((s.weight for s in ex.sets_completed if s.weight is not None), None)
+            template_exercises.append(
+                ExerciseInTemplate(
+                    exercise_id=ex.exercise_id or (idx + 1),
+                    name=ex.name,
+                    sets=max(len(ex.sets_completed), 1),
+                    reps=first_set.reps,
+                    duration=first_set.duration,
+                    rest_seconds=60,
+                    weight=weight,
+                    notes=ex.notes,
+                )
+            )
+
+        if not template_exercises:
+            raise WorkoutConflictError("Workout has no exercises to create template")
+
+        detected_type = "mixed"
+        tags_set = {str(tag).lower() for tag in (workout.tags or [])}
+        for candidate in ("strength", "cardio", "flexibility"):
+            if candidate in tags_set:
+                detected_type = candidate
+                break
+
+        template_name = (data.name or workout.comments or f"Шаблон из тренировки #{workout.id}").strip()
+        template = WorkoutTemplate(
+            user_id=user_id,
+            name=template_name,
+            type=detected_type,
+            exercises=[ex.model_dump() for ex in template_exercises],
+            is_public=data.is_public,
+        )
+        template = await self.repository.create_template(template)
+        audit_log(
+            action=WORKOUT_TEMPLATE_CREATE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=template.id,
+            client_ip=client_ip,
+            meta={"source_workout_id": data.workout_id},
+        )
+        return WorkoutTemplateResponse.model_validate(template, from_attributes=True)
+
+    async def clone_template(
+        self,
+        user_id: int,
+        template_id: int,
+        data: WorkoutTemplateCloneRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutTemplateResponse:
+        source = await self.repository.get_template(user_id=user_id, template_id=template_id)
+        if not source:
+            raise WorkoutNotFoundError("Template not found")
+
+        clone_name = (data.name or "").strip() or await self._build_clone_name(user_id=user_id, source_name=source.name)
+        clone = WorkoutTemplate(
+            user_id=user_id,
+            name=clone_name,
+            type=source.type,
+            exercises=list(source.exercises or []),
+            is_public=source.is_public if data.is_public is None else data.is_public,
+        )
+        clone = await self.repository.create_template(clone)
+        audit_log(
+            action=WORKOUT_TEMPLATE_CREATE,
+            user_db_id=user_id,
+            resource_type="workout_template",
+            resource_id=clone.id,
+            client_ip=client_ip,
+            meta={"cloned_from_template_id": template_id},
+        )
+        return WorkoutTemplateResponse.model_validate(clone, from_attributes=True)
 
     async def delete_template(
         self,
@@ -239,6 +435,7 @@ class WorkoutsService:
             raise WorkoutNotFoundError("Template not found")
 
         template.is_archived = True
+        template.version += 1
         template = await self.repository.update_template(template)
         audit_log(
             action=WORKOUT_TEMPLATE_ARCHIVE,
@@ -260,6 +457,7 @@ class WorkoutsService:
             raise WorkoutNotFoundError("Template not found")
 
         template.is_archived = False
+        template.version += 1
         template = await self.repository.update_template(template)
         audit_log(
             action=WORKOUT_TEMPLATE_UNARCHIVE,
@@ -311,29 +509,12 @@ class WorkoutsService:
             if not template or template.is_archived:
                 raise WorkoutNotFoundError("Template not found")
 
-        initial_exercises: list[dict] = []
+        initial_exercises = []
         if template is not None:
-            for ex in template.exercises or []:
-                sets = int(ex.get("sets") or 0)
-                if sets < 1:
-                    sets = 1
-                initial_exercises.append(
-                    {
-                        "exercise_id": ex.get("exercise_id"),
-                        "name": ex.get("name") or "Exercise",
-                        "notes": ex.get("notes"),
-                        "sets_completed": [
-                            {
-                                "set_number": i + 1,
-                                "reps": ex.get("reps"),
-                                "weight": ex.get("weight"),
-                                "duration": ex.get("duration"),
-                                "completed": False,
-                            }
-                            for i in range(sets)
-                        ],
-                    }
-                )
+            initial_exercises = [
+                self._exercise_template_to_workout_draft(ex, idx)
+                for idx, ex in enumerate(template.exercises or [])
+            ]
 
         workout = WorkoutLog(
             user_id=user_id,
@@ -363,6 +544,56 @@ class WorkoutsService:
             start_time=workout.created_at,
             status="in_progress",
             message="Workout started successfully",
+        )
+
+    async def start_workout_from_template_with_overrides(
+        self,
+        user_id: int,
+        template_id: int,
+        data: WorkoutStartFromTemplateRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutStartResponse:
+        template = await self.repository.get_template(user_id=user_id, template_id=template_id)
+        if not template or template.is_archived:
+            raise WorkoutNotFoundError("Template not found")
+
+        initial_exercises, override_comments, override_tags = self._resolve_start_overrides(
+            template_exercises=template.exercises or [],
+            overrides=data.overrides,
+        )
+
+        workout = WorkoutLog(
+            user_id=user_id,
+            template_id=template_id,
+            date=date.today(),
+            exercises=initial_exercises,
+            comments=data.name or override_comments or template.name,
+            tags=override_tags or ([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
+        )
+        workout = await self.repository.create_workout_log(workout)
+        await invalidate_user_analytics_cache(user_id)
+
+        audit_log(
+            action=WORKOUT_START,
+            user_db_id=user_id,
+            resource_type="workout_log",
+            resource_id=workout.id,
+            client_ip=client_ip,
+            meta={
+                "template_id": template_id,
+                "template_version": template.version,
+                "has_overrides": bool(data.overrides),
+            },
+        )
+
+        return WorkoutStartResponse(
+            id=workout.id,
+            user_id=workout.user_id,
+            template_id=workout.template_id,
+            date=workout.date,
+            start_time=workout.created_at,
+            status="in_progress",
+            message="Workout started from template with overrides",
         )
 
     async def _upsert_training_load_daily(self, user_id: int, target_date: date) -> None:

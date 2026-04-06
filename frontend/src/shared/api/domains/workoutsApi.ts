@@ -1,9 +1,13 @@
 import { api } from '@shared/api/client'
 import type {
     WorkoutTemplateCreateRequest,
+    WorkoutTemplateCreateFromWorkoutRequest,
+    WorkoutTemplateCloneRequest,
+    WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
     WorkoutTemplateListResponse,
     WorkoutStartRequest,
+    WorkoutStartFromTemplateRequest,
     WorkoutStartResponse,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
@@ -48,11 +52,31 @@ export const workoutsApi = {
         return api.post<WorkoutTemplateResponse>('/workouts/templates', payload)
     },
 
+    createTemplateFromWorkout(
+        payload: WorkoutTemplateCreateFromWorkoutRequest,
+    ): Promise<WorkoutTemplateResponse> {
+        return api.post<WorkoutTemplateResponse>('/workouts/templates/from-workout', payload)
+    },
+
     updateTemplate(
         templateId: number,
         payload: WorkoutTemplateCreateRequest,
     ): Promise<WorkoutTemplateResponse> {
         return api.put<WorkoutTemplateResponse>(`/workouts/templates/${templateId}`, payload)
+    },
+
+    patchTemplate(
+        templateId: number,
+        payload: WorkoutTemplatePatchRequest,
+    ): Promise<WorkoutTemplateResponse> {
+        return api.patch<WorkoutTemplateResponse>(`/workouts/templates/${templateId}`, payload)
+    },
+
+    cloneTemplate(
+        templateId: number,
+        payload: WorkoutTemplateCloneRequest = {},
+    ): Promise<WorkoutTemplateResponse> {
+        return api.post<WorkoutTemplateResponse>(`/workouts/templates/${templateId}/clone`, payload)
     },
 
     deleteTemplate(templateId: number): Promise<void> {
@@ -76,6 +100,13 @@ export const workoutsApi = {
 
     startWorkout(payload: WorkoutStartRequest): Promise<WorkoutStartResponse> {
         return api.post<WorkoutStartResponse>('/workouts/start', payload)
+    },
+
+    startWorkoutFromTemplateWithOverrides(
+        templateId: number,
+        payload: WorkoutStartFromTemplateRequest,
+    ): Promise<WorkoutStartResponse> {
+        return api.post<WorkoutStartResponse>(`/workouts/start/from-template/${templateId}`, payload)
     },
 
     completeWorkout(

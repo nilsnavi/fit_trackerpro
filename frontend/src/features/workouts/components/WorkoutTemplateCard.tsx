@@ -12,6 +12,7 @@ const TYPE_LABEL: Record<BackendWorkoutType, string> = {
 
 export interface WorkoutTemplateCardProps {
     template: WorkoutTemplateResponse
+    onOpenDetails: (id: number) => void
     isPinned: boolean
     isPinLimitReached: boolean
     pinFeedbackMessage: string | null
@@ -27,6 +28,7 @@ export interface WorkoutTemplateCardProps {
 
 export function WorkoutTemplateCard({
     template,
+    onOpenDetails,
     isPinned,
     isPinLimitReached,
     pinFeedbackMessage,
@@ -56,7 +58,16 @@ export function WorkoutTemplateCard({
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold leading-snug text-telegram-text">{template.name}</h3>
+                            <button
+                                type="button"
+                                onClick={() => onOpenDetails(template.id)}
+                                className="max-w-full text-left"
+                                aria-label={`Открыть шаблон ${template.name}`}
+                            >
+                                <h3 className="truncate text-sm font-semibold leading-snug text-telegram-text underline-offset-2 hover:underline">
+                                    {template.name}
+                                </h3>
+                            </button>
                             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-telegram-hint">
                                 {template.is_archived && (
                                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">Архив</span>

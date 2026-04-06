@@ -74,6 +74,13 @@ type ConfigValidationErrors = Partial<Record<'sets' | 'reps' | 'duration', strin
 
 const isPositiveNumber = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value) && value > 0;
 
+const QUICK_TYPE_TO_WORKOUT_TYPE: Record<string, WorkoutType[]> = {
+    strength: ['strength'],
+    cardio: ['cardio'],
+    flexibility: ['flexibility'],
+    mixed: [],
+};
+
 function validateBlockConfig(block: WorkoutBlock): string | null {
     if (block.type === 'strength') {
         if (!isPositiveNumber(block.config?.sets)) return 'Для силового блока укажите корректные подходы (sets > 0).';
@@ -113,6 +120,9 @@ export const WorkoutBuilder: React.FC = () => {
     }, [searchParams, templateIdParam])
 
     const isEditMode = editTemplateId != null
+    const quickNameParam = searchParams.get('name')?.trim() ?? ''
+    const quickTypeParam = searchParams.get('type')?.trim().toLowerCase() ?? 'mixed'
+    const quickModeEnabled = searchParams.get('quick') === '1'
 
     const {
         data: editingTemplate,
@@ -223,6 +233,19 @@ export const WorkoutBuilder: React.FC = () => {
         }
         const draft = loadTemplateEditorDraft(null);
         if (!draft) {
+            if (quickModeEnabled && quickNameParam.length > 0) {
+                hydrate({
+                    id: null,
+                    name: quickNameParam,
+                    description: '',
+                    types: QUICK_TYPE_TO_WORKOUT_TYPE[quickTypeParam] ?? ['mixed'],
+                    blocks: [],
+                });
+                setRestoredDraftAt(null);
+                hasInitializedDraftRef.current = true;
+                return;
+            }
+
             hydrate({
                 id: null,
                 name: '',
@@ -234,6 +257,7 @@ export const WorkoutBuilder: React.FC = () => {
             hasInitializedDraftRef.current = true;
             return;
         }
+
         hydrate({
             id: null,
             name: draft.name,
@@ -243,7 +267,7 @@ export const WorkoutBuilder: React.FC = () => {
         });
         setRestoredDraftAt(draft.savedAt);
         hasInitializedDraftRef.current = true;
-    }, [hydrate, isEditMode]);
+    }, [hydrate, isEditMode, quickModeEnabled, quickNameParam, quickTypeParam]);
 
     useEffect(() => {
         if (!editingTemplate) return;
@@ -530,20 +554,20 @@ export const WorkoutBuilder: React.FC = () => {
             markClean();
             clearTemplateEditorDraft(editTemplateId);
             setRestoredDraftAt(null);
-            navigate('/workouts');
+            navigate('/workouts/templates');
         } catch (error) {
             if (isOfflineMutationQueuedError(error)) {
                 tg.hapticFeedback({ type: 'notification', notificationType: 'success' });
                 clearTemplateEditorDraft(editTemplateId);
                 setRestoredDraftAt(null);
-                navigate('/workouts');
+                navigate('/workouts/templates');
                 return;
             }
             setValidationError(
                 'general',
                 isEditMode
-                    ? 'Не удалось обновить тренировку. Попробуйте ещё раз.'
-                    : 'Не удалось сохранить тренировку. Попробуйте ещё раз.'
+                    ? 'Не удалось обновить шаблон. Попробуйте ещё раз.'
+                    : 'Не удалось сохранить шаблон. Попробуйте ещё раз.'
             );
             tg.hapticFeedback({ type: 'notification', notificationType: 'error' });
         }
@@ -642,11 +666,16 @@ export const WorkoutBuilder: React.FC = () => {
                             {!isEditingTemplatePending && !editingTemplateError && 'Режим редактирования шаблона'}
                         </div>
                     )}
+                    {!isEditMode && (
+                        <div className="rounded-xl border border-primary/25 bg-primary/10 px-3 py-2 text-sm text-primary">
+                            Режим шаблона: вы настраиваете заготовку. Фактическое выполнение и запись подходов начнётся только в активной тренировке.
+                        </div>
+                    )}
                     {/* Title Row */}
                     <div className="flex items-center gap-3">
                         <Input
                             type="text"
-                            placeholder="Название тренировки…"
+                            placeholder="Название шаблона…"
                             value={workoutName}
                             onChange={(e) => {
                                 setWorkoutName(e.target.value);
@@ -688,7 +717,7 @@ export const WorkoutBuilder: React.FC = () => {
 
             {/* Add Block Section */}
             <div className="px-4 py-4">
-                <h3 className="text-sm font-medium text-telegram-hint mb-3">Добавить блок</h3>
+                <h3 className="text-sm font-medium text-telegram-hint mb-3">Добавить блок шаблона</h3>
                 <div className="grid grid-cols-4 gap-2">
                     <button
                         onClick={() => handleAddBlock('strength')}
@@ -744,6 +773,9 @@ export const WorkoutBuilder: React.FC = () => {
                         </button>
                     )}
                 </div>
+                {blocks.length > 1 ? (
+                    <p className="text-xs text-telegram-hint">Для перестановки блоков удерживайте иконку захвата слева в карточке.</p>
+                ) : null}
                 {validationErrors.blocks ? (
                     <p className="text-sm text-danger" role="alert">{validationErrors.blocks}</p>
                 ) : null}
@@ -1252,7 +1284,7 @@ export const WorkoutBuilder: React.FC = () => {
                     disabled={createTemplateMutation.isPending || updateTemplateMutation.isPending || (!isEditMode && !isDirty)}
                     leftIcon={<Plus className="w-5 h-5" />}
                 >
-                    {isEditMode ? 'Обновить тренировку' : 'Сохранить шаблон'}
+                    {isEditMode ? 'Обновить шаблон' : 'Сохранить шаблон'}
                 </Button>
             </div>
         </div>
