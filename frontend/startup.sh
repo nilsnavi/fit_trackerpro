@@ -4,6 +4,7 @@ set -e
 # Runtime config for the SPA (window.__APP_CONFIG__) — must run before nginx serves /config.js.
 # Default to same-origin API proxy so Telegram WebView/ngrok do not break on localhost URLs.
 export API_URL="${VITE_API_URL:-${API_URL:-/api/v1}}"
+export ADMIN_USER_IDS="${VITE_ADMIN_USER_IDS:-${ADMIN_USER_IDS:-}}"
 export TELEGRAM_BOT_USERNAME="${TELEGRAM_BOT_USERNAME:-}"
 export TELEGRAM_WEBAPP_URL="${TELEGRAM_WEBAPP_URL:-}"
 export SENTRY_DSN="${SENTRY_DSN:-}"
@@ -19,7 +20,7 @@ if [ ! -r "$CONFIG_TEMPLATE" ]; then
     exit 1
 fi
 
-envsubst '${API_URL} ${TELEGRAM_BOT_USERNAME} ${TELEGRAM_WEBAPP_URL} ${SENTRY_DSN} ${SENTRY_ENVIRONMENT} ${SENTRY_RELEASE} ${SENTRY_DIST}' \
+envsubst '${API_URL} ${ADMIN_USER_IDS} ${TELEGRAM_BOT_USERNAME} ${TELEGRAM_WEBAPP_URL} ${SENTRY_DSN} ${SENTRY_ENVIRONMENT} ${SENTRY_RELEASE} ${SENTRY_DIST}' \
     < "$CONFIG_TEMPLATE" \
     > "$CONFIG_OUT"
 
