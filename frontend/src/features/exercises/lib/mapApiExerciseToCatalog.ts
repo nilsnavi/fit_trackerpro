@@ -16,6 +16,7 @@ const EQUIPMENT_WHITELIST = new Set<EquipmentType>([
     'pull_up_bar',
     'bench',
     'cable_machine',
+    'machine',
     'smith_machine',
     'leg_press',
     'treadmill',

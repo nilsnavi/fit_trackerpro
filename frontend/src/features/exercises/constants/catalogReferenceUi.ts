@@ -24,6 +24,7 @@ export const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string }[] = [
     { id: 'dumbbells', label: 'Гантели' },
     { id: 'kettlebell', label: 'Гиря' },
     { id: 'cable_machine', label: 'Блочный тренажёр' },
+    { id: 'machine', label: 'Тренажёр' },
     { id: 'smith_machine', label: 'Машина Смита' },
     { id: 'leg_press', label: 'Жим ногами' },
     { id: 'treadmill', label: 'Беговая дорожка' },

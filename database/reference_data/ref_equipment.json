@@ -15,6 +15,7 @@
   { "code": "elliptical", "label": "Elliptical", "sort_order": 140, "is_active": true },
   { "code": "medicine_ball", "label": "Medicine Ball", "sort_order": 150, "is_active": true },
   { "code": "foam_roller", "label": "Foam Roller", "sort_order": 160, "is_active": true },
-  { "code": "yoga_mat", "label": "Yoga Mat", "sort_order": 170, "is_active": true }
+  { "code": "yoga_mat", "label": "Yoga Mat", "sort_order": 170, "is_active": true },
+  { "code": "machine", "label": "Machine", "sort_order": 180, "is_active": true }
 ]
 
