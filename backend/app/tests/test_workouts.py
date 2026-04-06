@@ -197,6 +197,42 @@ class TestWorkoutTemplates:
         default_ids = [item.get("id") for item in listed_default.json().get("items", [])]
         assert template_id in default_ids
 
+    async def test_delete_template_detaches_history_reference(self, authenticated_client: AsyncClient):
+        payload = {
+            "name": "Template Linked To History",
+            "type": "strength",
+            "exercises": [
+                {
+                    "exercise_id": 1,
+                    "name": "Push-ups",
+                    "sets": 2,
+                    "reps": 12,
+                    "rest_seconds": 60,
+                }
+            ],
+            "is_public": False,
+        }
+
+        created = await authenticated_client.post("/api/v1/workouts/templates", json=payload)
+        assert created.status_code in (200, 201), created.text
+        template_id = created.json().get("id")
+        assert template_id
+
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"template_id": template_id},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json().get("id")
+        assert workout_id
+
+        deleted = await authenticated_client.delete(f"/api/v1/workouts/templates/{template_id}")
+        assert deleted.status_code == 204, deleted.text
+
+        history_after = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert history_after.status_code == 200, history_after.text
+        assert history_after.json().get("template_id") is None
+
     async def test_clone_and_patch_template_with_expected_version(self, authenticated_client: AsyncClient):
         payload = {
             "name": "Template Clone Source",
