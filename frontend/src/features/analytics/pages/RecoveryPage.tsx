@@ -6,6 +6,7 @@ import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
 import { SectionHeader } from '@shared/ui/SectionHeader'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
+import { ProgressPeriodFilter } from '@features/analytics/components/ProgressPeriodFilter'
 import { ProgressScreenTabs } from '@features/analytics/components/ProgressScreenTabs'
 import {
     getAnalyticsMuscleLoad,
@@ -16,26 +17,11 @@ import {
     type ApiTrainingLoadDailyEntry,
 } from '@features/analytics/api/analyticsDomain'
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
-
-type Period = '7d' | '30d' | '90d'
-
-const PERIODS: Array<{ id: Period; label: string }> = [
-    { id: '7d', label: '7д' },
-    { id: '30d', label: '30д' },
-    { id: '90d', label: '90д' },
-]
-
-function getDateRange(period: Period): { date_from: string; date_to: string } {
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90
-    const end = new Date()
-    const start = new Date(end)
-    start.setDate(end.getDate() - (days - 1))
-
-    return {
-        date_from: format(start, 'yyyy-MM-dd'),
-        date_to: format(end, 'yyyy-MM-dd'),
-    }
-}
+import {
+    getAnalyticsDateRange,
+    PROGRESS_PERIODS_SHORT,
+    type ProgressPeriod,
+} from '@features/analytics/lib/progressDateRange'
 
 function summarizeLoad(load: ApiTrainingLoadDailyEntry[]) {
     if (load.length === 0) {
@@ -64,8 +50,10 @@ function topMuscles(rows: ApiMuscleLoadEntry[]) {
 }
 
 export default function RecoveryPage() {
-    const [period, setPeriod] = useState<Period>('30d')
-    const range = useMemo(() => getDateRange(period), [period])
+    const [period, setPeriod] = useState<ProgressPeriod>('30d')
+    const range = useMemo(() => getAnalyticsDateRange(period), [period])
+    const dateFrom = range.date_from ?? null
+    const dateTo = range.date_to ?? null
 
     const recoveryQuery = useQuery<ApiRecoveryStateResponse>({
         queryKey: queryKeys.analytics.recoveryState,
@@ -74,13 +62,13 @@ export default function RecoveryPage() {
     })
 
     const dailyLoadQuery = useQuery<ApiTrainingLoadDailyEntry[]>({
-        queryKey: queryKeys.analytics.trainingLoadDaily(range.date_from, range.date_to),
+        queryKey: queryKeys.analytics.trainingLoadDaily(dateFrom, dateTo),
         queryFn: () => getAnalyticsTrainingLoadDaily({ ...range, period }),
         staleTime: 60_000,
     })
 
     const muscleLoadQuery = useQuery<ApiMuscleLoadEntry[]>({
-        queryKey: queryKeys.analytics.muscleLoad(range.date_from, range.date_to),
+        queryKey: queryKeys.analytics.muscleLoad(dateFrom, dateTo),
         queryFn: () => getAnalyticsMuscleLoad({ ...range, period }),
         staleTime: 60_000,
     })
@@ -112,22 +100,7 @@ export default function RecoveryPage() {
                     description="Готовность к следующей тренировке, утомление и мышечная нагрузка."
                 />
                 <ProgressScreenTabs />
-                <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
-                    {PERIODS.map((item) => (
-                        <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setPeriod(item.id)}
-                            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
-                                period === item.id
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-telegram-bg text-telegram-hint'
-                            }`}
-                        >
-                            {item.label}
-                        </button>
-                    ))}
-                </div>
+                <ProgressPeriodFilter value={period} options={PROGRESS_PERIODS_SHORT} onChange={setPeriod} />
             </section>
 
             {error ? (

@@ -11,12 +11,12 @@ import {
     XAxis,
     YAxis,
     Tooltip,
-    Legend,
 } from 'recharts'
 import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
 import { SectionHeader } from '@shared/ui/SectionHeader'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
+import { ProgressPeriodFilter } from '@features/analytics/components/ProgressPeriodFilter'
 import { ProgressScreenTabs } from '@features/analytics/components/ProgressScreenTabs'
 import {
     getAnalyticsProgress,
@@ -30,38 +30,40 @@ import {
     mapProgressToExercises,
     type Exercise,
 } from '@features/analytics/mappers/analyticsMappers'
-
-type Period = '7d' | '30d' | '90d' | 'all'
-
-const PERIODS: Array<{ id: Period; label: string }> = [
-    { id: '7d', label: '7д' },
-    { id: '30d', label: '30д' },
-    { id: '90d', label: '90д' },
-    { id: 'all', label: 'Все' },
-]
+import {
+    getAnalyticsDateRange,
+    PROGRESS_PERIODS,
+    type ProgressPeriod,
+} from '@features/analytics/lib/progressDateRange'
 
 const LINE_COLORS = ['#2481cc', '#22c55e', '#f97316', '#ef4444', '#a855f7']
+const MAX_SELECTED_EXERCISES = 3
 
-function getDateRange(period: Period): { date_from?: string; date_to?: string } {
-    if (period === 'all') return {}
-
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90
-    const end = new Date()
-    const start = new Date(end)
-    start.setDate(end.getDate() - (days - 1))
-
-    return {
-        date_from: format(start, 'yyyy-MM-dd'),
-        date_to: format(end, 'yyyy-MM-dd'),
+function ExerciseChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number }>; label?: string }) {
+    if (!active || !payload || payload.length === 0) {
+        return null
     }
+
+    return (
+        <div className="rounded-xl border border-border bg-telegram-bg px-3 py-2 shadow-lg">
+            <p className="text-xs font-semibold text-telegram-text">{label}</p>
+            <div className="mt-2 space-y-1">
+                {payload.map((item) => (
+                    <p key={item.name} className="text-xs text-telegram-hint">
+                        <span className="font-medium text-telegram-text">{item.name}</span>: {item.value} кг
+                    </p>
+                ))}
+            </div>
+        </div>
+    )
 }
 
 export default function ExerciseProgressPage() {
-    const [period, setPeriod] = useState<Period>('30d')
+    const [period, setPeriod] = useState<ProgressPeriod>('30d')
     const [expanded, setExpanded] = useState(false)
     const [selectedExerciseIds, setSelectedExerciseIds] = useState<number[]>([])
 
-    const range = useMemo(() => getDateRange(period), [period])
+    const range = useMemo(() => getAnalyticsDateRange(period), [period])
     const dateFrom = range.date_from ?? null
     const dateTo = range.date_to ?? null
 
@@ -81,17 +83,29 @@ export default function ExerciseProgressPage() {
     const error = summaryQuery.error ?? progressQuery.error
     const progressRows = progressQuery.data ?? []
     const exercises = useMemo(() => mapProgressToExercises(progressRows), [progressRows])
+    const defaultExerciseIds = useMemo(
+        () =>
+            [...progressRows]
+                .sort((a, b) => (b.summary?.progress_percentage ?? 0) - (a.summary?.progress_percentage ?? 0))
+                .slice(0, MAX_SELECTED_EXERCISES)
+                .map((row) => row.exercise_id),
+        [progressRows],
+    )
 
     const selectedExercises = useMemo<Exercise[]>(() => {
         if (exercises.length === 0) return []
 
         if (selectedExerciseIds.length === 0) {
-            return exercises.slice(0, Math.min(3, exercises.length))
+            const preferredIds = defaultExerciseIds.length > 0 ? defaultExerciseIds : exercises.slice(0, MAX_SELECTED_EXERCISES).map((exercise) => exercise.id)
+
+            return preferredIds
+                .map((exerciseId) => exercises.find((exercise) => exercise.id === exerciseId))
+                .filter((exercise): exercise is Exercise => Boolean(exercise))
         }
 
         const selected = exercises.filter((exercise) => selectedExerciseIds.includes(exercise.id))
-        return selected.length > 0 ? selected : exercises.slice(0, Math.min(3, exercises.length))
-    }, [exercises, selectedExerciseIds])
+        return selected.length > 0 ? selected : exercises.slice(0, Math.min(MAX_SELECTED_EXERCISES, exercises.length))
+    }, [defaultExerciseIds, exercises, selectedExerciseIds])
 
     const chartData = useMemo(
         () => buildChartDataFromProgress({ progressRows, selectedExercises }),
@@ -112,6 +126,27 @@ export default function ExerciseProgressPage() {
         [progressRows],
     )
 
+    const exerciseHighlights = useMemo(
+        () =>
+            [...progressRows]
+                .sort((a, b) => (b.summary?.progress_percentage ?? 0) - (a.summary?.progress_percentage ?? 0))
+                .map((row) => {
+                    const sortedPoints = [...(row.data_points ?? [])].sort((a, b) => a.date.localeCompare(b.date))
+                    const latestPoint = sortedPoints[sortedPoints.length - 1]
+
+                    return {
+                        id: row.exercise_id,
+                        name: row.exercise_name,
+                        progress: Math.round(row.summary?.progress_percentage ?? 0),
+                        latestWeight: latestPoint?.max_weight ?? null,
+                        bestWeight: row.best_performance?.weight ?? null,
+                        bestDate: row.best_performance?.date ?? null,
+                        pointsCount: row.data_points?.length ?? 0,
+                    }
+                }),
+        [progressRows],
+    )
+
     const noData = !isLoading && progressRows.length === 0
 
     const toggleExercise = (exerciseId: number) => {
@@ -120,7 +155,7 @@ export default function ExerciseProgressPage() {
                 return prev.filter((id) => id !== exerciseId)
             }
 
-            if (prev.length >= 5) {
+            if (prev.length >= MAX_SELECTED_EXERCISES) {
                 return [...prev.slice(1), exerciseId]
             }
 
@@ -133,25 +168,10 @@ export default function ExerciseProgressPage() {
             <section className="space-y-3 rounded-3xl bg-telegram-secondary-bg/65 p-4">
                 <SectionHeader
                     title="Прогресс упражнений"
-                    description="Отслеживайте рабочие веса, PR и динамику по ключевым движениям."
+                    description="Ключевые движения, рост рабочих весов и свежие PR без перегруженного графика."
                 />
                 <ProgressScreenTabs />
-                <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
-                    {PERIODS.map((item) => (
-                        <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setPeriod(item.id)}
-                            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
-                                period === item.id
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-telegram-bg text-telegram-hint'
-                            }`}
-                        >
-                            {item.label}
-                        </button>
-                    ))}
-                </div>
+                <ProgressPeriodFilter value={period} options={PROGRESS_PERIODS} onChange={setPeriod} />
             </section>
 
             {error ? (
@@ -179,12 +199,22 @@ export default function ExerciseProgressPage() {
                 <>
                     <section className="grid grid-cols-2 gap-2">
                         <article className="rounded-2xl bg-telegram-secondary-bg p-3">
-                            <p className="text-xs text-telegram-hint">Выбрано упражнений</p>
+                            <p className="text-xs text-telegram-hint">На графике</p>
                             <p className="mt-1 text-xl font-semibold text-telegram-text">{selectedExercises.length}</p>
+                            <p className="mt-1 text-xs text-telegram-hint">До {MAX_SELECTED_EXERCISES} одновременно</p>
                         </article>
                         <article className="rounded-2xl bg-telegram-secondary-bg p-3">
                             <p className="text-xs text-telegram-hint">Рост силы</p>
                             <p className="mt-1 text-xl font-semibold text-telegram-text">+{keyMetrics.strengthGrowth}%</p>
+                            <p className="mt-1 text-xs text-telegram-hint">Среднее по выбранным движениям</p>
+                        </article>
+                        <article className="rounded-2xl bg-telegram-secondary-bg p-3">
+                            <p className="text-xs text-telegram-hint">Тренировок</p>
+                            <p className="mt-1 text-xl font-semibold text-telegram-text">{keyMetrics.totalWorkouts}</p>
+                        </article>
+                        <article className="rounded-2xl bg-telegram-secondary-bg p-3">
+                            <p className="text-xs text-telegram-hint">PR за период</p>
+                            <p className="mt-1 text-xl font-semibold text-telegram-text">{keyMetrics.personalRecords}</p>
                         </article>
                     </section>
 
@@ -196,7 +226,7 @@ export default function ExerciseProgressPage() {
                         >
                             <div className="text-left">
                                 <h2 className="text-sm font-semibold text-telegram-text">Упражнения для сравнения</h2>
-                                <p className="mt-1 text-xs text-telegram-hint">До 5 упражнений одновременно</p>
+                                <p className="mt-1 text-xs text-telegram-hint">Показываем только самое важное: до 3 линий</p>
                             </div>
                             {expanded ? <ChevronUp className="h-4 w-4 text-telegram-hint" /> : <ChevronDown className="h-4 w-4 text-telegram-hint" />}
                         </button>
@@ -235,21 +265,36 @@ export default function ExerciseProgressPage() {
 
                     <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                         <h2 className="text-sm font-semibold text-telegram-text">График рабочих весов</h2>
-                        <p className="mt-1 text-xs text-telegram-hint">Лучший вес на дату для выбранных упражнений</p>
+                        <p className="mt-1 text-xs text-telegram-hint">Лучший зафиксированный вес по каждой дате для выбранных упражнений</p>
 
                         {chartData.length === 0 ? (
                             <p className="mt-4 rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
                                 Недостаточно данных для графика за выбранный период.
                             </p>
                         ) : (
-                            <div className="mt-3 h-64 -mx-2">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                            <>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {selectedExercises.map((exercise, index) => (
+                                        <span
+                                            key={exercise.id}
+                                            className="inline-flex items-center gap-2 rounded-full bg-telegram-bg px-3 py-1.5 text-xs text-telegram-text"
+                                        >
+                                            <span
+                                                className="h-2.5 w-2.5 rounded-full"
+                                                style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
+                                            />
+                                            {exercise.name}
+                                        </span>
+                                    ))}
+                                </div>
+
+                                <div className="mt-3 h-64 -mx-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData} margin={{ top: 8, right: 16, left: 6, bottom: 8 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.35)" />
                                         <XAxis dataKey="formattedDate" tick={{ fontSize: 11 }} minTickGap={20} />
-                                        <YAxis tick={{ fontSize: 11 }} width={36} />
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                                        <YAxis tick={{ fontSize: 11 }} width={32} />
+                                        <Tooltip content={<ExerciseChartTooltip />} />
                                         {selectedExercises.map((exercise, index) => (
                                             <Line
                                                 key={exercise.id}
@@ -261,8 +306,58 @@ export default function ExerciseProgressPage() {
                                                 connectNulls
                                             />
                                         ))}
-                                    </LineChart>
-                                </ResponsiveContainer>
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </>
+                        )}
+                    </section>
+
+                    <section className="rounded-2xl bg-telegram-secondary-bg p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-semibold text-telegram-text">Кто растёт быстрее</h2>
+                                <p className="mt-1 text-xs text-telegram-hint">Список помогает быстро понять, куда сейчас идёт адаптация.</p>
+                            </div>
+                            <TrendingUp className="h-4 w-4 text-primary" />
+                        </div>
+
+                        {exerciseHighlights.length === 0 ? (
+                            <p className="rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
+                                Для списка прогрессии пока не хватает повторных записей.
+                            </p>
+                        ) : (
+                            <div className="space-y-2">
+                                {exerciseHighlights.slice(0, 5).map((item) => (
+                                    <article key={item.id} className="rounded-xl bg-telegram-bg p-3">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-medium text-telegram-text">{item.name}</p>
+                                                <p className="mt-1 text-xs text-telegram-hint">
+                                                    {item.pointsCount} точек на графике
+                                                    {item.bestDate ? ` • PR ${format(new Date(item.bestDate), 'dd MMM', { locale: ru })}` : ''}
+                                                </p>
+                                            </div>
+                                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                                                +{item.progress}%
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                                            <div className="rounded-lg bg-telegram-secondary-bg/70 px-3 py-2">
+                                                <p className="text-telegram-hint">Последний вес</p>
+                                                <p className="mt-1 font-semibold text-telegram-text">
+                                                    {item.latestWeight != null ? `${item.latestWeight} кг` : 'Нет данных'}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-telegram-secondary-bg/70 px-3 py-2">
+                                                <p className="text-telegram-hint">Лучший вес</p>
+                                                <p className="mt-1 font-semibold text-telegram-text">
+                                                    {item.bestWeight != null ? `${item.bestWeight} кг` : 'Нет данных'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </article>
+                                ))}
                             </div>
                         )}
                     </section>
@@ -295,16 +390,16 @@ export default function ExerciseProgressPage() {
                     <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                         <div className="mb-2 flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-primary" />
-                            <h2 className="text-sm font-semibold text-telegram-text">Краткая статистика</h2>
+                            <h2 className="text-sm font-semibold text-telegram-text">Что учитывать при чтении графика</h2>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <article className="rounded-xl bg-telegram-bg p-3">
-                                <p className="text-xs text-telegram-hint">Тренировок</p>
-                                <p className="mt-1 text-lg font-semibold text-telegram-text">{keyMetrics.totalWorkouts}</p>
+                                <p className="text-xs text-telegram-hint">Лучшая польза</p>
+                                <p className="mt-1 text-sm font-semibold text-telegram-text">Выбирать 1-3 ключевых движения</p>
                             </article>
                             <article className="rounded-xl bg-telegram-bg p-3">
-                                <p className="text-xs text-telegram-hint">Личных рекордов</p>
-                                <p className="mt-1 text-lg font-semibold text-telegram-text">{keyMetrics.personalRecords}</p>
+                                <p className="text-xs text-telegram-hint">Ограничение</p>
+                                <p className="mt-1 text-sm font-semibold text-telegram-text">Сейчас доступен только лучший вес по дате</p>
                             </article>
                         </div>
                     </section>
