@@ -4,6 +4,8 @@ import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
 interface SessionSummaryCardProps {
     workout: WorkoutHistoryItem
+    workoutTitle: string
+    elapsedLabel: string
     isActiveDraft: boolean
     durationMinutes: number
     exerciseCount: number
@@ -14,6 +16,8 @@ interface SessionSummaryCardProps {
 
 export function SessionSummaryCard({
     workout,
+    workoutTitle,
+    elapsedLabel,
     isActiveDraft,
     durationMinutes,
     exerciseCount,
@@ -23,12 +27,21 @@ export function SessionSummaryCard({
 }: SessionSummaryCardProps) {
     return (
         <div className="rounded-xl bg-telegram-secondary-bg p-4 space-y-4">
+            <div className="space-y-1">
+                <p className="text-xs uppercase tracking-wide text-telegram-hint">Сессия</p>
+                <h2 className="line-clamp-2 text-base font-semibold text-telegram-text">{workoutTitle}</h2>
+            </div>
+
             <div className="flex items-center gap-2 text-sm text-telegram-hint">
                 <CalendarDays className="h-4 w-4" />
                 <span>{formatDate(workout.date)}</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg bg-telegram-bg/60 p-2">
+                    <div className="text-xs text-telegram-hint">Прошло</div>
+                    <div className="mt-1 text-sm font-semibold text-telegram-text">{elapsedLabel}</div>
+                </div>
                 <div className="rounded-lg bg-telegram-bg/60 p-2">
                     <div className="flex items-center gap-1 text-xs text-telegram-hint">
                         <Clock3 className="h-3.5 w-3.5" />

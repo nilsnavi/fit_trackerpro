@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedSet } from '@features/workouts/types/workouts'
 
@@ -9,8 +9,11 @@ const WEIGHT_DELTAS = [1.25, 2.5, 5]
 interface ExerciseSetRowProps {
     set: CompletedSet
     exerciseIndex: number
+    isCurrent: boolean
+    previousBestLabel: string
     onFocusSet: (exerciseIndex: number, setIndex: number) => void
     onToggleCompleted: (exerciseIndex: number, setNumber: number, nextCompleted: boolean) => void
+    onSkipSet: () => void
     onCopyPrevious: (exerciseIndex: number, setNumber: number) => void
     onAdjustWeight: (exerciseIndex: number, setNumber: number, delta: number) => void
     onUpdateSet: (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
@@ -19,13 +22,23 @@ interface ExerciseSetRowProps {
 export const ExerciseSetRow = memo(function ExerciseSetRow({
     set,
     exerciseIndex,
+    isCurrent,
+    previousBestLabel,
     onFocusSet,
     onToggleCompleted,
+    onSkipSet,
     onCopyPrevious,
     onAdjustWeight,
     onUpdateSet,
 }: ExerciseSetRowProps) {
     const setIndex = set.set_number - 1
+    const [showEffort, setShowEffort] = useState(Boolean(set.rpe != null || set.rir != null))
+
+    useEffect(() => {
+        if (set.rpe != null || set.rir != null) {
+            setShowEffort(true)
+        }
+    }, [set.rir, set.rpe])
 
     // Memoized callbacks to prevent unnecessary child re-renders
     const handleToggleCompleted = useCallback(() => {
@@ -36,6 +49,11 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
     const handleCopyPrevious = useCallback(() => {
         onCopyPrevious(exerciseIndex, set.set_number)
     }, [exerciseIndex, set.set_number, onCopyPrevious])
+
+    const handleSkipSet = useCallback(() => {
+        onFocusSet(exerciseIndex, setIndex)
+        onSkipSet()
+    }, [exerciseIndex, onFocusSet, onSkipSet, setIndex])
 
     const handleAdjustWeight = useCallback(
         (delta: number) => {
@@ -105,21 +123,37 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
     )
 
     return (
-        <div className="rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text">
+        <div
+            className={`rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text ${isCurrent ? 'border border-primary/35 bg-primary/5' : 'border border-transparent'}`}
+        >
             <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">Подход {set.set_number}</span>
-                <button
-                    type="button"
-                    data-testid="set-toggle-btn"
-                    onClick={handleToggleCompleted}
-                    className={`min-h-[44px] touch-manipulation rounded-xl px-4 py-2 text-sm font-medium transition-colors ${set.completed
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                        : 'bg-telegram-secondary-bg text-telegram-text'
-                        }`}
-                >
-                    {set.completed ? '✓ Выполнен' : 'Отметить'}
-                </button>
+                <div>
+                    <span className="font-medium">Подход {set.set_number}</span>
+                    {isCurrent && <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide text-primary">Текущий</span>}
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={handleSkipSet}
+                        className="min-h-[40px] touch-manipulation rounded-xl bg-telegram-secondary-bg px-3 py-2 text-xs font-medium text-telegram-hint"
+                    >
+                        Пропуск
+                    </button>
+                    <button
+                        type="button"
+                        data-testid="set-toggle-btn"
+                        onClick={handleToggleCompleted}
+                        className={`min-h-[40px] touch-manipulation rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${set.completed
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                            : 'bg-primary text-primary-foreground'
+                            }`}
+                    >
+                        {set.completed ? '✓ Готово' : 'Готово'}
+                    </button>
+                </div>
             </div>
+
+            <p className="mt-1 text-[11px] text-telegram-hint">Предыдущий лучший: {previousBestLabel}</p>
 
             <div className="mt-2 flex flex-wrap gap-1.5">
                 <button
@@ -199,39 +233,51 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
             </div>
 
             <div className="mt-2 space-y-2">
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] text-telegram-hint">RPE</span>
-                    {RPE_OPTIONS.map((value) => (
-                        <button
-                            key={`rpe-${value}`}
-                            type="button"
-                            onClick={() => handleRpeToggle(value)}
-                            className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rpe === value
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
-                                }`}
-                        >
-                            {value}
-                        </button>
-                    ))}
-                </div>
+                <button
+                    type="button"
+                    onClick={() => setShowEffort((prev) => !prev)}
+                    className="min-h-[32px] rounded-lg bg-telegram-bg px-2.5 py-1.5 text-[11px] font-medium text-telegram-hint"
+                >
+                    {showEffort ? 'Скрыть RPE/RIR' : 'Добавить RPE (опционально)'}
+                </button>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] text-telegram-hint">RIR</span>
-                    {RIR_OPTIONS.map((value) => (
-                        <button
-                            key={`rir-${value}`}
-                            type="button"
-                            onClick={() => handleRirToggle(value)}
-                            className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rir === value
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
-                                }`}
-                        >
-                            {value}
-                        </button>
-                    ))}
-                </div>
+                {showEffort && (
+                    <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[11px] text-telegram-hint">RPE</span>
+                            {RPE_OPTIONS.map((value) => (
+                                <button
+                                    key={`rpe-${value}`}
+                                    type="button"
+                                    onClick={() => handleRpeToggle(value)}
+                                    className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rpe === value
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
+                                        }`}
+                                >
+                                    {value}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[11px] text-telegram-hint">RIR</span>
+                            {RIR_OPTIONS.map((value) => (
+                                <button
+                                    key={`rir-${value}`}
+                                    type="button"
+                                    onClick={() => handleRirToggle(value)}
+                                    className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rir === value
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
+                                        }`}
+                                >
+                                    {value}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

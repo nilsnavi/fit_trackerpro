@@ -4,7 +4,7 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { Plus, Timer } from 'lucide-react'
+import { CheckCircle2, Plus, SkipForward, Timer } from 'lucide-react'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
@@ -22,11 +22,11 @@ import { queryKeys } from '@shared/api/queryKeys'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatExercises } from '@features/workouts/lib/workoutModeHelpers'
 import { CurrentExerciseCard } from '@features/workouts/components'
+import { StickyBottomBar } from '@shared/ui/StickyBottomBar'
 import { useActiveWorkoutActions, useActiveWorkoutStore, useWorkoutSessionDraftStore } from '@/state/local'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
-import { SessionNavigationPanel } from '@features/workouts/active/components/SessionNavigationPanel'
 import { ActiveExerciseList } from '@features/workouts/active/components/ActiveExerciseList'
 import { AddExerciseModal } from '@features/workouts/active/modals/AddExerciseModal'
 import { AddTimerModal } from '@features/workouts/active/modals/AddTimerModal'
@@ -58,6 +58,32 @@ function parseTagsInput(value: string): string[] {
 
 const REST_PRESETS_SECONDS = [45, 60, 90, 120, 180]
 
+function formatElapsedDuration(totalSeconds: number): string {
+    const normalized = Math.max(0, Math.floor(totalSeconds))
+    const hours = Math.floor(normalized / 3600)
+    const minutes = Math.floor((normalized % 3600) / 60)
+    const seconds = normalized % 60
+
+    if (hours > 0) {
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    }
+
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+function formatSetSnapshot(set?: CompletedSet): string {
+    if (!set) return 'Нет данных'
+
+    const parts = [
+        typeof set.weight === 'number' ? `${set.weight} кг` : null,
+        typeof set.reps === 'number' ? `${set.reps} повт` : null,
+        typeof set.duration === 'number' ? `${set.duration} сек` : null,
+        typeof set.distance === 'number' ? `${set.distance} км` : null,
+    ].filter((part): part is string => Boolean(part))
+
+    return parts.length > 0 ? parts.join(' • ') : 'Нет данных'
+}
+
 function buildSyncPayload(workout: WorkoutHistoryItem): WorkoutSessionUpdateRequest {
     return {
         exercises: workout.exercises,
@@ -81,6 +107,7 @@ export function ActiveWorkoutPage() {
     const activeExercises = useActiveWorkoutStore((s) => s.exercises)
     const currentExerciseIndex = useActiveWorkoutStore((s) => s.currentExerciseIndex)
     const currentSetIndex = useActiveWorkoutStore((s) => s.currentSetIndex)
+    const elapsedSeconds = useActiveWorkoutStore((s) => s.elapsedSeconds)
     const restDefaultSeconds = useActiveWorkoutStore((s) => s.restDefaultSeconds)
     const startedAt = useActiveWorkoutStore((s) => s.startedAt)
 
@@ -166,13 +193,8 @@ export function ActiveWorkoutPage() {
         normalizedCurrentSetIndex,
         remainingSets,
         hasNextSet,
-        hasPrevSet,
         hasNextExercise,
-        hasPrevExercise,
-        goToPreviousPosition,
         goToNextSet,
-        goToNextExercise,
-        handleSkipCurrentSet,
     } = useWorkoutNavigation({
         activeExercises,
         currentExerciseIndex,
@@ -290,6 +312,7 @@ export function ActiveWorkoutPage() {
             previousBest: 'Нет данных',
             currentSetLabel: '—',
             remainingSets: 0,
+            currentSetNumber: null as number | null,
         }
 
         if (!currentExercise || !currentSet) return fallback
@@ -314,6 +337,7 @@ export function ActiveWorkoutPage() {
             previousBest: bestParts.length > 0 ? bestParts.join(' • ') : 'Нет данных',
             currentSetLabel: `Подход ${normalizedCurrentSetIndex + 1}/${currentExercise.sets_completed.length}${currentParts.length > 0 ? ` • ${currentParts.join(' • ')}` : ''}`,
             remainingSets,
+            currentSetNumber: currentSet.set_number,
         }
     }, [
         currentExercise,
@@ -322,6 +346,24 @@ export function ActiveWorkoutPage() {
         previousBestByExercise,
         remainingSets,
     ])
+
+    const previousBestLabelsByExercise = useMemo(() => {
+        const bestLabels = new Map<string, string>()
+        previousBestByExercise.forEach((set, exerciseName) => {
+            bestLabels.set(exerciseName.trim().toLowerCase(), formatSetSnapshot(set))
+        })
+        return bestLabels
+    }, [previousBestByExercise])
+
+    const workoutTitle = useMemo(() => {
+        const title = workout?.comments?.trim()
+        return title && title.length > 0 ? title : `Сессия #${workout?.id ?? workoutId}`
+    }, [workout?.comments, workout?.id, workoutId])
+
+    const elapsedLabel = useMemo(
+        () => formatElapsedDuration(elapsedSeconds),
+        [elapsedSeconds],
+    )
 
     const filteredCatalogExercises = useMemo(() => {
         const query = exerciseSearchQuery.trim().toLowerCase()
@@ -524,6 +566,59 @@ export function ActiveWorkoutPage() {
         updateSet(exerciseIndex, setNumber, { weight: nextWeight })
     }
 
+    const handleAddSetToCurrentExercise = () => {
+        if (!workout || !currentExercise) return
+
+        const nextSetNumber = currentExercise.sets_completed.length + 1
+        const previousValues = getPreviousSetValues(currentExercise, nextSetNumber)
+
+        tg.hapticFeedback({ type: 'selection' })
+        patchItem((prev) => ({
+            ...prev,
+            exercises: prev.exercises.map((exercise, index) => {
+                if (index !== currentExerciseIndex) return exercise
+
+                return {
+                    ...exercise,
+                    sets_completed: [
+                        ...exercise.sets_completed,
+                        {
+                            set_number: nextSetNumber,
+                            completed: false,
+                            reps: previousValues.reps,
+                            weight: previousValues.weight,
+                            duration: previousValues.duration,
+                            distance: previousValues.distance,
+                        },
+                    ],
+                }
+            }),
+        }))
+
+        setCurrentPosition(currentExerciseIndex, nextSetNumber - 1)
+    }
+
+    const handleRemoveLastSetFromCurrentExercise = () => {
+        if (!workout || !currentExercise) return
+        if (currentExercise.sets_completed.length <= 1) return
+
+        tg.hapticFeedback({ type: 'impact', style: 'light' })
+        patchItem((prev) => ({
+            ...prev,
+            exercises: prev.exercises.map((exercise, index) => {
+                if (index !== currentExerciseIndex) return exercise
+
+                return {
+                    ...exercise,
+                    sets_completed: exercise.sets_completed.slice(0, -1),
+                }
+            }),
+        }))
+
+        const nextSetIndex = Math.min(currentSetIndex, Math.max(0, currentExercise.sets_completed.length - 2))
+        setCurrentPosition(currentExerciseIndex, nextSetIndex)
+    }
+
     const handleRepeatPrevious = () => {
         if (!repeatSource) return
         tg.hapticFeedback({ type: 'selection' })
@@ -651,6 +746,19 @@ export function ActiveWorkoutPage() {
         }
     }, [restDefaultSeconds, setCurrentPosition, startRestTimer, tg, updateSet])
 
+    const handleCompleteCurrentSet = useCallback(() => {
+        if (!currentSet) return
+        handleToggleSetCompleted(currentExerciseIndex, currentSet.set_number, true)
+        goToNextSet()
+    }, [currentExerciseIndex, currentSet, goToNextSet, handleToggleSetCompleted])
+
+    const handleSkipCurrentSetQuick = useCallback(() => {
+        if (!currentSet) return
+        tg.hapticFeedback({ type: 'selection' })
+        updateSet(currentExerciseIndex, currentSet.set_number, { completed: false })
+        goToNextSet()
+    }, [currentExerciseIndex, currentSet, goToNextSet, tg, updateSet])
+
     const handleExerciseNotesChange = useCallback((exerciseIndex: number, notes: string | undefined) => {
         patchItem((prev) => ({
             ...prev,
@@ -678,7 +786,7 @@ export function ActiveWorkoutPage() {
     }
 
     return (
-        <div className="p-4 space-y-4">
+        <div className={`p-4 space-y-4 ${isActiveDraft ? 'pb-52' : ''}`}>
             <UnsavedChangesModal
                 isOpen={isLeaveConfirmOpen}
                 onLeave={onLeave}
@@ -702,24 +810,6 @@ export function ActiveWorkoutPage() {
                                 отправляются в базу данных до завершения сессии.
                             </p>
                             <div className="flex flex-wrap gap-2">
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    leftIcon={<Plus className="h-4 w-4" />}
-                                    onClick={() => resetAddItemForm('exercise')}
-                                >
-                                    Добавить упражнение
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    leftIcon={<Timer className="h-4 w-4" />}
-                                    onClick={() => resetAddItemForm('timer')}
-                                >
-                                    Добавить таймер
-                                </Button>
                                 {repeatSource && (
                                     <Button type="button" variant="secondary" size="sm" onClick={handleRepeatPrevious}>
                                         Повторить прошлую
@@ -740,6 +830,8 @@ export function ActiveWorkoutPage() {
 
                     <SessionSummaryCard
                         workout={workout}
+                        workoutTitle={workoutTitle}
+                        elapsedLabel={elapsedLabel}
                         isActiveDraft={isActiveDraft}
                         durationMinutes={durationMinutes}
                         exerciseCount={exerciseCount}
@@ -766,16 +858,6 @@ export function ActiveWorkoutPage() {
                         syncState={syncState}
                     />
 
-                    <SessionNavigationPanel
-                        hasPrev={hasPrevSet || hasPrevExercise}
-                        hasNextSet={hasNextSet}
-                        hasNextExercise={hasNextExercise}
-                        onBack={goToPreviousPosition}
-                        onNextSet={goToNextSet}
-                        onNextExercise={goToNextExercise}
-                        onSkip={handleSkipCurrentSet}
-                    />
-
                     <div className="rounded-xl border border-border bg-telegram-secondary-bg p-3 space-y-2">
                         <p className="text-xs text-telegram-hint">Отдых по умолчанию после подхода</p>
                         <div className="flex flex-wrap gap-1.5">
@@ -796,18 +878,20 @@ export function ActiveWorkoutPage() {
                         </div>
                     </div>
 
-                    <Button type="button" className="w-full" data-testid="finish-workout-btn" disabled={completeMutation.isPending} onClick={handleOpenFinishSheet}>
-                        Завершить тренировку
-                    </Button>
-
                     <ActiveExerciseList
                         exercises={workout.exercises}
+                        currentExerciseIndex={currentExerciseIndex}
+                        currentSetIndex={currentSetIndex}
+                        previousBestLabelsByExercise={previousBestLabelsByExercise}
                         canReorder={isActiveDraft}
                         onDragEnd={handleDragEnd}
                         onOpenStructureEditor={openStructureEditor}
+                        onAddSet={handleAddSetToCurrentExercise}
+                        onRemoveSet={handleRemoveLastSetFromCurrentExercise}
                         onDeleteExercise={handleDeleteExerciseRequest}
                         onSetCurrentPosition={setCurrentPosition}
                         onToggleSetCompleted={handleToggleSetCompleted}
+                        onSkipSet={handleSkipCurrentSetQuick}
                         onCopyPreviousSet={handleCopyPreviousSet}
                         onAdjustWeight={handleAdjustWeight}
                         onUpdateSet={updateSet}
@@ -902,6 +986,85 @@ export function ActiveWorkoutPage() {
                         />
                     )}
                 </>
+            )}
+
+            {isActiveDraft && !isLoading && !errorMessage && workout && (
+                <StickyBottomBar className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            leftIcon={<Plus className="h-4 w-4" />}
+                            onClick={() => resetAddItemForm('exercise')}
+                        >
+                            Упражнение
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            leftIcon={<Timer className="h-4 w-4" />}
+                            onClick={() => resetAddItemForm('timer')}
+                        >
+                            Таймер
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            leftIcon={<SkipForward className="h-4 w-4" />}
+                            onClick={handleSkipCurrentSetQuick}
+                            disabled={!currentSet || (!hasNextSet && !hasNextExercise)}
+                        >
+                            Пропустить
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="primary"
+                            size="md"
+                            leftIcon={<CheckCircle2 className="h-4 w-4" />}
+                            onClick={handleCompleteCurrentSet}
+                            disabled={!currentSet}
+                        >
+                            Готово
+                        </Button>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            onClick={handleRemoveLastSetFromCurrentExercise}
+                            disabled={!currentExercise || currentExercise.sets_completed.length <= 1}
+                        >
+                            - Подход
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            onClick={handleAddSetToCurrentExercise}
+                            disabled={!currentExercise}
+                        >
+                            + Подход
+                        </Button>
+                    </div>
+
+                    <Button
+                        type="button"
+                        className="w-full"
+                        data-testid="finish-workout-btn"
+                        disabled={completeMutation.isPending}
+                        onClick={handleOpenFinishSheet}
+                    >
+                        Завершить тренировку
+                    </Button>
+                </StickyBottomBar>
             )}
         </div>
     )
