@@ -133,6 +133,7 @@ class Settings(BaseSettings):
 
     # --- Optional: CORS & observability ---
     ALLOWED_ORIGINS: str | List[str] = "*"
+    ADMIN_USER_IDS: list[int] = []
     SENTRY_DSN: str | None = None
     SENTRY_RELEASE: Annotated[
         str | None,
@@ -291,6 +292,50 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v
+
+    @field_validator("ADMIN_USER_IDS", mode="before")
+    @classmethod
+    def parse_admin_user_ids(cls, value):
+        if value is None or value == "":
+            return []
+
+        if isinstance(value, str):
+            raw_parts = [part.strip() for part in value.split(",")]
+            parts = [part for part in raw_parts if part]
+            if not parts:
+                return []
+            try:
+                return [int(part) for part in parts]
+            except ValueError as exc:
+                raise ValueError(
+                    "ADMIN_USER_IDS must be a comma-separated list of integers, "
+                    "for example: 123456789,987654321"
+                ) from exc
+
+        if isinstance(value, list):
+            parsed: list[int] = []
+            for item in value:
+                if isinstance(item, bool):
+                    raise ValueError(
+                        "ADMIN_USER_IDS must contain only integers"
+                    )
+                if isinstance(item, int):
+                    parsed.append(item)
+                    continue
+                if isinstance(item, str) and item.strip():
+                    try:
+                        parsed.append(int(item.strip()))
+                        continue
+                    except ValueError as exc:
+                        raise ValueError(
+                            "ADMIN_USER_IDS must contain only integers"
+                        ) from exc
+                raise ValueError("ADMIN_USER_IDS must contain only integers")
+            return parsed
+
+        raise ValueError(
+            "ADMIN_USER_IDS must be either a comma-separated string or a list of integers"
+        )
 
     @field_validator("SECRET_KEY")
     @classmethod

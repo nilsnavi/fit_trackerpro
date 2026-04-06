@@ -191,7 +191,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, searchTerm, onVie
         >
             <div className="flex items-start gap-3">
                 {/* Image placeholder */}
-                <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-telegram-secondary-bg flex items-center justify-center flex-shrink-0">
                     {exercise.imageUrl ? (
                         <img
                             src={exercise.imageUrl}
@@ -207,7 +207,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, searchTerm, onVie
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-semibold text-telegram-text truncate">
                         {highlightText(exercise.name, searchTerm)}
                     </h3>
 
@@ -228,13 +228,13 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, searchTerm, onVie
                         {exercise.equipment.slice(0, 2).map(eq => (
                             <span
                                 key={eq}
-                                className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded"
+                                className="text-xs text-telegram-text/80 bg-telegram-bg px-2 py-0.5 rounded"
                             >
                                 {getEquipmentLabel(eq)}
                             </span>
                         ))}
                         {exercise.equipment.length > 2 && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-telegram-hint">
                                 +{exercise.equipment.length - 2}
                             </span>
                         )}
@@ -259,7 +259,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, searchTerm, onVie
                 </div>
 
                 {/* Arrow */}
-                <div className="text-gray-400 group-hover:text-blue-500 transition-colors">
+                <div className="text-telegram-hint group-hover:text-primary transition-colors">
                     <svg
                         width="20"
                         height="20"
@@ -355,7 +355,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
                 {/* Description */}
                 <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Описание</h4>
+                    <h4 className="font-semibold text-telegram-text mb-2">Описание</h4>
                     <p className="text-telegram-hint text-sm leading-relaxed">
                         {exercise.description}
                     </p>
@@ -363,7 +363,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
                 {/* Muscles */}
                 <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Мышечные группы</h4>
+                    <h4 className="font-semibold text-telegram-text mb-2">Мышечные группы</h4>
                     <div className="space-y-2">
                         <div>
                             <span className="text-xs text-telegram-hint">Основные:</span>
@@ -398,7 +398,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
                 {/* Equipment */}
                 <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Оборудование</h4>
+                    <h4 className="font-semibold text-telegram-text mb-2">Оборудование</h4>
                     <div className="flex flex-wrap gap-2">
                         {exercise.equipment.map(eq => (
                             <span
@@ -414,7 +414,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                 {/* Risks */}
                 {exercise.risks.length > 0 && (
                     <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">⚠️ Зоны риска</h4>
+                        <h4 className="font-semibold text-telegram-text mb-2">⚠️ Зоны риска</h4>
                         <div className="flex flex-wrap gap-2">
                             {exercise.risks.map(risk => (
                                 <span
@@ -433,14 +433,14 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
                 {/* Instructions */}
                 <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Техника выполнения</h4>
+                    <h4 className="font-semibold text-telegram-text mb-2">Техника выполнения</h4>
                     <ol className="space-y-2">
                         {exercise.instructions.map((instruction, index) => (
                             <li key={index} className="flex gap-3 text-sm">
                                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-medium">
                                     {index + 1}
                                 </span>
-                                <span className="text-gray-900 dark:text-white pt-0.5">{instruction}</span>
+                                <span className="text-telegram-text pt-0.5">{instruction}</span>
                             </li>
                         ))}
                     </ol>
@@ -466,12 +466,12 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                 {/* Similar exercises */}
                 {similarExercises.length > 0 && (
                     <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">Похожие упражнения</h4>
+                        <h4 className="font-semibold text-telegram-text mb-3">Похожие упражнения</h4>
                         <div className="space-y-2">
                             {similarExercises.map(similar => (
                                 <div
                                     key={similar.id}
-                                    className="flex items-center gap-3 p-3 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors"
+                                    className="flex items-center gap-3 p-3 bg-telegram-secondary-bg rounded-xl cursor-pointer hover:bg-telegram-bg transition-colors"
                                     onClick={() => {
                                         onClose();
                                         setTimeout(() => {
@@ -483,10 +483,10 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                                         {CATEGORIES.find(c => c.id === similar.category)?.icon || '🏋️'}
                                     </span>
                                     <div className="flex-1">
-                                        <p className="font-medium text-gray-900 text-sm">
+                                        <p className="font-medium text-telegram-text text-sm">
                                             {similar.name}
                                         </p>
-                                        <p className="text-xs text-gray-500">
+                                        <p className="text-xs text-telegram-hint">
                                             {getCategoryLabel(similar.category)}
                                         </p>
                                     </div>
@@ -497,7 +497,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                                         fill="none"
                                         stroke="currentColor"
                                         strokeWidth="2"
-                                        className="text-gray-400"
+                                        className="text-telegram-hint"
                                     >
                                         <polyline points="9 18 15 12 9 6" />
                                     </svg>
@@ -817,7 +817,7 @@ export const Catalog: React.FC = () => {
             {/* Header */}
             <div className="sticky top-0 z-20 bg-telegram-bg/95 backdrop-blur-sm border-b border-border">
                 <div className="px-4 py-3">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-telegram-hint">
                         {isLoading ? 'Загрузка…' : `${filteredExercises.length} упражнений`}
                     </p>
                 </div>
@@ -848,7 +848,7 @@ export const Catalog: React.FC = () => {
                         {filters.search && (
                             <button
                                 onClick={handleClearSearch}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-telegram-secondary-bg text-telegram-hint transition-colors"
                             >
                                 <svg
                                     width="16"
@@ -890,7 +890,7 @@ export const Catalog: React.FC = () => {
                             'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
                             activeFiltersCount > 0
                                 ? 'bg-primary text-white'
-                                : 'bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-neutral-700'
+                                : 'bg-telegram-secondary-bg text-telegram-text hover:bg-telegram-bg'
                         )}
                     >
                         <svg
@@ -933,7 +933,7 @@ export const Catalog: React.FC = () => {
                     <CatalogExerciseListSkeleton rows={8} />
                 ) : filteredExercises.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                        <div className="w-16 h-16 rounded-full bg-telegram-secondary-bg flex items-center justify-center mb-4">
                             <svg
                                 width="32"
                                 height="32"
@@ -941,14 +941,14 @@ export const Catalog: React.FC = () => {
                                 fill="none"
                                 stroke="currentColor"
                                 strokeWidth="2"
-                                className="text-gray-500"
+                                className="text-telegram-hint"
                             >
                                 <circle cx="11" cy="11" r="8" />
                                 <path d="m21 21-4.35-4.35" />
                             </svg>
                         </div>
-                        <h3 className="font-semibold text-gray-900 mb-1">Ничего не найдено</h3>
-                        <p className="text-sm text-gray-500 max-w-xs">
+                        <h3 className="font-semibold text-telegram-text mb-1">Ничего не найдено</h3>
+                        <p className="text-sm text-telegram-hint max-w-xs">
                             Попробуйте изменить параметры поиска или сбросить фильтры
                         </p>
                         <Button
@@ -1009,7 +1009,7 @@ export const Catalog: React.FC = () => {
                 <div className="space-y-6">
                     {/* Equipment Filter */}
                     <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">Оборудование</h4>
+                        <h4 className="font-semibold text-telegram-text mb-3">Оборудование</h4>
                         <div className="flex flex-wrap gap-2">
                             {equipmentOptions.map(option => (
                                 <Chip
@@ -1025,10 +1025,10 @@ export const Catalog: React.FC = () => {
 
                     {/* Risk Filter */}
                     <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">
+                        <h4 className="font-semibold text-telegram-text mb-3">
                             Исключить зоны риска
                         </h4>
-                        <p className="text-sm text-gray-500 mb-3">
+                        <p className="text-sm text-telegram-hint mb-3">
                             Скрыть упражнения с нагрузкой на выбранные зоны
                         </p>
                         <div className="flex flex-wrap gap-2">
@@ -1046,7 +1046,7 @@ export const Catalog: React.FC = () => {
 
                     {/* Difficulty Filter */}
                     <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">Сложность</h4>
+                        <h4 className="font-semibold text-telegram-text mb-3">Сложность</h4>
                         <div className="flex flex-wrap gap-2">
                             {DIFFICULTY_OPTIONS.map(option => (
                                 <Chip
@@ -1061,7 +1061,7 @@ export const Catalog: React.FC = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3 pt-4 border-t border-gray-200">
+                    <div className="flex gap-3 pt-4 border-t border-border">
                         <Button
                             variant="secondary"
                             fullWidth
