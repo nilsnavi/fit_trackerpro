@@ -1,7 +1,7 @@
 -- Zero-downtime CONTRACT migration (safe finalize step)
 -- Use only after:
 -- 1) Expand migration is applied,
--- 2) app is deployed with Prisma @map("snake_case"),
+-- 2) app is deployed with snake_case-compatible runtime mapping,
 -- 3) validate script confirms no drift.
 --
 -- This step intentionally removes dual-write triggers/functions only.

@@ -15,7 +15,7 @@ Related policy:
    - Adds snake_case columns (if missing), backfills from camelCase, and installs dual-write triggers.
 
 2. **Deploy app**
-   - Deploy backend using current Prisma schema (`@map("snake_case")`).
+   - Deploy backend version that uses snake_case-compatible ORM mappings.
    - Keep all app pods on this version.
 
 3. **Validate**

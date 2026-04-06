@@ -109,6 +109,8 @@ ENV/
 env/
 .pytest_cache/
 .mypy_cache/
+.envrc
+.direnv/
 .ruff_cache/
 .pyright/
 .tox/
@@ -153,7 +155,9 @@ web_modules/
 
 # --- Testing / E2E ---
 playwright-report/
+frontend/playwright-report/
 test-results/
+frontend/test-results/
 blob-report/
 .playwright/
 .nyc_output/

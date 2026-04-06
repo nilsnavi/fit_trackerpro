@@ -8,13 +8,13 @@ Do **not** enable table partitioning on day one (MVP).
 
 - Use regular tables.
 - Invest in correct indexes and query plans first.
-- Keep migrations and Prisma workflow simple.
+- Keep migrations and schema governance simple (SQLAlchemy models + Alembic).
 - Optimize for rapid product iteration and operational simplicity.
 
 ## Why partitioning is deferred
 
 - Adds complexity to schema migrations.
-- Increases complexity in Prisma-based development workflows.
+- Increases complexity in migration and rollout workflows.
 - Complicates backup and restore procedures.
 - Can slow down development velocity without clear performance benefit at MVP scale.
 
