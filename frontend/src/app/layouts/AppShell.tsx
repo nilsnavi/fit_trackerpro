@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { ConnectivitySyncBar } from '@app/components/ConnectivitySyncBar'
 import { Navigation } from '@app/components/Navigation'
+import { ActiveWorkoutBanner } from '@app/components/ActiveWorkoutBanner'
 import { useTelegramContext } from '../providers/TelegramProvider'
 import { useWorkoutSessionDraftCloudSync } from '@shared/hooks/useWorkoutSessionDraftCloudSync'
 import { cn } from '@shared/lib/cn'
@@ -15,7 +16,7 @@ export function AppShell() {
         <AppShellLayoutProvider>
             <div
                 className={cn(
-                    'app-shell flex min-h-screen min-h-[100dvh] flex-col bg-telegram-bg text-telegram-text antialiased',
+                    'app-shell telegram-viewport-stable flex min-h-screen min-h-[100dvh] flex-col bg-telegram-bg text-telegram-text antialiased',
                     'safe-area-x transition-colors duration-200',
                     isTelegram && 'overscroll-y-contain',
                 )}
@@ -27,11 +28,12 @@ export function AppShell() {
                 <main
                     className={cn(
                         'app-shell-main min-h-0 flex-1 overflow-x-hidden overflow-y-auto',
-                        'pb-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px))]',
+                        'pb-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px)+var(--active-workout-banner-h))]',
                     )}
                 >
                     <Outlet />
                 </main>
+                <ActiveWorkoutBanner />
                 <Navigation />
             </div>
         </AppShellLayoutProvider>

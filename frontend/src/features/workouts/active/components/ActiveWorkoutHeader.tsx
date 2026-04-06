@@ -15,7 +15,7 @@ export function ActiveWorkoutHeader({ onBack, syncState }: ActiveWorkoutHeaderPr
                 <button
                     type="button"
                     onClick={onBack}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-telegram-secondary-bg text-telegram-text"
+                    className="flex h-11 w-11 touch-manipulation shrink-0 items-center justify-center rounded-full bg-telegram-secondary-bg text-telegram-text active:bg-telegram-secondary-bg/70"
                     aria-label="Назад к тренировкам"
                 >
                     <ArrowLeft className="h-4 w-4" />

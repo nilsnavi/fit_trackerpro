@@ -279,8 +279,8 @@ export function WorkoutDetailPage() {
                                                 <span
                                                     className={`rounded-full px-2 py-0.5 text-xs ${
                                                         set.completed
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                                                            : 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'
+                                                            ? 'bg-success/15 text-success'
+                                                            : 'bg-telegram-secondary-bg text-telegram-hint'
                                                     }`}
                                                 >
                                                     {set.completed ? 'Выполнен' : 'Не выполнен'}

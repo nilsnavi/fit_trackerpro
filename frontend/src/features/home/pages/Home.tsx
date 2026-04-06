@@ -194,54 +194,54 @@ export function Home() {
     return (
         <div className="space-y-6 p-4">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-2xl font-bold text-telegram-text">
                     {getGreeting()}, {userName}!
                 </h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-sm text-telegram-hint">
                     Готов достичь своих целей сегодня?
                 </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
                     <div className="mb-2 flex items-center gap-2">
                         <Flame className="h-5 w-5 text-orange-500" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Калории</span>
+                        <span className="text-sm text-telegram-hint">Калории</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-2xl font-bold text-telegram-text">
                         {stats.calories.toLocaleString()}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">ккал всего</div>
+                    <div className="text-xs text-telegram-hint">ккал всего</div>
                 </div>
-                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
                     <div className="mb-2 flex items-center gap-2">
                         <Timer className="h-5 w-5 text-blue-500" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Тренировки</span>
+                        <span className="text-sm text-telegram-hint">Тренировки</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.workouts}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">всего</div>
+                    <div className="text-2xl font-bold text-telegram-text">{stats.workouts}</div>
+                    <div className="text-xs text-telegram-hint">всего</div>
                 </div>
-                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
                     <div className="mb-2 flex items-center gap-2">
                         <Activity className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Активность</span>
+                        <span className="text-sm text-telegram-hint">Активность</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activityMinutes}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">минут всего</div>
+                    <div className="text-2xl font-bold text-telegram-text">{stats.activityMinutes}</div>
+                    <div className="text-xs text-telegram-hint">минут всего</div>
                 </div>
-                <div className="rounded-xl bg-gray-50 p-4 transition-colors dark:bg-neutral-800">
+                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
                     <div className="mb-2 flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-purple-500" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Серия</span>
+                        <span className="text-sm text-telegram-hint">Серия</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.streakDays}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">дней подряд</div>
+                    <div className="text-2xl font-bold text-telegram-text">{stats.streakDays}</div>
+                    <div className="text-xs text-telegram-hint">дней подряд</div>
                 </div>
             </div>
 
             {(waterData || templatesLoading || templates.length > 0) && (
                 <div className="space-y-3">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Сегодня и программы</h2>
+                    <h2 className="text-lg font-semibold text-telegram-text">Сегодня и программы</h2>
                     <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
                         {waterData && (
                             <WaterWidget
@@ -254,7 +254,7 @@ export function Home() {
                             ? Array.from({ length: 3 }).map((_, i) => (
                                   <div
                                       key={`sk-${i}`}
-                                      className="h-44 w-40 shrink-0 animate-pulse rounded-2xl bg-gray-100 dark:bg-neutral-800"
+                                      className="h-44 w-40 shrink-0 animate-pulse rounded-2xl bg-telegram-secondary-bg"
                                   />
                               ))
                             : sortedTemplates.map((template) => (
@@ -286,7 +286,7 @@ export function Home() {
 
             <div>
                 <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Недавние тренировки</h2>
+                    <h2 className="text-lg font-semibold text-telegram-text">Недавние тренировки</h2>
                     <button
                         type="button"
                         className="text-sm text-primary"
@@ -301,7 +301,7 @@ export function Home() {
                 {historyLoading ? (
                     <WorkoutsHistoryBlockSkeleton />
                 ) : recentWorkouts.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 dark:border-neutral-700 dark:bg-neutral-900/40">
+                    <div className="rounded-2xl border border-dashed border-border bg-telegram-secondary-bg/30">
                         <SectionEmptyState
                             icon={Activity}
                             compact
@@ -333,7 +333,7 @@ export function Home() {
                                             navigate(`/workouts/active/${workout.id}`)
                                         }
                                     }}
-                                    className="flex cursor-pointer items-center gap-3 rounded-xl bg-gray-50 p-4 transition-colors active:scale-[0.98] dark:bg-neutral-800"
+                                    className="flex cursor-pointer items-center gap-3 rounded-xl bg-telegram-secondary-bg p-4 transition-colors active:scale-[0.98]"
                                     onClick={() => {
                                         tg.hapticFeedback({ type: 'impact', style: 'light' })
                                         navigate(`/workouts/active/${workout.id}`)
@@ -345,8 +345,8 @@ export function Home() {
                                         <TypeIcon className="h-5 w-5" />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="font-medium text-gray-900 dark:text-white">{workout.title}</h3>
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-gray-500 dark:text-gray-400">
+                                        <h3 className="font-medium text-telegram-text">{workout.title}</h3>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-telegram-hint">
                                             <span>{formatRecentDate(workout.date)}</span>
                                             <span className="flex items-center gap-1">
                                                 <Clock className="h-3 w-3" />
@@ -355,7 +355,7 @@ export function Home() {
                                             {showCals && <span>{workout.calories} ккал</span>}
                                         </div>
                                     </div>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-telegram-hint" />
                                 </div>
                             )
                         })}
@@ -364,7 +364,7 @@ export function Home() {
             </div>
 
             <div>
-                <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Быстрые действия</h2>
+                <h2 className="mb-3 text-lg font-semibold text-telegram-text">Быстрые действия</h2>
                 <div className="grid grid-cols-2 gap-3">
                     <button
                         type="button"
@@ -376,7 +376,7 @@ export function Home() {
                     </button>
                     <button
                         type="button"
-                        className="flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors active:scale-[0.98] dark:bg-neutral-700 dark:text-white"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-telegram-secondary-bg px-4 py-3 font-medium text-telegram-text transition-colors active:scale-[0.98]"
                         onClick={() => handleQuickAction('metric')}
                     >
                         <TrendingUp className="h-5 w-5" />
@@ -386,7 +386,7 @@ export function Home() {
             </div>
 
             {tg.isTelegram && (
-                <div className="pt-4 text-center text-xs text-gray-400 dark:text-gray-500">
+                <div className="pt-4 text-center text-xs text-telegram-hint">
                     Telegram WebApp v{tg.webApp?.version} • {tg.webApp?.platform}
                 </div>
             )}

@@ -696,8 +696,8 @@ export function ActiveWorkoutPage() {
             {!isLoading && !errorMessage && workout && (
                 <>
                     {isActiveDraft && (
-                        <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/50 dark:bg-amber-950/40 p-4 space-y-3">
-                            <p className="text-sm text-gray-800 dark:text-amber-100/90">
+                        <div className="rounded-xl border border-warning/35 bg-warning/10 p-4 space-y-3">
+                            <p className="text-sm text-telegram-text">
                                 Тренировка ещё не завершена. Изменения в упражнениях сохраняются автоматически и
                                 отправляются в базу данных до завершения сессии.
                             </p>
@@ -730,7 +730,7 @@ export function ActiveWorkoutPage() {
                                 type="button"
                                 variant="secondary"
                                 size="sm"
-                                className="w-full border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/50"
+                                className="w-full border-danger/35 text-danger hover:bg-danger/10"
                                 onClick={handleAbandonDraft}
                             >
                                 Отменить тренировку

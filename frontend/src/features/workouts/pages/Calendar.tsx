@@ -57,7 +57,7 @@ const ColorLegend: React.FC = () => {
         { color: 'bg-success', label: 'Выполнена' },
         { color: 'bg-warning', label: 'Частично' },
         { color: 'bg-danger', label: 'Пропущена' },
-        { color: 'bg-neutral-300', label: 'Запланирована' }
+        { color: 'bg-telegram-hint/50', label: 'Запланирована' }
     ];
 
     return (
@@ -217,7 +217,7 @@ const DayDetailSheet: React.FC<{
                 {plannedWorkouts.length > 0 && (
                     <div>
                         <h3 className="text-sm font-medium text-telegram-hint mb-2 flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-neutral-300" />
+                            <span className="w-2 h-2 rounded-full bg-telegram-hint/50" />
                             Запланированы
                         </h3>
                         <div className="space-y-2">

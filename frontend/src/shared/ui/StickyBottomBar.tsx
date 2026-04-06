@@ -32,7 +32,7 @@ export function StickyBottomBar({
                 'fixed inset-x-0 bottom-0 z-30',
                 'border-t border-border bg-telegram-bg/90 backdrop-blur-sm',
                 'px-4 py-3',
-                aboveNav ? 'mb-14 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]' : 'pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
+                aboveNav ? 'mb-[var(--app-shell-nav-h)] pb-3' : 'pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
                 className,
             )}
         >

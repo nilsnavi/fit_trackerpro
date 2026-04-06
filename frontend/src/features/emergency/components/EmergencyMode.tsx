@@ -185,8 +185,8 @@ function CloseButton({
                 'relative w-10 h-10 rounded-full flex items-center justify-center',
                 'transition-all duration-200',
                 isHolding
-                    ? 'bg-red-100 dark:bg-red-900/30'
-                    : 'bg-telegram-secondary-bg hover:bg-red-50 dark:hover:bg-red-900/20'
+                    ? 'bg-danger/20'
+                    : 'bg-telegram-secondary-bg hover:bg-danger/10'
             )}
             aria-label="Удерживайте 3 секунды для закрытия"
         >
@@ -263,14 +263,14 @@ function SymptomSelection({ onSelect }: SymptomSelectionProps) {
                         'bg-telegram-secondary-bg',
                         'flex items-center gap-4',
                         'transition-all duration-200',
-                        'active:scale-[0.98] active:bg-red-50 dark:active:bg-red-900/20',
-                        'hover:bg-red-50/50 dark:hover:bg-red-900/10',
-                        'border-2 border-transparent hover:border-red-200 dark:hover:border-red-800'
+                        'active:scale-[0.98] active:bg-danger/10',
+                        'hover:bg-danger/6',
+                        'border-2 border-transparent hover:border-danger/35'
                     )}
                 >
                     <div className={cn(
                         'w-12 h-12 rounded-xl flex items-center justify-center',
-                        'bg-red-100 dark:bg-red-900/30 text-red-500'
+                        'bg-danger/15 text-danger'
                     )}>
                         {symptom.icon}
                     </div>
@@ -356,7 +356,7 @@ function HypoglycemiaProtocol({ onCallHelp, onTimerComplete, onBetter }: Hypogly
             {/* Step 1: Take 15g carbs */}
             {step === 1 && (
                 <div className="space-y-4">
-                    <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-4 border border-red-200 dark:border-red-800">
+                    <div className="bg-danger/10 rounded-2xl p-4 border border-danger/35">
                         <div className="flex items-start gap-3">
                             <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold">
                                 1
@@ -370,7 +370,7 @@ function HypoglycemiaProtocol({ onCallHelp, onTimerComplete, onBetter }: Hypogly
                                 </p>
                                 <button
                                     onClick={() => setShowSources(!showSources)}
-                                    className="text-sm text-red-500 font-medium flex items-center gap-1"
+                                    className="text-sm text-danger font-medium flex items-center gap-1"
                                 >
                                     <Cookie className="w-4 h-4" />
                                     {showSources ? 'Скрыть примеры' : 'Показать примеры'}
