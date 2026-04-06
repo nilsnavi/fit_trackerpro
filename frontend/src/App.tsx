@@ -64,7 +64,6 @@ const LoginPage = lazy(() =>
 )
 const WorkoutCalendarPage = lazy(() => import('@features/workouts/pages/Calendar'))
 const AchievementsPage = lazy(() => import('@features/achievements/pages/AchievementsPage'))
-const RestTimerSandboxPage = lazy(() => import('@features/sandbox/pages/RestTimerDemo'))
 
 function SentryErrorFallback({
     resetError,
@@ -280,14 +279,6 @@ export default function App() {
                                             element={
                                                 <RouteGuard screenTitle="Достижения">
                                                     <AchievementsPage />
-                                                </RouteGuard>
-                                            }
-                                        />
-                                        <Route
-                                            path="/sandbox/rest-timer"
-                                            element={
-                                                <RouteGuard screenTitle="Sandbox · Rest timer" isPublic>
-                                                    <RestTimerSandboxPage />
                                                 </RouteGuard>
                                             }
                                         />

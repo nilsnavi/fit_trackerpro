@@ -4,11 +4,12 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { CheckCircle2, Plus, SkipForward, Timer } from 'lucide-react'
+import { CheckCircle2, Plus, Settings2, SkipForward, Timer } from 'lucide-react'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
+import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery'
 import { useOptimisticWorkoutSession } from '@features/workouts/hooks/useOptimisticWorkoutSession'
 import {
     useCompleteWorkoutMutation,
@@ -22,8 +23,9 @@ import { queryKeys } from '@shared/api/queryKeys'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatExercises } from '@features/workouts/lib/workoutModeHelpers'
 import { CurrentExerciseCard } from '@features/workouts/components'
-import { StickyBottomBar } from '@shared/ui/StickyBottomBar'
-import { useActiveWorkoutActions, useActiveWorkoutStore, useWorkoutSessionDraftStore } from '@/state/local'
+import { WorkoutActionRail } from '@features/workouts/components/WorkoutActionRail'
+import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
+import { useActiveWorkoutActions, useActiveWorkoutStore, useWorkoutRestPresetsStore, useWorkoutSessionDraftStore } from '@/state/local'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
@@ -56,7 +58,7 @@ function parseTagsInput(value: string): string[] {
         .filter((tag) => tag.length > 0)
 }
 
-const REST_PRESETS_SECONDS = [45, 60, 90, 120, 180]
+const FALLBACK_REST_PRESETS_SECONDS = [45, 60, 90, 120, 180]
 
 function formatElapsedDuration(totalSeconds: number): string {
     const normalized = Math.max(0, Math.floor(totalSeconds))
@@ -152,6 +154,8 @@ export function ActiveWorkoutPage() {
     const [isAbandonConfirmOpen, setIsAbandonConfirmOpen] = useState(false)
     const [isDeleteExerciseConfirmOpen, setIsDeleteExerciseConfirmOpen] = useState(false)
     const [pendingDeleteExerciseIndex, setPendingDeleteExerciseIndex] = useState<number | null>(null)
+    const [isRestPresetsModalOpen, setIsRestPresetsModalOpen] = useState(false)
+    const [restPresetsDraft, setRestPresetsDraft] = useState('')
 
     const isActiveDraft =
         workout != null &&
@@ -166,8 +170,20 @@ export function ActiveWorkoutPage() {
 
     const completeMutation = useCompleteWorkoutMutation()
     const updateSessionMutation = useUpdateWorkoutSessionMutation()
+    const { data: profile } = useCurrentUserQuery()
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
+
+    const restPresetScopeKey = useMemo(() => {
+        const userKey = profile?.id != null ? String(profile.id) : 'anon'
+        const templateKey = workout?.template_id != null ? String(workout.template_id) : 'default'
+        return `${userKey}:${templateKey}`
+    }, [profile?.id, workout?.template_id])
+
+    const restPresets = useWorkoutRestPresetsStore((s) => s.getPresetsForScope(restPresetScopeKey))
+    const scopedDefaultRest = useWorkoutRestPresetsStore((s) => s.getDefaultRestForScope(restPresetScopeKey))
+    const setPresetsForScope = useWorkoutRestPresetsStore((s) => s.setPresetsForScope)
+    const setDefaultRestForScope = useWorkoutRestPresetsStore((s) => s.setDefaultRestForScope)
 
     const { flushNow: flushWorkoutSync, syncState } = useActiveWorkoutSync({
         workoutId,
@@ -229,6 +245,33 @@ export function ActiveWorkoutPage() {
         }
     }, [tg, navigate])
 
+    useEffect(() => {
+        if (restDefaultSeconds !== scopedDefaultRest) {
+            setRestDefaultSeconds(scopedDefaultRest)
+        }
+    }, [restDefaultSeconds, scopedDefaultRest, setRestDefaultSeconds])
+
+    useEffect(() => {
+        if (!isRestPresetsModalOpen) return
+        setRestPresetsDraft(restPresets.join(', '))
+    }, [isRestPresetsModalOpen, restPresets])
+
+    const handleSelectRestPreset = useCallback((seconds: number) => {
+        setRestDefaultSeconds(seconds)
+        setDefaultRestForScope(restPresetScopeKey, seconds)
+    }, [restPresetScopeKey, setDefaultRestForScope, setRestDefaultSeconds])
+
+    const handleSaveRestPresets = useCallback(() => {
+        const parsed = restPresetsDraft
+            .split(',')
+            .map((value) => Number.parseInt(value.trim(), 10))
+            .filter((value) => Number.isFinite(value))
+
+        setPresetsForScope(restPresetScopeKey, parsed)
+        setIsRestPresetsModalOpen(false)
+        toast.success('Пресеты отдыха обновлены')
+    }, [restPresetScopeKey, restPresetsDraft, setPresetsForScope])
+
     const errorMessage = !isValidWorkoutId
         ? 'Неверный идентификатор тренировки'
         : isError
@@ -246,6 +289,11 @@ export function ActiveWorkoutPage() {
         return workout.exercises.reduce((acc, exercise) => (
             acc + exercise.sets_completed.filter((set) => set.completed).length
         ), 0)
+    }, [workout])
+
+    const totalSetCount = useMemo(() => {
+        if (!workout) return 0
+        return workout.exercises.reduce((acc, exercise) => acc + exercise.sets_completed.length, 0)
     }, [workout])
 
     const completedExercises = useMemo(() => {
@@ -859,13 +907,23 @@ export function ActiveWorkoutPage() {
                     />
 
                     <div className="rounded-xl border border-border bg-telegram-secondary-bg p-3 space-y-2">
-                        <p className="text-xs text-telegram-hint">Отдых по умолчанию после подхода</p>
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs text-telegram-hint">Отдых по умолчанию после подхода</p>
+                            <button
+                                type="button"
+                                onClick={() => setIsRestPresetsModalOpen(true)}
+                                className="inline-flex items-center gap-1 rounded-full bg-telegram-bg px-2 py-1 text-[11px] font-medium text-telegram-hint"
+                            >
+                                <Settings2 className="h-3.5 w-3.5" />
+                                Пресеты
+                            </button>
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
-                            {REST_PRESETS_SECONDS.map((seconds) => (
+                            {(restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS).map((seconds) => (
                                 <button
                                     key={seconds}
                                     type="button"
-                                    onClick={() => setRestDefaultSeconds(seconds)}
+                                    onClick={() => handleSelectRestPreset(seconds)}
                                     className={`rounded-full px-2 py-1 text-[11px] transition-colors ${
                                         restDefaultSeconds === seconds
                                             ? 'bg-primary text-primary-foreground'
@@ -879,6 +937,7 @@ export function ActiveWorkoutPage() {
                     </div>
 
                     <ActiveExerciseList
+                        incrementScopePrefix={restPresetScopeKey}
                         exercises={workout.exercises}
                         currentExerciseIndex={currentExerciseIndex}
                         currentSetIndex={currentSetIndex}
@@ -985,86 +1044,121 @@ export function ActiveWorkoutPage() {
                             onSave={handleSaveStructure}
                         />
                     )}
+
+                    <WorkoutModal
+                        isOpen={isRestPresetsModalOpen}
+                        onClose={() => setIsRestPresetsModalOpen(false)}
+                        title="Пресеты отдыха"
+                        description="Укажите секунды через запятую. Пример: 45, 60, 90"
+                        size="sm"
+                        footer={(
+                            <Button type="button" fullWidth onClick={handleSaveRestPresets}>
+                                Сохранить пресеты
+                            </Button>
+                        )}
+                    >
+                        <div className="space-y-2">
+                            <label className="block text-xs text-telegram-hint">Секунды (15-600)</label>
+                            <input
+                                type="text"
+                                value={restPresetsDraft}
+                                onChange={(event) => setRestPresetsDraft(event.target.value)}
+                                placeholder="45, 60, 90, 120"
+                                className="w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
+                            />
+                        </div>
+                    </WorkoutModal>
                 </>
             )}
 
             {isActiveDraft && !isLoading && !errorMessage && workout && (
-                <StickyBottomBar className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="md"
-                            leftIcon={<Plus className="h-4 w-4" />}
-                            onClick={() => resetAddItemForm('exercise')}
-                        >
-                            Упражнение
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="md"
-                            leftIcon={<Timer className="h-4 w-4" />}
-                            onClick={() => resetAddItemForm('timer')}
-                        >
-                            Таймер
-                        </Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="md"
-                            leftIcon={<SkipForward className="h-4 w-4" />}
-                            onClick={handleSkipCurrentSetQuick}
-                            disabled={!currentSet || (!hasNextSet && !hasNextExercise)}
-                        >
-                            Пропустить
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="primary"
-                            size="md"
-                            leftIcon={<CheckCircle2 className="h-4 w-4" />}
-                            onClick={handleCompleteCurrentSet}
-                            disabled={!currentSet}
-                        >
-                            Готово
-                        </Button>
-                    </div>
-
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="md"
-                            onClick={handleRemoveLastSetFromCurrentExercise}
-                            disabled={!currentExercise || currentExercise.sets_completed.length <= 1}
-                        >
-                            - Подход
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="md"
-                            onClick={handleAddSetToCurrentExercise}
-                            disabled={!currentExercise}
-                        >
-                            + Подход
-                        </Button>
-                    </div>
-
-                    <Button
-                        type="button"
-                        className="w-full"
-                        data-testid="finish-workout-btn"
-                        disabled={completeMutation.isPending}
-                        onClick={handleOpenFinishSheet}
-                    >
-                        Завершить тренировку
-                    </Button>
-                </StickyBottomBar>
+                <WorkoutActionRail
+                    className="space-y-2"
+                    topSlot={(
+                        <>
+                            <div className="flex items-center justify-between rounded-lg bg-telegram-secondary-bg px-3 py-2">
+                                <p className="text-xs text-telegram-hint">Прогресс сессии</p>
+                                <p className="text-sm font-semibold text-telegram-text">
+                                    {completedSetCount}/{totalSetCount} подходов
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                                <span className="shrink-0 text-[11px] text-telegram-hint">Отдых:</span>
+                                {(restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS).map((seconds) => (
+                                    <button
+                                        key={`sticky-rest-${seconds}`}
+                                        type="button"
+                                        onClick={() => startRestTimer(seconds)}
+                                        className="shrink-0 rounded-full bg-telegram-secondary-bg px-2.5 py-1 text-[11px] font-medium text-telegram-text"
+                                    >
+                                        {seconds < 60 ? `${seconds}с` : `${Math.floor(seconds / 60)}м`}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                    sections={[
+                        [
+                            {
+                                id: 'add-exercise',
+                                label: 'Упражнение',
+                                variant: 'secondary',
+                                leftIcon: <Plus className="h-4 w-4" />,
+                                onClick: () => resetAddItemForm('exercise'),
+                            },
+                            {
+                                id: 'add-timer',
+                                label: 'Таймер',
+                                variant: 'secondary',
+                                leftIcon: <Timer className="h-4 w-4" />,
+                                onClick: () => resetAddItemForm('timer'),
+                            },
+                        ],
+                        [
+                            {
+                                id: 'skip-set',
+                                label: 'Пропустить',
+                                variant: 'secondary',
+                                leftIcon: <SkipForward className="h-4 w-4" />,
+                                onClick: handleSkipCurrentSetQuick,
+                                disabled: !currentSet || (!hasNextSet && !hasNextExercise),
+                            },
+                            {
+                                id: 'complete-set',
+                                label: 'Готово',
+                                leftIcon: <CheckCircle2 className="h-4 w-4" />,
+                                onClick: handleCompleteCurrentSet,
+                                disabled: !currentSet,
+                            },
+                        ],
+                        [
+                            {
+                                id: 'remove-set',
+                                label: '- Подход',
+                                variant: 'secondary',
+                                onClick: handleRemoveLastSetFromCurrentExercise,
+                                disabled: !currentExercise || currentExercise.sets_completed.length <= 1,
+                            },
+                            {
+                                id: 'add-set',
+                                label: '+ Подход',
+                                variant: 'secondary',
+                                onClick: handleAddSetToCurrentExercise,
+                                disabled: !currentExercise,
+                            },
+                        ],
+                        [
+                            {
+                                id: 'finish-workout',
+                                label: 'Завершить тренировку',
+                                onClick: handleOpenFinishSheet,
+                                disabled: completeMutation.isPending,
+                                isLoading: completeMutation.isPending,
+                                className: 'w-full',
+                            },
+                        ],
+                    ]}
+                />
             )}
         </div>
     )

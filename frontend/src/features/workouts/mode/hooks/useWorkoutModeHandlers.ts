@@ -92,7 +92,7 @@ export function useWorkoutModeHandlers({
                 workoutId: started.id,
                 payload: buildRepeatSessionPayload(recentWorkout),
             })
-            setWorkoutSessionDraft(started.id, recentWorkout.comments?.trim() || config.title)
+            setWorkoutSessionDraft(started.id, recentWorkout.comments?.trim() || config.title, started.template_id ?? null)
             navigate(`/workouts/active/${started.id}`)
         } catch (err) {
             if (isOfflineMutationQueuedError(err)) {
@@ -184,7 +184,7 @@ export function useWorkoutModeHandlers({
                     },
                 })
             }
-            setWorkoutSessionDraft(started.id, editorTitle.trim())
+            setWorkoutSessionDraft(started.id, editorTitle.trim(), started.template_id ?? null)
             markEditorCleanAndNavigate(`/workouts/active/${started.id}`)
         } catch (err) {
             if (isOfflineMutationQueuedError(err)) {

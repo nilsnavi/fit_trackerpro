@@ -45,10 +45,16 @@ import { trackBusinessMetric } from '@shared/lib/businessMetrics';
 import { AnalyticsPageSkeleton } from '@shared/ui/page-skeletons';
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
 import { queryKeys } from '@shared/api/queryKeys';
-import { analyticsApi } from '@shared/api/domains/analyticsApi';
 import { getErrorMessage } from '@shared/errors';
 import { useRealAnalytics } from '@shared/config/runtime';
 import { toast } from '@shared/stores/toastStore';
+import {
+    getAnalyticsMuscleLoad,
+    getAnalyticsProgress,
+    getAnalyticsRecoveryState,
+    getAnalyticsSummary,
+    getAnalyticsTrainingLoadDaily,
+} from '@features/analytics/api/analyticsDomain';
 import { buildMockAnalytics } from '@features/analytics/mocks/analyticsMock';
 import {
     buildChartDataFromProgress,
@@ -853,11 +859,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
     const summaryQuery = useQuery({
         queryKey: queryKeys.analytics.summary(apiPeriod, dateRange.date_from ?? null, dateRange.date_to ?? null),
         queryFn: () =>
-            analyticsApi.getSummary({
+            getAnalyticsSummary({
                 period: apiPeriod,
                 ...(dateRange.date_from ? { date_from: dateRange.date_from } : {}),
                 ...(dateRange.date_to ? { date_to: dateRange.date_to } : {}),
-            }) as Promise<ApiAnalyticsSummaryResponse>,
+            }),
         enabled: isReal && !isRecoveryScreen,
     })
 
@@ -870,33 +876,33 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
             dateRange.date_to ?? null,
         ),
         queryFn: () =>
-            analyticsApi.getProgress({
+            getAnalyticsProgress({
                 period: apiPeriod,
                 ...(dateRange.date_from ? { date_from: dateRange.date_from } : {}),
                 ...(dateRange.date_to ? { date_to: dateRange.date_to } : {}),
                 max_exercises: maxExercises,
                 max_data_points: maxDataPoints,
-            }) as Promise<ApiExerciseProgressResponse[]>,
+            }),
         enabled: isReal && !isRecoveryScreen,
     })
 
     const trainingLoadQuery = useQuery({
         queryKey: queryKeys.analytics.trainingLoadDaily(dateRange.date_from ?? null, dateRange.date_to ?? null),
-        queryFn: () => analyticsApi.getTrainingLoadDaily(dateRange) as Promise<ApiTrainingLoadDailyEntry[]>,
+        queryFn: () => getAnalyticsTrainingLoadDaily(dateRange),
         staleTime: 60_000,
         enabled: isReal && isRecoveryScreen,
     })
 
     const muscleLoadQuery = useQuery({
         queryKey: queryKeys.analytics.muscleLoad(dateRange.date_from ?? null, dateRange.date_to ?? null),
-        queryFn: () => analyticsApi.getMuscleLoad(dateRange) as Promise<ApiMuscleLoadEntry[]>,
+        queryFn: () => getAnalyticsMuscleLoad(dateRange),
         staleTime: 60_000,
         enabled: isReal && isRecoveryScreen,
     })
 
     const recoveryStateQuery = useQuery({
         queryKey: queryKeys.analytics.recoveryState,
-        queryFn: () => analyticsApi.getRecoveryState() as Promise<ApiRecoveryStateResponse>,
+        queryFn: () => getAnalyticsRecoveryState(),
         staleTime: 60_000,
         enabled: isReal && isRecoveryScreen,
     })
@@ -908,11 +914,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
         return buildMockAnalytics({ date_from, date_to, period: apiPeriod })
     }, [apiPeriod, dateRange.date_from, dateRange.date_to, isReal])
 
-    const summary = (isReal ? summaryQuery.data : mock?.summary) as ApiAnalyticsSummaryResponse | undefined
-    const progressRows = (isReal ? progressQuery.data : mock?.progress) as ApiExerciseProgressResponse[] | undefined
-    const trainingLoadRows = (isReal ? trainingLoadQuery.data : mock?.trainingLoadDaily) as ApiTrainingLoadDailyEntry[] | undefined
-    const muscleLoadRows = (isReal ? muscleLoadQuery.data : mock?.muscleLoad) as ApiMuscleLoadEntry[] | undefined
-    const recoveryState = (isReal ? recoveryStateQuery.data : mock?.recoveryState) as ApiRecoveryStateResponse | undefined
+    const summary: ApiAnalyticsSummaryResponse | undefined = isReal ? summaryQuery.data : mock?.summary
+    const progressRows: ApiExerciseProgressResponse[] | undefined = isReal ? progressQuery.data : mock?.progress
+    const trainingLoadRows: ApiTrainingLoadDailyEntry[] | undefined = isReal ? trainingLoadQuery.data : mock?.trainingLoadDaily
+    const muscleLoadRows: ApiMuscleLoadEntry[] | undefined = isReal ? muscleLoadQuery.data : mock?.muscleLoad
+    const recoveryState: ApiRecoveryStateResponse | undefined = isReal ? recoveryStateQuery.data : mock?.recoveryState
 
     const isAnalyticsPending = isReal && !isRecoveryScreen && (summaryQuery.isPending || progressQuery.isPending)
     const isAnalyticsError = isReal && !isRecoveryScreen && (summaryQuery.isError || progressQuery.isError)

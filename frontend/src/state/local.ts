@@ -13,6 +13,8 @@ export type { AnalyticsRange } from '../stores/uiStore'
 export { useWorkoutDraftStore } from '../stores/workoutDraftStore'
 export { useWorkoutSessionDraftStore } from '../stores/workoutSessionDraftStore'
 export { useWorkoutTemplatePinsStore } from '../stores/workoutTemplatePinsStore'
+export { useWorkoutRestPresetsStore } from '../stores/workoutRestPresetsStore'
+export { useWorkoutQuickIncrementsStore } from '../stores/workoutQuickIncrementsStore'
 export { useActiveWorkoutStore } from '../stores/activeWorkoutStore'
 export type { ActiveWorkoutSyncState, ActiveWorkoutRestTimerState } from '../stores/activeWorkoutStore'
 export {

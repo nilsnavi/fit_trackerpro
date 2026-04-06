@@ -135,7 +135,7 @@ export function Home() {
         try {
             const started = await startWorkoutMutation.mutateAsync({ template_id: templateId })
             const templateName = templates.find((t) => t.id === id)?.name
-            setWorkoutSessionDraft(started.id, templateName ?? `Тренировка #${started.id}`)
+            setWorkoutSessionDraft(started.id, templateName ?? `Тренировка #${started.id}`, started.template_id ?? templateId)
             navigate(`/workouts/active/${started.id}`)
         } catch {
             // errors are surfaced via global error handlers
