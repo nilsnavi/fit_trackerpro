@@ -83,3 +83,21 @@ def test_production_rejects_empty_allowed_origins():
     }
     with pytest.raises(ValidationError):
         Settings(**payload)
+
+
+@pytest.mark.unit
+def test_admin_user_ids_parses_comma_separated_string():
+    payload = _valid_settings_payload()
+    payload["ADMIN_USER_IDS"] = "123,456,789"
+
+    s = Settings(**payload)
+    assert s.ADMIN_USER_IDS == [123, 456, 789]
+
+
+@pytest.mark.unit
+def test_admin_user_ids_rejects_non_numeric_values():
+    payload = _valid_settings_payload()
+    payload["ADMIN_USER_IDS"] = "123,abc,789"
+
+    with pytest.raises(ValidationError):
+        Settings(**payload)
