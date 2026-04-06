@@ -4,7 +4,7 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
-import { CheckCircle2, Plus, Settings2, SkipForward, Timer } from 'lucide-react'
+import { Plus, Timer } from 'lucide-react'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
@@ -800,6 +800,11 @@ export function ActiveWorkoutPage() {
         goToNextSet()
     }, [currentExerciseIndex, currentSet, goToNextSet, handleToggleSetCompleted])
 
+    const handleStartQuickRest = useCallback(() => {
+        tg.hapticFeedback({ type: 'selection' })
+        startRestTimer(restDefaultSeconds)
+    }, [restDefaultSeconds, startRestTimer, tg])
+
     const handleSkipCurrentSetQuick = useCallback(() => {
         if (!currentSet) return
         tg.hapticFeedback({ type: 'selection' })
@@ -904,37 +909,16 @@ export function ActiveWorkoutPage() {
                         currentSet={currentContextCard.currentSetLabel}
                         remainingSets={currentContextCard.remainingSets}
                         syncState={syncState}
+                        completedSetCount={completedSetCount}
+                        totalSetCount={totalSetCount}
+                        restDefaultSeconds={restDefaultSeconds}
+                        canComplete={Boolean(currentSet)}
+                        canSkip={Boolean(currentSet && (hasNextSet || hasNextExercise))}
+                        onCompleteSet={handleCompleteCurrentSet}
+                        onSkipSet={handleSkipCurrentSetQuick}
+                        onStartRest={handleStartQuickRest}
+                        onOpenRestPresets={() => setIsRestPresetsModalOpen(true)}
                     />
-
-                    <div className="rounded-xl border border-border bg-telegram-secondary-bg p-3 space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs text-telegram-hint">Отдых по умолчанию после подхода</p>
-                            <button
-                                type="button"
-                                onClick={() => setIsRestPresetsModalOpen(true)}
-                                className="inline-flex items-center gap-1 rounded-full bg-telegram-bg px-2 py-1 text-[11px] font-medium text-telegram-hint"
-                            >
-                                <Settings2 className="h-3.5 w-3.5" />
-                                Пресеты
-                            </button>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                            {(restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS).map((seconds) => (
-                                <button
-                                    key={seconds}
-                                    type="button"
-                                    onClick={() => handleSelectRestPreset(seconds)}
-                                    className={`rounded-full px-2 py-1 text-[11px] transition-colors ${
-                                        restDefaultSeconds === seconds
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'bg-telegram-bg text-telegram-hint'
-                                    }`}
-                                >
-                                    {seconds < 60 ? `${seconds}с` : `${Math.floor(seconds / 60)}м`}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
 
                     <ActiveExerciseList
                         incrementScopePrefix={restPresetScopeKey}
@@ -1088,8 +1072,12 @@ export function ActiveWorkoutPage() {
                                     <button
                                         key={`sticky-rest-${seconds}`}
                                         type="button"
-                                        onClick={() => startRestTimer(seconds)}
-                                        className="shrink-0 rounded-full bg-telegram-secondary-bg px-2.5 py-1 text-[11px] font-medium text-telegram-text"
+                                        onClick={() => handleSelectRestPreset(seconds)}
+                                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                                            restDefaultSeconds === seconds
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-telegram-secondary-bg text-telegram-text'
+                                        }`}
                                     >
                                         {seconds < 60 ? `${seconds}с` : `${Math.floor(seconds / 60)}м`}
                                     </button>
@@ -1112,23 +1100,6 @@ export function ActiveWorkoutPage() {
                                 variant: 'secondary',
                                 leftIcon: <Timer className="h-4 w-4" />,
                                 onClick: () => resetAddItemForm('timer'),
-                            },
-                        ],
-                        [
-                            {
-                                id: 'skip-set',
-                                label: 'Пропустить',
-                                variant: 'secondary',
-                                leftIcon: <SkipForward className="h-4 w-4" />,
-                                onClick: handleSkipCurrentSetQuick,
-                                disabled: !currentSet || (!hasNextSet && !hasNextExercise),
-                            },
-                            {
-                                id: 'complete-set',
-                                label: 'Готово',
-                                leftIcon: <CheckCircle2 className="h-4 w-4" />,
-                                onClick: handleCompleteCurrentSet,
-                                disabled: !currentSet,
                             },
                         ],
                         [

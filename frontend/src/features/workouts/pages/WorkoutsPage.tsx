@@ -30,6 +30,7 @@ import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { Modal } from '@shared/ui/Modal'
 import { Button } from '@shared/ui/Button'
+import { SectionHeader } from '@shared/ui/SectionHeader'
 import { useWorkoutTemplatePinsStore } from '@/state/local'
 import { WorkoutActionRail } from '@features/workouts/components/WorkoutActionRail'
 
@@ -145,6 +146,8 @@ export function WorkoutsPage() {
         }
     }, [workouts])
 
+    const recentWorkoutSessions = useMemo(() => workouts.slice(0, 5), [workouts])
+
     // Живой таймер «в процессе» для карточки resume
     const [elapsedMin, setElapsedMin] = useState<number>(0)
     useEffect(() => {
@@ -232,19 +235,19 @@ export function WorkoutsPage() {
 
             {!templatesLoading && !templatesError && favoriteTemplates.length > 0 && (
                 <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <h2 className="text-base font-semibold text-telegram-text">Избранные шаблоны</h2>
-                            <p className="text-xs text-telegram-hint">
-                                {hasPinnedTemplates
-                                    ? 'Самый быстрый старт по любимым шаблонам.'
-                                    : 'Закрепите шаблоны ниже, чтобы настроить этот блок.'}
-                            </p>
-                        </div>
-                        <div className="rounded-full bg-telegram-secondary-bg px-2.5 py-1 text-xs font-medium text-telegram-hint">
-                            {pinnedTemplatesCount}/5
-                        </div>
-                    </div>
+                    <SectionHeader
+                        title="Избранные шаблоны"
+                        description={
+                            hasPinnedTemplates
+                                ? 'Самый быстрый старт по любимым шаблонам.'
+                                : 'Закрепите шаблоны ниже, чтобы настроить этот блок.'
+                        }
+                        action={
+                            <div className="rounded-full bg-telegram-secondary-bg px-2.5 py-1 text-xs font-medium text-telegram-hint">
+                                {pinnedTemplatesCount}/5
+                            </div>
+                        }
+                    />
                     <p className="text-xs text-telegram-hint">
                         До 5 закреплённых шаблонов. {isPinnedTemplatesLimitReached ? 'Лимит достигнут: снимите одно закрепление, чтобы добавить новое.' : 'Закрепляйте шаблоны из списка ниже.'}
                     </p>
@@ -431,27 +434,30 @@ export function WorkoutsPage() {
 
             {/* ── 4. Templates ────────────────────────────────────── */}
             <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-telegram-text">Шаблоны</h2>
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/workouts/templates')}
-                            className="text-xs font-medium text-telegram-hint active:opacity-70"
-                        >
-                            Все
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleAddWorkout}
-                            className="flex items-center gap-1 text-xs font-medium text-primary active:opacity-70"
-                            aria-label="Создать шаблон"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Создать
-                        </button>
-                    </div>
-                </div>
+                <SectionHeader
+                    title="Шаблоны"
+                    description="Сохранённые планы для повторяемых тренировок и быстрого старта."
+                    action={
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/workouts/templates')}
+                                className="text-xs font-medium text-telegram-hint active:opacity-70"
+                            >
+                                Все
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleAddWorkout}
+                                className="flex items-center gap-1 text-xs font-medium text-primary active:opacity-70"
+                                aria-label="Создать шаблон"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                                Создать
+                            </button>
+                        </div>
+                    }
+                />
                 {templatesLoading && (
                     <div className="space-y-2">
                         <div className="h-16 animate-pulse rounded-xl bg-telegram-secondary-bg" />
@@ -546,6 +552,69 @@ export function WorkoutsPage() {
                             </button>
                         </div>
                     ))}
+            </div>
+
+            <div className="space-y-3">
+                <SectionHeader
+                    title="Последние сессии"
+                    description="Открывайте детали завершённых тренировок или быстро возвращайтесь к незавершённым."
+                    action={
+                        <button
+                            type="button"
+                            onClick={() => navigate('/workouts/history')}
+                            className="text-xs font-medium text-primary active:opacity-70"
+                        >
+                            Вся история
+                        </button>
+                    }
+                />
+                {recentWorkoutSessions.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-telegram-secondary-bg/60">
+                        <SectionEmptyState
+                            icon={Clock}
+                            compact
+                            title="История пока пуста"
+                            description="После первой завершённой тренировки здесь появятся последние сессии и быстрый повтор."
+                            primaryAction={{
+                                label: 'Начать пустую тренировку',
+                                onClick: () => void handleStartEmpty(),
+                            }}
+                        />
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {recentWorkoutSessions.map((workout) => {
+                            const listCfg = getWorkoutListTypeConfig(workout.type)
+                            const TypeIcon = listCfg.icon
+                            const isCompleted = workout.duration > 0
+
+                            return (
+                                <button
+                                    key={`recent-${workout.id}`}
+                                    type="button"
+                                    onClick={() => navigate(isCompleted ? `/workouts/${workout.id}` : `/workouts/active/${workout.id}`)}
+                                    className="flex w-full items-center gap-3 rounded-2xl bg-telegram-secondary-bg p-4 text-left transition-transform active:scale-[0.99]"
+                                >
+                                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${listCfg.listBadgeClass} text-white`}>
+                                        <TypeIcon className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-semibold text-telegram-text">{workout.title}</div>
+                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-telegram-hint">
+                                            <span>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(workout.date))}</span>
+                                            <span>{workout.duration} мин</span>
+                                            <span>{workout.calories} ккал</span>
+                                            {!isCompleted ? (
+                                                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-warning">В процессе</span>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 shrink-0 text-telegram-hint" />
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
             </div>
 
             <Modal
