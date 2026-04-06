@@ -15,6 +15,8 @@ WORKDIR /app
 
 # Disable husky in CI/Docker — no .git dir available and hooks are not needed.
 ENV HUSKY=0
+# Ensure devDependencies are installed for `tsc && vite build` regardless of CI defaults.
+ENV NODE_ENV=development
 
 # NODE_ENV must not be production during install (devDependencies include Vite).
 COPY package.json package-lock.json ./
