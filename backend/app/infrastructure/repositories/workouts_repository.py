@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import List, Optional
 
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, update
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.exercise import Exercise
@@ -52,6 +52,12 @@ class WorkoutsRepository(SQLAlchemyRepository):
         result = await self.db.execute(query)
         return result.scalars().all()
 
+    async def list_template_names(self, user_id: int) -> List[str]:
+        result = await self.db.execute(
+            select(WorkoutTemplate.name).where(WorkoutTemplate.user_id == user_id)
+        )
+        return [name for name in result.scalars().all() if isinstance(name, str) and name.strip()]
+
     async def get_template(self, user_id: int, template_id: int) -> Optional[WorkoutTemplate]:
         result = await self.db.execute(
             select(WorkoutTemplate).where(
@@ -62,6 +68,36 @@ class WorkoutsRepository(SQLAlchemyRepository):
             )
         )
         return result.scalar_one_or_none()
+
+    async def update_template_with_expected_version(
+        self,
+        *,
+        user_id: int,
+        template_id: int,
+        expected_version: int,
+        values: dict,
+    ) -> Optional[WorkoutTemplate]:
+        stmt = (
+            update(WorkoutTemplate)
+            .where(
+                and_(
+                    WorkoutTemplate.id == template_id,
+                    WorkoutTemplate.user_id == user_id,
+                    WorkoutTemplate.version == expected_version,
+                )
+            )
+            .values(
+                **values,
+                version=WorkoutTemplate.version + 1,
+                updated_at=func.now(),
+            )
+        )
+        result = await self.db.execute(stmt)
+        if (result.rowcount or 0) == 0:
+            await self.db.rollback()
+            return None
+        await self.commit()
+        return await self.get_template(user_id=user_id, template_id=template_id)
 
     async def count_history(
         self,
@@ -100,6 +136,18 @@ class WorkoutsRepository(SQLAlchemyRepository):
                 and_(
                     WorkoutLog.id == workout_id,
                     WorkoutLog.user_id == user_id,
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_completed_workout(self, user_id: int, workout_id: int) -> Optional[WorkoutLog]:
+        result = await self.db.execute(
+            select(WorkoutLog).where(
+                and_(
+                    WorkoutLog.id == workout_id,
+                    WorkoutLog.user_id == user_id,
+                    WorkoutLog.duration.is_not(None),
                 )
             )
         )

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useWorkoutHistoryItemQuery } from './useWorkoutHistoryItemQuery'
 import {
-    useCreateWorkoutTemplateMutation,
+    useCreateTemplateFromWorkoutMutation,
     useDeleteWorkoutTemplateMutation,
     useStartWorkoutMutation,
 } from './useWorkoutMutations'
@@ -12,8 +12,7 @@ import { buildRepeatSessionPayload } from '../lib/workoutModeHelpers'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import type { WorkoutType } from '@shared/types'
 import type { WorkoutMode } from '../config/workoutTypeConfigs'
-import type { BackendWorkoutType, WorkoutHistoryItem } from '../types/workouts'
-import { detectWorkoutType } from '../lib/workoutListItem'
+import type { WorkoutHistoryItem } from '../types/workouts'
 
 export type TemplateToDelete = { id: number; name: string }
 
@@ -33,7 +32,7 @@ export function useWorkoutsPageState() {
 
     const startWorkoutMutation = useStartWorkoutMutation()
     const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
-    const createWorkoutTemplateMutation = useCreateWorkoutTemplateMutation()
+    const createTemplateFromWorkoutMutation = useCreateTemplateFromWorkoutMutation()
     const deleteTemplateMutation = useDeleteWorkoutTemplateMutation()
 
     const {
@@ -139,38 +138,16 @@ export function useWorkoutsPageState() {
     const handleSaveWorkoutAsTemplate = useCallback(
         async (workout: WorkoutHistoryItem, templateName?: string) => {
             tg.hapticFeedback({ type: 'impact', style: 'light' })
-            const workoutType = detectWorkoutType(workout)
-            const templateType: BackendWorkoutType =
-                workoutType === 'cardio' || workoutType === 'strength' || workoutType === 'flexibility'
-                    ? workoutType
-                    : 'mixed'
             const fallbackTemplateName =
                 templateName ?? workout.comments?.trim() ?? `Шаблон из тренировки #${workout.id}`
 
-            await createWorkoutTemplateMutation.mutateAsync({
+            await createTemplateFromWorkoutMutation.mutateAsync({
+                workout_id: workout.id,
                 name: fallbackTemplateName,
-                type: templateType,
                 is_public: false,
-                exercises: workout.exercises.map((exercise, index) => {
-                    const firstSet = exercise.sets_completed[0]
-                    const nonEmptyWeights = exercise.sets_completed
-                        .map((setItem) => setItem.weight)
-                        .filter((weight): weight is number => typeof weight === 'number')
-
-                    return {
-                        exercise_id: exercise.exercise_id || index + 1,
-                        name: exercise.name,
-                        sets: Math.max(exercise.sets_completed.length, 1),
-                        reps: firstSet?.reps,
-                        duration: firstSet?.duration,
-                        rest_seconds: 60,
-                        weight: nonEmptyWeights[0],
-                        notes: exercise.notes,
-                    }
-                }),
             })
         },
-        [tg, createWorkoutTemplateMutation],
+        [tg, createTemplateFromWorkoutMutation],
     )
 
     const handleEditTemplate = useCallback(
@@ -218,7 +195,7 @@ export function useWorkoutsPageState() {
         // Mutation state
         isStartingWorkout: startWorkoutMutation.isPending,
         isRepeatingLast: startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending,
-        isSavingTemplateFromHistory: createWorkoutTemplateMutation.isPending,
+        isSavingTemplateFromHistory: createTemplateFromWorkoutMutation.isPending,
         isDeletingTemplate: deleteTemplateMutation.isPending,
         // Handlers
         handleFilterChange,

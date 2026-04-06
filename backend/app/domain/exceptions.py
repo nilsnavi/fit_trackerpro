@@ -31,6 +31,12 @@ class WorkoutNotFoundError(DomainError):
     default_message = "Workout not found"
 
 
+class WorkoutConflictError(DomainError):
+    code = "workout_conflict"
+    http_status = 409
+    default_message = "Workout resource conflict"
+
+
 class HealthNotFoundError(DomainError):
     code = "health_not_found"
     http_status = 404

@@ -356,6 +356,7 @@ export function optimisticTemplateRow(
         exercises: payload.exercises,
         is_public: payload.is_public,
         is_archived: false,
+        version: 1,
         created_at: now,
         updated_at: now,
     }

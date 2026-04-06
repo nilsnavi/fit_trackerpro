@@ -23,9 +23,13 @@ from app.schemas.workouts import (
     WorkoutHistoryResponse,
     WorkoutSessionUpdateRequest,
     WorkoutStartRequest,
+    WorkoutStartFromTemplateRequest,
     WorkoutStartResponse,
+    WorkoutTemplateCloneRequest,
     WorkoutTemplateCreate,
+    WorkoutTemplateFromWorkoutCreate,
     WorkoutTemplateList,
+    WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
 )
 
@@ -66,6 +70,21 @@ async def create_workout_template(
     )
 
 
+@router.post("/templates/from-workout", response_model=WorkoutTemplateResponse, status_code=status.HTTP_201_CREATED)
+async def create_workout_template_from_workout(
+    payload: WorkoutTemplateFromWorkoutCreate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.create_template_from_workout(
+        user_id=current_user.id,
+        data=payload,
+        client_ip=get_client_ip(request),
+    )
+
+
 @router.get("/templates/{template_id}", response_model=WorkoutTemplateResponse)
 async def get_workout_template(
     template_id: int,
@@ -89,6 +108,40 @@ async def update_workout_template(
         user_id=current_user.id,
         template_id=template_id,
         data=template_data,
+        client_ip=get_client_ip(request),
+    )
+
+
+@router.patch("/templates/{template_id}", response_model=WorkoutTemplateResponse)
+async def patch_workout_template(
+    template_id: int,
+    patch_data: WorkoutTemplatePatchRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.patch_template(
+        user_id=current_user.id,
+        template_id=template_id,
+        data=patch_data,
+        client_ip=get_client_ip(request),
+    )
+
+
+@router.post("/templates/{template_id}/clone", response_model=WorkoutTemplateResponse, status_code=status.HTTP_201_CREATED)
+async def clone_workout_template(
+    template_id: int,
+    clone_data: WorkoutTemplateCloneRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.clone_template(
+        user_id=current_user.id,
+        template_id=template_id,
+        data=clone_data,
         client_ip=get_client_ip(request),
     )
 
@@ -168,6 +221,23 @@ async def start_workout(
     service = WorkoutsService(db)
     return await service.start_workout(
         user_id=current_user.id,
+        data=start_data,
+        client_ip=get_client_ip(request),
+    )
+
+
+@router.post("/start/from-template/{template_id}", response_model=WorkoutStartResponse)
+async def start_workout_from_template_with_overrides(
+    template_id: int,
+    start_data: WorkoutStartFromTemplateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.start_workout_from_template_with_overrides(
+        user_id=current_user.id,
+        template_id=template_id,
         data=start_data,
         client_ip=get_client_ip(request),
     )

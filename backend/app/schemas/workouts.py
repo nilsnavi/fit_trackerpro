@@ -158,6 +158,7 @@ class WorkoutTemplateResponse(BaseModel):
     exercises: List[ExerciseInTemplate]
     is_public: bool
     is_archived: bool
+    version: int
     created_at: datetime
     updated_at: datetime
 
@@ -186,6 +187,56 @@ class WorkoutStartRequest(BaseModel):
     type: WorkoutSessionType = Field(
         default=WorkoutSessionType.CUSTOM,
         description="Workout category for ad-hoc sessions.",
+    )
+
+
+class StartWorkoutTemplateOverrides(BaseModel):
+    """Optional template overrides for start workflow without mutating source template."""
+
+    exercises: List[ExerciseInTemplate] = Field(
+        default_factory=list,
+        max_length=100,
+        description="Override exercise plan for this session only.",
+    )
+    comments: Optional[str] = Field(None, max_length=1000)
+    tags: List[_Tag] = Field(default_factory=list, max_length=50)
+
+
+class WorkoutStartFromTemplateRequest(BaseModel):
+    """Start workout from template with optional per-session overrides."""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    type: WorkoutSessionType = Field(default=WorkoutSessionType.CUSTOM)
+    overrides: Optional[StartWorkoutTemplateOverrides] = None
+
+
+class WorkoutTemplateFromWorkoutCreate(BaseModel):
+    """Create template from completed workout session."""
+
+    workout_id: int = Field(..., ge=1)
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    is_public: bool = Field(default=False)
+
+
+class WorkoutTemplateCloneRequest(BaseModel):
+    """Clone existing template."""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    is_public: Optional[bool] = None
+
+
+class WorkoutTemplatePatchRequest(BaseModel):
+    """Partial template update payload with optimistic concurrency."""
+
+    expected_version: int = Field(..., ge=1)
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    type: Optional[WorkoutTemplateType] = None
+    exercises: Optional[List[ExerciseInTemplate]] = Field(None, min_length=1, max_length=100)
+    is_public: Optional[bool] = None
+    exercise_order: Optional[List[int]] = Field(
+        None,
+        min_length=1,
+        description="0-based order of existing exercise indexes for lightweight reorder operations.",
     )
 
 

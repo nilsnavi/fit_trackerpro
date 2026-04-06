@@ -32,13 +32,13 @@ export function WorkoutBlocksSortableList({
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8,
+                distance: 6,
             },
         }),
         useSensor(TouchSensor, {
             activationConstraint: {
-                delay: 200,
-                tolerance: 8,
+                delay: 140,
+                tolerance: 10,
             },
         }),
         useSensor(KeyboardSensor, {

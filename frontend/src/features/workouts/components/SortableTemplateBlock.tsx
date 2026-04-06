@@ -9,8 +9,8 @@ interface SortableTemplateBlockProps {
     index: number
     onEdit: (block: WorkoutBlock) => void
     onDelete: (id: string) => void
-    onMoveUp: (index: number) => void
-    onMoveDown: (index: number) => void
+    onMoveUp: () => void
+    onMoveDown: () => void
     isFirst: boolean
     isLast: boolean
 }
@@ -69,10 +69,11 @@ export function SortableTemplateBlock({
             <button
                 {...attributes}
                 {...listeners}
-                className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg cursor-grab active:cursor-grabbing"
+                className="h-11 w-11 shrink-0 rounded-xl text-telegram-hint hover:bg-telegram-secondary-bg hover:text-telegram-text active:scale-95 active:cursor-grabbing"
+                style={{ touchAction: 'none' }}
                 aria-label="Перетащить для сортировки"
             >
-                <GripVertical className="w-5 h-5" />
+                <GripVertical className="mx-auto h-5 w-5" />
             </button>
 
             <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-semibold">
@@ -90,11 +91,12 @@ export function SortableTemplateBlock({
                 <p className="text-sm text-telegram-hint truncate">
                     {summary || block.config?.note || 'Без настроек'}
                 </p>
+                <p className="mt-0.5 text-[10px] text-telegram-hint/90">Удерживайте значок слева, чтобы поменять порядок</p>
             </div>
 
             <div className="flex items-center gap-1">
                 <button
-                    onClick={() => onMoveUp(index)}
+                    onClick={onMoveUp}
                     disabled={isFirst}
                     className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg disabled:opacity-30"
                     aria-label="Переместить вверх"
@@ -102,7 +104,7 @@ export function SortableTemplateBlock({
                     <ChevronUp className="w-4 h-4" />
                 </button>
                 <button
-                    onClick={() => onMoveDown(index)}
+                    onClick={onMoveDown}
                     disabled={isLast}
                     className="p-1.5 rounded-lg text-telegram-hint hover:text-telegram-text hover:bg-telegram-secondary-bg disabled:opacity-30"
                     aria-label="Переместить вниз"

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, Clock3, Copy, Lock, Pencil, Play, Timer, Globe, Layers3 } from 'lucide-react'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { queryKeys } from '@shared/api/queryKeys'
-import { useCreateWorkoutTemplateMutation, useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import { useCloneWorkoutTemplateMutation, useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
@@ -35,7 +35,7 @@ export function WorkoutTemplateDetailPage() {
     const { id } = useParams<{ id: string }>()
     const tg = useTelegramWebApp()
     const startWorkoutMutation = useStartWorkoutMutation()
-    const createTemplateMutation = useCreateWorkoutTemplateMutation()
+    const cloneTemplateMutation = useCloneWorkoutTemplateMutation()
     const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
     const [isStarting, setIsStarting] = useState(false)
     const [isDuplicating, setIsDuplicating] = useState(false)
@@ -113,12 +113,13 @@ export function WorkoutTemplateDetailPage() {
         if (!template) return
         tg.hapticFeedback({ type: 'impact', style: 'light' })
         setIsDuplicating(true)
-        createTemplateMutation.mutate(
+        cloneTemplateMutation.mutate(
             {
-                name: `${template.name} (копия)`,
-                type: template.type,
-                exercises: template.exercises,
-                is_public: template.is_public,
+                templateId: template.id,
+                payload: {
+                    name: `${template.name} (копия)`,
+                    is_public: template.is_public,
+                },
             },
             {
                 onSuccess: (nextTemplate) => {
@@ -256,8 +257,8 @@ export function WorkoutTemplateDetailPage() {
                         variant="secondary"
                         size="lg"
                         onClick={handleDuplicateTemplate}
-                        isLoading={isDuplicating}
-                        disabled={isDuplicating || isStarting}
+                        isLoading={isDuplicating || cloneTemplateMutation.isPending}
+                        disabled={isDuplicating || cloneTemplateMutation.isPending || isStarting}
                         leftIcon={<Copy className="h-5 w-5" />}
                     >
                         Дубликат

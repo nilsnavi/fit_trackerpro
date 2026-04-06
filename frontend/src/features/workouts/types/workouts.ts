@@ -21,6 +21,26 @@ export interface WorkoutTemplateCreateRequest {
     is_public: boolean
 }
 
+export interface WorkoutTemplateCreateFromWorkoutRequest {
+    workout_id: number
+    name?: string
+    is_public?: boolean
+}
+
+export interface WorkoutTemplateCloneRequest {
+    name?: string
+    is_public?: boolean
+}
+
+export interface WorkoutTemplatePatchRequest {
+    expected_version: number
+    name?: string
+    type?: BackendWorkoutType
+    exercises?: ExerciseInTemplate[]
+    is_public?: boolean
+    exercise_order?: number[]
+}
+
 /** Ответ API `POST/PUT /workouts/templates` */
 export interface WorkoutTemplateResponse {
     id: number
@@ -30,6 +50,7 @@ export interface WorkoutTemplateResponse {
     exercises: ExerciseInTemplate[]
     is_public: boolean
     is_archived: boolean
+    version: number
     created_at: string
     updated_at: string
 }
@@ -63,6 +84,18 @@ export interface WorkoutStartRequest {
     template_id?: number
     name?: string
     type?: WorkoutStartType
+}
+
+export interface WorkoutStartTemplateOverrides {
+    exercises?: ExerciseInTemplate[]
+    comments?: string
+    tags?: string[]
+}
+
+export interface WorkoutStartFromTemplateRequest {
+    name?: string
+    type?: WorkoutStartType
+    overrides?: WorkoutStartTemplateOverrides
 }
 
 export interface WorkoutStartResponse {

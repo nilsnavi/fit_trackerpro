@@ -6,7 +6,9 @@ import type {
     WorkoutCompleteRequest,
     WorkoutStartRequest,
     WorkoutSessionUpdateRequest,
+    WorkoutTemplateCloneRequest,
     WorkoutTemplateCreateRequest,
+    WorkoutTemplateCreateFromWorkoutRequest,
     WorkoutHistoryItem,
     WorkoutTemplateListResponse,
 } from '@features/workouts/types/workouts'
@@ -64,6 +66,11 @@ type StartMutationContext = {
 type CreateTemplateContext = {
     tempId: number
     templateListsSnap: ReturnType<typeof takeWorkoutsTemplateListsSnapshot>
+}
+
+type CloneTemplateVariables = {
+    templateId: number
+    payload?: WorkoutTemplateCloneRequest
 }
 
 type UpdateTemplateVariables = {
@@ -179,6 +186,43 @@ export function useUpdateWorkoutTemplateMutation() {
         },
         onSuccess: (data) => {
             replaceTemplateInListsById(queryClient, data.id, data)
+        },
+        onSettled: () => {
+            invalidateWorkouts(queryClient)
+        },
+    })
+}
+
+export function useCreateTemplateFromWorkoutMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (payload: WorkoutTemplateCreateFromWorkoutRequest) =>
+            workoutsApi.createTemplateFromWorkout(payload),
+        onSuccess: (data) => {
+            trackBusinessMetric('created_template', {
+                template_id: data.id,
+                exercise_count: data.exercises.length,
+                source: 'workout',
+            })
+        },
+        onSettled: () => {
+            invalidateWorkouts(queryClient)
+        },
+    })
+}
+
+export function useCloneWorkoutTemplateMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async ({ templateId, payload }: CloneTemplateVariables) =>
+            workoutsApi.cloneTemplate(templateId, payload ?? {}),
+        onSuccess: (data, vars) => {
+            trackBusinessMetric('created_template', {
+                template_id: data.id,
+                source_template_id: vars.templateId,
+                exercise_count: data.exercises.length,
+                source: 'clone',
+            })
         },
         onSettled: () => {
             invalidateWorkouts(queryClient)

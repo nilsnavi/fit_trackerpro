@@ -197,6 +197,140 @@ class TestWorkoutTemplates:
         default_ids = [item.get("id") for item in listed_default.json().get("items", [])]
         assert template_id in default_ids
 
+    async def test_clone_and_patch_template_with_expected_version(self, authenticated_client: AsyncClient):
+        payload = {
+            "name": "Template Clone Source",
+            "type": "strength",
+            "exercises": [
+                {
+                    "exercise_id": 1,
+                    "name": "Push-ups",
+                    "sets": 3,
+                    "reps": 10,
+                    "rest_seconds": 60,
+                },
+                {
+                    "exercise_id": 2,
+                    "name": "Squats",
+                    "sets": 4,
+                    "reps": 8,
+                    "rest_seconds": 90,
+                },
+            ],
+            "is_public": False,
+        }
+        created = await authenticated_client.post("/api/v1/workouts/templates", json=payload)
+        assert created.status_code in (200, 201), created.text
+        source = created.json()
+        source_id = source["id"]
+
+        cloned = await authenticated_client.post(
+            f"/api/v1/workouts/templates/{source_id}/clone",
+            json={},
+        )
+        assert cloned.status_code in (200, 201), cloned.text
+        cloned_json = cloned.json()
+        clone_id = cloned_json["id"]
+        assert clone_id != source_id
+        assert "копия" in cloned_json["name"].lower()
+        assert cloned_json.get("version") == 1
+
+        patch_ok = await authenticated_client.patch(
+            f"/api/v1/workouts/templates/{clone_id}",
+            json={"expected_version": 1, "exercise_order": [1, 0]},
+        )
+        assert patch_ok.status_code == 200, patch_ok.text
+        patched = patch_ok.json()
+        assert patched.get("version") == 2
+        assert patched["exercises"][0]["exercise_id"] == 2
+
+        patch_conflict = await authenticated_client.patch(
+            f"/api/v1/workouts/templates/{clone_id}",
+            json={"expected_version": 1, "name": "Stale update"},
+        )
+        assert patch_conflict.status_code == 409, patch_conflict.text
+
+    async def test_create_template_from_workout_and_start_with_overrides(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Session for template", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json().get("id")
+        assert workout_id
+
+        complete_payload = {
+            "duration": 30,
+            "exercises": [
+                {
+                    "exercise_id": 11,
+                    "name": "Burpees",
+                    "sets_completed": [
+                        {"set_number": 1, "completed": True, "reps": 12, "weight": None},
+                        {"set_number": 2, "completed": True, "reps": 12, "weight": None},
+                    ],
+                    "notes": "fast",
+                }
+            ],
+            "comments": "Explosive day",
+            "tags": ["strength"],
+            "glucose_before": None,
+            "glucose_after": None,
+        }
+        completed = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json=complete_payload,
+            headers={"Idempotency-Key": "pytest-create-from-workout"},
+        )
+        assert completed.status_code == 200, completed.text
+
+        created_template = await authenticated_client.post(
+            "/api/v1/workouts/templates/from-workout",
+            json={"workout_id": workout_id, "name": "From Completed Workout", "is_public": False},
+        )
+        assert created_template.status_code in (200, 201), created_template.text
+        template_json = created_template.json()
+        template_id = template_json["id"]
+        assert template_json["name"] == "From Completed Workout"
+        assert len(template_json["exercises"]) == 1
+
+        started_with_overrides = await authenticated_client.post(
+            f"/api/v1/workouts/start/from-template/{template_id}",
+            json={
+                "name": "Override Run",
+                "overrides": {
+                    "exercises": [
+                        {
+                            "exercise_id": 99,
+                            "name": "Sprint",
+                            "sets": 1,
+                            "duration": 60,
+                            "rest_seconds": 30,
+                        }
+                    ],
+                    "comments": "override comments",
+                    "tags": ["custom"],
+                },
+            },
+        )
+        assert started_with_overrides.status_code == 200, started_with_overrides.text
+        override_workout_id = started_with_overrides.json().get("id")
+        assert override_workout_id
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{override_workout_id}")
+        assert detail.status_code == 200, detail.text
+        detail_json = detail.json()
+        exercises = detail_json.get("exercises") or []
+        assert exercises[0].get("exercise_id") == 99
+
+        source_after = await authenticated_client.get(f"/api/v1/workouts/templates/{template_id}")
+        assert source_after.status_code == 200, source_after.text
+        source_exercises = source_after.json().get("exercises") or []
+        assert source_exercises[0].get("exercise_id") == 11
+
 
 @pytest.mark.integration
 class TestWorkoutStartComplete:
