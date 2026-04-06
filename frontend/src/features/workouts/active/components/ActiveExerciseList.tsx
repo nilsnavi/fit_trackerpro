@@ -13,7 +13,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Minus, PencilRuler, Plus, Trash2 } from 'lucide-react'
 import { SortableExerciseCard } from '@features/workouts/components/SortableExerciseCard'
 import {
@@ -76,6 +76,28 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
         useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     )
+
+    useEffect(() => {
+        setCollapsedExerciseIds((prev) => {
+            const next: Record<string, true> = {}
+
+            exercises.forEach((exercise, index) => {
+                const itemId = `${exercise.exercise_id}-${index}`
+                const shouldCollapse = index !== currentExerciseIndex
+
+                if (shouldCollapse && prev[itemId] !== undefined) {
+                    next[itemId] = true
+                    return
+                }
+
+                if (shouldCollapse) {
+                    next[itemId] = true
+                }
+            })
+
+            return next
+        })
+    }, [currentExerciseIndex, exercises])
 
     const sortableIds = useMemo(
         () => exercises.map((exercise, index) => `${exercise.exercise_id}-${index}`),
@@ -256,15 +278,17 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                 </div>
                                             )}
 
-                                            <div className="mt-3">
-                                                <label className="block text-xs font-medium text-telegram-hint">Заметки к упражнению</label>
-                                                <textarea
-                                                    value={exercise.notes ?? ''}
-                                                    onChange={(e) => onNotesChange(exerciseIndex, e.target.value || undefined)}
-                                                    rows={2}
-                                                    className="mt-1 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
-                                                />
-                                            </div>
+                                            {isCurrentExercise || Boolean(exercise.notes?.trim()) ? (
+                                                <div className="mt-3">
+                                                    <label className="block text-xs font-medium text-telegram-hint">Заметки к упражнению</label>
+                                                    <textarea
+                                                        value={exercise.notes ?? ''}
+                                                        onChange={(e) => onNotesChange(exerciseIndex, e.target.value || undefined)}
+                                                        rows={2}
+                                                        className="mt-1 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2 text-sm text-telegram-text"
+                                                    />
+                                                </div>
+                                            ) : null}
                                         </>
                                     )}
                                 </div>

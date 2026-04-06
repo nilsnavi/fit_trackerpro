@@ -1,4 +1,4 @@
-import { Activity, Flame, Timer, TrendingUp, ChevronRight, Clock } from 'lucide-react'
+import { Activity, ArrowRight, ChevronRight, Clock, Flame, LayoutTemplate, Play, Timer, TrendingUp } from 'lucide-react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useEffect, useMemo, useState } from 'react'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
@@ -14,6 +14,8 @@ import { useUserStatsQuery } from '@features/profile/hooks/useUserStatsQuery'
 import { useAddWaterEntryMutation } from '@features/health/hooks/useHealthQueries'
 import { useHomeWaterQuery, useHomeWorkoutTemplatesQuery } from '@features/home/hooks'
 import { WaterWidget, WorkoutCard } from '@features/home/components'
+import { Button } from '@shared/ui/Button'
+import { SectionHeader } from '@shared/ui/SectionHeader'
 import { useWorkoutSessionDraftStore, useWorkoutTemplatePinsStore } from '@/state/local'
 
 interface DashboardStats {
@@ -40,6 +42,8 @@ export function Home() {
     const { templates, isPending: templatesLoading } = useHomeWorkoutTemplatesQuery()
     const startWorkoutMutation = useStartWorkoutMutation()
     const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
+    const activeWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
+    const activeWorkoutTitle = useWorkoutSessionDraftStore((s) => s.title)
     const pinnedTemplateIds = useWorkoutTemplatePinsStore((s) => s.pinnedTemplateIds)
     const togglePinnedTemplate = useWorkoutTemplatePinsStore((s) => s.togglePinnedTemplate)
     const addWater = useAddWaterEntryMutation()
@@ -155,6 +159,17 @@ export function Home() {
         return custom ? [...regular, custom] : regular
     }, [templates, pinnedTemplateIds])
 
+    const quickLaunchTemplates = useMemo(
+        () => sortedTemplates.filter((template) => template.id !== 'custom').slice(0, 4),
+        [sortedTemplates],
+    )
+
+    const activeTemplateName = useMemo(() => {
+        const activeTitle = activeWorkoutTitle?.trim()
+        if (activeTitle) return activeTitle
+        return templates.find((template) => template.id === String(activeWorkoutId))?.name ?? null
+    }, [activeWorkoutId, activeWorkoutTitle, templates])
+
     const handleToggleFavorite = (id: string) => {
         const templateId = Number.parseInt(id, 10)
         if (!Number.isFinite(templateId)) return
@@ -176,6 +191,24 @@ export function Home() {
         return 'Добрый вечер'
     }
 
+    const handleStartEmptyWorkout = async () => {
+        hapticFeedback({ type: 'impact', style: 'medium' })
+
+        try {
+            const started = await startWorkoutMutation.mutateAsync({})
+            setWorkoutSessionDraft(started.id, 'Быстрая тренировка', started.template_id)
+            navigate(`/workouts/active/${started.id}`)
+        } catch {
+            // handled by global error boundaries/toasts
+        }
+    }
+
+    const handleResumeWorkout = () => {
+        if (!activeWorkoutId) return
+        hapticFeedback({ type: 'selection' })
+        navigate(`/workouts/active/${activeWorkoutId}`)
+    }
+
     const homeHeaderAvatar = useMemo(
         () => (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-lg font-bold text-white">
@@ -192,56 +225,150 @@ export function Home() {
     useAppShellHeaderRight(homeHeaderAvatar)
 
     return (
-        <div className="space-y-6 p-4">
+        <div className="space-y-5 p-4 pb-28">
             <div>
                 <h1 className="text-2xl font-bold text-telegram-text">
                     {getGreeting()}, {userName}!
                 </h1>
                 <p className="mt-1 text-sm text-telegram-hint">
-                    Готов достичь своих целей сегодня?
+                    Открой тренировку за 1-2 тапа и держи темп даже внутри Telegram WebView.
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
-                    <div className="mb-2 flex items-center gap-2">
-                        <Flame className="h-5 w-5 text-orange-500" />
-                        <span className="text-sm text-telegram-hint">Калории</span>
+            <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-primary">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/70">
+                            {activeWorkoutId ? 'Активная сессия' : 'Быстрый старт'}
+                        </p>
+                        <h2 className="mt-2 text-xl font-semibold leading-tight">
+                            {activeWorkoutId
+                                ? activeTemplateName ?? `Тренировка #${activeWorkoutId}`
+                                : 'Начните новую тренировку без лишних экранов'}
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-white/80">
+                            {activeWorkoutId
+                                ? 'Состояние уже сохранено. Возвращайтесь к текущему упражнению и продолжайте с того же подхода.'
+                                : 'Пустая сессия, шаблон или любимая программа ниже. Всё под большой палец и без длинного пути по меню.'}
+                        </p>
                     </div>
-                    <div className="text-2xl font-bold text-telegram-text">
-                        {stats.calories.toLocaleString()}
+                    <div className="rounded-2xl bg-white/15 p-3">
+                        {activeWorkoutId ? <Play className="h-6 w-6" /> : <LayoutTemplate className="h-6 w-6" />}
                     </div>
-                    <div className="text-xs text-telegram-hint">ккал всего</div>
                 </div>
-                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
-                    <div className="mb-2 flex items-center gap-2">
-                        <Timer className="h-5 w-5 text-blue-500" />
-                        <span className="text-sm text-telegram-hint">Тренировки</span>
-                    </div>
-                    <div className="text-2xl font-bold text-telegram-text">{stats.workouts}</div>
-                    <div className="text-xs text-telegram-hint">всего</div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                    {activeWorkoutId ? (
+                        <>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="md"
+                                className="border border-white/15 bg-white/12 text-white hover:bg-white/16"
+                                onClick={handleResumeWorkout}
+                                leftIcon={<Play className="h-4 w-4" />}
+                            >
+                                Продолжить
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="md"
+                                className="border border-white/15 bg-white/12 text-white hover:bg-white/16"
+                                onClick={() => navigate('/workouts')}
+                                rightIcon={<ArrowRight className="h-4 w-4" />}
+                            >
+                                К списку
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="md"
+                                className="border border-white/15 bg-white text-primary hover:bg-white/90"
+                                onClick={() => void handleStartEmptyWorkout()}
+                                isLoading={startWorkoutMutation.isPending}
+                                leftIcon={<Play className="h-4 w-4" />}
+                            >
+                                Пустая сессия
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="md"
+                                className="border border-white/15 bg-white/12 text-white hover:bg-white/16"
+                                onClick={() => navigate('/workouts/templates')}
+                                rightIcon={<ArrowRight className="h-4 w-4" />}
+                            >
+                                Шаблоны
+                            </Button>
+                        </>
+                    )}
                 </div>
-                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
-                    <div className="mb-2 flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-telegram-hint">Активность</span>
+            </section>
+
+            <section className="rounded-3xl bg-telegram-secondary-bg p-4">
+                <SectionHeader
+                    title="Сегодняшний темп"
+                    description="Короткий статус по активности и серии, чтобы сразу видеть общий контекст."
+                    action={
+                        <button
+                            type="button"
+                            className="rounded-full bg-telegram-bg px-3 py-1.5 text-xs font-medium text-primary"
+                            onClick={() => navigate('/progress')}
+                        >
+                            Прогресс
+                        </button>
+                    }
+                />
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-telegram-bg/80 p-3">
+                        <div className="flex items-center gap-2 text-xs text-telegram-hint">
+                            <Flame className="h-4 w-4 text-orange-500" /> Калории
+                        </div>
+                        <div className="mt-2 text-xl font-semibold text-telegram-text">{stats.calories.toLocaleString()}</div>
+                        <div className="text-[11px] text-telegram-hint">ккал всего</div>
                     </div>
-                    <div className="text-2xl font-bold text-telegram-text">{stats.activityMinutes}</div>
-                    <div className="text-xs text-telegram-hint">минут всего</div>
-                </div>
-                <div className="rounded-xl bg-telegram-secondary-bg p-4 transition-colors">
-                    <div className="mb-2 flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-purple-500" />
-                        <span className="text-sm text-telegram-hint">Серия</span>
+                    <div className="rounded-2xl bg-telegram-bg/80 p-3">
+                        <div className="flex items-center gap-2 text-xs text-telegram-hint">
+                            <Timer className="h-4 w-4 text-blue-500" /> Тренировки
+                        </div>
+                        <div className="mt-2 text-xl font-semibold text-telegram-text">{stats.workouts}</div>
+                        <div className="text-[11px] text-telegram-hint">всего</div>
                     </div>
-                    <div className="text-2xl font-bold text-telegram-text">{stats.streakDays}</div>
-                    <div className="text-xs text-telegram-hint">дней подряд</div>
+                    <div className="rounded-2xl bg-telegram-bg/80 p-3">
+                        <div className="flex items-center gap-2 text-xs text-telegram-hint">
+                            <Activity className="h-4 w-4 text-green-500" /> Активность
+                        </div>
+                        <div className="mt-2 text-xl font-semibold text-telegram-text">{stats.activityMinutes}</div>
+                        <div className="text-[11px] text-telegram-hint">минут</div>
+                    </div>
+                    <div className="rounded-2xl bg-telegram-bg/80 p-3">
+                        <div className="flex items-center gap-2 text-xs text-telegram-hint">
+                            <TrendingUp className="h-4 w-4 text-primary" /> Серия
+                        </div>
+                        <div className="mt-2 text-xl font-semibold text-telegram-text">{stats.streakDays}</div>
+                        <div className="text-[11px] text-telegram-hint">дней подряд</div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
             {(waterData || templatesLoading || templates.length > 0) && (
-                <div className="space-y-3">
-                    <h2 className="text-lg font-semibold text-telegram-text">Сегодня и программы</h2>
+                <section className="space-y-3">
+                    <SectionHeader
+                        title="Быстрый старт по шаблонам"
+                        description="Любимые программы и сегодняшние карточки для запуска в один тап."
+                        action={
+                            <button
+                                type="button"
+                                className="text-xs font-medium text-primary"
+                                onClick={() => navigate('/workouts/templates')}
+                            >
+                                Все шаблоны
+                            </button>
+                        }
+                    />
                     <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
                         {waterData && (
                             <WaterWidget
@@ -281,23 +408,50 @@ export function Home() {
                                   </div>
                               ))}
                     </div>
-                </div>
+                    {!templatesLoading && quickLaunchTemplates.length > 0 ? (
+                        <div className="grid gap-2">
+                            {quickLaunchTemplates.map((template) => (
+                                <button
+                                    key={`quick-${template.id}`}
+                                    type="button"
+                                    onClick={() => {
+                                        void handleTemplateStart(template.id)
+                                    }}
+                                    className="flex items-center justify-between gap-3 rounded-2xl bg-telegram-secondary-bg px-4 py-3 text-left active:scale-[0.99]"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="truncate text-sm font-semibold text-telegram-text">{template.name}</div>
+                                        <div className="mt-1 text-xs text-telegram-hint">
+                                            {template.exerciseCount} упражнений • быстрый запуск
+                                        </div>
+                                    </div>
+                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/12 text-primary">
+                                        <Play className="h-4 w-4" fill="currentColor" />
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
+                </section>
             )}
 
-            <div>
-                <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-telegram-text">Недавние тренировки</h2>
-                    <button
-                        type="button"
-                        className="text-sm text-primary"
-                        onClick={() => {
-                            tg.hapticFeedback({ type: 'selection' })
-                            navigate('/workouts')
-                        }}
-                    >
-                        Все
-                    </button>
-                </div>
+            <section>
+                <SectionHeader
+                    title="Недавние тренировки"
+                    description="Быстрый доступ к последним сессиям и повторам без похода в историю."
+                    action={
+                        <button
+                            type="button"
+                            className="text-xs font-medium text-primary"
+                            onClick={() => {
+                                tg.hapticFeedback({ type: 'selection' })
+                                navigate('/workouts/history')
+                            }}
+                        >
+                            История
+                        </button>
+                    }
+                />
                 {historyLoading ? (
                     <WorkoutsHistoryBlockSkeleton />
                 ) : recentWorkouts.length === 0 ? (
@@ -317,7 +471,7 @@ export function Home() {
                         />
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="mt-3 space-y-3">
                         {recentWorkouts.map((workout) => {
                             const listCfg = getWorkoutListTypeConfig(workout.type)
                             const TypeIcon = listCfg.icon
@@ -361,11 +515,14 @@ export function Home() {
                         })}
                     </div>
                 )}
-            </div>
+            </section>
 
-            <div>
-                <h2 className="mb-3 text-lg font-semibold text-telegram-text">Быстрые действия</h2>
-                <div className="grid grid-cols-2 gap-3">
+            <section>
+                <SectionHeader
+                    title="Быстрые действия"
+                    description="Частые сценарии: начать логирование, открыть тренировки или перейти к метрикам."
+                />
+                <div className="mt-3 grid grid-cols-2 gap-3">
                     <button
                         type="button"
                         className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-medium text-white transition-transform active:scale-[0.98]"
@@ -383,13 +540,7 @@ export function Home() {
                         Записать метрику
                     </button>
                 </div>
-            </div>
-
-            {tg.isTelegram && (
-                <div className="pt-4 text-center text-xs text-telegram-hint">
-                    Telegram WebApp v{tg.webApp?.version} • {tg.webApp?.platform}
-                </div>
-            )}
+            </section>
         </div>
     )
 }

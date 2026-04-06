@@ -18,6 +18,8 @@ import {
 } from '@features/analytics/api/analyticsDomain'
 import { ProgressStatCard } from '@features/analytics/components/ProgressStatCard'
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
+import { ProgressScreenTabs } from '@features/analytics/components/ProgressScreenTabs'
+import { SectionHeader } from '@shared/ui/SectionHeader'
 
 type Period = '7d' | '30d' | '90d' | 'all'
 
@@ -140,11 +142,12 @@ export default function ProgressOverviewPage() {
 
     return (
         <div className="space-y-4 p-4 pb-28">
-            <section className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-lg font-semibold text-telegram-text">Прогресс</h1>
-                    <p className="text-xs text-telegram-hint">Короткие срезы для зала</p>
-                </div>
+            <section className="space-y-3 rounded-3xl bg-telegram-secondary-bg/65 p-4">
+                <SectionHeader
+                    title="Прогресс"
+                    description="Короткие срезы, PR и консистентность без перегруза графиками."
+                />
+                <ProgressScreenTabs />
                 <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
                     {PERIODS.map((item) => (
                         <button
@@ -154,7 +157,7 @@ export default function ProgressOverviewPage() {
                             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
                                 period === item.id
                                     ? 'bg-primary text-primary-foreground'
-                                    : 'bg-telegram-secondary-bg text-telegram-hint'
+                                    : 'bg-telegram-bg text-telegram-hint'
                             }`}
                         >
                             {item.label}
