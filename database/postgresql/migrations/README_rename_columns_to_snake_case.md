@@ -7,7 +7,7 @@
 
 ## What this migration does
 
-- Renames DB columns from camelCase to snake_case to match Prisma `@map("snake_case")`.
+- Renames DB columns from camelCase to snake_case to match current backend naming conventions.
 - Uses `information_schema.columns` guards, so it is idempotent and safe to re-run.
 - Performs only `ALTER TABLE ... RENAME COLUMN ...` operations (no data rewrite).
 
@@ -53,4 +53,4 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/postgresql/migrations/202603
 
 ## Operational note
 
-- During deploy, run migration before shipping app version that expects snake_case physical columns via Prisma `@map`.
+- During deploy, run migration before shipping app version that expects snake_case physical columns.

@@ -113,4 +113,4 @@ def register_v1_routes(app: FastAPI) -> None:
         tags=[TAG_EMERGENCY],
         **auth_mount_kw,
     )
-    app.include_router(legacy, prefix=API_V1_PREFIX, deprecated=True)
+    app.include_router(legacy, prefix=API_V1_PREFIX, deprecated=True, include_in_schema=False)

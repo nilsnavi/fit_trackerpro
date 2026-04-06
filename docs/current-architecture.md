@@ -14,11 +14,10 @@
 
 Основные модули:
 - `frontend/src/main.tsx` - runtime entrypoint.
-- `frontend/src/app` - app shell, providers, router.
-- `frontend/src/pages` - page-level экраны.
+- `frontend/src/App.tsx` - app composition (providers + routes).
+- `frontend/src/app` - app shell, providers, layouts.
 - `frontend/src/features` - доменные модули (workouts, exercises, profile, health, analytics, achievements, home, emergency).
-- `frontend/src/components` - UI и feature components.
-- `frontend/src/services` - API-клиент.
+- `frontend/src/shared` - shared UI/components, API bindings и утилиты.
 
 Текущий паттерн:
 - Router-based SPA (`react-router-dom`).
@@ -49,7 +48,7 @@ API включает домены:
 - Alembic: `database/migrations`.
 - SQL migrations/runbooks: `database/postgresql/migrations`.
 - Legacy SQL snapshots (архив): `docs/db/legacy/schema_v2.sql`, `docs/db/legacy/models.sql`.
-- Legacy Prisma schema (архив, не используется runtime): `docs/db/legacy/schema.prisma`.
+- Prisma schema удалена из активного репозитория; Prisma не используется runtime-кодом.
 
 Боевая БД:
 - **PostgreSQL** (основное хранилище).

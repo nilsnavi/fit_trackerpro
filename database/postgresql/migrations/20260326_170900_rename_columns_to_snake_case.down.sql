@@ -1,4 +1,4 @@
--- Auto-generated from Prisma schema
+-- Generated from historical schema mapping
 -- Rollback for column rename migration: snake_case -> camelCase
 BEGIN;
 

@@ -28,7 +28,7 @@
 
 - `docs/db/legacy/schema_v2.sql` — исторический SQL snapshot
 - `docs/db/legacy/models.sql` — исторический SQL snapshot
-- `docs/db/legacy/schema.prisma` — историческая Prisma schema (не используется runtime)
+- Prisma schema удалена из активного репозитория и не используется runtime
 
 ## Рекомендуемые проверки после изменений
 

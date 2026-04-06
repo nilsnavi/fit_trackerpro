@@ -1,4 +1,4 @@
--- Auto-generated from Prisma schema
+-- Generated from historical schema mapping
 -- Safe/idempotent column rename migration: camelCase -> snake_case
 BEGIN;
 
