@@ -5,6 +5,7 @@ from datetime import date, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import CHALLENGE_CREATE, CHALLENGE_JOIN, CHALLENGE_LEAVE, audit_log
 from app.domain.challenge import Challenge
 from app.domain.exceptions import (
     ChallengeForbiddenError,
@@ -12,7 +13,6 @@ from app.domain.exceptions import (
     ChallengeValidationError,
 )
 from app.infrastructure.repositories.challenges_repository import ChallengesRepository
-from app.core.audit import CHALLENGE_CREATE, CHALLENGE_JOIN, CHALLENGE_LEAVE, audit_log
 from app.schemas.challenges import (
     ChallengeCreate,
     ChallengeDetailResponse,

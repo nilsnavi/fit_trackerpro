@@ -5,14 +5,13 @@ Rate limiting using Redis for distributed tracking
 import logging
 import os
 import time
-import redis
 from functools import wraps
 from typing import Callable, Optional
 
+import redis
 from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from app.api.v1.registration import API_V1_PREFIX
 from app.core.request_identity import (

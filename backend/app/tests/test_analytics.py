@@ -1,6 +1,7 @@
+from datetime import datetime
+
 import pytest
 from httpx import AsyncClient
-from datetime import datetime
 
 from app.settings import settings
 

@@ -10,20 +10,21 @@ os.environ.setdefault("TELEGRAM_BOT_TOKEN", "123456:ABCpytest_test_bot_token_val
 os.environ.setdefault("TELEGRAM_WEBAPP_URL", "https://example.com/webapp")
 os.environ.setdefault("SECRET_KEY", "pytest-secret-key-at-least-thirty-two-chars")
 
+from typing import AsyncGenerator, Generator
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from typing import AsyncGenerator, Generator
 
-from app.domain.base import Base
 import app.domain.registry  # noqa: F401 — full metadata for create_all
+from app.domain.base import Base
 from app.infrastructure.database import get_async_db
 from app.main import app
-from app.tests.telegram_webapp import build_init_data
 from app.settings import settings
+from app.tests.telegram_webapp import build_init_data
 
 # One shared in-memory SQLite so multiple HTTP requests in a test see the same DB.
 _test_engine = create_async_engine(

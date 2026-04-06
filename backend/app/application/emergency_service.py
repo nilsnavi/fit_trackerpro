@@ -5,12 +5,11 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.user import User
 from app.domain.emergency_contact import EmergencyContact
 from app.domain.exceptions import EmergencyNotFoundError, EmergencyValidationError
+from app.domain.user import User
 from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.emergency_repository import EmergencyRepository
-from app.settings import settings
 from app.schemas.emergency import (
     EmergencyContactCreate,
     EmergencyContactListResponse,
@@ -24,6 +23,7 @@ from app.schemas.emergency import (
     EmergencyWorkoutNotifyResponse,
     NotificationResult,
 )
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 

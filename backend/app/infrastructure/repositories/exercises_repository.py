@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import func, or_, select
+
 from app.domain.exercise import Exercise
 from app.infrastructure.repositories.base import SQLAlchemyRepository
 

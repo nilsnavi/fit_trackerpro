@@ -8,8 +8,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import fakeredis
-import redis
 import pytest
+import redis
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 

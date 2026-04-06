@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.api.deps.idempotency import optional_idempotency_key
+from app.application.emergency_service import EmergencyService
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.emergency import (
@@ -23,7 +24,6 @@ from app.schemas.emergency import (
     EmergencySettingsResponse,
     EmergencyWorkoutNotifyResponse,
 )
-from app.application.emergency_service import EmergencyService
 
 router = APIRouter()
 

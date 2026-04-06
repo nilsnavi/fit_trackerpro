@@ -2,11 +2,11 @@
 Telegram WebApp authentication utilities
 Handles initData validation and user extraction
 """
-import hmac
 import hashlib
+import hmac
 import urllib.parse
-from typing import Dict, Optional, Any
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
 
 from app.settings import settings
 

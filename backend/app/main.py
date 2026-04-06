@@ -11,10 +11,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.exception_handlers import register_exception_handlers
+from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
 from app.api.v1.registration import register_v1_routes
 from app.api.v1.system import health_check_response
-from app.bot import setup_bot, start_bot, start_bot_webhook, stop_bot, process_webhook_update
-from app.settings import settings
+from app.bot import process_webhook_update, setup_bot, start_bot, start_bot_webhook, stop_bot
 from app.core.logging import configure_logging
 from app.core.telemetry import init_sentry, setup_prometheus_metrics
 from app.infrastructure.cache import close_cache
@@ -29,7 +29,7 @@ from app.middleware.request_logging import StructuredRequestLoggingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
 from app.schemas.system import HealthCheckResponse
-from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
+from app.settings import settings
 
 configure_logging(settings)
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.APP_NAME,
+    title=f'{settings.APP_NAME} API',
     description="""
     Backend API for FitTracker Pro Telegram Mini App
     

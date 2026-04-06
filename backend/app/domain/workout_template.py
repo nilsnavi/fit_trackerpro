@@ -5,15 +5,15 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Integer,
-    String,
-    DateTime,
     JSON,
     Boolean,
+    CheckConstraint,
+    DateTime,
     ForeignKey,
     Index,
+    Integer,
+    String,
     UniqueConstraint,
-    CheckConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func

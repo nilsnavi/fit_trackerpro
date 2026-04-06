@@ -3,10 +3,19 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.core.audit import (
+    AUTH_ACCOUNT_DELETE,
+    AUTH_LOGOUT,
+    AUTH_PROFILE_UPDATE,
+    AUTH_REFRESH,
+    AUTH_TELEGRAM_LOGIN,
+    audit_log,
+)
 from app.core.security import create_access_token, create_refresh_token, verify_token
-from app.domain.user import User
 from app.domain.exceptions import AuthenticationError
+from app.domain.user import User
 from app.infrastructure.repositories.auth_repository import AuthRepository
+from app.infrastructure.telegram_auth import validate_and_get_user
 from app.schemas.auth import (
     AuthResponse,
     LogoutResponse,
@@ -19,15 +28,6 @@ from app.schemas.auth import (
     user_profile_from_db,
 )
 from app.settings import settings
-from app.infrastructure.telegram_auth import validate_and_get_user
-from app.core.audit import (
-    AUTH_ACCOUNT_DELETE,
-    AUTH_LOGOUT,
-    AUTH_PROFILE_UPDATE,
-    AUTH_REFRESH,
-    AUTH_TELEGRAM_LOGIN,
-    audit_log,
-)
 
 
 class AuthService:

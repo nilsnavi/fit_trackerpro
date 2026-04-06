@@ -7,9 +7,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import get_client_ip
 from app.api.deps.auth import get_current_user
 from app.api.deps.idempotency import optional_idempotency_key
+from app.application.achievements_service import AchievementsService
+from app.core.audit import get_client_ip
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.achievements import (
@@ -19,7 +20,6 @@ from app.schemas.achievements import (
     UserAchievementListResponse,
     UserAchievementResponse,
 )
-from app.application.achievements_service import AchievementsService
 
 router = APIRouter()
 

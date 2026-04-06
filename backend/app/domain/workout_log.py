@@ -1,21 +1,21 @@
 """
 WorkoutLog Model
 """
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
-    Integer,
-    String,
-    DateTime,
-    Date,
     JSON,
+    CheckConstraint,
+    Date,
+    DateTime,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
+    Integer,
     Numeric,
+    String,
     UniqueConstraint,
-    CheckConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -23,9 +23,9 @@ from sqlalchemy.sql import func
 from app.domain.base import Base
 
 if TYPE_CHECKING:
+    from .glucose_log import GlucoseLog
     from .user import User
     from .workout_template import WorkoutTemplate
-    from .glucose_log import GlucoseLog
 
 
 class WorkoutLog(Base):

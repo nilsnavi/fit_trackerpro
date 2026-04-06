@@ -6,12 +6,12 @@ import logging
 from typing import Optional
 
 from telegram import (
-    Update,
     BotCommand,
-    MenuButtonWebApp,
-    WebAppInfo,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    MenuButtonWebApp,
+    Update,
+    WebAppInfo,
 )
 from telegram.ext import (
     Application,

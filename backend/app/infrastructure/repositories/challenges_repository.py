@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import desc, func, select
+
 from app.domain.challenge import Challenge
 from app.domain.user import User
 from app.infrastructure.repositories.base import SQLAlchemyRepository
