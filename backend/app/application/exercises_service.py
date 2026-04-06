@@ -70,7 +70,12 @@ class ExercisesService:
             raise ExerciseNotFoundError("Exercise not found")
         return ExerciseResponse.model_validate(exercise, from_attributes=True)
 
-    async def create_exercise(self, user_id: int, data: ExerciseCreate) -> ExerciseResponse:
+    async def create_exercise(
+        self,
+        user_id: int,
+        data: ExerciseCreate,
+        is_admin: bool = False,
+    ) -> ExerciseResponse:
         exercise = Exercise(
             name=data.name,
             description=data.description,
@@ -79,7 +84,7 @@ class ExercisesService:
             muscle_groups=data.muscle_groups,
             risk_flags=data.risk_flags.model_dump(),
             media_url=data.media_url,
-            status="pending",
+            status="active" if is_admin else "pending",
             author_user_id=user_id,
         )
         exercise = await self.repository.create_exercise(exercise)

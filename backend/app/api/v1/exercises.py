@@ -22,6 +22,7 @@ from app.schemas.exercises import (
     ExerciseUpdate,
     RiskFlags,
 )
+from app.settings import settings
 
 router = APIRouter()
 
@@ -67,7 +68,8 @@ async def create_exercise(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ExercisesService(db)
-    return await service.create_exercise(user_id=current_user.id, data=exercise_data)
+    is_admin = current_user.telegram_id in settings.ADMIN_USER_IDS
+    return await service.create_exercise(user_id=current_user.id, data=exercise_data, is_admin=is_admin)
 
 
 @router.post("/custom", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
@@ -115,6 +117,7 @@ async def create_custom_exercise_multipart(
     _ = (difficulty, media)
 
     service = ExercisesService(db)
+    is_admin = current_user.telegram_id in settings.ADMIN_USER_IDS
     return await service.create_exercise(
         user_id=current_user.id,
         data=ExerciseCreate(
@@ -126,6 +129,7 @@ async def create_custom_exercise_multipart(
             risk_flags=risk_flags,
             media_url=None,
         ),
+        is_admin=is_admin,
     )
 
 
