@@ -93,7 +93,7 @@ export function WorkoutModePageView({
                                     {preset.unit === 'minutes'
                                         ? 'Длительность'
                                         : config.ux.emphasizeRoundsInPresets
-                                            ? 'Круги'
+                                            ? 'Подходы'
                                             : 'Объём'}
                                 </div>
                             </button>

@@ -719,7 +719,7 @@ export function ActiveWorkoutPage() {
         toast.info('Упражнение удалено')
     }
 
-    const handleCompleteSession = (tagsOverride?: string[]) => {
+    const handleCompleteSession = useCallback((tagsOverride?: string[]) => {
         setSessionError(null)
         const current = queryClient.getQueryData<WorkoutHistoryItem>(queryKeys.workouts.historyItem(workoutId))
         if (!current) {
@@ -768,7 +768,7 @@ export function ActiveWorkoutPage() {
                 },
             },
         )
-    }
+    }, [completeMutation, durationMinutes, navigate, queryClient, tg, workoutId])
 
     const handleOpenFinishSheet = () => {
         if (!workout) return
@@ -785,14 +785,49 @@ export function ActiveWorkoutPage() {
         handleCompleteSession(parsedTags)
     }
 
+    const shouldAutoCompleteAfterSetToggle = useCallback((exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
+        if (!nextCompleted) return false
+
+        const current = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey)
+        if (!current) return false
+
+        const nextExercises = current.exercises.map((exercise, index) => {
+            if (index !== exerciseIndex) return exercise
+            return {
+                ...exercise,
+                sets_completed: exercise.sets_completed.map((set) => (
+                    set.set_number === setNumber ? { ...set, completed: true } : set
+                )),
+            }
+        })
+
+        return !nextExercises.some((exercise) => exercise.sets_completed.some((set) => !set.completed))
+    }, [detailQueryKey, queryClient])
+
     const handleToggleSetCompleted = useCallback((exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
         tg.hapticFeedback({ type: 'selection' })
         setCurrentPosition(exerciseIndex, setNumber - 1)
+        const shouldAutoComplete = shouldAutoCompleteAfterSetToggle(exerciseIndex, setNumber, nextCompleted)
         updateSet(exerciseIndex, setNumber, { completed: nextCompleted })
         if (nextCompleted) {
             startRestTimer(restDefaultSeconds)
         }
-    }, [restDefaultSeconds, setCurrentPosition, startRestTimer, tg, updateSet])
+
+        if (shouldAutoComplete && !completeMutation.isPending) {
+            flushWorkoutSync()
+            handleCompleteSession()
+        }
+    }, [
+        completeMutation.isPending,
+        flushWorkoutSync,
+        handleCompleteSession,
+        restDefaultSeconds,
+        setCurrentPosition,
+        shouldAutoCompleteAfterSetToggle,
+        startRestTimer,
+        tg,
+        updateSet,
+    ])
 
     const handleCompleteCurrentSet = useCallback(() => {
         if (!currentSet) return
@@ -940,6 +975,19 @@ export function ActiveWorkoutPage() {
                         onUpdateSet={updateSet}
                         onNotesChange={handleExerciseNotesChange}
                     />
+
+                    {isActiveDraft && (
+                        <Button
+                            type="button"
+                            onClick={handleOpenFinishSheet}
+                            disabled={completeMutation.isPending}
+                            isLoading={completeMutation.isPending}
+                            fullWidth
+                            className="mt-2 py-4 text-base font-semibold"
+                        >
+                            Завершить тренировку
+                        </Button>
+                    )}
 
                     {isFinishSheetOpen && (
                         <FinishWorkoutModal

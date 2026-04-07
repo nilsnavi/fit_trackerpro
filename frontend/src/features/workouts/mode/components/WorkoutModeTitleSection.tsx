@@ -35,7 +35,7 @@ export function WorkoutModeTitleSection({
                 onChange={(e) => onTitleChange(e.target.value)}
                 error={validationErrors.title}
                 fullWidth
-                placeholder="Например: Силовая • 4 круга"
+                placeholder="Например: Силовая • 4 подхода"
             />
             <button
                 type="button"
