@@ -14,6 +14,8 @@ import type {
 } from '@features/workouts/types/workouts'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
+import { getErrorMessage } from '@shared/errors'
+import { toast } from '@shared/stores/toastStore'
 import { isOfflineMutationQueuedError, isRecoverableSyncError } from '@shared/offline/syncQueue'
 import {
     enqueueOfflineTemplateCreate,
@@ -373,9 +375,13 @@ export function useStartWorkoutMutation() {
         },
         onError: (err, _payload, ctx) => {
             if (isOfflineMutationQueuedError(err)) return
-            if (!ctx) return
-            restoreSnapshotEntries(queryClient, ctx.calendarSnap)
-            restoreSnapshotEntries(queryClient, ctx.historyListsSnap)
+            if (ctx) {
+                restoreSnapshotEntries(queryClient, ctx.calendarSnap)
+                restoreSnapshotEntries(queryClient, ctx.historyListsSnap)
+            }
+            toast.error(`Не удалось запустить тренировку: ${getErrorMessage(err)}`, {
+                toastKey: 'start-workout-error',
+            })
         },
         onSuccess: async (data, variables, ctx) => {
             if (!ctx) return

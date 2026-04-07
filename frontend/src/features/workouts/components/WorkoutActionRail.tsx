@@ -20,11 +20,13 @@ interface WorkoutActionRailProps {
     sections: WorkoutActionRailButton[][]
     topSlot?: ReactNode
     className?: string
+    /** When true the bar collapses to a drag handle and expands on swipe-up */
+    collapsible?: boolean
 }
 
-export function WorkoutActionRail({ sections, topSlot, className }: WorkoutActionRailProps) {
+export function WorkoutActionRail({ sections, topSlot, className, collapsible }: WorkoutActionRailProps) {
     return (
-        <StickyBottomBar className={className}>
+        <StickyBottomBar className={className} collapsible={collapsible}>
             {topSlot}
             {sections.map((section, sectionIndex) => {
                 if (section.length === 1) {

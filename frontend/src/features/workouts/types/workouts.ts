@@ -100,6 +100,8 @@ export interface WorkoutStartFromTemplateRequest {
 
 export interface WorkoutStartResponse {
     id: number
+    /** Legacy compatibility: some deployments may still return workout_id instead of id. */
+    workout_id?: number
     user_id: number
     template_id?: number
     date: string
@@ -142,6 +144,8 @@ export interface WorkoutCompleteResponse {
 
 export interface WorkoutHistoryItem {
     id: number
+    /** Legacy compatibility: some deployments may still return workout_id instead of id. */
+    workout_id?: number
     template_id?: number
     date: string
     duration?: number

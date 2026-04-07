@@ -1105,6 +1105,7 @@ export function ActiveWorkoutPage() {
 
             {isActiveDraft && !isLoading && !errorMessage && workout && (
                 <WorkoutActionRail
+                    collapsible
                     className="space-y-2"
                     topSlot={(
                         <>
