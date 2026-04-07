@@ -14,10 +14,16 @@ export type SyncQueueItem = {
      */
     dedupeKey: string
     payload: unknown
+    /** UUID для идемпотентной переотправки на сервер. */
+    idempotencyKey?: string
     createdAt: number
     attempts: number
     status: SyncQueueItemStatus
     lastError?: string
+    /** Версия, которую ожидаем на сервере (для оптимистичного блокирования). */
+    expectedVersion?: number
+    /** Версия, которая была на сервере при конфликте. */
+    conflictVersion?: number
     /**
      * Для нерекаверибл ошибок (обычно 4xx): элемент остаётся в очереди,
      * но не будет автоматически ретраиться пока пользователь не вмешается.
@@ -31,6 +37,10 @@ export type EnqueueSyncMutationInput = {
     kind: string
     dedupeKey: string
     payload: unknown
+    /** UUID для идемпотентности на сервере. */
+    idempotencyKey?: string
+    /** Ожидаемая версия ресурса на сервере. */
+    expectedVersion?: number
 }
 
 export type EnqueueResult = {

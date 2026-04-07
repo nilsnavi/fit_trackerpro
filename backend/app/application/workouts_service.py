@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import date
 from decimal import Decimal
 from typing import Optional
@@ -730,6 +731,7 @@ class WorkoutsService:
             tags=list(workout.tags or []),
             glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
             glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            version=workout.version,
             completed_at=workout.updated_at,
             message=message,
         )
@@ -748,8 +750,14 @@ class WorkoutsService:
             tags=list(workout.tags or []),
             glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
             glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            version=workout.version,
             created_at=workout.created_at,
         )
+
+    @staticmethod
+    def _request_payload_hash(payload: dict) -> str:
+        normalized = str(sorted(payload.items())).encode("utf-8")
+        return hashlib.sha256(normalized).hexdigest()
 
     async def update_workout_session(
         self,
@@ -758,19 +766,61 @@ class WorkoutsService:
         data: WorkoutSessionUpdateRequest,
         client_ip: str | None = None,
     ) -> WorkoutHistoryItem:
+        operation_type = "session_update"
+        payload_dump = data.model_dump(mode="json")
+        request_hash = self._request_payload_hash(payload_dump)
+
+        if data.idempotency_key:
+            cached = await self.repository.get_idempotency_record(
+                user_id=user_id,
+                operation_type=operation_type,
+                idempotency_key=data.idempotency_key,
+            )
+            if cached:
+                if cached.request_hash != request_hash:
+                    raise WorkoutConflictError(
+                        "Idempotency key reused with different payload",
+                        details={
+                            "idempotency_key": data.idempotency_key,
+                            "operation_type": operation_type,
+                        },
+                    )
+                return WorkoutHistoryItem.model_validate(cached.response_payload)
+
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
         if not workout:
             raise WorkoutNotFoundError("Workout not found")
         if workout.duration is not None:
             raise WorkoutNotFoundError("Completed workout cannot be updated")
+        if data.expected_version is not None and workout.version != data.expected_version:
+            raise WorkoutConflictError(
+                "Workout version mismatch",
+                details={
+                    "expected_version": data.expected_version,
+                    "current_version": workout.version,
+                    "workout_id": workout_id,
+                },
+            )
 
         workout.exercises = [ex.model_dump() for ex in data.exercises]
         workout.comments = data.comments
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
         workout.glucose_after = data.glucose_after
+        workout.version += 1
 
         workout = await self.repository.commit_workout_update(workout)
+        response_item = self._workout_log_to_history_item(workout, data.exercises)
+
+        if data.idempotency_key:
+            await self.repository.create_idempotency_record(
+                user_id=user_id,
+                operation_type=operation_type,
+                idempotency_key=data.idempotency_key,
+                resource_id=workout_id,
+                request_hash=request_hash,
+                response_payload=response_item.model_dump(mode="json"),
+            )
 
         audit_log(
             action=WORKOUT_UPDATE,
@@ -781,7 +831,7 @@ class WorkoutsService:
             meta={"exercise_count": len(data.exercises)},
         )
 
-        return self._workout_log_to_history_item(workout, data.exercises)
+        return response_item
 
     async def _complete_workout_once(
         self,
@@ -793,6 +843,15 @@ class WorkoutsService:
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
         if not workout:
             raise WorkoutNotFoundError("Workout not found")
+        if data.expected_version is not None and workout.version != data.expected_version:
+            raise WorkoutConflictError(
+                "Workout version mismatch",
+                details={
+                    "expected_version": data.expected_version,
+                    "current_version": workout.version,
+                    "workout_id": workout_id,
+                },
+            )
 
         if workout.duration is not None:
             raw_ex = workout.exercises or []
@@ -809,6 +868,7 @@ class WorkoutsService:
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
         workout.glucose_after = data.glucose_after
+        workout.version += 1
 
         await self._upsert_training_load_daily(user_id=user_id, target_date=workout.date)
         await self._upsert_muscle_load_daily(user_id=user_id, target_date=workout.date)
@@ -837,6 +897,7 @@ class WorkoutsService:
             tags=workout.tags,
             glucose_before=workout.glucose_before,
             glucose_after=workout.glucose_after,
+            version=workout.version,
             completed_at=workout.updated_at,
             message="Workout completed successfully",
         )
@@ -849,6 +910,27 @@ class WorkoutsService:
         client_ip: str | None = None,
         idempotency_key: str | None = None,
     ) -> WorkoutCompleteResponse:
+        operation_type = "session_complete"
+        payload_dump = data.model_dump(mode="json")
+        request_hash = self._request_payload_hash(payload_dump)
+
+        if data.idempotency_key:
+            cached = await self.repository.get_idempotency_record(
+                user_id=user_id,
+                operation_type=operation_type,
+                idempotency_key=data.idempotency_key,
+            )
+            if cached:
+                if cached.request_hash != request_hash:
+                    raise WorkoutConflictError(
+                        "Idempotency key reused with different payload",
+                        details={
+                            "idempotency_key": data.idempotency_key,
+                            "operation_type": operation_type,
+                        },
+                    )
+                return WorkoutCompleteResponse.model_validate(cached.response_payload)
+
         async def _run() -> WorkoutCompleteResponse:
             return await self._complete_workout_once(
                 user_id=user_id,
@@ -856,6 +938,18 @@ class WorkoutsService:
                 data=data,
                 client_ip=client_ip,
             )
+
+        if data.idempotency_key:
+            response = await _run()
+            await self.repository.create_idempotency_record(
+                user_id=user_id,
+                operation_type=operation_type,
+                idempotency_key=data.idempotency_key,
+                resource_id=workout_id,
+                request_hash=request_hash,
+                response_payload=response.model_dump(mode="json"),
+            )
+            return response
 
         if idempotency_key:
             return await run_idempotent(

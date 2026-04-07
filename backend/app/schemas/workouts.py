@@ -282,6 +282,17 @@ class WorkoutSessionUpdateRequest(BaseModel):
         ge=2.0,
         le=30.0,
     )
+    idempotency_key: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=128,
+        description="Optional idempotency key for replay-safe updates.",
+    )
+    expected_version: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Expected workout version for optimistic locking.",
+    )
 
 
 class WorkoutCompleteRequest(BaseModel):
@@ -319,6 +330,17 @@ class WorkoutCompleteRequest(BaseModel):
         le=30.0,
         description="Glucose after workout (mmol/L).",
     )
+    idempotency_key: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=128,
+        description="Optional idempotency key for replay-safe completion.",
+    )
+    expected_version: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Expected workout version for optimistic locking.",
+    )
 
 
 class WorkoutCompleteResponse(BaseModel):
@@ -334,6 +356,7 @@ class WorkoutCompleteResponse(BaseModel):
     tags: List[str]
     glucose_before: Optional[float]
     glucose_after: Optional[float]
+    version: int
     completed_at: datetime
     message: str = Field(
         default="Workout completed successfully",
@@ -352,6 +375,7 @@ class WorkoutHistoryItem(BaseModel):
     tags: List[str]
     glucose_before: Optional[float]
     glucose_after: Optional[float]
+    version: int
     created_at: datetime
 
 

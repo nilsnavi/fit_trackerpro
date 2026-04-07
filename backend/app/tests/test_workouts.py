@@ -1,5 +1,6 @@
 import pytest
 from httpx import AsyncClient
+from uuid import uuid4
 
 
 @pytest.mark.integration
@@ -319,7 +320,7 @@ class TestWorkoutTemplates:
         completed = await authenticated_client.post(
             f"/api/v1/workouts/complete?workout_id={workout_id}",
             json=complete_payload,
-            headers={"Idempotency-Key": "pytest-create-from-workout"},
+            headers={"Idempotency-Key": f"pytest-create-from-workout-{workout_id}-{uuid4()}"},
         )
         assert completed.status_code == 200, completed.text
 
@@ -445,7 +446,7 @@ class TestWorkoutStartComplete:
             "glucose_after": None,
         }
 
-        idem_key = "pytest-idem-1"
+        idem_key = f"pytest-idem-{workout_id}-{uuid4()}"
         completed_1 = await authenticated_client.post(
             f"/api/v1/workouts/complete?workout_id={workout_id}",
             json=complete_payload,
@@ -529,6 +530,146 @@ class TestWorkoutStartComplete:
         detail_json = detail.json()
         assert len(detail_json.get("exercises") or []) == 2
         assert detail_json.get("comments") == update_payload["comments"]
+
+    async def test_update_active_workout_conflict_returns_409_details(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Conflict session", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json().get("id")
+        assert workout_id
+
+        # Any incorrect expected_version should produce 409 with details.
+        payload = {
+            "comments": "stale update",
+            "tags": ["strength"],
+            "exercises": [],
+            "expected_version": 999,
+            "idempotency_key": "pytest-conflict-update-key",
+        }
+
+        conflict = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json=payload,
+        )
+        assert conflict.status_code == 409, conflict.text
+        body = conflict.json()
+        assert (body.get("error") or {}).get("code") == "workout_conflict"
+        details = (body.get("error") or {}).get("details") or {}
+        assert details.get("expected_version") == 999
+        assert details.get("current_version") == 1
+        assert details.get("workout_id") == workout_id
+
+    async def test_update_active_workout_body_idempotency_replays_response(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Idempotent update", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json().get("id")
+        assert workout_id
+
+        first_payload = {
+            "comments": "first",
+            "tags": ["strength"],
+            "exercises": [
+                {
+                    "exercise_id": 201,
+                    "name": "Pull-ups",
+                    "sets_completed": [
+                        {"set_number": 1, "completed": False, "reps": 8, "weight": None, "duration": None}
+                    ],
+                }
+            ],
+            "expected_version": 1,
+            "idempotency_key": "pytest-update-idem-same",
+        }
+
+        r1 = await authenticated_client.patch(f"/api/v1/workouts/history/{workout_id}", json=first_payload)
+        assert r1.status_code == 200, r1.text
+        body1 = r1.json()
+        assert body1.get("version") == 2
+
+        # Replay with same payload + same key should return cached version=2.
+        r2 = await authenticated_client.patch(f"/api/v1/workouts/history/{workout_id}", json=first_payload)
+        assert r2.status_code == 200, r2.text
+        body2 = r2.json()
+        assert body2.get("version") == 2
+        assert body2.get("comments") == "first"
+
+        # Same key but different payload must return conflict.
+        changed_payload = {
+            **first_payload,
+            "comments": "changed",
+        }
+        r3 = await authenticated_client.patch(f"/api/v1/workouts/history/{workout_id}", json=changed_payload)
+        assert r3.status_code == 409, r3.text
+
+    async def test_complete_workout_body_idempotency_replays_response(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Idempotent complete", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json().get("id")
+        assert workout_id
+
+        payload = {
+            "duration": 30,
+            "exercises": [
+                {
+                    "exercise_id": 11,
+                    "name": "Burpees",
+                    "sets_completed": [
+                        {"set_number": 1, "completed": True, "reps": 12, "weight": None},
+                    ],
+                    "notes": "fast",
+                }
+            ],
+            "comments": "done",
+            "tags": ["strength"],
+            "glucose_before": None,
+            "glucose_after": None,
+            "expected_version": 1,
+            "idempotency_key": "pytest-complete-idem-same",
+        }
+
+        c1 = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json=payload,
+        )
+        assert c1.status_code == 200, c1.text
+        c1_body = c1.json()
+        assert c1_body.get("version") == 2
+
+        c2 = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json=payload,
+        )
+        assert c2.status_code == 200, c2.text
+        c2_body = c2.json()
+        assert c2_body.get("version") == 2
+        assert c2_body.get("duration") == 30
+
+        payload_changed = {
+            **payload,
+            "duration": 31,
+        }
+        c3 = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json=payload_changed,
+        )
+        assert c3.status_code == 409, c3.text
 
 
 @pytest.mark.integration

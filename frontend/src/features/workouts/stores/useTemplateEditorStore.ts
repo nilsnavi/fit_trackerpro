@@ -51,6 +51,10 @@ interface TemplateEditorState {
     setValidationError: (key: TemplateEditorValidationKey, message: string) => void
     clearValidationError: (key: TemplateEditorValidationKey) => void
     clearValidationErrors: () => void
+    setVersion: (version: number) => void
+    setServerVersion: (version: number) => void
+    detectConflict: (serverVersion: number) => void
+    clearConflict: () => void
 }
 
 const initialState = {
@@ -226,7 +230,7 @@ export const useTemplateEditorStore = create<TemplateEditorState>()((set) => ({
 
     clearConflict: () =>
         set({ hasConflict: false }),
-})
+}))
 
 /**
  * Selects mutable editor state fields in a single subscription.
@@ -273,6 +277,10 @@ export function useTemplateEditorActions() {
             setValidationError: s.setValidationError,
             clearValidationError: s.clearValidationError,
             clearValidationErrors: s.clearValidationErrors,
+            setVersion: s.setVersion,
+            setServerVersion: s.setServerVersion,
+            detectConflict: s.detectConflict,
+            clearConflict: s.clearConflict,
         })),
     )
 }

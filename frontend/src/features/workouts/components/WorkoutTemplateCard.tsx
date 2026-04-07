@@ -1,8 +1,7 @@
-import { Copy, Globe, LayoutTemplate, Lock, MoreVertical, Pencil, Pin, Play, Dumbbell, Heart } from 'lucide-react'
+import { Copy, Globe, LayoutTemplate, Lock, MoreVertical, Pencil, Pin, Play } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import type { BackendWorkoutType, WorkoutTemplateResponse } from '@features/workouts/types/workouts'
 import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
-import { cn } from '@shared/lib/cn'
 
 const TYPE_LABEL: Record<BackendWorkoutType, string> = {
     cardio: 'Кардио',
@@ -10,11 +9,6 @@ const TYPE_LABEL: Record<BackendWorkoutType, string> = {
     flexibility: 'Гибкость',
     mixed: 'Смешанная',
 }
-
-const EXERCISE_ICON_MAP = {
-    strength: Dumbbell,
-    cardio: Heart,
-} as const
 
 export interface WorkoutTemplateCardProps {
     template: WorkoutTemplateResponse
