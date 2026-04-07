@@ -368,6 +368,91 @@ class TestWorkoutTemplates:
         source_exercises = source_after.json().get("exercises") or []
         assert source_exercises[0].get("exercise_id") == 11
 
+    async def test_session_snapshot_is_immutable_after_template_update(self, authenticated_client: AsyncClient):
+        template_payload = {
+            "name": "Template Snapshot Source",
+            "type": "strength",
+            "exercises": [
+                {
+                    "exercise_id": 10,
+                    "name": "Bench Press",
+                    "sets": 2,
+                    "reps": 8,
+                    "rest_seconds": 120,
+                }
+            ],
+            "is_public": False,
+        }
+        created = await authenticated_client.post("/api/v1/workouts/templates", json=template_payload)
+        assert created.status_code in (200, 201), created.text
+        template_id = created.json()["id"]
+
+        started = await authenticated_client.post("/api/v1/workouts/start", json={"template_id": template_id})
+        assert started.status_code == 200, started.text
+        workout_id = started.json()["id"]
+
+        updated_template_payload = {
+            **template_payload,
+            "exercises": [
+                {
+                    "exercise_id": 20,
+                    "name": "Deadlift",
+                    "sets": 3,
+                    "reps": 5,
+                    "rest_seconds": 180,
+                }
+            ],
+        }
+        updated = await authenticated_client.put(
+            f"/api/v1/workouts/templates/{template_id}",
+            json=updated_template_payload,
+        )
+        assert updated.status_code == 200, updated.text
+
+        complete_payload = {
+            "duration": 35,
+            "exercises": [
+                {
+                    "exercise_id": 10,
+                    "name": "Bench Press",
+                    "sets_completed": [
+                        {
+                            "set_number": 1,
+                            "set_type": "warmup",
+                            "completed": True,
+                            "reps": 10,
+                            "weight": 40,
+                            "rpe": 5,
+                        },
+                        {
+                            "set_number": 2,
+                            "set_type": "failure",
+                            "completed": True,
+                            "reps": 8,
+                            "weight": 60,
+                            "rpe": 9.5,
+                        },
+                    ],
+                }
+            ],
+            "comments": "snapshot check",
+            "tags": ["strength"],
+        }
+        completed = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json=complete_payload,
+            headers={"Idempotency-Key": f"pytest-snapshot-{workout_id}-{uuid4()}"},
+        )
+        assert completed.status_code == 200, completed.text
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail.status_code == 200, detail.text
+        exercises = detail.json().get("exercises") or []
+        assert exercises[0]["exercise_id"] == 10
+        sets = exercises[0].get("sets_completed") or []
+        assert sets[0].get("set_type") == "warmup"
+        assert sets[1].get("set_type") == "failure"
+
 
 @pytest.mark.integration
 class TestWorkoutStartComplete:

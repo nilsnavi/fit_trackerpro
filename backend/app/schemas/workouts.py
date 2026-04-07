@@ -10,7 +10,7 @@ from typing import Annotated, List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.schemas.enums import WorkoutSessionType, WorkoutTemplateType
+from app.schemas.enums import WorkoutSessionType, WorkoutSetType, WorkoutTemplateType
 
 
 class ExerciseInTemplate(BaseModel):
@@ -69,6 +69,10 @@ class CompletedSet(BaseModel):
         ge=1,
         le=1000,
         description="1-based set index within the exercise.",
+    )
+    set_type: WorkoutSetType = Field(
+        default=WorkoutSetType.WORKING,
+        description="Set type: warmup, working, dropset, failure.",
     )
     reps: Optional[int] = Field(
         None,
