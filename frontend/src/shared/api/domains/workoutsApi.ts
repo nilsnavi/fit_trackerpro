@@ -17,6 +17,49 @@ import type {
     CalendarWorkout,
 } from '@features/workouts/types/workouts'
 
+function normalizeWorkoutStartResponse(response: WorkoutStartResponse): WorkoutStartResponse {
+    const normalizedId =
+        typeof response.id === 'number'
+            ? response.id
+            : typeof response.workout_id === 'number'
+              ? response.workout_id
+              : null
+
+    if (normalizedId == null) {
+        throw new Error('Workout start response does not contain workout id')
+    }
+
+    return {
+        ...response,
+        id: normalizedId,
+    }
+}
+
+function normalizeWorkoutHistoryItem(response: WorkoutHistoryItem): WorkoutHistoryItem {
+    const normalizedId =
+        typeof response.id === 'number'
+            ? response.id
+            : typeof response.workout_id === 'number'
+              ? response.workout_id
+              : null
+
+    if (normalizedId == null) {
+        throw new Error('Workout history response does not contain workout id')
+    }
+
+    return {
+        ...response,
+        id: normalizedId,
+    }
+}
+
+function normalizeWorkoutHistoryResponse(response: WorkoutHistoryResponse): WorkoutHistoryResponse {
+    return {
+        ...response,
+        items: response.items.map(normalizeWorkoutHistoryItem),
+    }
+}
+
 export const workoutsApi = {
     getHistory(params?: {
         page?: number
@@ -24,11 +67,15 @@ export const workoutsApi = {
         date_from?: string
         date_to?: string
     }): Promise<WorkoutHistoryResponse> {
-        return api.get<WorkoutHistoryResponse>('/workouts/history', params)
+        return api
+            .get<WorkoutHistoryResponse>('/workouts/history', params)
+            .then(normalizeWorkoutHistoryResponse)
     },
 
     getHistoryItem(workoutId: number): Promise<WorkoutHistoryItem> {
-        return api.get<WorkoutHistoryItem>(`/workouts/history/${workoutId}`)
+        return api
+            .get<WorkoutHistoryItem>(`/workouts/history/${workoutId}`)
+            .then(normalizeWorkoutHistoryItem)
     },
 
     getCalendarMonth(params: { year: number; month: number }): Promise<CalendarWorkout[]> {
@@ -95,18 +142,24 @@ export const workoutsApi = {
         workoutId: number,
         payload: WorkoutSessionUpdateRequest,
     ): Promise<WorkoutHistoryItem> {
-        return api.patch<WorkoutHistoryItem>(`/workouts/history/${workoutId}`, payload)
+        return api
+            .patch<WorkoutHistoryItem>(`/workouts/history/${workoutId}`, payload)
+            .then(normalizeWorkoutHistoryItem)
     },
 
     startWorkout(payload: WorkoutStartRequest): Promise<WorkoutStartResponse> {
-        return api.post<WorkoutStartResponse>('/workouts/start', payload)
+        return api
+            .post<WorkoutStartResponse>('/workouts/start', payload)
+            .then(normalizeWorkoutStartResponse)
     },
 
     startWorkoutFromTemplateWithOverrides(
         templateId: number,
         payload: WorkoutStartFromTemplateRequest,
     ): Promise<WorkoutStartResponse> {
-        return api.post<WorkoutStartResponse>(`/workouts/start/from-template/${templateId}`, payload)
+        return api
+            .post<WorkoutStartResponse>(`/workouts/start/from-template/${templateId}`, payload)
+            .then(normalizeWorkoutStartResponse)
     },
 
     completeWorkout(
