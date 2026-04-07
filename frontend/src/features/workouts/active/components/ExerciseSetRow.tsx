@@ -298,16 +298,26 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                 <button
                                     type="button"
                                     onClick={handleCopyPrevious}
-                                    className="min-h-[36px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs text-telegram-hint active:bg-telegram-secondary-bg"
+                                    className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
                                 >
-                                    Скопировать
+                                    Как прошлый
                                 </button>
+                                {weightDeltas.map((delta) => (
+                                    <button
+                                        key={`minus-${delta}`}
+                                        type="button"
+                                        onClick={() => handleAdjustWeight(-delta)}
+                                        className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
+                                    >
+                                        -{delta}
+                                    </button>
+                                ))}
                                 {weightDeltas.map((delta) => (
                                     <button
                                         key={delta}
                                         type="button"
                                         onClick={() => handleAdjustWeight(delta)}
-                                        className="min-h-[36px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs text-telegram-hint active:bg-telegram-secondary-bg"
+                                        className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
                                     >
                                         +{delta}
                                     </button>

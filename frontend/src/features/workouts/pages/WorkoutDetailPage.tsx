@@ -16,16 +16,14 @@ import { getErrorMessage } from '@shared/errors'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import {
     useCreateTemplateFromWorkoutMutation,
-    useStartWorkoutMutation,
-    useUpdateWorkoutSessionMutation,
 } from '@features/workouts/hooks/useWorkoutMutations'
+import { useWorkoutSessionStarter } from '@features/workouts/hooks/useWorkoutSessionStarter'
 import {
     formatDate,
     formatDurationMinutes,
     formatSetValue,
 } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHelpers'
-import { useWorkoutSessionDraftStore } from '@/state/local'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
 const buildTemplateName = (workout: WorkoutHistoryItem): string => {
@@ -37,10 +35,7 @@ const buildTemplateName = (workout: WorkoutHistoryItem): string => {
 export function WorkoutDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
-
-    const startWorkoutMutation = useStartWorkoutMutation()
-    const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
+    const { startWorkoutSession, isStartingSession } = useWorkoutSessionStarter()
     const createTemplateFromWorkoutMutation = useCreateTemplateFromWorkoutMutation()
 
     const workoutId = Number.parseInt(id ?? '', 10)
@@ -83,12 +78,13 @@ export function WorkoutDetailPage() {
         const title = workout.comments?.trim() || `Тренировка #${workout.id}`
 
         try {
-            const started = await startWorkoutMutation.mutateAsync({ name: title })
-            await updateWorkoutSessionMutation.mutateAsync({
-                workoutId: started.id,
-                payload: buildRepeatSessionPayload(workout),
+            const started = await startWorkoutSession({
+                startPayload: { name: title },
+                patchPayload: buildRepeatSessionPayload(workout),
+                draft: { title },
+                onOfflineQueued: () => navigate('/workouts'),
             })
-            setWorkoutSessionDraft(started.id, title, started.template_id ?? null)
+            if (!started) return
             navigate(`/workouts/active/${started.id}`)
         } catch (e) {
             setSessionError(getErrorMessage(e))
@@ -226,8 +222,8 @@ export function WorkoutDetailPage() {
                                 type="button"
                                 leftIcon={<RotateCcw className="h-4 w-4" />}
                                 onClick={() => void handleRepeatWorkout()}
-                                isLoading={startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending}
-                                disabled={startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending}
+                                isLoading={isStartingSession}
+                                disabled={isStartingSession}
                             >
                                     Повторить
                             </Button>

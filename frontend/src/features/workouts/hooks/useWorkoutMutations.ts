@@ -21,6 +21,7 @@ import {
     enqueueOfflineTemplateCreate,
     enqueueOfflineTemplateUpdate,
     enqueueOfflineWorkoutComplete,
+    enqueueOfflineWorkoutSessionUpdate,
     enqueueOfflineWorkoutStart,
 } from '@shared/offline/workoutOfflineEnqueue'
 import {
@@ -334,8 +335,16 @@ export function useUnarchiveWorkoutTemplateMutation() {
 export function useUpdateWorkoutSessionMutation() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: async ({ workoutId, payload }: UpdateWorkoutSessionVariables) =>
-            workoutsApi.updateWorkoutSession(workoutId, payload),
+        mutationFn: async ({ workoutId, payload }: UpdateWorkoutSessionVariables) => {
+            try {
+                return await workoutsApi.updateWorkoutSession(workoutId, payload)
+            } catch (e) {
+                if (isRecoverableSyncError(e)) {
+                    enqueueOfflineWorkoutSessionUpdate(workoutId, payload)
+                }
+                throw e
+            }
+        },
         onSuccess: (data, variables) => {
             queryClient.setQueryData(queryKeys.workouts.historyItem(variables.workoutId), data)
         },

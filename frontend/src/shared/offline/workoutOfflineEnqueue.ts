@@ -1,6 +1,7 @@
 import type {
     WorkoutCompleteRequest,
     WorkoutStartRequest,
+    WorkoutSessionUpdateRequest,
     WorkoutTemplateCreateRequest,
 } from '@features/workouts/types/workouts'
 import {
@@ -49,6 +50,20 @@ export function enqueueOfflineWorkoutStart(payload: WorkoutStartRequest): never 
         kind: WORKOUT_SYNC_KINDS.START,
         dedupeKey,
         payload,
+    })
+    requestSyncFlush()
+    throw new OfflineMutationQueuedError()
+}
+
+/** Последняя версия активной сессии на workout_id (upsert-поведение по dedupeKey). */
+export function enqueueOfflineWorkoutSessionUpdate(
+    workoutId: number,
+    payload: WorkoutSessionUpdateRequest,
+): never {
+    enqueueSyncMutation({
+        kind: WORKOUT_SYNC_KINDS.SESSION_UPDATE,
+        dedupeKey: `workout:update:${workoutId}`,
+        payload: { workoutId, body: payload },
     })
     requestSyncFlush()
     throw new OfflineMutationQueuedError()
