@@ -25,6 +25,8 @@ from app.domain.base import Base
 if TYPE_CHECKING:
     from .glucose_log import GlucoseLog
     from .user import User
+    from .workout_session_exercise import WorkoutSessionExercise
+    from .workout_set import WorkoutSet
     from .workout_template import WorkoutTemplate
 
 
@@ -124,6 +126,20 @@ class WorkoutLog(Base):
         back_populates="workout",
         cascade="all, delete-orphan",
         overlaps="glucose_logs",
+    )
+    session_exercises: Mapped[list["WorkoutSessionExercise"]] = relationship(
+        "WorkoutSessionExercise",
+        back_populates="workout_session",
+        cascade="all, delete-orphan",
+        order_by="WorkoutSessionExercise.order_index",
+        overlaps="user,workout_session_exercises",
+    )
+    workout_sets: Mapped[list["WorkoutSet"]] = relationship(
+        "WorkoutSet",
+        back_populates="workout_session",
+        cascade="all, delete-orphan",
+        order_by="WorkoutSet.id",
+        overlaps="user,workout_sets",
     )
 
     __table_args__ = (

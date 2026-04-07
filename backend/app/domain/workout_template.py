@@ -21,6 +21,7 @@ from sqlalchemy.sql import func
 from app.domain.base import Base
 
 if TYPE_CHECKING:
+    from .template_exercise import TemplateExercise
     from .user import User
     from .workout_log import WorkoutLog
 
@@ -49,7 +50,7 @@ class WorkoutTemplate(Base):
         comment="Workout type: cardio, strength, flexibility, mixed"
     )
 
-    # Exercises stored as JSONB array
+    # Legacy compatibility field; normalized rows are stored in template_exercises.
     exercises: Mapped[list[dict]] = mapped_column(
         JSON,
         default=list,
@@ -92,6 +93,13 @@ class WorkoutTemplate(Base):
         "WorkoutLog",
         back_populates="template",
         overlaps="workout_logs",
+    )
+    template_exercises: Mapped[list["TemplateExercise"]] = relationship(
+        "TemplateExercise",
+        back_populates="template",
+        cascade="all, delete-orphan",
+        order_by="TemplateExercise.order_index",
+        overlaps="user,template_exercises",
     )
 
     __table_args__ = (

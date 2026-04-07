@@ -21,13 +21,16 @@ from app.core.audit import (
 from app.domain.exceptions import WorkoutConflictError, WorkoutNotFoundError
 from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
+from app.domain.template_exercise import TemplateExercise
 from app.domain.training_load_daily import TrainingLoadDaily
 from app.domain.workout_log import WorkoutLog
+from app.domain.workout_session_exercise import WorkoutSessionExercise
+from app.domain.workout_set import WorkoutSet
 from app.domain.workout_template import WorkoutTemplate
 from app.infrastructure.cache import invalidate_user_analytics_cache
 from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
-from app.schemas.enums import WorkoutSessionType
+from app.schemas.enums import WorkoutSessionType, WorkoutSetType
 from app.schemas.workouts import (
     CompletedExercise,
     ExerciseInTemplate,
@@ -147,6 +150,7 @@ class WorkoutsService:
             "sets_completed": [
                 {
                     "set_number": i + 1,
+                    "set_type": WorkoutSetType.WORKING.value,
                     "reps": ex.get("reps"),
                     "weight": ex.get("weight"),
                     "duration": ex.get("duration"),
@@ -155,6 +159,75 @@ class WorkoutsService:
                 for i in range(sets)
             ],
         }
+
+    @staticmethod
+    def _normalize_set_type(value: object) -> str:
+        allowed = {item.value for item in WorkoutSetType}
+        candidate = str(value).strip().lower() if value is not None else WorkoutSetType.WORKING.value
+        return candidate if candidate in allowed else WorkoutSetType.WORKING.value
+
+    def _build_template_exercise_rows(
+        self,
+        *,
+        user_id: int,
+        exercises_payload: list[dict],
+    ) -> list[TemplateExercise]:
+        rows: list[TemplateExercise] = []
+        for idx, raw in enumerate(exercises_payload):
+            rows.append(
+                TemplateExercise(
+                    user_id=user_id,
+                    exercise_id=int(raw.get("exercise_id") or (idx + 1)),
+                    order_index=idx,
+                    name=str(raw.get("name") or f"Exercise #{idx + 1}").strip() or f"Exercise #{idx + 1}",
+                    sets=max(int(raw.get("sets") or 1), 1),
+                    reps=raw.get("reps"),
+                    duration=raw.get("duration"),
+                    rest_seconds=max(int(raw.get("rest_seconds") or 0), 0),
+                    weight=raw.get("weight"),
+                    notes=raw.get("notes"),
+                )
+            )
+        return rows
+
+    def _build_session_snapshot_rows(
+        self,
+        *,
+        user_id: int,
+        workout_session_id: int,
+        exercises_payload: list[dict],
+    ) -> list[WorkoutSessionExercise]:
+        rows: list[WorkoutSessionExercise] = []
+        for ex_idx, raw_exercise in enumerate(exercises_payload):
+            session_exercise = WorkoutSessionExercise(
+                user_id=user_id,
+                workout_session_id=workout_session_id,
+                exercise_id=int(raw_exercise.get("exercise_id") or (ex_idx + 1)),
+                order_index=ex_idx,
+                name=str(raw_exercise.get("name") or f"Exercise #{ex_idx + 1}").strip() or f"Exercise #{ex_idx + 1}",
+                notes=raw_exercise.get("notes"),
+            )
+            sets_payload = raw_exercise.get("sets_completed") if isinstance(raw_exercise, dict) else None
+            if isinstance(sets_payload, list):
+                for set_idx, raw_set in enumerate(sets_payload):
+                    if not isinstance(raw_set, dict):
+                        continue
+                    session_exercise.sets.append(
+                        WorkoutSet(
+                            user_id=user_id,
+                            workout_session_id=workout_session_id,
+                            set_number=int(raw_set.get("set_number") or set_idx + 1),
+                            set_type=self._normalize_set_type(raw_set.get("set_type")),
+                            reps=raw_set.get("reps"),
+                            weight=raw_set.get("weight"),
+                            rpe=raw_set.get("rpe"),
+                            rir=raw_set.get("rir"),
+                            duration=raw_set.get("duration"),
+                            completed=bool(raw_set.get("completed", True)),
+                        )
+                    )
+            rows.append(session_exercise)
+        return rows
 
     @staticmethod
     def _apply_reorder(existing: list[dict], order: list[int]) -> list[dict]:
@@ -182,7 +255,7 @@ class WorkoutsService:
     ) -> tuple[list[dict], str | None, list[str]]:
         source_exercises: list[dict]
         if overrides and overrides.exercises:
-            source_exercises = [ex.model_dump() for ex in overrides.exercises]
+            source_exercises = [ex.model_dump(mode="json") for ex in overrides.exercises]
         else:
             source_exercises = template_exercises or []
         initial_exercises = [
@@ -229,10 +302,18 @@ class WorkoutsService:
             user_id=user_id,
             name=data.name,
             type=data.type,
-            exercises=[ex.model_dump() for ex in data.exercises],
+            exercises=[ex.model_dump(mode="json") for ex in data.exercises],
             is_public=data.is_public,
         )
         template = await self.repository.create_template(template)
+        await self.repository.replace_template_exercises(
+            user_id=user_id,
+            template_id=template.id,
+            template_exercises=self._build_template_exercise_rows(
+                user_id=user_id,
+                exercises_payload=template.exercises,
+            ),
+        )
         audit_log(
             action=WORKOUT_TEMPLATE_CREATE,
             user_db_id=user_id,
@@ -262,10 +343,18 @@ class WorkoutsService:
 
         template.name = data.name
         template.type = data.type
-        template.exercises = [ex.model_dump() for ex in data.exercises]
+        template.exercises = [ex.model_dump(mode="json") for ex in data.exercises]
         template.is_public = data.is_public
         template.version += 1
         template = await self.repository.update_template(template)
+        await self.repository.replace_template_exercises(
+            user_id=user_id,
+            template_id=template.id,
+            template_exercises=self._build_template_exercise_rows(
+                user_id=user_id,
+                exercises_payload=template.exercises,
+            ),
+        )
         audit_log(
             action=WORKOUT_TEMPLATE_UPDATE,
             user_db_id=user_id,
@@ -291,7 +380,7 @@ class WorkoutsService:
         next_public = data.is_public if data.is_public is not None else template.is_public
         next_exercises = template.exercises
         if data.exercises is not None:
-            next_exercises = [ex.model_dump() for ex in data.exercises]
+            next_exercises = [ex.model_dump(mode="json") for ex in data.exercises]
         if data.exercise_order is not None:
             next_exercises = self._apply_reorder(next_exercises or [], data.exercise_order)
 
@@ -308,6 +397,15 @@ class WorkoutsService:
         )
         if not updated:
             raise WorkoutConflictError("Template version mismatch. Refresh template and retry.")
+
+        await self.repository.replace_template_exercises(
+            user_id=user_id,
+            template_id=updated.id,
+            template_exercises=self._build_template_exercise_rows(
+                user_id=user_id,
+                exercises_payload=list(updated.exercises or []),
+            ),
+        )
 
         audit_log(
             action=WORKOUT_TEMPLATE_UPDATE,
@@ -363,10 +461,18 @@ class WorkoutsService:
             user_id=user_id,
             name=template_name,
             type=detected_type,
-            exercises=[ex.model_dump() for ex in template_exercises],
+            exercises=[ex.model_dump(mode="json") for ex in template_exercises],
             is_public=data.is_public,
         )
         template = await self.repository.create_template(template)
+        await self.repository.replace_template_exercises(
+            user_id=user_id,
+            template_id=template.id,
+            template_exercises=self._build_template_exercise_rows(
+                user_id=user_id,
+                exercises_payload=template.exercises,
+            ),
+        )
         audit_log(
             action=WORKOUT_TEMPLATE_CREATE,
             user_db_id=user_id,
@@ -397,6 +503,14 @@ class WorkoutsService:
             is_public=source.is_public if data.is_public is None else data.is_public,
         )
         clone = await self.repository.create_template(clone)
+        await self.repository.replace_template_exercises(
+            user_id=user_id,
+            template_id=clone.id,
+            template_exercises=self._build_template_exercise_rows(
+                user_id=user_id,
+                exercises_payload=clone.exercises,
+            ),
+        )
         audit_log(
             action=WORKOUT_TEMPLATE_CREATE,
             user_db_id=user_id,
@@ -526,6 +640,15 @@ class WorkoutsService:
             tags=([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
         )
         workout = await self.repository.create_workout_log(workout)
+        await self.repository.replace_session_snapshot(
+            user_id=user_id,
+            workout_session_id=workout.id,
+            session_exercises=self._build_session_snapshot_rows(
+                user_id=user_id,
+                workout_session_id=workout.id,
+                exercises_payload=initial_exercises,
+            ),
+        )
         await invalidate_user_analytics_cache(user_id)
 
         audit_log(
@@ -572,6 +695,15 @@ class WorkoutsService:
             tags=override_tags or ([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
         )
         workout = await self.repository.create_workout_log(workout)
+        await self.repository.replace_session_snapshot(
+            user_id=user_id,
+            workout_session_id=workout.id,
+            session_exercises=self._build_session_snapshot_rows(
+                user_id=user_id,
+                workout_session_id=workout.id,
+                exercises_payload=initial_exercises,
+            ),
+        )
         await invalidate_user_analytics_cache(user_id)
 
         audit_log(
@@ -802,7 +934,7 @@ class WorkoutsService:
                 },
             )
 
-        workout.exercises = [ex.model_dump() for ex in data.exercises]
+        workout.exercises = [ex.model_dump(mode="json") for ex in data.exercises]
         workout.comments = data.comments
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
@@ -810,6 +942,15 @@ class WorkoutsService:
         workout.version += 1
 
         workout = await self.repository.commit_workout_update(workout)
+        await self.repository.replace_session_snapshot(
+            user_id=user_id,
+            workout_session_id=workout.id,
+            session_exercises=self._build_session_snapshot_rows(
+                user_id=user_id,
+                workout_session_id=workout.id,
+                exercises_payload=workout.exercises or [],
+            ),
+        )
         response_item = self._workout_log_to_history_item(workout, data.exercises)
 
         if data.idempotency_key:
@@ -863,7 +1004,7 @@ class WorkoutsService:
             )
 
         workout.duration = data.duration
-        workout.exercises = [ex.model_dump() for ex in data.exercises]
+        workout.exercises = [ex.model_dump(mode="json") for ex in data.exercises]
         workout.comments = data.comments
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
@@ -875,6 +1016,15 @@ class WorkoutsService:
         await self._upsert_recovery_state(user_id=user_id, target_date=workout.date)
 
         await self.repository.commit_workout_completion(workout)
+        await self.repository.replace_session_snapshot(
+            user_id=user_id,
+            workout_session_id=workout.id,
+            session_exercises=self._build_session_snapshot_rows(
+                user_id=user_id,
+                workout_session_id=workout.id,
+                exercises_payload=workout.exercises or [],
+            ),
+        )
         await invalidate_user_analytics_cache(user_id)
 
         audit_log(

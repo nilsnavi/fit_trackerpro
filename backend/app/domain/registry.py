@@ -23,8 +23,11 @@ from app.domain.reference_data import (  # noqa: F401
     RefExerciseStatus,
     RefMuscleGroup,
 )
+from app.domain.template_exercise import TemplateExercise  # noqa: F401
 from app.domain.training_load_daily import TrainingLoadDaily  # noqa: F401
 from app.domain.user import User  # noqa: F401
 from app.domain.user_achievement import UserAchievement  # noqa: F401
 from app.domain.workout_log import WorkoutLog  # noqa: F401
+from app.domain.workout_session_exercise import WorkoutSessionExercise  # noqa: F401
+from app.domain.workout_set import WorkoutSet  # noqa: F401
 from app.domain.workout_template import WorkoutTemplate  # noqa: F401

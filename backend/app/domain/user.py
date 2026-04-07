@@ -19,8 +19,11 @@ if TYPE_CHECKING:
     from .muscle_load import MuscleLoad
     from .recovery_state import RecoveryState
     from .training_load_daily import TrainingLoadDaily
+    from .template_exercise import TemplateExercise
     from .user_achievement import UserAchievement
     from .workout_log import WorkoutLog
+    from .workout_session_exercise import WorkoutSessionExercise
+    from .workout_set import WorkoutSet
     from .workout_template import WorkoutTemplate
 
 
@@ -90,10 +93,28 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    template_exercises: Mapped[list["TemplateExercise"]] = relationship(
+        "TemplateExercise",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        overlaps="template",
+    )
     workout_logs: Mapped[list["WorkoutLog"]] = relationship(
         "WorkoutLog",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    workout_session_exercises: Mapped[list["WorkoutSessionExercise"]] = relationship(
+        "WorkoutSessionExercise",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        overlaps="workout_session",
+    )
+    workout_sets: Mapped[list["WorkoutSet"]] = relationship(
+        "WorkoutSet",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        overlaps="workout_session",
     )
     glucose_logs: Mapped[list["GlucoseLog"]] = relationship(
         "GlucoseLog",

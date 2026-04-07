@@ -43,6 +43,13 @@ class WorkoutSessionType(StrEnum):
     CUSTOM = "custom"
 
 
+class WorkoutSetType(StrEnum):
+    WARMUP = "warmup"
+    WORKING = "working"
+    DROPSET = "dropset"
+    FAILURE = "failure"
+
+
 class ChallengeType(StrEnum):
     WORKOUT_COUNT = "workout_count"
     DURATION = "duration"

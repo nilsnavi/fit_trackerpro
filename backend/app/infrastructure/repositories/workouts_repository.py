@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import List, Optional
 
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import and_, delete, desc, func, select, update
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.exercise import Exercise
@@ -11,7 +11,10 @@ from app.domain.idempotency_record import IdempotencyRecord
 from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
 from app.domain.training_load_daily import TrainingLoadDaily
+from app.domain.template_exercise import TemplateExercise
 from app.domain.workout_log import WorkoutLog
+from app.domain.workout_session_exercise import WorkoutSessionExercise
+from app.domain.workout_set import WorkoutSet
 from app.domain.workout_template import WorkoutTemplate
 from app.infrastructure.repositories.base import SQLAlchemyRepository
 
@@ -242,6 +245,26 @@ class WorkoutsRepository(SQLAlchemyRepository):
         await self.refresh(template)
         return template
 
+    async def replace_template_exercises(
+        self,
+        *,
+        user_id: int,
+        template_id: int,
+        template_exercises: list[TemplateExercise],
+    ) -> None:
+        await self.db.execute(
+            delete(TemplateExercise).where(
+                and_(
+                    TemplateExercise.user_id == user_id,
+                    TemplateExercise.template_id == template_id,
+                )
+            )
+        )
+        for row in template_exercises:
+            row.template_id = template_id
+            self.add(row)
+        await self.commit()
+
     async def delete_template(self, template: WorkoutTemplate) -> None:
         # Detach historical workouts from template before physical delete.
         # This keeps history intact and avoids FK conflicts for already used templates.
@@ -268,6 +291,33 @@ class WorkoutsRepository(SQLAlchemyRepository):
         await self.commit()
         await self.refresh(workout)
         return workout
+
+    async def replace_session_snapshot(
+        self,
+        *,
+        user_id: int,
+        workout_session_id: int,
+        session_exercises: list[WorkoutSessionExercise],
+    ) -> None:
+        await self.db.execute(
+            delete(WorkoutSet).where(
+                and_(
+                    WorkoutSet.user_id == user_id,
+                    WorkoutSet.workout_session_id == workout_session_id,
+                )
+            )
+        )
+        await self.db.execute(
+            delete(WorkoutSessionExercise).where(
+                and_(
+                    WorkoutSessionExercise.user_id == user_id,
+                    WorkoutSessionExercise.workout_session_id == workout_session_id,
+                )
+            )
+        )
+        for row in session_exercises:
+            self.add(row)
+        await self.commit()
 
     def add_training_load_daily(self, row: TrainingLoadDaily) -> None:
         self.add(row)
