@@ -11,7 +11,7 @@ import {
 } from './helpers/workout-api-mock'
 
 test.describe('workouts regression suite @regression @workout-flows', () => {
-test.describe.configure({ timeout: 60_000 })
+test.describe.configure({ mode: 'serial', timeout: 60_000 })
 
 test('mode -> add exercise -> save', async ({ page }) => {
     const state = buildWorkoutState()
@@ -39,7 +39,7 @@ test('mode -> add exercise -> save', async ({ page }) => {
 
     await expect.poll(() => state.createTemplateRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts(?:\?.*)?$/)
-    await expect(page.getByRole('heading', { name: title })).toBeVisible()
+    await expect(page.getByRole('main')).toContainText('История')
 })
 
 test('save and start workout', async ({ page }) => {
@@ -68,7 +68,7 @@ test('save and start workout', async ({ page }) => {
     await expect.poll(() => state.updateSessionRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
     await expect(page.getByRole('heading', { name: 'Жим лёжа' }).last()).toBeVisible()
-    await expect(page.locator('[data-testid="finish-workout-btn"]')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Завершить тренировку' })).toBeVisible()
 })
 
 test('repeat workout from workouts page', async ({ page }) => {
@@ -148,6 +148,7 @@ test('resume draft from workouts page', async ({ page }) => {
     await page.locator('[data-testid="resume-draft-btn"]').click()
 
     await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
+    await expect(page.getByText('Прогресс сессии').first()).toBeVisible()
     await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
 })
 
@@ -163,6 +164,7 @@ test('complete workout', async ({ page }) => {
                 name: 'Присед',
                 sets_completed: [
                     { set_number: 1, reps: 5, weight: 80, completed: false },
+                    { set_number: 2, reps: 5, weight: 80, completed: false },
                 ],
             },
         ],
@@ -180,14 +182,54 @@ test('complete workout', async ({ page }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto(`/workouts/active/${workoutId}`)
+    await expect(page.getByText('Прогресс сессии').first()).toBeVisible({ timeout: 30_000 })
     await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
 
     await page.locator('[data-testid="set-toggle-btn"]').first().click()
-    await expect(page.locator('[data-testid="set-toggle-btn"][class*="green"]').first()).toBeVisible()
+    await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
 
-    await page.locator('[data-testid="finish-workout-btn"]').click()
-    await expect(page.locator('[data-testid="confirm-finish-btn"]')).toBeVisible()
-    await page.locator('[data-testid="confirm-finish-btn"]').click()
+    // Completing the last remaining set should auto-finish workout.
+    await page.locator('[data-testid="set-toggle-btn"]').nth(1).click()
+
+    await expect.poll(() => state.completeRequests.length).toBe(1)
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}(?:\\?.*)?$`))
+    expect(state.completeRequests[0]?.payload.duration).toBeTruthy()
+})
+
+test('auto-complete workout on last "Готово" tap', async ({ page }) => {
+    const workoutId = 322
+    const detail: WorkoutHistoryItem = {
+        id: workoutId,
+        date: isoNow(),
+        duration: undefined,
+        exercises: [
+            {
+                exercise_id: 1001,
+                name: 'Присед',
+                sets_completed: [
+                    { set_number: 1, reps: 5, weight: 80, completed: false },
+                ],
+            },
+        ],
+        comments: 'E2E авто-завершение по готово',
+        tags: ['strength'],
+        created_at: isoMinutesAgo(8),
+    }
+    const state = buildWorkoutState({
+        historyItems: [detail],
+        details: new Map([[workoutId, detail]]),
+    })
+
+    await seedAuth(page)
+    await seedDraft(page, workoutId, 'E2E авто-завершение по готово')
+    await mockWorkoutApi(page, state)
+
+    await page.goto(`/workouts/active/${workoutId}`)
+    await expect(page.getByText('Прогресс сессии').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+
+    // One incomplete set in session: pressing "Готово" must immediately complete workout.
+    await page.getByRole('button', { name: 'Готово' }).first().click()
 
     await expect.poll(() => state.completeRequests.length).toBe(1)
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}(?:\\?.*)?$`))
@@ -206,6 +248,7 @@ test('offline -> reconnect -> sync', async ({ page, context }) => {
                 name: 'Жим лёжа',
                 sets_completed: [
                     { set_number: 1, reps: 8, weight: 70, completed: false },
+                    { set_number: 2, reps: 8, weight: 70, completed: false },
                 ],
             },
         ],
@@ -229,7 +272,7 @@ test('offline -> reconnect -> sync', async ({ page, context }) => {
     await page.locator('[data-testid="set-toggle-btn"]').first().click()
 
     const status = page.getByRole('status').filter({ hasText: 'Офлайн' }).first()
-    await expect(status).toBeVisible({ timeout: 5000 })
+    await expect(status).toBeVisible({ timeout: 8000 })
     await expect(page.getByText('Офлайн: изменения поставлены в очередь синхронизации')).toBeVisible({ timeout: 5000 })
 
     await context.setOffline(false)

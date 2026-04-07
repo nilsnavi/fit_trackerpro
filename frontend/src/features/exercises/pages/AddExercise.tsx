@@ -72,6 +72,7 @@ const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: string; color: string
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+const EXERCISE_NAME_MAX_LENGTH = 100;
 
 // ============================================
 // Validation Helpers
@@ -80,7 +81,9 @@ const ALLOWED_TYPES = ['image/gif', 'video/mp4', 'video/webm', 'video/quicktime'
 const validateName = (value: string): string | undefined => {
     if (!value.trim()) return 'Название обязательно';
     if (value.length < 3) return 'Минимум 3 символа';
-    if (value.length > 50) return 'Максимум 50 символов';
+    if (value.length > EXERCISE_NAME_MAX_LENGTH) {
+        return `Максимум ${EXERCISE_NAME_MAX_LENGTH} символов`;
+    }
     return undefined;
 };
 
@@ -463,7 +466,7 @@ export const AddExercise: React.FC = () => {
                         disabled={isSubmitting}
                     />
                     <p className="text-xs text-telegram-hint mt-1">
-                        {formData.name.length}/50 символов
+                        {formData.name.length}/{EXERCISE_NAME_MAX_LENGTH} символов
                     </p>
                 </div>
 

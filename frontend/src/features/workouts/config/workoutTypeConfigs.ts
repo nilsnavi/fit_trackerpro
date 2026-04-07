@@ -70,9 +70,9 @@ const strength: WorkoutTypeConfig = {
     backendType: 'strength',
     defaultDurationMinutes: 45,
     presets: [
-        { id: 'strength-3', label: '3 круга', value: 3, unit: 'rounds' },
-        { id: 'strength-4', label: '4 круга', value: 4, unit: 'rounds' },
-        { id: 'strength-5', label: '5 кругов', value: 5, unit: 'rounds' },
+        { id: 'strength-3', label: '3 подхода', value: 3, unit: 'rounds' },
+        { id: 'strength-4', label: '4 подхода', value: 4, unit: 'rounds' },
+        { id: 'strength-5', label: '5 подходов', value: 5, unit: 'rounds' },
     ],
     tags: ['strength'],
     parameters: {
@@ -90,7 +90,7 @@ const strength: WorkoutTypeConfig = {
     },
     hints: {
         modeIntro: 'Между подходами включайте отдых — таймер подскажет, когда продолжить.',
-        presetPicker: 'Круги — ориентир объёма; фактическое число упражнений задаётся в журнале.',
+        presetPicker: 'Подходы — ориентир объёма; фактическое число упражнений задаётся в журнале.',
         emptyHistory: 'Начните силовую с режима «Силовая» или соберите шаблон в конструкторе.',
         builder: 'Силовые блоки: вес, повторы и отдых между подходами попадут в шаблон.',
     },
@@ -109,7 +109,7 @@ const functional: WorkoutTypeConfig = {
     listTypes: [],
     title: 'Функционал',
     filterLabel: 'Функционал',
-    subtitle: 'HIIT и круговая работа',
+    subtitle: 'HIIT и интервальная работа',
     description: 'Интервальная нагрузка на всё тело.',
     themeClass: 'from-amber-500 to-orange-500',
     listBadgeClass: 'bg-amber-500',
@@ -117,9 +117,9 @@ const functional: WorkoutTypeConfig = {
     backendType: 'mixed',
     defaultDurationMinutes: 25,
     presets: [
-        { id: 'functional-3', label: '3 круга', value: 3, unit: 'rounds' },
-        { id: 'functional-5', label: '5 кругов', value: 5, unit: 'rounds' },
-        { id: 'functional-7', label: '7 кругов', value: 7, unit: 'rounds' },
+        { id: 'functional-3', label: '3 подхода', value: 3, unit: 'rounds' },
+        { id: 'functional-5', label: '5 подходов', value: 5, unit: 'rounds' },
+        { id: 'functional-7', label: '7 подходов', value: 7, unit: 'rounds' },
     ],
     tags: ['mixed', 'functional', 'hiit'],
     parameters: {
@@ -138,7 +138,7 @@ const functional: WorkoutTypeConfig = {
         suggestedIntervalRestSeconds: 20,
     },
     hints: {
-        modeIntro: 'Чередуйте работу и отдых; пресеты задают число кругов.',
+        modeIntro: 'Чередуйте работу и отдых; пресеты задают число подходов.',
         presetPicker: 'Интервалы можно уточнить по упражнениям в журнале после старта.',
         builder: 'Смешивайте силовые и кардио-блоки — тип шаблона на бэкенде будет mixed.',
     },
@@ -147,7 +147,7 @@ const functional: WorkoutTypeConfig = {
         emphasizeRoundsInPresets: true,
         showCaloriesInSummary: true,
         compactExerciseCards: true,
-        intensityHint: 'HIIT обычно high; при кругах средней интенсивности выберите medium.',
+        intensityHint: 'HIIT обычно high; при подходах средней интенсивности выберите medium.',
     },
 }
 

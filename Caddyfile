@@ -1,6 +1,10 @@
 :80 {
   encode gzip
 
+  header * {
+    Ngrok-Skip-Browser-Warning "FitTracker Pro"
+  }
+
   @api path /api/* /docs* /redoc* /openapi.json /metrics /health
   handle @api {
     reverse_proxy backend:8000
@@ -10,4 +14,3 @@
     reverse_proxy frontend:80
   }
 }
-
