@@ -12,6 +12,7 @@ interface TemplateEditorHydratePayload {
     description: string
     types: WorkoutType[]
     blocks: WorkoutBlock[]
+    version?: number
 }
 
 interface TemplateEditorState {
@@ -22,6 +23,12 @@ interface TemplateEditorState {
     blocks: WorkoutBlock[]
     isDirty: boolean
     validationErrors: TemplateEditorValidationErrors
+    /* Template version for optimistic locking */
+    version: number | null
+    /* Server version when template was last loaded (for conflict detection) */
+    serverVersion: number | null
+    /* Whether template was modified by someone else while editing */
+    hasConflict: boolean
 
     hydrate: (payload: TemplateEditorHydratePayload) => void
     reset: () => void
@@ -54,6 +61,9 @@ const initialState = {
     blocks: [] as WorkoutBlock[],
     isDirty: false,
     validationErrors: {} as TemplateEditorValidationErrors,
+    version: null as number | null,
+    serverVersion: null as number | null,
+    hasConflict: false,
 }
 
 const withOrder = (blocks: WorkoutBlock[]) =>
@@ -65,15 +75,18 @@ const withOrder = (blocks: WorkoutBlock[]) =>
 export const useTemplateEditorStore = create<TemplateEditorState>()((set) => ({
     ...initialState,
 
-    hydrate: ({ id, name, description, types, blocks }) =>
+    hydrate: (payload) =>
         set({
-            id,
-            name,
-            description,
-            types,
-            blocks: withOrder(blocks),
+            id: payload.id,
+            name: payload.name,
+            description: payload.description,
+            types: payload.types,
+            blocks: withOrder(payload.blocks),
             isDirty: false,
             validationErrors: {},
+            version: payload.version ?? null,
+            serverVersion: payload.version ?? null,
+            hasConflict: false,
         }),
 
     reset: () => set(initialState),
@@ -197,7 +210,23 @@ export const useTemplateEditorStore = create<TemplateEditorState>()((set) => ({
         }),
 
     clearValidationErrors: () => set({ validationErrors: {} }),
-}))
+
+    /* Version tracking for optimistic locking */
+    setVersion: (version: number) =>
+        set({ version }),
+
+    setServerVersion: (version: number) =>
+        set({ serverVersion: version }),
+
+    detectConflict: (serverVersion: number) =>
+        set((state) => {
+            const hasConflict = state.serverVersion !== null && serverVersion > state.serverVersion
+            return { hasConflict }
+        }),
+
+    clearConflict: () =>
+        set({ hasConflict: false }),
+})
 
 /**
  * Selects mutable editor state fields in a single subscription.
@@ -213,6 +242,8 @@ export function useTemplateEditorStateSlice() {
             blocks: s.blocks,
             isDirty: s.isDirty,
             validationErrors: s.validationErrors,
+            version: s.version,
+            hasConflict: s.hasConflict,
         })),
     )
 }

@@ -294,6 +294,7 @@ export const WorkoutBuilder: React.FC = () => {
             description: '',
             types: mapBackendTypeToSelectedTypes(editingTemplate.type),
             blocks: mapTemplateExercisesToBlocks(editingTemplate.exercises),
+            version: editingTemplate.version,
         });
         setRestoredDraftAt(null);
         hydratedTemplateIdRef.current = editingTemplate.id;

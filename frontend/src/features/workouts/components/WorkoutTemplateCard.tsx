@@ -1,7 +1,8 @@
-import { Copy, Globe, LayoutTemplate, Lock, MoreVertical, Pencil, Pin, Play } from 'lucide-react'
+import { Copy, Globe, LayoutTemplate, Lock, MoreVertical, Pencil, Pin, Play, Dumbbell, Heart } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import type { BackendWorkoutType, WorkoutTemplateResponse } from '@features/workouts/types/workouts'
 import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
+import { cn } from '@shared/lib/cn'
 
 const TYPE_LABEL: Record<BackendWorkoutType, string> = {
     cardio: 'Кардио',
@@ -9,6 +10,11 @@ const TYPE_LABEL: Record<BackendWorkoutType, string> = {
     flexibility: 'Гибкость',
     mixed: 'Смешанная',
 }
+
+const EXERCISE_ICON_MAP = {
+    strength: Dumbbell,
+    cardio: Heart,
+} as const
 
 export interface WorkoutTemplateCardProps {
     template: WorkoutTemplateResponse
@@ -106,6 +112,42 @@ export function WorkoutTemplateCard({
                     ) : null}
                 </div>
             </div>
+
+            {/* Quick exercise preview */}
+            {template.exercises.length > 0 && (
+                <div className="mt-3 space-y-1 rounded-lg bg-telegram-bg/40 p-3">
+                    {template.exercises.slice(0, 2).map((exercise, idx) => {
+                        const parts: string[] = []
+                        if (exercise.sets) parts.push(`${exercise.sets}×`)
+                        if (exercise.reps) parts.push(`${exercise.reps}повт`)
+                        if (exercise.duration) parts.push(`${exercise.duration}м`)
+                        if (exercise.weight) parts.push(`${exercise.weight}кг`)
+                        
+                        return (
+                            <div key={idx} className="flex items-start gap-2">
+                                <div className="text-[10px] font-bold text-telegram-hint mt-0.5">
+                                    {idx + 1}.
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[11px] font-medium text-telegram-text truncate">
+                                        {exercise.name}
+                                    </p>
+                                    {parts.length > 0 && (
+                                        <p className="text-[9px] text-telegram-hint">
+                                            {parts.join(' ')}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
+                    {template.exercises.length > 2 && (
+                        <p className="text-[10px] text-telegram-hint pt-1">
+                            +{template.exercises.length - 2} ещё
+                        </p>
+                    )}
+                </div>
+            )}
 
             <div className="mt-4 grid grid-cols-3 gap-2">
                 <Button
