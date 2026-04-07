@@ -13,6 +13,7 @@ from app.domain.daily_wellness import DailyWellness  # noqa: F401
 from app.domain.emergency_contact import EmergencyContact  # noqa: F401
 from app.domain.exercise import Exercise  # noqa: F401
 from app.domain.glucose_log import GlucoseLog  # noqa: F401
+from app.domain.idempotency_record import IdempotencyRecord  # noqa: F401
 from app.domain.muscle_load import MuscleLoad  # noqa: F401
 from app.domain.recovery_state import RecoveryState  # noqa: F401
 from app.domain.reference_data import (  # noqa: F401

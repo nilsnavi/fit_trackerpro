@@ -269,8 +269,11 @@ async def update_active_workout(
     request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
+    idempotency_key: str | None = Depends(optional_idempotency_key),
 ):
     service = WorkoutsService(db)
+    if session_data.idempotency_key is None and idempotency_key:
+        session_data.idempotency_key = idempotency_key
     return await service.update_workout_session(
         user_id=current_user.id,
         workout_id=workout_id,

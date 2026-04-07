@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 
 class DomainError(Exception):
@@ -12,8 +12,14 @@ class DomainError(Exception):
     http_status: ClassVar[int] = 400
     default_message: ClassVar[str] = "Request failed"
 
-    def __init__(self, message: str | None = None) -> None:
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        details: list[dict[str, Any]] | dict[str, Any] | None = None,
+    ) -> None:
         self.message = message if message is not None else self.default_message
+        self.details = details
         super().__init__(self.message)
 
 

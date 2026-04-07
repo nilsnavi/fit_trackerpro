@@ -58,6 +58,13 @@ class WorkoutLog(Base):
         nullable=True,
         comment="Duration in minutes"
     )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+        comment="Optimistic locking version for in-progress updates",
+    )
 
     # Completed exercises stored as JSONB
     exercises: Mapped[list[dict]] = mapped_column(
@@ -130,6 +137,10 @@ class WorkoutLog(Base):
             name="ck_workout_logs_duration_range",
         ),
         CheckConstraint(
+            "version >= 1",
+            name="ck_workout_logs_version_positive",
+        ),
+        CheckConstraint(
             "glucose_before IS NULL OR (glucose_before >= 2 AND glucose_before <= 30)",
             name="ck_workout_logs_glucose_before_range",
         ),
@@ -144,6 +155,7 @@ class WorkoutLog(Base):
             name="fk_workout_logs_user_template",
         ),
         Index('ix_workout_logs_user_date', 'user_id', 'date'),
+        Index('ix_workout_logs_user_id_id_version', 'user_id', 'id', 'version'),
     )
 
     def __repr__(self) -> str:

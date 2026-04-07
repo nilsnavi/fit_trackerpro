@@ -4,6 +4,7 @@ export const WORKOUT_SYNC_KINDS = {
     TEMPLATE_UPDATE: 'workout.template.update',
     START: 'workout.start',
     SESSION_UPDATE: 'workout.session.update',
+    SESSION_COMPLETE: 'workout.session.complete',
     COMPLETE: 'workout.complete',
 } as const
 

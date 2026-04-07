@@ -133,6 +133,8 @@ export class SyncQueueEngine {
             kind: input.kind,
             dedupeKey: input.dedupeKey,
             payload: input.payload,
+               idempotencyKey: input.idempotencyKey,
+               expectedVersion: input.expectedVersion,
             createdAt: now,
             attempts: 0,
             status: 'pending',

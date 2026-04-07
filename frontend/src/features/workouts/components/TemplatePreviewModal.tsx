@@ -1,9 +1,8 @@
-import { AlertCircle, Dumbbell, Heart, Timer, Clock } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { Modal } from '@shared/ui/Modal'
 import { Button } from '@shared/ui/Button'
 import type { WorkoutTemplateResponse } from '@features/workouts/types/workouts'
 import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
-import { cn } from '@shared/lib/cn'
 
 interface TemplatePreviewModalProps {
     isOpen: boolean
@@ -14,16 +13,9 @@ interface TemplatePreviewModalProps {
     isStarting?: boolean
 }
 
-const EXERCISE_ICON_MAP = {
-    strength: Dumbbell,
-    cardio: Heart,
-    timer: Timer,
-} as const
-
 export function TemplatePreviewModal({
     isOpen,
     template,
-    isLoading = false,
     onClose,
     onStart,
     isStarting = false,

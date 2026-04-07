@@ -59,11 +59,14 @@ export function enqueueOfflineWorkoutStart(payload: WorkoutStartRequest): never 
 export function enqueueOfflineWorkoutSessionUpdate(
     workoutId: number,
     payload: WorkoutSessionUpdateRequest,
+    expectedVersion?: number,
 ): never {
     enqueueSyncMutation({
         kind: WORKOUT_SYNC_KINDS.SESSION_UPDATE,
         dedupeKey: `workout:update:${workoutId}`,
         payload: { workoutId, body: payload },
+        idempotencyKey: `session:update:${workoutId}:${crypto.randomUUID()}`,
+        expectedVersion,
     })
     requestSyncFlush()
     throw new OfflineMutationQueuedError()
@@ -73,11 +76,14 @@ export function enqueueOfflineWorkoutSessionUpdate(
 export function enqueueOfflineWorkoutComplete(
     workoutId: number,
     payload: WorkoutCompleteRequest,
+    expectedVersion?: number,
 ): never {
     enqueueSyncMutation({
         kind: WORKOUT_SYNC_KINDS.COMPLETE,
         dedupeKey: `workout:complete:${workoutId}`,
         payload: { workoutId, body: payload },
+        idempotencyKey: `session:complete:${workoutId}:${crypto.randomUUID()}`,
+        expectedVersion,
     })
     requestSyncFlush()
     throw new OfflineMutationQueuedError()

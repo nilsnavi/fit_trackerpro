@@ -83,6 +83,7 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
         status_code=exc.http_status,
         code=exc.code,
         message=exc.message,
+        details=getattr(exc, "details", None),
     )
 
 

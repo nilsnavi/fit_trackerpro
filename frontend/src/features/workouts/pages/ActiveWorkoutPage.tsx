@@ -37,8 +37,10 @@ import { FinishWorkoutModal } from '@features/workouts/active/modals/FinishWorko
 import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
 import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
+import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWorkoutStructureEditor } from '@features/workouts/active/hooks/useWorkoutStructureEditor'
+import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
 import type {
     CompletedSet,
     CompletedExercise,
@@ -105,6 +107,9 @@ export function ActiveWorkoutPage() {
     const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
     const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
     const abandonWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.abandonDraft)
+    const initializeActiveWorkoutDraft = useActiveWorkoutSessionDraftStore((s) => s.initializeDraft)
+    const clearActiveWorkoutDraft = useActiveWorkoutSessionDraftStore((s) => s.clearDraft)
+    const getActiveWorkoutDraft = useActiveWorkoutSessionDraftStore((s) => s.getDraft)
 
     const activeExercises = useActiveWorkoutStore((s) => s.exercises)
     const currentExerciseIndex = useActiveWorkoutStore((s) => s.currentExerciseIndex)
@@ -204,6 +209,15 @@ export function ActiveWorkoutPage() {
         buildSyncPayload,
     })
 
+    useActiveWorkoutDraftPersist(
+        workout,
+        isActiveDraft,
+        elapsedSeconds,
+        currentExerciseIndex,
+        currentSetIndex,
+        restDefaultSeconds,
+    )
+
     const {
         currentExercise,
         currentSet,
@@ -256,6 +270,52 @@ export function ActiveWorkoutPage() {
         if (!isRestPresetsModalOpen) return
         setRestPresetsDraft(restPresets.join(', '))
     }, [isRestPresetsModalOpen, restPresets])
+
+    useEffect(() => {
+        if (!workout || !isActiveDraft) return
+
+        const existingDraft = getActiveWorkoutDraft()
+        if (existingDraft?.workoutId === workout.id) {
+            return
+        }
+
+        const startedAtMs = Date.parse(workout.created_at)
+        initializeActiveWorkoutDraft({
+            workoutId: workout.id,
+            templateId: workout.template_id ?? null,
+            startedAt: Number.isNaN(startedAtMs) ? Date.now() : startedAtMs,
+            exercises: workout.exercises,
+            elapsedSeconds,
+            currentExerciseIndex,
+            currentSetIndex,
+            comments: workout.comments,
+            tags: workout.tags ?? [],
+            restDefaultSeconds,
+            lastSyncedAt: Date.now(),
+            lastSyncedVersion: 0,
+            lastSyncedPayload: JSON.stringify(buildSyncPayload(workout)),
+            pendingOperationIds: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        })
+    }, [
+        currentExerciseIndex,
+        currentSetIndex,
+        elapsedSeconds,
+        getActiveWorkoutDraft,
+        initializeActiveWorkoutDraft,
+        isActiveDraft,
+        restDefaultSeconds,
+        workout,
+    ])
+
+    useEffect(() => {
+        if (!workout) return
+        const isCompleted = typeof workout.duration === 'number' && workout.duration > 0
+        if (isCompleted) {
+            clearActiveWorkoutDraft()
+        }
+    }, [clearActiveWorkoutDraft, workout])
 
     const handleSelectRestPreset = useCallback((seconds: number) => {
         setRestDefaultSeconds(seconds)
@@ -692,6 +752,7 @@ export function ActiveWorkoutPage() {
         skipRestTimer()
         resetActiveWorkoutState()
         abandonWorkoutSessionDraft()
+        clearActiveWorkoutDraft()
         queryClient.removeQueries({ queryKey: detailQueryKey, exact: true })
         void queryClient.invalidateQueries({ queryKey: ['workouts'] })
         toast.info('Тренировка отменена')
@@ -764,6 +825,7 @@ export function ActiveWorkoutPage() {
             {
                 onSuccess: (data) => {
                     setIsFinishSheetOpen(false)
+                    clearActiveWorkoutDraft()
                     toast.success('Тренировка успешно завершена')
                     navigate(`/workouts/${data.id}`)
                 },
@@ -777,7 +839,7 @@ export function ActiveWorkoutPage() {
                 },
             },
         )
-    }, [completeMutation, durationMinutes, navigate, queryClient, tg, workoutId])
+    }, [clearActiveWorkoutDraft, completeMutation, durationMinutes, navigate, queryClient, tg, workoutId])
 
     const handleOpenFinishSheet = async () => {
         if (completeMutation.isPending || isCompletingRef.current) return

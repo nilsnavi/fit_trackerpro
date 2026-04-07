@@ -7,6 +7,7 @@ from sqlalchemy import and_, desc, func, select, update
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.exercise import Exercise
+from app.domain.idempotency_record import IdempotencyRecord
 from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
 from app.domain.training_load_daily import TrainingLoadDaily
@@ -283,3 +284,44 @@ class WorkoutsRepository(SQLAlchemyRepository):
     async def commit_workout_completion(self, workout: WorkoutLog) -> None:
         await self.commit()
         await self.refresh(workout)
+
+    async def get_idempotency_record(
+        self,
+        *,
+        user_id: int,
+        operation_type: str,
+        idempotency_key: str,
+    ) -> Optional[IdempotencyRecord]:
+        result = await self.db.execute(
+            select(IdempotencyRecord).where(
+                and_(
+                    IdempotencyRecord.user_id == user_id,
+                    IdempotencyRecord.operation_type == operation_type,
+                    IdempotencyRecord.idempotency_key == idempotency_key,
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def create_idempotency_record(
+        self,
+        *,
+        user_id: int,
+        operation_type: str,
+        idempotency_key: str,
+        resource_id: int,
+        request_hash: str,
+        response_payload: dict,
+    ) -> IdempotencyRecord:
+        record = IdempotencyRecord(
+            user_id=user_id,
+            operation_type=operation_type,
+            idempotency_key=idempotency_key,
+            resource_id=resource_id,
+            request_hash=request_hash,
+            response_payload=response_payload,
+        )
+        self.add(record)
+        await self.commit()
+        await self.refresh(record)
+        return record
