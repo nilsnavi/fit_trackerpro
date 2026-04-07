@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { useNavigate } from 'react-router-dom'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
-import { useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import { useWorkoutSessionStarter } from '@features/workouts/hooks/useWorkoutSessionStarter'
 import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import { getWorkoutListTypeConfig } from '@features/workouts/config/workoutTypeConfigs'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
@@ -40,9 +40,9 @@ export function Home() {
     const { data: userStats } = useUserStatsQuery()
     const { data: waterData } = useHomeWaterQuery()
     const { templates, isPending: templatesLoading } = useHomeWorkoutTemplatesQuery()
-    const startWorkoutMutation = useStartWorkoutMutation()
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
+    const { startWorkoutSession, isStartingSession } = useWorkoutSessionStarter()
     const activeWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
+    const activeWorkoutTemplateId = useWorkoutSessionDraftStore((s) => s.templateId)
     const activeWorkoutTitle = useWorkoutSessionDraftStore((s) => s.title)
     const pinnedTemplateIds = useWorkoutTemplatePinsStore((s) => s.pinnedTemplateIds)
     const togglePinnedTemplate = useWorkoutTemplatePinsStore((s) => s.togglePinnedTemplate)
@@ -137,9 +137,16 @@ export function Home() {
         const templateId = Number.parseInt(id, 10)
         if (!Number.isFinite(templateId)) return
         try {
-            const started = await startWorkoutMutation.mutateAsync({ template_id: templateId })
             const templateName = templates.find((t) => t.id === id)?.name
-            setWorkoutSessionDraft(started.id, templateName ?? `Тренировка #${started.id}`, started.template_id ?? templateId)
+            const started = await startWorkoutSession({
+                startPayload: { template_id: templateId },
+                draft: {
+                    title: templateName ?? `Тренировка #${templateId}`,
+                    templateId,
+                },
+                onOfflineQueued: () => navigate('/workouts'),
+            })
+            if (!started) return
             navigate(`/workouts/active/${started.id}`)
         } catch {
             // errors are surfaced via global error handlers
@@ -167,8 +174,9 @@ export function Home() {
     const activeTemplateName = useMemo(() => {
         const activeTitle = activeWorkoutTitle?.trim()
         if (activeTitle) return activeTitle
-        return templates.find((template) => template.id === String(activeWorkoutId))?.name ?? null
-    }, [activeWorkoutId, activeWorkoutTitle, templates])
+        if (activeWorkoutTemplateId == null) return null
+        return templates.find((template) => template.id === String(activeWorkoutTemplateId))?.name ?? null
+    }, [activeWorkoutTemplateId, activeWorkoutTitle, templates])
 
     const handleToggleFavorite = (id: string) => {
         const templateId = Number.parseInt(id, 10)
@@ -195,8 +203,12 @@ export function Home() {
         hapticFeedback({ type: 'impact', style: 'medium' })
 
         try {
-            const started = await startWorkoutMutation.mutateAsync({})
-            setWorkoutSessionDraft(started.id, 'Быстрая тренировка', started.template_id)
+            const started = await startWorkoutSession({
+                startPayload: {},
+                draft: { title: 'Быстрая тренировка' },
+                onOfflineQueued: () => navigate('/workouts'),
+            })
+            if (!started) return
             navigate(`/workouts/active/${started.id}`)
         } catch {
             // handled by global error boundaries/toasts
@@ -288,7 +300,7 @@ export function Home() {
                                 size="md"
                                 className="border border-white/15 bg-white text-primary hover:bg-white/90"
                                 onClick={() => void handleStartEmptyWorkout()}
-                                isLoading={startWorkoutMutation.isPending}
+                                isLoading={isStartingSession}
                                 leftIcon={<Play className="h-4 w-4" />}
                             >
                                 Пустая сессия

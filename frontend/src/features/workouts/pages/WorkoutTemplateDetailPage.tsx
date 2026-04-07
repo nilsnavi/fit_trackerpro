@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, Clock3, Copy, Lock, Pencil, Play, Timer, Globe, Layers3 } from 'lucide-react'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { queryKeys } from '@shared/api/queryKeys'
-import { useCloneWorkoutTemplateMutation, useStartWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import { useCloneWorkoutTemplateMutation } from '@features/workouts/hooks/useWorkoutMutations'
+import { useWorkoutSessionStarter } from '@features/workouts/hooks/useWorkoutSessionStarter'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import { estimateTemplateDurationMinutes } from '@features/workouts/lib/templateDuration'
@@ -12,7 +13,6 @@ import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { Button } from '@shared/ui/Button'
 import { getErrorMessage } from '@shared/errors'
-import { useWorkoutSessionDraftStore } from '@/state/local'
 
 function formatExerciseDetails(exercise: {
     sets: number
@@ -34,9 +34,8 @@ export function WorkoutTemplateDetailPage() {
     const navigate = useNavigate()
     const { id } = useParams<{ id: string }>()
     const tg = useTelegramWebApp()
-    const startWorkoutMutation = useStartWorkoutMutation()
+    const { startWorkoutSession } = useWorkoutSessionStarter()
     const cloneTemplateMutation = useCloneWorkoutTemplateMutation()
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
     const [isStarting, setIsStarting] = useState(false)
     const [isDuplicating, setIsDuplicating] = useState(false)
     const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false)
@@ -87,19 +86,19 @@ export function WorkoutTemplateDetailPage() {
         if (!template) return
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         setIsStarting(true)
-        startWorkoutMutation.mutate(
-            { template_id: template.id, name: template.name },
-            {
-                onSuccess: (res) => {
-                    setWorkoutSessionDraft(res.id, template.name, res.template_id ?? template.id)
-                    navigate(`/workouts/active/${res.id}`)
-                },
-                onSettled: () => {
-                    setIsStarting(false)
-                    setIsStartOptionsOpen(false)
-                },
-            },
-        )
+        void startWorkoutSession({
+            startPayload: { template_id: template.id, name: template.name },
+            draft: { title: template.name, templateId: template.id },
+            onOfflineQueued: () => navigate('/workouts'),
+        })
+            .then((started) => {
+                if (!started) return
+                navigate(`/workouts/active/${started.id}`)
+            })
+            .finally(() => {
+                setIsStarting(false)
+                setIsStartOptionsOpen(false)
+            })
     }
 
     const handleEditBeforeStart = () => {

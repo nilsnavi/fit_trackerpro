@@ -80,18 +80,30 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
     useEffect(() => {
         setCollapsedExerciseIds((prev) => {
             const next: Record<string, true> = {}
+            const activeIds = new Set<string>()
 
             exercises.forEach((exercise, index) => {
                 const itemId = `${exercise.exercise_id}-${index}`
+                activeIds.add(itemId)
                 const shouldCollapse = index !== currentExerciseIndex
 
-                if (shouldCollapse && prev[itemId] !== undefined) {
+                if (!shouldCollapse) {
+                    return
+                }
+
+                if (prev[itemId]) {
                     next[itemId] = true
                     return
                 }
 
-                if (shouldCollapse) {
+                if (prev[itemId] === undefined) {
                     next[itemId] = true
+                }
+            })
+
+            Object.keys(prev).forEach((itemId) => {
+                if (!activeIds.has(itemId)) {
+                    delete next[itemId]
                 }
             })
 
@@ -142,6 +154,9 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                             Number((incrementBase * 2).toFixed(2)),
                             Number((incrementBase * 4).toFixed(2)),
                         ]
+                        const currentSetNumber = currentSetIndex + 1
+                        const currentSetExists =
+                            currentSetNumber >= 1 && currentSetNumber <= exercise.sets_completed.length
 
                         return (
                             <SortableExerciseCard
@@ -218,6 +233,45 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                     {!isCollapsed && (
                                         <>
                                             <div className="mt-2 space-y-2">
+                                                {isCurrentExercise ? (
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <button
+                                                            type="button"
+                                                            disabled={!currentSetExists}
+                                                            onClick={() => onCopyPreviousSet(exerciseIndex, currentSetNumber)}
+                                                            className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                                        >
+                                                            Повторить прошлый
+                                                        </button>
+                                                        <div className="grid grid-cols-2 gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                disabled={!currentSetExists}
+                                                                onClick={() => onAdjustWeight(exerciseIndex, currentSetNumber, -incrementBase)}
+                                                                className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                                            >
+                                                                -{incrementBase}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={!currentSetExists}
+                                                                onClick={() => onAdjustWeight(exerciseIndex, currentSetNumber, incrementBase)}
+                                                                className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                                            >
+                                                                +{incrementBase}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="text-[11px] font-medium uppercase tracking-wide text-telegram-hint">
+                                                        Подходы
+                                                    </p>
+                                                    <p className="text-[11px] text-telegram-hint">
+                                                        {exercise.sets_completed.length} шт
+                                                    </p>
+                                                </div>
                                                 <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
                                                     <span className="shrink-0 text-[11px] text-telegram-hint">Шаг веса:</span>
                                                     {QUICK_INCREMENT_BASE_OPTIONS.map((option) => (
@@ -262,7 +316,7 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                         type="button"
                                                         onClick={onRemoveSet}
                                                         disabled={exercise.sets_completed.length <= 1}
-                                                        className="flex min-h-[40px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                                        className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
                                                     >
                                                         <Minus className="h-3.5 w-3.5" />
                                                         Убрать подход
@@ -270,7 +324,7 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                     <button
                                                         type="button"
                                                         onClick={onAddSet}
-                                                        className="flex min-h-[40px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
+                                                        className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
                                                     >
                                                         <Plus className="h-3.5 w-3.5" />
                                                         Добавить подход

@@ -5,10 +5,9 @@ import { useWorkoutHistoryItemQuery } from './useWorkoutHistoryItemQuery'
 import {
     useCreateTemplateFromWorkoutMutation,
     useDeleteWorkoutTemplateMutation,
-    useStartWorkoutMutation,
 } from './useWorkoutMutations'
-import { useUpdateWorkoutSessionMutation } from './useWorkoutMutations'
 import { buildRepeatSessionPayload } from '../lib/workoutModeHelpers'
+import { useWorkoutSessionStarter } from './useWorkoutSessionStarter'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import type { WorkoutType } from '@shared/types'
 import type { WorkoutMode } from '../config/workoutTypeConfigs'
@@ -27,11 +26,9 @@ export function useWorkoutsPageState() {
     const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
     const draftTitle = useWorkoutSessionDraftStore((s) => s.title)
     const draftUpdatedAt = useWorkoutSessionDraftStore((s) => s.updatedAt)
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
     const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
 
-    const startWorkoutMutation = useStartWorkoutMutation()
-    const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
+    const { startWorkoutSession, isStartingSession } = useWorkoutSessionStarter()
     const createTemplateFromWorkoutMutation = useCreateTemplateFromWorkoutMutation()
     const deleteTemplateMutation = useDeleteWorkoutTemplateMutation()
 
@@ -101,38 +98,52 @@ export function useWorkoutsPageState() {
     const handleStartEmpty = useCallback(async () => {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         const title = 'Свободная тренировка'
-        const started = await startWorkoutMutation.mutateAsync({ name: title })
-        setWorkoutSessionDraft(started.id, title, started.template_id ?? null)
+        const started = await startWorkoutSession({
+            startPayload: { name: title },
+            draft: { title },
+        })
+        if (!started) {
+            navigate('/workouts')
+            return
+        }
         navigate(`/workouts/active/${started.id}`)
-    }, [tg, startWorkoutMutation, setWorkoutSessionDraft, navigate])
+    }, [tg, startWorkoutSession, navigate])
 
     const handleStartLast = useCallback(
         async (lastItem: WorkoutHistoryItem) => {
             tg.hapticFeedback({ type: 'impact', style: 'medium' })
             const title = lastItem.comments?.trim() || 'Последняя тренировка'
-            const started = await startWorkoutMutation.mutateAsync({ name: title })
-            await updateWorkoutSessionMutation.mutateAsync({
-                workoutId: started.id,
-                payload: buildRepeatSessionPayload(lastItem),
+            const started = await startWorkoutSession({
+                startPayload: { name: title },
+                patchPayload: buildRepeatSessionPayload(lastItem),
+                draft: { title },
             })
-            setWorkoutSessionDraft(started.id, title, started.template_id ?? null)
+            if (!started) {
+                navigate('/workouts')
+                return
+            }
             navigate(`/workouts/active/${started.id}`)
         },
-        [tg, startWorkoutMutation, updateWorkoutSessionMutation, setWorkoutSessionDraft, navigate],
+        [tg, startWorkoutSession, navigate],
     )
 
     const handleStartFromTemplate = useCallback(
         async (templateId: number, templateName?: string) => {
             tg.hapticFeedback({ type: 'impact', style: 'medium' })
-            const started = await startWorkoutMutation.mutateAsync({ template_id: templateId })
-            setWorkoutSessionDraft(
-                started.id,
-                templateName ?? `Тренировка #${started.id}`,
-                started.template_id ?? templateId,
-            )
+            const started = await startWorkoutSession({
+                startPayload: { template_id: templateId },
+                draft: {
+                    title: templateName ?? `Тренировка #${templateId}`,
+                    templateId,
+                },
+            })
+            if (!started) {
+                navigate('/workouts')
+                return
+            }
             navigate(`/workouts/active/${started.id}`)
         },
-        [tg, startWorkoutMutation, setWorkoutSessionDraft, navigate],
+        [tg, startWorkoutSession, navigate],
     )
 
     const handleSaveWorkoutAsTemplate = useCallback(
@@ -193,8 +204,8 @@ export function useWorkoutsPageState() {
         templateToDelete,
         deletingTemplateId,
         // Mutation state
-        isStartingWorkout: startWorkoutMutation.isPending,
-        isRepeatingLast: startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending,
+        isStartingWorkout: isStartingSession,
+        isRepeatingLast: isStartingSession,
         isSavingTemplateFromHistory: createTemplateFromWorkoutMutation.isPending,
         isDeletingTemplate: deleteTemplateMutation.isPending,
         // Handlers

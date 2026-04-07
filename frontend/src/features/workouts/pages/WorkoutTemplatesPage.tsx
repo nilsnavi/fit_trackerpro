@@ -17,9 +17,9 @@ import {
     useArchiveWorkoutTemplateMutation,
     useUnarchiveWorkoutTemplateMutation,
     useDeleteWorkoutTemplateMutation,
-    useStartWorkoutMutation,
 } from '@features/workouts/hooks/useWorkoutMutations'
-import { useWorkoutSessionDraftStore, useWorkoutTemplatePinsStore } from '@/state/local'
+import { useWorkoutTemplatePinsStore } from '@/state/local'
+import { useWorkoutSessionStarter } from '@features/workouts/hooks/useWorkoutSessionStarter'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext'
 import {
@@ -70,7 +70,7 @@ export function WorkoutTemplatesPage() {
 
     const pinnedIds = useWorkoutTemplatePinsStore((s) => s.pinnedTemplateIds)
     const togglePin = useWorkoutTemplatePinsStore((s) => s.togglePinnedTemplate)
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
+    const { startWorkoutSession } = useWorkoutSessionStarter()
 
     const includeArchived = activeSection === 'archived'
     const { data, isPending, error } = useWorkoutTemplatesQuery({ includeArchived })
@@ -78,7 +78,6 @@ export function WorkoutTemplatesPage() {
     const archiveTemplateMutation = useArchiveWorkoutTemplateMutation()
     const unarchiveTemplateMutation = useUnarchiveWorkoutTemplateMutation()
     const deleteTemplateMutation = useDeleteWorkoutTemplateMutation()
-    const startWorkoutMutation = useStartWorkoutMutation()
 
     const allTemplates = useMemo(() => data?.items ?? [], [data?.items])
 
@@ -164,16 +163,16 @@ export function WorkoutTemplatesPage() {
     const handleStart = (id: number, name: string) => {
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         setIsStarting(true)
-        startWorkoutMutation.mutate(
-            { template_id: id, name },
-            {
-                onSuccess: (res) => {
-                    setWorkoutSessionDraft(res.id, name, res.template_id ?? id)
-                    navigate(`/workouts/active/${res.id}`)
-                },
-                onSettled: () => setIsStarting(false),
-            },
-        )
+        void startWorkoutSession({
+            startPayload: { template_id: id, name },
+            draft: { title: name, templateId: id },
+            onOfflineQueued: () => navigate('/workouts'),
+        })
+            .then((started) => {
+                if (!started) return
+                navigate(`/workouts/active/${started.id}`)
+            })
+            .finally(() => setIsStarting(false))
     }
 
     const handleOpenTemplateDetails = (id: number) => {

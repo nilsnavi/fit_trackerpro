@@ -6,10 +6,8 @@ import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
     useCreateWorkoutTemplateMutation,
-    useStartWorkoutMutation,
-    useUpdateWorkoutSessionMutation,
 } from '@features/workouts/hooks/useWorkoutMutations'
-import { useWorkoutSessionDraftStore } from '@/state/local'
+import { useWorkoutSessionStarter } from '@features/workouts/hooks/useWorkoutSessionStarter'
 import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHelpers'
 import {
     mapEditorExercisesToCompleted,
@@ -68,10 +66,8 @@ export function useWorkoutModeHandlers({
 }: UseWorkoutModeHandlersParams): WorkoutModeHandlers {
     const navigate = useNavigate()
 
-    const startWorkoutMutation = useStartWorkoutMutation()
-    const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
+    const { startWorkoutSession, isStartingSession } = useWorkoutSessionStarter()
     const createTemplateMutation = useCreateWorkoutTemplateMutation()
-    const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
 
     const markEditorCleanAndNavigate = useCallback((to: string) => {
         useWorkoutModeEditorStore.getState().markClean()
@@ -84,30 +80,25 @@ export function useWorkoutModeHandlers({
         if (!recentWorkout) return
         onRepeatError(null)
         try {
-            const started = await startWorkoutMutation.mutateAsync({
-                name: recentWorkout.comments?.trim() || `${config.title} • повтор`,
-                type: config.backendType,
+            const started = await startWorkoutSession({
+                startPayload: {
+                    name: recentWorkout.comments?.trim() || `${config.title} • повтор`,
+                    type: config.backendType,
+                },
+                patchPayload: buildRepeatSessionPayload(recentWorkout),
+                draft: { title: recentWorkout.comments?.trim() || config.title },
+                onOfflineQueued: () => navigate('/workouts'),
             })
-            await updateWorkoutSessionMutation.mutateAsync({
-                workoutId: started.id,
-                payload: buildRepeatSessionPayload(recentWorkout),
-            })
-            setWorkoutSessionDraft(started.id, recentWorkout.comments?.trim() || config.title, started.template_id ?? null)
+            if (!started) return
             navigate(`/workouts/active/${started.id}`)
         } catch (err) {
-            if (isOfflineMutationQueuedError(err)) {
-                navigate('/workouts')
-                return
-            }
             onRepeatError('Не удалось повторить тренировку. Попробуйте ещё раз.')
         }
     }, [
         recentWorkout,
         config.title,
         config.backendType,
-        startWorkoutMutation,
-        updateWorkoutSessionMutation,
-        setWorkoutSessionDraft,
+        startWorkoutSession,
         navigate,
         onRepeatError,
     ])
@@ -169,28 +160,27 @@ export function useWorkoutModeHandlers({
         if (!validate()) return
         onSaveAndStartError(null)
         try {
-            const started = await startWorkoutMutation.mutateAsync({
-                name: editorTitle.trim(),
-                type: config.backendType,
-            })
             const completedExercises = mapEditorExercisesToCompleted(editorExercises)
-            if (completedExercises.length > 0) {
-                await updateWorkoutSessionMutation.mutateAsync({
-                    workoutId: started.id,
-                    payload: {
-                        exercises: completedExercises,
-                        tags: config.tags,
-                        comments: editorTitle.trim(),
-                    },
-                })
-            }
-            setWorkoutSessionDraft(started.id, editorTitle.trim(), started.template_id ?? null)
+            const patchPayload = completedExercises.length > 0
+                ? {
+                    exercises: completedExercises,
+                    tags: config.tags,
+                    comments: editorTitle.trim(),
+                }
+                : undefined
+
+            const started = await startWorkoutSession({
+                startPayload: {
+                    name: editorTitle.trim(),
+                    type: config.backendType,
+                },
+                patchPayload,
+                draft: { title: editorTitle.trim() },
+                onOfflineQueued: () => markEditorCleanAndNavigate('/workouts'),
+            })
+            if (!started) return
             markEditorCleanAndNavigate(`/workouts/active/${started.id}`)
         } catch (err) {
-            if (isOfflineMutationQueuedError(err)) {
-                markEditorCleanAndNavigate('/workouts')
-                return
-            }
             onSaveAndStartError('Не удалось запустить тренировку. Попробуйте ещё раз.')
             console.error('Failed to save and start workout:', err)
         }
@@ -200,17 +190,12 @@ export function useWorkoutModeHandlers({
         config.backendType,
         config.tags,
         editorExercises,
-        startWorkoutMutation,
-        updateWorkoutSessionMutation,
-        setWorkoutSessionDraft,
+        startWorkoutSession,
         markEditorCleanAndNavigate,
         onSaveAndStartError,
     ])
 
-    const isMutating =
-        startWorkoutMutation.isPending ||
-        updateWorkoutSessionMutation.isPending ||
-        createTemplateMutation.isPending
+    const isMutating = isStartingSession || createTemplateMutation.isPending
 
     return {
         handleRepeat,
@@ -219,7 +204,7 @@ export function useWorkoutModeHandlers({
         handleSaveAndStart,
         isMutating,
         isSaving: createTemplateMutation.isPending,
-        isStarting: startWorkoutMutation.isPending || updateWorkoutSessionMutation.isPending,
-        isRepeating: updateWorkoutSessionMutation.isPending && !startWorkoutMutation.isPending,
+        isStarting: isStartingSession,
+        isRepeating: isStartingSession,
     }
 }

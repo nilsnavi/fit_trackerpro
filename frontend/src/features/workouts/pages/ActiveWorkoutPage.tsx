@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
@@ -156,6 +156,7 @@ export function ActiveWorkoutPage() {
     const [pendingDeleteExerciseIndex, setPendingDeleteExerciseIndex] = useState<number | null>(null)
     const [isRestPresetsModalOpen, setIsRestPresetsModalOpen] = useState(false)
     const [restPresetsDraft, setRestPresetsDraft] = useState('')
+    const isCompletingRef = useRef(false)
 
     const isActiveDraft =
         workout != null &&
@@ -720,6 +721,10 @@ export function ActiveWorkoutPage() {
     }
 
     const handleCompleteSession = useCallback((tagsOverride?: string[]) => {
+        if (completeMutation.isPending || isCompletingRef.current) {
+            return
+        }
+
         setSessionError(null)
         const current = queryClient.getQueryData<WorkoutHistoryItem>(queryKeys.workouts.historyItem(workoutId))
         if (!current) {
@@ -752,6 +757,7 @@ export function ActiveWorkoutPage() {
             glucose_after: current.glucose_after,
         }
 
+        isCompletingRef.current = true
         tg.hapticFeedback({ type: 'impact', style: 'medium' })
         completeMutation.mutate(
             { workoutId, payload },
@@ -766,14 +772,18 @@ export function ActiveWorkoutPage() {
                     setSessionError(message)
                     toast.error(message)
                 },
+                onSettled: () => {
+                    isCompletingRef.current = false
+                },
             },
         )
     }, [completeMutation, durationMinutes, navigate, queryClient, tg, workoutId])
 
-    const handleOpenFinishSheet = () => {
+    const handleOpenFinishSheet = async () => {
+        if (completeMutation.isPending || isCompletingRef.current) return
         if (!workout) return
         // Flush any pending debounced changes before the user confirms finish.
-        flushWorkoutSync()
+        await flushWorkoutSync()
         setSessionError(null)
         setFinishTagsDraft((workout.tags ?? []).join(', '))
         setIsFinishSheetOpen(true)
@@ -785,45 +795,16 @@ export function ActiveWorkoutPage() {
         handleCompleteSession(parsedTags)
     }
 
-    const shouldAutoCompleteAfterSetToggle = useCallback((exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
-        if (!nextCompleted) return false
-
-        const current = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey)
-        if (!current) return false
-
-        const nextExercises = current.exercises.map((exercise, index) => {
-            if (index !== exerciseIndex) return exercise
-            return {
-                ...exercise,
-                sets_completed: exercise.sets_completed.map((set) => (
-                    set.set_number === setNumber ? { ...set, completed: true } : set
-                )),
-            }
-        })
-
-        return !nextExercises.some((exercise) => exercise.sets_completed.some((set) => !set.completed))
-    }, [detailQueryKey, queryClient])
-
     const handleToggleSetCompleted = useCallback((exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
         tg.hapticFeedback({ type: 'selection' })
         setCurrentPosition(exerciseIndex, setNumber - 1)
-        const shouldAutoComplete = shouldAutoCompleteAfterSetToggle(exerciseIndex, setNumber, nextCompleted)
         updateSet(exerciseIndex, setNumber, { completed: nextCompleted })
         if (nextCompleted) {
             startRestTimer(restDefaultSeconds)
         }
-
-        if (shouldAutoComplete && !completeMutation.isPending) {
-            flushWorkoutSync()
-            handleCompleteSession()
-        }
     }, [
-        completeMutation.isPending,
-        flushWorkoutSync,
-        handleCompleteSession,
         restDefaultSeconds,
         setCurrentPosition,
-        shouldAutoCompleteAfterSetToggle,
         startRestTimer,
         tg,
         updateSet,

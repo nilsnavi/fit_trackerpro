@@ -50,7 +50,7 @@ interface UseActiveWorkoutSyncParams {
 
 interface UseActiveWorkoutSyncResult {
     /** Immediately cancel any pending debounce and fire sync now. Use before navigation / finish. */
-    flushNow: () => void
+    flushNow: () => Promise<void>
     syncState: ActiveWorkoutSyncState
     lastSyncedPayload: WorkoutSessionUpdateRequest | null
     pendingPayload: WorkoutSessionUpdateRequest | null
@@ -96,6 +96,7 @@ export function useActiveWorkoutSync({
     // ── Timer refs ─────────────────────────────────────────────────────────
     const debounceTimerRef = useRef<number | null>(null)
     const retryTimerRef = useRef<number | null>(null)
+    const flushWaitersRef = useRef<Array<() => void>>([])
 
     // ── Stable refs for latest mutable values ─────────────────────────────
     // Updated every render so callbacks with [] deps always read fresh values.
@@ -126,6 +127,19 @@ export function useActiveWorkoutSync({
         setActiveSyncStateRef.current(nextState)
     }
 
+    const resolveFlushWaiters = useCallback(() => {
+        if (flushWaitersRef.current.length === 0) return
+        const waiters = flushWaitersRef.current
+        flushWaitersRef.current = []
+        waiters.forEach((resolve) => {
+            try {
+                resolve()
+            } catch {
+                // noop
+            }
+        })
+    }, [])
+
     const scheduleRetry = useCallback(() => {
         if (retryTimerRef.current !== null) {
             window.clearTimeout(retryTimerRef.current)
@@ -151,7 +165,10 @@ export function useActiveWorkoutSync({
     // ── Core sync execution (stable identity) ─────────────────────────────
     const executeSync = useCallback(() => {
         const currentWorkout = workoutRef.current
-        if (!isActiveDraftRef.current || !currentWorkout) return
+        if (!isActiveDraftRef.current || !currentWorkout) {
+            resolveFlushWaiters()
+            return
+        }
 
         // One request at a time — prevent race conditions.
         if (inFlightRef.current) return
@@ -160,7 +177,10 @@ export function useActiveWorkoutSync({
         const snapshot = JSON.stringify(payload)
 
         // Nothing new to persist.
-        if (snapshot === lastPersistedSnapshotRef.current) return
+        if (snapshot === lastPersistedSnapshotRef.current) {
+            resolveFlushWaiters()
+            return
+        }
 
         setPendingPayload(payload)
 
@@ -173,6 +193,7 @@ export function useActiveWorkoutSync({
                 hasShownOfflineToastRef.current = true
             }
             hadSyncIssueRef.current = true
+            resolveFlushWaiters()
             return
         }
 
@@ -209,6 +230,7 @@ export function useActiveWorkoutSync({
                     }
 
                     setPendingPayload(null)
+                    resolveFlushWaiters()
                 },
                 onError: () => {
                     inFlightRef.current = false
@@ -222,10 +244,11 @@ export function useActiveWorkoutSync({
                         executeSyncRef.current()
                     })
                     scheduleRetry()
+                    resolveFlushWaiters()
                 },
             },
         )
-    }, [scheduleRetry]) // reads mutable inputs via refs
+    }, [resolveFlushWaiters, scheduleRetry]) // reads mutable inputs via refs
 
     executeSyncRef.current = executeSync
 
@@ -250,16 +273,34 @@ export function useActiveWorkoutSync({
 
     // ── Flush (stable, exposed to caller) ─────────────────────────────────
     const flushNow = useCallback(() => {
-        if (debounceTimerRef.current !== null) {
-            window.clearTimeout(debounceTimerRef.current)
-            debounceTimerRef.current = null
-        }
-        if (retryTimerRef.current !== null) {
-            window.clearTimeout(retryTimerRef.current)
-            retryTimerRef.current = null
-        }
-        retryAttemptRef.current = 0
-        executeSyncRef.current()
+        return new Promise<void>((resolve) => {
+            flushWaitersRef.current.push(resolve)
+
+            if (debounceTimerRef.current !== null) {
+                window.clearTimeout(debounceTimerRef.current)
+                debounceTimerRef.current = null
+            }
+            if (retryTimerRef.current !== null) {
+                window.clearTimeout(retryTimerRef.current)
+                retryTimerRef.current = null
+            }
+            retryAttemptRef.current = 0
+
+            const currentWorkout = workoutRef.current
+            const hasUnsyncedChanges =
+                Boolean(isActiveDraftRef.current) &&
+                Boolean(currentWorkout) &&
+                lastPersistedSnapshotRef.current !== null &&
+                JSON.stringify(buildSyncPayloadRef.current(currentWorkout as WorkoutHistoryItem)) !==
+                    lastPersistedSnapshotRef.current
+
+            if (!inFlightRef.current && !hasUnsyncedChanges) {
+                resolveFlushWaiters()
+                return
+            }
+
+            executeSyncRef.current()
+        })
     }, []) // stable
 
     const hasUnsyncedChanges = useCallback(() => {
