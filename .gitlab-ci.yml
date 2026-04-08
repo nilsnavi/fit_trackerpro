@@ -15,6 +15,7 @@ default:
 
 stages:
   - test
+  - db_migrations
 
 lint_backend:
   stage: test
@@ -188,4 +189,130 @@ e2e_frontend_regression:
     paths:
       - frontend/playwright-report/
       - frontend/test-results/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DB MIGRATION SAFETY STAGE
+# Two independent jobs:
+#  1. test_migrations_fresh_db   – applies all migrations on a clean DB from base
+#  2. test_migration_rollback    – upgrade→head, downgrade→-1, upgrade→head again
+# Both require lint_backend to pass first (avoids running on broken code).
+# ─────────────────────────────────────────────────────────────────────────────
+
+.migration_base: &migration_base
+  stage: db_migrations
+  image: python:3.12-slim
+  needs:
+    - lint_backend
+    - backend_dep_consistency
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    POSTGRES_DB: fittracker_test
+    POSTGRES_USER: fittracker
+    POSTGRES_PASSWORD: fittracker_ci_password
+    DATABASE_URL: "postgresql+asyncpg://fittracker:fittracker_ci_password@postgres:5432/fittracker_test"
+    DATABASE_URL_SYNC: "postgresql+psycopg2://fittracker:fittracker_ci_password@postgres:5432/fittracker_test"
+    TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    SECRET_KEY: "ci-test-secret-key-not-used-in-production"
+    ENV: "test"
+  cache:
+    key: "pip-cache"
+    paths:
+      - .cache/pip/
+
+test_migrations_fresh_db:
+  <<: *migration_base
+  script:
+    - python -m pip install --upgrade pip -q
+    - pip install -r backend/requirements/dev.txt -q
+    # Validate migration chain integrity (no branches, no gaps, all have downgrade)
+    - python backend/tools/test_migrations.py --validate-chain
+    # Wait for Postgres to be ready
+    - |
+      python - <<'PYEOF'
+      import time, sys
+      import psycopg2
+      for i in range(30):
+          try:
+              psycopg2.connect(
+                  dbname="fittracker_test", user="fittracker",
+                  password="fittracker_ci_password", host="postgres", port=5432
+              ).close()
+              print("Postgres ready")
+              sys.exit(0)
+          except Exception:
+              time.sleep(1)
+      print("Postgres not ready after 30s", file=sys.stderr)
+      sys.exit(1)
+      PYEOF
+    # Apply all migrations from zero
+    - cd database/migrations && alembic upgrade head
+    # Confirm alembic_version row is present
+    - |
+      python - <<'PYEOF'
+      import psycopg2
+      conn = psycopg2.connect(
+          dbname="fittracker_test", user="fittracker",
+          password="fittracker_ci_password", host="postgres", port=5432
+      )
+      cur = conn.cursor()
+      cur.execute("SELECT version_num FROM alembic_version")
+      row = cur.fetchone()
+      assert row is not None, "alembic_version table is empty after upgrade head"
+      print(f"HEAD revision confirmed: {row[0]}")
+      conn.close()
+      PYEOF
+
+test_migration_rollback:
+  <<: *migration_base
+  script:
+    - python -m pip install --upgrade pip -q
+    - pip install -r backend/requirements/dev.txt -q
+    # Wait for Postgres
+    - |
+      python - <<'PYEOF'
+      import time, sys
+      import psycopg2
+      for i in range(30):
+          try:
+              psycopg2.connect(
+                  dbname="fittracker_test", user="fittracker",
+                  password="fittracker_ci_password", host="postgres", port=5432
+              ).close()
+              print("Postgres ready")
+              sys.exit(0)
+          except Exception:
+              time.sleep(1)
+      print("Postgres not ready after 30s", file=sys.stderr)
+      sys.exit(1)
+      PYEOF
+    # Phase 1: upgrade to head
+    - cd database/migrations && alembic upgrade head
+    - echo "Phase 1 PASSED: upgrade head OK"
+    # Phase 2: roll back one step
+    - alembic downgrade -1
+    - echo "Phase 2 PASSED: downgrade -1 OK"
+    # Phase 3: roll back to base (full downgrade chain)
+    - alembic downgrade base
+    - echo "Phase 3 PASSED: downgrade base OK"
+    # Phase 4: re-apply all migrations (round-trip)
+    - alembic upgrade head
+    - echo "Phase 4 PASSED: upgrade head after full rollback OK"
+    # Final check: confirm DB is at head again
+    - |
+      python - <<'PYEOF'
+      import psycopg2
+      conn = psycopg2.connect(
+          dbname="fittracker_test", user="fittracker",
+          password="fittracker_ci_password", host="postgres", port=5432
+      )
+      cur = conn.cursor()
+      cur.execute("SELECT version_num FROM alembic_version")
+      row = cur.fetchone()
+      assert row is not None, "alembic_version empty after round-trip"
+      print(f"Round-trip confirmed. Final revision: {row[0]}")
+      conn.close()
+      PYEOF
 
