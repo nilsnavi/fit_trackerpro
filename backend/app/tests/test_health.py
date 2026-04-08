@@ -1,7 +1,9 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.application.health_check_service import HealthCheckService
 from app.main import app
+from app.schemas.system import DependencyStatus, ReadinessResponse
 
 
 @pytest.mark.unit
@@ -22,6 +24,105 @@ async def test_health_probe_alias_matches_canonical(client: AsyncClient):
     assert canonical.status_code == 200
     assert alias.status_code == 200
     assert canonical.json() == alias.json()
+
+
+@pytest.mark.unit
+async def test_health_live_endpoint(client: AsyncClient):
+    """GET /health/live returns liveness payload."""
+    response = await client.get('/health/live')
+    assert response.status_code == 200
+    data = response.json()
+    assert data['status'] == 'alive'
+    assert 'timestamp' in data
+
+
+@pytest.mark.unit
+async def test_system_live_endpoint(client: AsyncClient):
+    """GET /api/v1/system/live returns liveness payload."""
+    response = await client.get('/api/v1/system/live')
+    assert response.status_code == 200
+    data = response.json()
+    assert data['status'] == 'alive'
+    assert 'timestamp' in data
+
+
+@pytest.mark.unit
+async def test_readiness_returns_503_when_not_ready(client: AsyncClient, monkeypatch):
+    """Readiness returns HTTP 503 if at least one dependency is unhealthy."""
+
+    async def _not_ready() -> ReadinessResponse:
+        return ReadinessResponse(
+            status='not_ready',
+            timestamp='2026-04-08T00:00:00Z',
+            dependencies={
+                'database': DependencyStatus(
+                    name='database',
+                    healthy=False,
+                    response_time_ms=None,
+                    message='database down',
+                )
+            },
+        )
+
+    monkeypatch.setattr(HealthCheckService, 'readiness', staticmethod(_not_ready))
+
+    response = await client.get('/health/ready')
+    assert response.status_code == 503
+    data = response.json()
+    assert data['status'] == 'not_ready'
+    assert data['dependencies']['database']['healthy'] is False
+
+
+@pytest.mark.unit
+async def test_readiness_returns_200_when_ready(client: AsyncClient, monkeypatch):
+    """Readiness returns HTTP 200 when all dependencies are healthy."""
+
+    async def _ready() -> ReadinessResponse:
+        return ReadinessResponse(
+            status='ready',
+            timestamp='2026-04-08T00:00:00Z',
+            dependencies={
+                'database': DependencyStatus(
+                    name='database',
+                    healthy=True,
+                    response_time_ms=None,
+                    message=None,
+                )
+            },
+        )
+
+    monkeypatch.setattr(HealthCheckService, 'readiness', staticmethod(_ready))
+
+    response = await client.get('/health/ready')
+    assert response.status_code == 200
+    data = response.json()
+    assert data['status'] == 'ready'
+    assert data['dependencies']['database']['healthy'] is True
+
+
+@pytest.mark.unit
+async def test_system_readiness_returns_503_when_not_ready(client: AsyncClient, monkeypatch):
+    """V1 readiness endpoint also returns HTTP 503 when unhealthy."""
+
+    async def _not_ready() -> ReadinessResponse:
+        return ReadinessResponse(
+            status='not_ready',
+            timestamp='2026-04-08T00:00:00Z',
+            dependencies={
+                'database': DependencyStatus(
+                    name='database',
+                    healthy=False,
+                    response_time_ms=None,
+                    message='database down',
+                )
+            },
+        )
+
+    monkeypatch.setattr(HealthCheckService, 'readiness', staticmethod(_not_ready))
+
+    response = await client.get('/api/v1/system/ready')
+    assert response.status_code == 503
+    assert response.json()['status'] == 'not_ready'
 
 
 @pytest.mark.unit
