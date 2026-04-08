@@ -71,6 +71,49 @@ test('save and start workout', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'Завершить тренировку' })).toBeVisible()
 })
 
+test('create template -> start workout -> log sets -> complete -> open history', async ({ page }) => {
+    const state = buildWorkoutState()
+    await seedAuth(page)
+    await mockWorkoutApi(page, state)
+
+    await page.goto('/workouts/mode/strength')
+
+    const title = 'E2E полный критический путь'
+    await page.getByLabel('Название тренировки').fill(title)
+    await page.locator('[data-testid="add-exercise-btn"]').click()
+
+    const searchDialog = page.locator('[role="dialog"]').last()
+    await expect(searchDialog).toBeVisible()
+    await searchDialog.getByRole('button', { name: 'Присед' }).first().click()
+
+    const configDialog = page.locator('[role="dialog"]').last()
+    await expect(configDialog).toBeVisible()
+    await configDialog.locator('[data-testid="confirm-exercise-btn"]').click()
+    await expect(configDialog).toBeHidden()
+
+    await page.locator('[data-testid="save-btn"]').click()
+    await expect.poll(() => state.createTemplateRequests.length).toBe(1)
+    await expect(page).toHaveURL(/\/workouts(?:\?.*)?$/)
+
+    await page.getByRole('button', { name: new RegExp(`Начать по шаблону ${title}`) }).click()
+
+    await expect.poll(() => state.startRequests.length).toBe(1)
+    await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
+    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
+
+    await page.locator('[data-testid="set-toggle-btn"]').first().click()
+    await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
+
+    await page.getByRole('button', { name: 'Готово' }).first().click()
+
+    await expect.poll(() => state.completeRequests.length, { timeout: 10_000 }).toBe(1)
+    await expect(page).toHaveURL(/\/workouts\/\d+(?:\?.*)?$/)
+
+    await page.goto('/workouts')
+    await expect(page.getByRole('main').getByRole('heading', { name: 'История' })).toBeVisible()
+    await expect(page.getByText(title)).toBeVisible()
+})
+
 test('repeat workout from workouts page', async ({ page }) => {
     const lastWorkoutId = 222
     const lastWorkout: WorkoutHistoryItem = {

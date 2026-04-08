@@ -319,6 +319,79 @@ describe('useActiveWorkoutSync', () => {
         expect(result.current.hasPendingChanges).toBe(false)
     })
 
+    it('keeps only the latest payload when changes happen quickly (fast clicks)', async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+        })
+        const initialWorkout = makeWorkout()
+        const changedA = makeWorkout({
+            comments: 'tap-1',
+            exercises: [
+                {
+                    exercise_id: 1,
+                    name: 'Bench Press',
+                    sets_completed: [
+                        { set_number: 1, reps: 8, weight: 60, completed: true },
+                    ],
+                },
+            ],
+        })
+        const changedB = makeWorkout({
+            comments: 'tap-2',
+            exercises: [
+                {
+                    exercise_id: 1,
+                    name: 'Bench Press',
+                    sets_completed: [
+                        { set_number: 1, reps: 9, weight: 60, completed: true },
+                    ],
+                },
+            ],
+        })
+
+        const mutate = jest.fn((_, options: { onSuccess: (data: WorkoutHistoryItem) => void }) => {
+            options.onSuccess(changedB)
+        })
+
+        const { rerender } = renderHook(
+            (workout: WorkoutHistoryItem) =>
+                useActiveWorkoutSync({
+                    workoutId: workout.id,
+                    workout,
+                    draftWorkoutId: workout.id,
+                    isActiveDraft: true,
+                    activeExercises: workout.exercises,
+                    startedAt: null,
+                    queryClient,
+                    initializeActiveSession: jest.fn(),
+                    setActiveExercises: jest.fn(),
+                    setCurrentPosition: jest.fn(),
+                    setActiveElapsedSeconds: jest.fn(),
+                    setActiveSyncState: jest.fn(),
+                    clearWorkoutSessionDraft: jest.fn(),
+                    updateSessionMutation: { mutate },
+                    buildSyncPayload: makePayload,
+                }),
+            { initialProps: initialWorkout },
+        )
+
+        rerender(changedA)
+        rerender(changedB)
+
+        act(() => {
+            jest.advanceTimersByTime(2_000)
+        })
+
+        await waitFor(() => {
+            expect(mutate).toHaveBeenCalledTimes(1)
+        })
+
+        expect(mutate).toHaveBeenCalledWith(
+            { workoutId: 77, payload: makePayload(changedB) },
+            expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+        )
+    })
+
     it('flushes pending changes on visibilitychange, blur and beforeunload', async () => {
         const queryClient = new QueryClient({
             defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
