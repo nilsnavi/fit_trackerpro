@@ -41,7 +41,7 @@ export const queryKeys = {
         contacts: ['emergency', 'contacts'] as const,
     },
     exercises: {
-        list: (params: { page: number; page_size: number; status: string }) =>
+        list: (params: Record<string, unknown>) =>
             ['exercises', 'list', params] as const,
     },
     analytics: {

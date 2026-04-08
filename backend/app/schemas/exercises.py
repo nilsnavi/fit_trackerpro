@@ -100,6 +100,15 @@ class ExerciseCreate(BaseModel):
         max_length=30,
         description="Muscle groups; at most 30 entries.",
     )
+    muscle_group: Optional[_Label] = Field(
+        None,
+        description="Primary muscle group used for fast filtering.",
+    )
+    aliases: List[_Label] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Alternative names used in exercise search.",
+    )
     risk_flags: RiskFlags = Field(default_factory=RiskFlags)
     media_url: Optional[str] = Field(
         None,
@@ -129,6 +138,11 @@ class ExerciseUpdate(BaseModel):
         None,
         max_length=30,
     )
+    muscle_group: Optional[_Label] = None
+    aliases: Optional[List[_Label]] = Field(
+        None,
+        max_length=20,
+    )
     risk_flags: Optional[RiskFlags] = None
     media_url: Optional[str] = Field(
         None,
@@ -146,6 +160,8 @@ class ExerciseResponse(BaseModel):
     category: str
     equipment: List[str]
     muscle_groups: List[str]
+    muscle_group: Optional[str] = None
+    aliases: List[str] = Field(default_factory=list)
     risk_flags: RiskFlags
     media_url: Optional[str]
     status: str

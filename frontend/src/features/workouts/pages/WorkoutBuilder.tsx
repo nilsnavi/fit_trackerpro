@@ -16,6 +16,7 @@ import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
+import { Skeleton } from '@shared/ui/Skeleton';
 import {
     useCreateWorkoutTemplateMutation,
     useUpdateWorkoutTemplateMutation,
@@ -42,13 +43,15 @@ import {
 import { getErrorMessage } from '@shared/errors';
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue';
 import { toast } from '@shared/stores/toastStore';
-import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery';
 import { cn } from '@shared/lib/cn';
 import {
     useTemplateEditorActions,
     useTemplateEditorStateSlice,
 } from '@features/workouts/stores/useTemplateEditorStore';
 import type { WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
+import { useCreateCustomExerciseMutation } from '@features/exercises/hooks/useExerciseMutations';
+import { useExerciseMuscleGroupsQuery } from '@features/exercises/hooks/useExerciseReferenceData';
+import { useWorkoutBuilderExercisesQuery } from '@features/workouts/hooks/useWorkoutBuilderExercisesQuery';
 import {
     clearTemplateEditorDraft,
     loadTemplateEditorDraft,
@@ -69,6 +72,8 @@ const customExerciseCategories = [
     { id: 'strength', label: 'Силовые' },
     { id: 'cardio', label: 'Кардио' },
 ];
+
+const EXERCISE_SEARCH_DEBOUNCE_MS = 300;
 
 type ConfigValidationErrors = Partial<Record<'sets' | 'reps' | 'duration', string>>;
 
@@ -109,6 +114,7 @@ export const WorkoutBuilder: React.FC = () => {
     const [searchParams] = useSearchParams()
     const createTemplateMutation = useCreateWorkoutTemplateMutation()
     const updateTemplateMutation = useUpdateWorkoutTemplateMutation()
+    const createCustomExerciseMutation = useCreateCustomExerciseMutation()
     const hydratedTemplateIdRef = useRef<number | null>(null)
     const hasInitializedDraftRef = useRef(false)
 
@@ -183,7 +189,9 @@ export const WorkoutBuilder: React.FC = () => {
 
     // Exercise selector state
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('all');
     const [selectedExercise, setSelectedExercise] = useState<WorkoutBuilderExercise | null>(null);
     const [customExerciseName, setCustomExerciseName] = useState('');
     const [customExerciseCategory, setCustomExerciseCategory] = useState<'strength' | 'cardio'>('strength');
@@ -334,6 +342,16 @@ export const WorkoutBuilder: React.FC = () => {
         };
     }, [blocks, description, editTemplateId, isDirty, selectedTypes, workoutName]);
 
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery.trim())
+        }, EXERCISE_SEARCH_DEBOUNCE_MS)
+
+        return () => {
+            window.clearTimeout(timeoutId)
+        }
+    }, [searchQuery])
+
     // ============================================
     // Handlers
     // ============================================
@@ -351,7 +369,9 @@ export const WorkoutBuilder: React.FC = () => {
         setCurrentBlockType(type);
         setSelectedExercise(null);
         setSearchQuery('');
+        setDebouncedSearchQuery('');
         setSelectedCategory('all');
+        setSelectedMuscleGroup('all');
 
         if (type === 'strength' || type === 'cardio') {
             setIsSelectorOpen(true);
@@ -365,12 +385,21 @@ export const WorkoutBuilder: React.FC = () => {
     const handleExerciseSelect = (exercise: WorkoutBuilderExercise) => {
         tg.hapticFeedback({ type: 'selection' })
         setSelectedExercise(exercise);
-        setConfig({
-            sets: 3,
-            reps: 10,
-            weight: 0,
-            restSeconds: 60,
-        });
+        if ((currentBlockType ?? exercise.category) === 'cardio') {
+            setConfig({
+                duration: 20,
+                distance: 0,
+                note: exercise.notes,
+            });
+        } else {
+            setConfig({
+                sets: 3,
+                reps: 10,
+                weight: 0,
+                restSeconds: 60,
+                note: exercise.notes,
+            });
+        }
         setIsSelectorOpen(false);
         setIsConfigOpen(true);
     };
@@ -389,7 +418,7 @@ export const WorkoutBuilder: React.FC = () => {
         setIsCustomExerciseOpen(true);
     };
 
-    const handleSaveCustomExercise = () => {
+    const handleSaveCustomExercise = async () => {
         const name = customExerciseName.trim();
         if (!name) {
             setCustomExerciseError('Введите название упражнения');
@@ -402,15 +431,33 @@ export const WorkoutBuilder: React.FC = () => {
             .map((item) => item.trim())
             .filter(Boolean);
 
-        handleExerciseSelect({
-            id: `custom-${Date.now()}`,
-            name,
-            category: customExerciseCategory,
-            muscleGroups,
-            notes: customExerciseNotes.trim() || undefined,
-        });
-        setIsCustomExerciseOpen(false);
-        resetCustomExerciseForm();
+        const formData = new FormData();
+        formData.set('name', name);
+        formData.set('category', customExerciseCategory);
+        formData.set('description', customExerciseNotes.trim());
+        formData.set('equipment', JSON.stringify([]));
+        formData.set('target_muscles', JSON.stringify(muscleGroups));
+        formData.set('risks', JSON.stringify([]));
+        formData.set('difficulty', 'beginner');
+
+        try {
+            const createdExercise = await createCustomExerciseMutation.mutateAsync(formData)
+            handleExerciseSelect({
+                id: String(createdExercise.id),
+                name: createdExercise.name,
+                category: createdExercise.category,
+                muscleGroup: createdExercise.muscle_group,
+                muscleGroups: createdExercise.muscle_groups,
+                equipment: createdExercise.equipment,
+                aliases: createdExercise.aliases,
+                notes: customExerciseNotes.trim() || undefined,
+            })
+            setIsCustomExerciseOpen(false);
+            resetCustomExerciseForm();
+        } catch (error) {
+            setCustomExerciseError(getErrorMessage(error) || 'Не удалось создать упражнение');
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' });
+        }
     };
 
     const handleConfigSave = () => {
@@ -527,7 +574,14 @@ export const WorkoutBuilder: React.FC = () => {
             return;
         }
 
-        const exercises = buildTemplateExercises(blocks);
+        let exercises;
+        try {
+            exercises = buildTemplateExercises(blocks);
+        } catch {
+            setValidationError('blocks', 'Одно из упражнений ещё не связано с каталогом. Выберите его заново.');
+            tg.hapticFeedback({ type: 'notification', notificationType: 'error' })
+            return;
+        }
 
         if (exercises.length === 0) {
             setValidationError('general', 'Добавьте хотя бы одно силовое упражнение или кардио');
@@ -579,22 +633,22 @@ export const WorkoutBuilder: React.FC = () => {
         toggleType(type);
     };
 
-    // Filtered exercises from real catalog
-    const { data: catalogExercises = [] } = useExercisesCatalogQuery();
-    const filteredExercises: WorkoutBuilderExercise[] = useMemo(() => {
-        return catalogExercises
-            .filter((ex) => {
-                const matchesSearch = ex.name.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchesCategory = selectedCategory === 'all' || ex.category === selectedCategory;
-                return matchesSearch && matchesCategory;
-            })
-            .map((ex) => ({
-                id: String(ex.id),
-                name: ex.name,
-                category: ex.category,
-                muscleGroups: [...ex.primaryMuscles, ...ex.secondaryMuscles],
-            }));
-    }, [catalogExercises, searchQuery, selectedCategory]);
+    const { data: muscleGroupData } = useExerciseMuscleGroupsQuery();
+    const muscleGroupOptions = muscleGroupData?.muscle_groups ?? [];
+
+    const {
+        items: filteredExercises,
+        isLoading: isExercisesLoading,
+        isError: isExercisesError,
+        isFetchingNextPage,
+        hasNextPage,
+        fetchNextPage,
+    } = useWorkoutBuilderExercisesQuery({
+        search: debouncedSearchQuery,
+        muscleGroup: selectedMuscleGroup === 'all' ? undefined : selectedMuscleGroup,
+        category: selectedCategory === 'all' ? undefined : selectedCategory,
+        pageSize: 20,
+    });
 
     const previewTypeLabel = useMemo(() => {
         if (selectedTypes.length === 0) {
@@ -872,32 +926,78 @@ export const WorkoutBuilder: React.FC = () => {
                         ))}
                     </ChipGroup>
 
+                    <div>
+                        <label className="mb-1.5 block text-sm font-medium text-telegram-text">
+                            Группа мышц
+                        </label>
+                        <select
+                            value={selectedMuscleGroup}
+                            onChange={(e) => setSelectedMuscleGroup(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-telegram-secondary-bg px-3 py-2.5 text-sm text-telegram-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        >
+                            <option value="all">Все группы мышц</option>
+                            {muscleGroupOptions.map((muscleGroup) => (
+                                <option key={muscleGroup.value} value={muscleGroup.value}>
+                                    {muscleGroup.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Exercise List */}
                     <div className="max-h-[50vh] overflow-y-auto space-y-2">
-                        {filteredExercises.length === 0 ? (
+                        {isExercisesLoading && filteredExercises.length === 0 ? (
+                            <div className="space-y-2">
+                                {Array.from({ length: 6 }).map((_, index) => (
+                                    <Skeleton key={`builder-exercise-skeleton-${index}`} className="h-[72px] w-full rounded-xl" />
+                                ))}
+                            </div>
+                        ) : isExercisesError ? (
+                            <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-6 text-center text-sm text-danger">
+                                Не удалось загрузить упражнения. Попробуйте изменить фильтры или повторить позже.
+                            </div>
+                        ) : filteredExercises.length === 0 ? (
                             <div className="text-center py-8 text-telegram-hint">
                                 <p>Ничего не найдено</p>
+                                <p className="mt-1 text-sm">
+                                    Попробуйте другой запрос или смените группу мышц.
+                                </p>
                             </div>
                         ) : (
-                            filteredExercises.map((exercise) => (
-                                <button
-                                    key={exercise.id}
-                                    onClick={() => handleExerciseSelect(exercise)}
-                                    className="w-full text-left p-3 rounded-xl bg-telegram-secondary-bg hover:bg-primary/10 transition-colors"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h4 className="font-medium text-telegram-text">
-                                                {exercise.name}
-                                            </h4>
-                                            <p className="text-sm text-telegram-hint">
-                                                {exercise.muscleGroups?.join(', ')}
-                                            </p>
+                            <>
+                                {filteredExercises.map((exercise) => (
+                                    <button
+                                        key={exercise.id}
+                                        onClick={() => handleExerciseSelect(exercise)}
+                                        className="w-full text-left p-3 rounded-xl bg-telegram-secondary-bg hover:bg-primary/10 transition-colors"
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <h4 className="font-medium text-telegram-text">
+                                                    {exercise.name}
+                                                </h4>
+                                                <p className="text-sm text-telegram-hint">
+                                                    {exercise.muscleGroups?.join(', ') || exercise.muscleGroup || 'Без группы'}
+                                                </p>
+                                            </div>
+                                            <ChevronDown className="w-5 h-5 shrink-0 text-telegram-hint -rotate-90" />
                                         </div>
-                                        <ChevronDown className="w-5 h-5 text-telegram-hint -rotate-90" />
-                                    </div>
-                                </button>
-                            ))
+                                    </button>
+                                ))}
+
+                                {hasNextPage ? (
+                                    <Button
+                                        variant="secondary"
+                                        fullWidth
+                                        isLoading={isFetchingNextPage}
+                                        onClick={() => {
+                                            void fetchNextPage()
+                                        }}
+                                    >
+                                        Показать ещё
+                                    </Button>
+                                ) : null}
+                            </>
                         )}
                     </div>
 
@@ -992,7 +1092,14 @@ export const WorkoutBuilder: React.FC = () => {
                         }}>
                             Отмена
                         </Button>
-                        <Button onClick={handleSaveCustomExercise}>Сохранить</Button>
+                        <Button
+                            onClick={() => {
+                                void handleSaveCustomExercise()
+                            }}
+                            isLoading={createCustomExerciseMutation.isPending}
+                        >
+                            Сохранить
+                        </Button>
                     </div>
                 </div>
             </Modal>

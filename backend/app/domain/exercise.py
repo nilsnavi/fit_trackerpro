@@ -60,6 +60,19 @@ class Exercise(Base):
         comment="Target muscle groups"
     )
 
+    muscle_group: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        comment="Primary muscle group for fast filtering in builders",
+    )
+
+    aliases: Mapped[list[str]] = mapped_column(
+        JSON,
+        default=list,
+        comment="Alternative exercise names used in search",
+    )
+
     # Risk flags for users with limitations stored as JSONB
     risk_flags: Mapped[dict] = mapped_column(
         JSON,

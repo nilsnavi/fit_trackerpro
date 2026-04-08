@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, cast, func, or_, select
 
 from app.domain.exercise import Exercise
 from app.infrastructure.repositories.base import SQLAlchemyRepository
@@ -22,14 +22,21 @@ class ExercisesRepository(SQLAlchemyRepository):
         if status != "all":
             query = query.where(Exercise.status == status)
         if muscle_group:
-            query = query.where(Exercise.muscle_groups.contains([muscle_group]))
+            query = query.where(
+                or_(
+                    Exercise.muscle_group == muscle_group,
+                    cast(Exercise.muscle_groups, String).ilike(f'%"{muscle_group}"%'),
+                )
+            )
         if equipment:
-            query = query.where(Exercise.equipment.contains([equipment]))
+            query = query.where(cast(Exercise.equipment, String).ilike(f'%"{equipment}"%'))
         if search:
             query = query.where(
                 or_(
                     Exercise.name.ilike(f"%{search}%"),
                     Exercise.description.ilike(f"%{search}%"),
+                    Exercise.muscle_group.ilike(f"%{search}%"),
+                    cast(Exercise.aliases, String).ilike(f"%{search}%"),
                 )
             )
         return query

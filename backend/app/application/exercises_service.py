@@ -24,6 +24,29 @@ class ExercisesService:
         self.repository = ExercisesRepository(db)
         self.db = db
 
+    def _to_response(self, exercise: Exercise) -> ExerciseResponse:
+        muscle_groups = list(exercise.muscle_groups or [])
+        aliases = list(exercise.aliases or [])
+        primary_muscle_group = exercise.muscle_group or (muscle_groups[0] if muscle_groups else None)
+        return ExerciseResponse.model_validate(
+            {
+                'id': exercise.id,
+                'name': exercise.name,
+                'description': exercise.description,
+                'category': exercise.category,
+                'equipment': list(exercise.equipment or []),
+                'muscle_groups': muscle_groups,
+                'muscle_group': primary_muscle_group,
+                'aliases': aliases,
+                'risk_flags': exercise.risk_flags,
+                'media_url': exercise.media_url,
+                'status': exercise.status,
+                'author_user_id': exercise.author_user_id,
+                'created_at': exercise.created_at,
+                'updated_at': exercise.updated_at,
+            }
+        )
+
     async def get_exercises(
         self,
         category: str | None,
@@ -51,7 +74,7 @@ class ExercisesService:
             page_size=page_size,
         )
         return ExerciseListResponse(
-            items=[ExerciseResponse.model_validate(e, from_attributes=True) for e in exercises],
+            items=[self._to_response(e) for e in exercises],
             total=total,
             page=page,
             page_size=page_size,
@@ -68,7 +91,7 @@ class ExercisesService:
         exercise = await self.repository.get_exercise(exercise_id=exercise_id)
         if not exercise:
             raise ExerciseNotFoundError("Exercise not found")
-        return ExerciseResponse.model_validate(exercise, from_attributes=True)
+        return self._to_response(exercise)
 
     async def create_exercise(
         self,
@@ -82,26 +105,30 @@ class ExercisesService:
             category=data.category,
             equipment=data.equipment,
             muscle_groups=data.muscle_groups,
+            muscle_group=data.muscle_group or (data.muscle_groups[0] if data.muscle_groups else None),
+            aliases=data.aliases,
             risk_flags=data.risk_flags.model_dump(),
             media_url=data.media_url,
             status="active" if is_admin else "pending",
             author_user_id=user_id,
         )
         exercise = await self.repository.create_exercise(exercise)
-        return ExerciseResponse.model_validate(exercise, from_attributes=True)
+        return self._to_response(exercise)
 
     async def update_exercise(self, exercise_id: int, data: ExerciseUpdate) -> ExerciseResponse:
         exercise = await self.repository.get_exercise(exercise_id=exercise_id)
         if not exercise:
             raise ExerciseNotFoundError("Exercise not found")
 
-        for field, value in data.model_dump(exclude_unset=True).items():
-            if field == "risk_flags" and value is not None:
-                exercise.risk_flags = value.model_dump()
-            else:
-                setattr(exercise, field, value)
+        payload = data.model_dump(exclude_unset=True)
+        if 'muscle_groups' in payload and 'muscle_group' not in payload:
+            muscle_groups = payload.get('muscle_groups') or []
+            payload['muscle_group'] = muscle_groups[0] if muscle_groups else None
+
+        for field, value in payload.items():
+            setattr(exercise, field, value)
         exercise = await self.repository.update_exercise(exercise)
-        return ExerciseResponse.model_validate(exercise, from_attributes=True)
+        return self._to_response(exercise)
 
     async def delete_exercise(self, exercise_id: int) -> None:
         exercise = await self.repository.get_exercise(exercise_id=exercise_id)
@@ -115,7 +142,7 @@ class ExercisesService:
             raise ExerciseNotFoundError("Pending exercise not found")
         exercise.status = "active"
         exercise = await self.repository.approve_exercise(exercise)
-        return ExerciseResponse.model_validate(exercise, from_attributes=True)
+        return self._to_response(exercise)
 
     async def get_categories(self) -> ExerciseCategoriesResponse:
         rows = (
