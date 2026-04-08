@@ -34,29 +34,19 @@ import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/Wor
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
 import { ActiveExerciseList } from '@features/workouts/active/components/ActiveExerciseList'
-import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
-    // Получение рекомендации веса для текущего упражнения
-    const {
-        data: weightRecommendation,
-        isLoading: isWeightRecLoading,
-        isError: isWeightRecError,
-    } = useWeightRecommendation(
-        workoutId,
-        currentExercise?.exercise_id ?? 0,
-        Boolean(isActiveDraft && currentExercise?.exercise_id && currentSet?.rpe != null)
-    )
+import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
 import { AddExerciseModal } from '@features/workouts/active/modals/AddExerciseModal'
 import { AddTimerModal } from '@features/workouts/active/modals/AddTimerModal'
+import { ExerciseRestSettingsModal } from '@features/workouts/active/modals/ExerciseRestSettingsModal'
 import { ExerciseStructureEditorModal } from '@features/workouts/active/modals/ExerciseStructureEditorModal'
 import { FinishWorkoutModal } from '@features/workouts/active/modals/FinishWorkoutModal'
-import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
-import { ExerciseRestSettingsModal } from '@features/workouts/active/modals/ExerciseRestSettingsModal'
 import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWorkoutStructureEditor } from '@features/workouts/active/hooks/useWorkoutStructureEditor'
 import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
+import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
 import type {
     CompletedSet,
     CompletedExercise,
@@ -200,9 +190,8 @@ export function ActiveWorkoutPage() {
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
     // Offline sync и conflict resolution
-    const { failedCount: syncFailedCount } = useSyncQueueWithRetry()
+    useSyncQueueWithRetry()
     const { conflict: conflictInfo, isOpen: isConflictOpen, closeConflict } = useConflictResolution()
-    const exerciseActionQueue = useOfflineExerciseActionQueue(workoutId)
 
     const restPresetScopeKey = useMemo(() => {
         const userKey = profile?.id != null ? String(profile.id) : 'anon'
@@ -268,6 +257,17 @@ export function ActiveWorkoutPage() {
         exercises: workout?.exercises ?? [],
         patchItem,
     })
+
+    // Получение рекомендации веса для текущего упражнения
+    const {
+        data: weightRecommendation,
+        isLoading: isWeightRecLoading,
+        isError: isWeightRecError,
+    } = useWeightRecommendation(
+        workoutId,
+        currentExercise?.exercise_id ?? 0,
+        Boolean(isActiveDraft && currentExercise?.exercise_id && currentSet?.rpe != null)
+    )
 
     useEffect(() => {
         setSessionError(null)
@@ -930,19 +930,6 @@ export function ActiveWorkoutPage() {
         skipRestTimer()
     }, [skipRestTimer, recordActualRestTime, currentExercise])
 
-    // Обертка для остановки таймера с записью фактического времени отдыха
-    const handleStopRestWithAnalytics = useCallback(() => {
-        const state = useActiveWorkoutStore.getState()
-        const actualRestSeconds = state.restTimer.durationSeconds - state.restTimer.remainingSeconds
-        
-        // Записываем фактическое время отдыха для текущего упражнения
-        if (currentExercise?.exercise_id && actualRestSeconds > 0) {
-            recordActualRestTime(currentExercise.exercise_id, actualRestSeconds)
-        }
-        
-        stopRestTimer()
-    }, [stopRestTimer, recordActualRestTime, currentExercise])
-
     const handleSkipCurrentSetQuick = useCallback(() => {
         if (!currentSet) return
         tg.hapticFeedback({ type: 'selection' })
@@ -1049,7 +1036,6 @@ export function ActiveWorkoutPage() {
 
                     <RestTimerPanel 
                         onSkipWithAnalytics={handleSkipRestWithAnalytics}
-                        onStopWithAnalytics={handleStopRestWithAnalytics}
                     />
 
                     <CurrentExerciseCard

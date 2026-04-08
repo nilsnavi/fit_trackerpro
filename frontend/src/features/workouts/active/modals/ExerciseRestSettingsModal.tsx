@@ -27,7 +27,7 @@ export const ExerciseRestSettingsModal = memo(function ExerciseRestSettingsModal
     exerciseId,
     exerciseName,
 }: ExerciseRestSettingsModalProps) {
-    const { setExerciseRestSettings, recordActualRestTime } = useActiveWorkoutActions()
+    const { setExerciseRestSettings } = useActiveWorkoutActions()
     const restDefaultSeconds = useActiveWorkoutStore((s) => s.restDefaultSeconds)
     const exerciseRestSettings = useActiveWorkoutStore((s) => s.exerciseRestSettings[exerciseId])
     

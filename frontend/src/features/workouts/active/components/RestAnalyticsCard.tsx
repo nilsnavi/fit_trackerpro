@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { TrendingUp, Clock, BarChart3 } from 'lucide-react'
+import { TrendingUp, BarChart3 } from 'lucide-react'
 import type { ExerciseRestSettings } from '@features/workouts/types/workouts'
 
 interface RestAnalyticsCardProps {
@@ -9,7 +9,6 @@ interface RestAnalyticsCardProps {
 }
 
 export const RestAnalyticsCard = memo(function RestAnalyticsCard({
-    exerciseName,
     settings,
     globalDefaultSeconds,
 }: RestAnalyticsCardProps) {
@@ -122,7 +121,7 @@ export const RestAnalyticsCard = memo(function RestAnalyticsCard({
             )}
 
             {/* Рекомендация */}
-            {settings.usage_count >= 5 && settings.last_used_seconds && (
+            {settings.usage_count !== undefined && settings.usage_count >= 5 && settings.last_used_seconds && (
                 <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3">
                     <div className="flex items-start gap-2">
                         <TrendingUp className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />

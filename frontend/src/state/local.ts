@@ -18,7 +18,6 @@ export { useWorkoutQuickIncrementsStore } from '../stores/workoutQuickIncrements
 export { useActiveWorkoutStore } from '../stores/activeWorkoutStore'
 export type { ActiveWorkoutSyncState, ActiveWorkoutRestTimerState } from '../stores/activeWorkoutStore'
 export {
-    useActiveWorkoutStateSlice,
     useActiveWorkoutActions,
     useRestDurationForExercise,
 } from '../stores/activeWorkoutStore'
