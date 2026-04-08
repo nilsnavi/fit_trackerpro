@@ -63,6 +63,45 @@ docker compose --env-file backend/.env --env-file frontend/.env exec backend ale
 
 Полный стек через Docker Compose (см. выше). Код бэкенда смонтирован в контейнер (`./backend:/app`), правки подхватываются при перезапуске процесса внутри контейнера в зависимости от режима запуска.
 
+### Вариант A1 — Docker DEV (автообновление в контейнерах)
+
+Для режима разработки с автоматическим подхватом изменений:
+
+- backend: `uvicorn --reload`
+- frontend: Vite HMR внутри контейнера
+
+Запуск одной командой (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\dev-up.ps1
+```
+
+Остановка одной командой (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\dev-down.ps1
+```
+
+С ngrok для Telegram Mini App:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\dev-up.ps1 -WithNgrok
+```
+
+Остановка DEV + ngrok:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\dev-down.ps1 -WithNgrok
+```
+
+Локальные адреса DEV-режима:
+
+- Frontend HMR: `http://localhost:18081`
+- Edge (единая точка входа): `http://localhost:19000`
+- Backend API: `http://localhost:18000/api/v1`
+
+Примечание по миграциям: контейнер `fittracker-migrator` в этом проекте одноразовый. Нормальный статус после запуска — `exited (0)`.
+
 ### Вариант B — бэкенд и фронтенд на хосте, БД в Docker
 
 Требования: **Python 3.11+**, **Node.js 20+**, **PostgreSQL 15**, **Redis 7**.

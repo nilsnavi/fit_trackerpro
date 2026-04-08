@@ -120,6 +120,18 @@ class UserUnits(StrEnum):
     IMPERIAL = "imperial"
 
 
+class FitnessGoal(StrEnum):
+    STRENGTH = "strength"
+    WEIGHT_LOSS = "weight_loss"
+    ENDURANCE = "endurance"
+
+
+class ExperienceLevel(StrEnum):
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+
+
 class AchievementCategoryFilter(StrEnum):
     WORKOUTS = "workouts"
     HEALTH = "health"

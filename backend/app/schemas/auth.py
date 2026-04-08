@@ -9,7 +9,7 @@ from typing import Annotated, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.enums import TokenKind, UserTheme, UserUnits
+from app.schemas.enums import ExperienceLevel, FitnessGoal, TokenKind, UserTheme, UserUnits
 
 # --- Response / stored profile (permissive; must accept legacy DB JSON) ---
 
@@ -45,6 +45,27 @@ class UserProfileData(BaseModel):
         min_length=4,
         max_length=32,
         description="Date of birth (string; format depends on client).",
+    )
+    fitness_goal: Optional[FitnessGoal] = Field(
+        None,
+        description="Primary fitness objective selected during onboarding.",
+    )
+    experience_level: Optional[ExperienceLevel] = Field(
+        None,
+        description="Training experience level selected during onboarding.",
+    )
+    onboarding_completed: Optional[bool] = Field(
+        None,
+        description="Whether onboarding has been completed.",
+    )
+    onboarding_completed_at: Optional[str] = Field(
+        None,
+        description="ISO timestamp when onboarding was completed.",
+    )
+    telegram_photo_url: Optional[str] = Field(
+        None,
+        max_length=2048,
+        description="Telegram profile photo URL from initData.",
     )
 
 
@@ -113,6 +134,24 @@ class UserProfilePatch(BaseModel):
         min_length=4,
         max_length=32,
         description="Date of birth (string; format depends on client).",
+    )
+    fitness_goal: Optional[FitnessGoal] = Field(
+        None,
+        description="Primary fitness objective.",
+    )
+    experience_level: Optional[ExperienceLevel] = Field(
+        None,
+        description="Training experience level.",
+    )
+    onboarding_completed: Optional[bool] = Field(
+        None,
+        description="Onboarding completion marker.",
+    )
+    onboarding_completed_at: Optional[str] = Field(
+        None,
+        min_length=10,
+        max_length=64,
+        description="ISO datetime for onboarding completion.",
     )
 
 
@@ -194,6 +233,14 @@ class AuthResponse(BaseModel):
         max_length=16384,
         description="Refresh token; optional for backward compatibility.",
     )
+    is_new_user: bool = Field(
+        default=False,
+        description="True when user has been created during this auth request.",
+    )
+    onboarding_required: bool = Field(
+        default=False,
+        description="True when onboarding form should be shown to the user.",
+    )
     token_type: str = Field(default="bearer", pattern="^(?i)bearer$")
     expires_in: Optional[int] = Field(
         None,
@@ -201,6 +248,21 @@ class AuthResponse(BaseModel):
         le=86400 * 365,
         description="Token expiration in seconds",
     )
+
+
+class OnboardingRequest(BaseModel):
+    """Request model for first-login onboarding."""
+
+    fitness_goal: FitnessGoal = Field(..., description="Primary fitness objective.")
+    experience_level: ExperienceLevel = Field(..., description="Current training level.")
+
+
+class OnboardingResponse(BaseModel):
+    """Response for onboarding save operation."""
+
+    success: bool = True
+    message: str = Field(default="Onboarding saved", max_length=500)
+    profile: UserProfileData
 
 
 class UserProfileUpdate(BaseModel):

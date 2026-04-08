@@ -7,6 +7,16 @@ import { getAuthTokens, useAuthStore } from '@/stores/authStore'
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean }
 
+function isPublicAuthRequest(config: RetryableRequestConfig | undefined): boolean {
+    const requestUrl = config?.url ?? ''
+    return (
+        requestUrl.includes('/auth/telegram') ||
+        requestUrl.includes('/users/auth/telegram') ||
+        requestUrl.includes('/auth/refresh') ||
+        requestUrl.includes('/users/auth/refresh')
+    )
+}
+
 class ApiService {
     private client: AxiosInstance
 
@@ -78,6 +88,7 @@ class ApiService {
                 if (
                     clientError.status === 401 &&
                     typeof window !== 'undefined' &&
+                    !isPublicAuthRequest(originalConfig) &&
                     window.location.pathname !== '/login'
                 ) {
                     // Minimal auth boundary UX: redirect to login and preserve return URL.

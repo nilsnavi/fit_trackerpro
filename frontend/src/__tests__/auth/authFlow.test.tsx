@@ -5,10 +5,10 @@ import { LoginPage } from '@features/auth/pages/LoginPage'
 import { ProtectedRoute } from '@shared/auth/ProtectedRoute'
 import { useAuthStore } from '@/stores/authStore'
 
-jest.mock('@shared/api/client', () => {
+jest.mock('@features/profile/api/authApi', () => {
     return {
-        api: {
-            post: jest.fn(),
+        authApi: {
+            telegramLogin: jest.fn(),
         },
     }
 })
@@ -28,8 +28,8 @@ describe('Telegram onboarding/auth flow', () => {
     })
 
     it('happy path: LoginPage calls telegram auth and stores tokens then redirects', async () => {
-        const { api } = await import('@shared/api/client')
-        ;(api.post as jest.Mock).mockResolvedValue({
+        const { authApi } = await import('@features/profile/api/authApi')
+        ;(authApi.telegramLogin as jest.Mock).mockResolvedValue({
             access_token: 'access-1',
             refresh_token: 'refresh-1',
         })

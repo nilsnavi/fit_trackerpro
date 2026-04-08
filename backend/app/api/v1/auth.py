@@ -15,6 +15,8 @@ from app.infrastructure.database import get_async_db
 from app.schemas.auth import (
     AuthResponse,
     LogoutResponse,
+    OnboardingRequest,
+    OnboardingResponse,
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
@@ -73,3 +75,18 @@ async def update_user_profile(
 @protected_auth_router.post("/logout", response_model=LogoutResponse)
 async def logout(request: Request, current_user: User = Depends(get_current_user)):
     return AuthService.logout(current_user=current_user, client_ip=get_client_ip(request))
+
+
+@protected_auth_router.post("/onboarding", response_model=OnboardingResponse)
+async def save_onboarding(
+    onboarding_request: OnboardingRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = AuthService(db)
+    return await service.save_onboarding(
+        current_user=current_user,
+        payload=onboarding_request,
+        client_ip=get_client_ip(request),
+    )
