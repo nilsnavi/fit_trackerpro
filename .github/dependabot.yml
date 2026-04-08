@@ -1,82 +1,22 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Moscow"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "security"
-
   - package-ecosystem: "npm"
-    directory: "/frontend"
+    directory: /
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "06:05"
-      timezone: "Europe/Moscow"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "frontend"
-      - "security"
+    group: "all"
     commit-message:
-      prefix: "chore"
-      include: "scope"
-    groups:
-      frontend-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-
-  - package-ecosystem: "pip"
-    directory: "/backend"
+      prefix: "fix(deps)"
+    auto-merge:
+      enable: true
+      method: "merge"
+  - package-ecosystem: "docker"
+    directory: /
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "06:10"
-      timezone: "Europe/Moscow"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "backend"
-      - "security"
+    group: "all"
     commit-message:
-      prefix: "chore"
-      include: "scope"
-    groups:
-      backend-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-
-  - package-ecosystem: "pip"
-    directory: "/backend/requirements"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:15"
-      timezone: "Europe/Moscow"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "backend"
-      - "security"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-    groups:
-      backend-requirements-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
+      prefix: "fix(deps)"
+    auto-merge:
+      enable: true
+      method: "merge"
