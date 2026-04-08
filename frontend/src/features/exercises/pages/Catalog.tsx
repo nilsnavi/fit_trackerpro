@@ -46,55 +46,6 @@ export type {
 } from '@features/exercises/types/catalogUi';
 
 // ============================================
-// Mock Data (заменить на API)
-// ============================================
-
-const MOCK_EXERCISES: Exercise[] = [
-    {
-        id: 1,
-        name: 'Приседания со штангой',
-        category: 'strength',
-        equipment: ['barbell'],
-        primaryMuscles: ['Квадрицепсы', 'Ягодицы'],
-        secondaryMuscles: ['Спина', 'Кор'],
-        difficulty: 'intermediate',
-        risks: ['knee', 'back'],
-        description: 'Базовое упражнение для развития силы ног и ягодиц.',
-        instructions: ['Встаньте под штангу', 'Опуститесь в присед', 'Вернитесь в исходное положение'],
-        tips: [],
-        isCustom: false,
-    },
-    {
-        id: 2,
-        name: 'Бег на месте',
-        category: 'cardio',
-        equipment: ['none'],
-        primaryMuscles: ['Ноги'],
-        secondaryMuscles: ['Кор'],
-        difficulty: 'beginner',
-        risks: ['knee'],
-        description: 'Кардио упражнение без оборудования.',
-        instructions: ['Встаньте прямо', 'Начните бег на месте'],
-        tips: [],
-        isCustom: false,
-    },
-    {
-        id: 3,
-        name: 'Растяжка задней поверхности бедра',
-        category: 'flexibility',
-        equipment: ['yoga_mat'],
-        primaryMuscles: ['Бёдра'],
-        secondaryMuscles: [],
-        difficulty: 'beginner',
-        risks: [],
-        description: 'Мягкая растяжка.',
-        instructions: ['Примите удобное положение', 'Дышите ровно', 'Удерживайте растяжку'],
-        tips: [],
-        isCustom: false,
-    },
-];
-
-// ============================================
 // Helper Functions
 // ============================================
 
@@ -736,10 +687,8 @@ export const Catalog: React.FC = () => {
     // fetched dictionaries are used for chips and filter modal.
 
     const exercises = useMemo(
-        () =>
-            exercisesQuery.data ??
-            (exercisesQuery.isError ? MOCK_EXERCISES : []),
-        [exercisesQuery.data, exercisesQuery.isError],
+        () => exercisesQuery.data ?? [],
+        [exercisesQuery.data],
     );
 
     const isLoading = exercisesQuery.isPending;

@@ -12,9 +12,12 @@ export const mapWorkoutTypeToBackend = (types: WorkoutType[]): BackendWorkoutTyp
     return normalized[0]
 }
 
-export const toExerciseId = (id: string, fallbackIndex: number): number => {
+export const toExerciseId = (id: string): number => {
     const parsed = Number.parseInt(id, 10)
-    return Number.isNaN(parsed) ? fallbackIndex + 1 : parsed
+    if (Number.isNaN(parsed)) {
+        throw new Error(`Invalid exercise id: ${id}`)
+    }
+    return parsed
 }
 
 export const mapBackendTypeToSelectedTypes = (type: BackendWorkoutType): WorkoutType[] => {
@@ -57,10 +60,10 @@ export const buildTemplateExercises = (blocks: WorkoutBlock[]): ExerciseInTempla
             (block): block is WorkoutBlock & { exercise: WorkoutBuilderExercise } =>
                 (block.type === 'strength' || block.type === 'cardio') && Boolean(block.exercise),
         )
-        .map((block, index) => {
+        .map((block) => {
             const isCardio = block.type === 'cardio'
             return {
-                exercise_id: toExerciseId(block.exercise.id, index),
+                exercise_id: toExerciseId(block.exercise.id),
                 name: block.exercise.name,
                 sets: Math.max(1, block.config?.sets ?? 3),
                 reps: isCardio ? undefined : Math.max(1, block.config?.reps ?? 10),

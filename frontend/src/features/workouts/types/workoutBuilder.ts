@@ -6,7 +6,10 @@ export interface WorkoutBuilderExercise {
     id: string
     name: string
     category: string
+    muscleGroup?: string | null
     muscleGroups?: string[]
+    equipment?: string[]
+    aliases?: string[]
     notes?: string
 }
 

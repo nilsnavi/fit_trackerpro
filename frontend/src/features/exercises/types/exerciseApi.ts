@@ -1,5 +1,17 @@
 /** Ответы GET /exercises (согласно backend ExerciseResponse / ExerciseListResponse). */
 
+export type ExerciseListStatus = 'active' | 'pending' | 'archived' | 'all'
+
+export interface ExerciseListApiParams {
+    page?: number
+    page_size?: number
+    status?: ExerciseListStatus
+    category?: string
+    muscle_group?: string
+    equipment?: string
+    search?: string
+}
+
 export interface ExerciseRiskFlagsApi {
     high_blood_pressure: boolean
     diabetes: boolean
@@ -15,6 +27,8 @@ export interface ExerciseApiItem {
     category: string
     equipment: string[]
     muscle_groups: string[]
+    muscle_group: string | null
+    aliases: string[]
     risk_flags: ExerciseRiskFlagsApi
     media_url: string | null
     status: string
