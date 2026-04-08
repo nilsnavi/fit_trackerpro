@@ -29,6 +29,19 @@ jest.mock('@shared/api/domains/workoutsApi', () => {
     }
 })
 
+jest.mock('@features/analytics/api/analyticsDomain', () => ({
+    getAnalyticsWorkoutSummary: jest.fn().mockResolvedValue({
+        workout_id: 0,
+        date: '2026-03-10',
+        duration: 0,
+        total_sets: 0,
+        total_reps: 0,
+        total_volume: 0,
+        best_sets: [],
+        pr_events: [],
+    }),
+}))
+
 function makeQueryClient(): QueryClient {
     return new QueryClient({
         defaultOptions: {

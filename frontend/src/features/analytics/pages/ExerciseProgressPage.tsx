@@ -2,15 +2,17 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { ChevronDown, ChevronUp, Dumbbell, TrendingUp, Trophy } from 'lucide-react'
+import { Activity, ChevronDown, ChevronUp, Dumbbell, TrendingUp, Trophy } from 'lucide-react'
 import {
+    Area,
+    AreaChart,
+    CartesianGrid,
     Line,
     LineChart,
     ResponsiveContainer,
-    CartesianGrid,
+    Tooltip,
     XAxis,
     YAxis,
-    Tooltip,
 } from 'recharts'
 import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
@@ -18,11 +20,14 @@ import { SectionHeader } from '@shared/ui/SectionHeader'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { ProgressPeriodFilter } from '@features/analytics/components/ProgressPeriodFilter'
 import { ProgressScreenTabs } from '@features/analytics/components/ProgressScreenTabs'
+import { PREventCard } from '@features/analytics/components/PREventCard'
 import {
     getAnalyticsProgress,
+    getAnalyticsProgressInsights,
     getAnalyticsSummary,
     type ApiAnalyticsSummaryResponse,
     type ApiExerciseProgressResponse,
+    type ApiProgressInsightsResponse,
 } from '@features/analytics/api/analyticsDomain'
 import {
     buildChartDataFromProgress,
@@ -58,6 +63,19 @@ function ExerciseChartTooltip({ active, payload, label }: { active?: boolean; pa
     )
 }
 
+function VolumeTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
+    if (!active || !payload || payload.length === 0) return null
+
+    return (
+        <div className="rounded-xl border border-border bg-telegram-bg px-3 py-2 shadow-lg">
+            <p className="text-xs font-semibold text-telegram-text">{label}</p>
+            <p className="mt-1 text-xs text-telegram-hint">
+                Объём: <span className="font-medium text-telegram-text">{payload[0]?.value ?? 0}</span>
+            </p>
+        </div>
+    )
+}
+
 export default function ExerciseProgressPage() {
     const [period, setPeriod] = useState<ProgressPeriod>('30d')
     const [expanded, setExpanded] = useState(false)
@@ -79,8 +97,14 @@ export default function ExerciseProgressPage() {
         staleTime: 60_000,
     })
 
-    const isLoading = summaryQuery.isPending || progressQuery.isPending
-    const error = summaryQuery.error ?? progressQuery.error
+    const insightsQuery = useQuery<ApiProgressInsightsResponse>({
+        queryKey: queryKeys.analytics.progressInsights(period, dateFrom, dateTo),
+        queryFn: () => getAnalyticsProgressInsights({ ...range, period }),
+        staleTime: 60_000,
+    })
+
+    const isLoading = summaryQuery.isPending || progressQuery.isPending || insightsQuery.isPending
+    const error = summaryQuery.error ?? progressQuery.error ?? insightsQuery.error
     const progressRows = progressQuery.data ?? []
     const exercises = useMemo(() => mapProgressToExercises(progressRows), [progressRows])
     const defaultExerciseIds = useMemo(
@@ -118,12 +142,25 @@ export default function ExerciseProgressPage() {
     )
 
     const prItems = useMemo(
+        () => (insightsQuery.data?.pr_events ?? []).slice(0, 4),
+        [insightsQuery.data?.pr_events],
+    )
+
+    const bestSets = useMemo(
+        () => (insightsQuery.data?.best_sets ?? []).slice(0, 5),
+        [insightsQuery.data?.best_sets],
+    )
+
+    const volumeTrendData = useMemo(
         () =>
-            progressRows
-                .filter((item) => item.best_performance?.date)
-                .sort((a, b) => (b.best_performance?.date ?? '').localeCompare(a.best_performance?.date ?? ''))
-                .slice(0, 4),
-        [progressRows],
+            [...(insightsQuery.data?.volume_trend ?? [])]
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .slice(-10)
+                .map((item) => ({
+                    label: format(new Date(item.date), 'dd MMM', { locale: ru }),
+                    volume: Math.round(item.total_volume ?? 0),
+                })),
+        [insightsQuery.data?.volume_trend],
     )
 
     const exerciseHighlights = useMemo(
@@ -316,6 +353,47 @@ export default function ExerciseProgressPage() {
                     <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
                             <div>
+                                <h2 className="text-sm font-semibold text-telegram-text">Объём нагрузки за период</h2>
+                                <p className="mt-1 text-xs text-telegram-hint">Суммарный объём (кг × повт) по тренировочным дням.</p>
+                            </div>
+                            <Activity className="h-4 w-4 text-primary" />
+                        </div>
+
+                        {volumeTrendData.length === 0 ? (
+                            <p className="rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
+                                Недостаточно данных для графика объёма.
+                            </p>
+                        ) : (
+                            <div className="-mx-2 mt-3 h-48">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={volumeTrendData} margin={{ top: 8, right: 16, left: 6, bottom: 8 }}>
+                                        <defs>
+                                            <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.35)" />
+                                        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={20} />
+                                        <YAxis tick={{ fontSize: 11 }} width={36} />
+                                        <Tooltip content={<VolumeTooltip />} />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="volume"
+                                            stroke="hsl(var(--primary))"
+                                            strokeWidth={2}
+                                            fill="url(#volumeGradient)"
+                                            dot={false}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="rounded-2xl bg-telegram-secondary-bg p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <div>
                                 <h2 className="text-sm font-semibold text-telegram-text">Кто растёт быстрее</h2>
                                 <p className="mt-1 text-xs text-telegram-hint">Список помогает быстро понять, куда сейчас идёт адаптация.</p>
                             </div>
@@ -374,12 +452,34 @@ export default function ExerciseProgressPage() {
                         ) : (
                             <div className="space-y-2">
                                 {prItems.map((item) => (
-                                    <article key={`${item.exercise_id}-${item.best_performance?.date}`} className="rounded-xl bg-telegram-bg p-3">
-                                        <p className="text-sm font-medium text-telegram-text">{item.exercise_name}</p>
+                                    <PREventCard key={`${item.exercise_id}-${item.date}`} item={item} />
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="rounded-2xl bg-telegram-secondary-bg p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-semibold text-telegram-text">Лучшие подходы периода</h2>
+                                <p className="mt-1 text-xs text-telegram-hint">Топ-сеты по объёму (вес × повторы) для быстрого фокуса.</p>
+                            </div>
+                            <Trophy className="h-4 w-4 text-amber-500" />
+                        </div>
+                        {bestSets.length === 0 ? (
+                            <p className="rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
+                                Лучшие подходы появятся после завершённых сетов с весом и повторами.
+                            </p>
+                        ) : (
+                            <div className="space-y-2">
+                                {bestSets.map((setItem) => (
+                                    <article key={`${setItem.exercise_id}-${setItem.date}-${setItem.set_number ?? 0}`} className="rounded-xl bg-telegram-bg p-3">
+                                        <p className="text-sm font-medium text-telegram-text">{setItem.exercise_name}</p>
                                         <p className="mt-1 text-xs text-telegram-hint">
-                                            {item.best_performance?.weight != null ? `${item.best_performance.weight} кг` : 'Без веса'}
-                                            {item.best_performance?.reps != null ? ` × ${item.best_performance.reps} повт` : ''}
-                                            {item.best_performance?.date ? ` • ${format(new Date(item.best_performance.date), 'dd MMM', { locale: ru })}` : ''}
+                                            {setItem.weight != null ? `${setItem.weight} кг` : 'Без веса'}
+                                            {setItem.reps != null ? ` × ${setItem.reps} повт` : ''}
+                                            {setItem.set_number != null ? ` • Подход ${setItem.set_number}` : ''}
+                                            {` • Объём ${Math.round(setItem.volume)}`}
                                         </p>
                                     </article>
                                 ))}

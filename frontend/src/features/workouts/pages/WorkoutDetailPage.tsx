@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
     ArrowLeft,
@@ -8,11 +9,15 @@ import {
     RotateCcw,
     Tags,
     LayoutTemplate,
+    Trophy,
 } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import { Modal } from '@shared/ui/Modal'
 import { Input } from '@shared/ui/Input'
 import { getErrorMessage } from '@shared/errors'
+import { queryKeys } from '@shared/api/queryKeys'
+import { getAnalyticsWorkoutSummary } from '@features/analytics/api/analyticsDomain'
+import { PREventCard } from '@features/analytics/components/PREventCard'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import {
     useCreateTemplateFromWorkoutMutation,
@@ -55,6 +60,13 @@ export function WorkoutDetailPage() {
     const [templateNameError, setTemplateNameError] = useState<string | null>(null)
 
     const isCompletedWorkout = typeof workout?.duration === 'number' && workout.duration > 0
+
+    const workoutSummaryQuery = useQuery({
+        queryKey: queryKeys.analytics.workoutSummary(workoutId),
+        queryFn: () => getAnalyticsWorkoutSummary({ workout_id: workoutId }),
+        enabled: isValidWorkoutId && isCompletedWorkout,
+        staleTime: 60_000,
+    })
 
     const exerciseCount = useMemo(() => workout?.exercises.length ?? 0, [workout])
 
@@ -215,6 +227,85 @@ export function WorkoutDetailPage() {
                         )}
                     </section>
 
+                    <section className="space-y-3 rounded-xl bg-telegram-secondary-bg p-4">
+                        <div className="flex items-center justify-between">
+                               <h2 className="text-base font-semibold text-telegram-text">Аналитика тренировки</h2>
+                            <Trophy className="h-4 w-4 text-amber-500" />
+                        </div>
+
+                        {workoutSummaryQuery.isLoading ? (
+                            <div className="h-20 animate-pulse rounded-xl bg-telegram-bg/60" />
+                        ) : workoutSummaryQuery.error ? (
+                            <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
+                                {getErrorMessage(workoutSummaryQuery.error)}
+                            </p>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="rounded-lg bg-telegram-bg/60 p-2">
+                                        <div className="text-xs text-telegram-hint">Объём</div>
+                                        <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                            {Math.round(workoutSummaryQuery.data?.total_volume ?? 0)}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg bg-telegram-bg/60 p-2">
+                                        <div className="text-xs text-telegram-hint">Сеты</div>
+                                        <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                            {workoutSummaryQuery.data?.total_sets ?? 0}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg bg-telegram-bg/60 p-2">
+                                        <div className="text-xs text-telegram-hint">Повторы</div>
+                                        <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                            {workoutSummaryQuery.data?.total_reps ?? 0}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-semibold text-telegram-text">Лучшие подходы</h3>
+                                    {(workoutSummaryQuery.data?.best_sets ?? []).length === 0 ? (
+                                        <p className="rounded-lg bg-telegram-bg/60 px-3 py-2 text-xs text-telegram-hint">
+                                            Лучшие подходы появятся после сохранения выполненных сетов с весом/повторами.
+                                        </p>
+                                    ) : (
+                                        (workoutSummaryQuery.data?.best_sets ?? []).map((setItem) => (
+                                            <article
+                                                key={`${setItem.exercise_id}-${setItem.date}-${setItem.set_number ?? 0}`}
+                                                className="rounded-lg bg-telegram-bg/60 p-3"
+                                            >
+                                                <p className="text-sm font-medium text-telegram-text">{setItem.exercise_name}</p>
+                                                <p className="mt-1 text-xs text-telegram-hint">
+                                                    {setItem.weight != null ? `${setItem.weight} кг` : 'Без веса'}
+                                                    {setItem.reps != null ? ` × ${setItem.reps} повт` : ''}
+                                                    {setItem.set_number != null ? ` • Подход ${setItem.set_number}` : ''}
+                                                    {` • Объём ${Math.round(setItem.volume)}`}
+                                                </p>
+                                            </article>
+                                        ))
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-semibold text-telegram-text">PR в этой тренировке</h3>
+                                    {(workoutSummaryQuery.data?.pr_events ?? []).length === 0 ? (
+                                        <p className="rounded-lg bg-telegram-bg/60 px-3 py-2 text-xs text-telegram-hint">
+                                            В этой сессии новые PR не зафиксированы.
+                                        </p>
+                                    ) : (
+                                        (workoutSummaryQuery.data?.pr_events ?? []).map((pr) => (
+                                            <PREventCard
+                                                key={`${pr.exercise_id}-${pr.date}`}
+                                                item={pr}
+                                                className="rounded-lg bg-telegram-bg/60 p-3"
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </section>
+
                     <section className="space-y-2">
                             <h2 className="text-base font-semibold text-telegram-text">Действия</h2>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -222,21 +313,21 @@ export function WorkoutDetailPage() {
                                 type="button"
                                 leftIcon={<RotateCcw className="h-4 w-4" />}
                                 onClick={() => void handleRepeatWorkout()}
-                                isLoading={isStartingSession}
-                                disabled={isStartingSession}
+                                    isLoading={isStartingSession}
+                                    disabled={isStartingSession}
                             >
-                                    Повторить
+                                        Повторить
                             </Button>
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                leftIcon={<LayoutTemplate className="h-4 w-4" />}
-                                onClick={handleOpenSaveAsTemplate}
-                                isLoading={createTemplateFromWorkoutMutation.isPending}
-                                disabled={createTemplateFromWorkoutMutation.isPending}
-                            >
-                                    Сохранить как шаблон
-                            </Button>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    leftIcon={<LayoutTemplate className="h-4 w-4" />}
+                                    onClick={handleOpenSaveAsTemplate}
+                                    isLoading={createTemplateFromWorkoutMutation.isPending}
+                                    disabled={createTemplateFromWorkoutMutation.isPending}
+                                >
+                                        Сохранить как шаблон
+                                </Button>
                         </div>
                         {templateSavedName && (
                             <p className="text-sm text-primary">Шаблон сохранен: {templateSavedName}</p>

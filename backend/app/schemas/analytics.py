@@ -286,3 +286,85 @@ class MuscleImbalanceSignalsResponse(BaseModel):
     @classmethod
     def _signals_none_as_empty(cls, v: Any) -> Any:
         return None if v is None or v == {} else v
+
+
+class ProgressInsightsVolumePoint(BaseModel):
+    """Daily volume aggregate point for trend charts."""
+
+    date: date
+    workout_count: int
+    total_sets: int
+    total_reps: int
+    total_volume: float
+
+
+class ProgressInsightsFrequencyPoint(BaseModel):
+    """Weekly frequency aggregate point."""
+
+    week_start: date
+    week_end: date
+    active_days: int
+    workout_count: int
+
+
+class ProgressInsightsPRItem(BaseModel):
+    """Detected personal record event for an exercise."""
+
+    exercise_id: int
+    exercise_name: str
+    date: date
+    weight: Optional[float] = None
+    reps: Optional[int] = None
+    previous_best_weight: Optional[float] = None
+    improvement: Optional[float] = None
+    improvement_pct: Optional[float] = None
+    is_first_entry: bool = False
+
+
+class ProgressInsightsBestSetItem(BaseModel):
+    """Top set by volume/weight in selected period."""
+
+    exercise_id: int
+    exercise_name: str
+    date: date
+    set_number: Optional[int] = None
+    weight: Optional[float] = None
+    reps: Optional[int] = None
+    volume: float
+
+
+class ProgressInsightsSummary(BaseModel):
+    """Compact overview of progress in selected period."""
+
+    total_workouts: int
+    active_days: int
+    total_sets: int
+    total_reps: int
+    total_volume: float
+    average_workouts_per_week: float
+
+
+class ProgressInsightsResponse(BaseModel):
+    """Combined progress analytics payload for overview screens."""
+
+    period: str
+    date_from: date
+    date_to: date
+    summary: ProgressInsightsSummary
+    volume_trend: List[ProgressInsightsVolumePoint] = Field(default_factory=list)
+    frequency_trend: List[ProgressInsightsFrequencyPoint] = Field(default_factory=list)
+    best_sets: List[ProgressInsightsBestSetItem] = Field(default_factory=list)
+    pr_events: List[ProgressInsightsPRItem] = Field(default_factory=list)
+
+
+class WorkoutPostSummaryResponse(BaseModel):
+    """Post-workout snapshot focused on immediate user feedback."""
+
+    workout_id: int
+    date: date
+    duration: int
+    total_sets: int
+    total_reps: int
+    total_volume: float
+    best_sets: List[ProgressInsightsBestSetItem] = Field(default_factory=list)
+    pr_events: List[ProgressInsightsPRItem] = Field(default_factory=list)

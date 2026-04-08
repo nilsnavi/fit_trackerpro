@@ -19,4 +19,10 @@ export const analyticsApi = {
     getRecoveryState() {
         return api.get('/analytics/recovery-state')
     },
+    getProgressInsights(params?: Record<string, unknown>) {
+        return api.get('/analytics/progress-insights', params)
+    },
+    getWorkoutSummary(params?: Record<string, unknown>) {
+        return api.get('/analytics/workout-summary', params)
+    },
 }

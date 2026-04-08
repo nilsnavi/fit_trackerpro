@@ -620,3 +620,403 @@ class AnalyticsRepository(SQLAlchemyRepository):
             )
         ).mappings().first()
         return dict(row) if row else None
+
+    async def get_progress_insights_summary(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> Dict[str, Any]:
+        result = await self.db.execute(
+            text(
+                """
+                WITH parsed_sets AS (
+                    SELECT
+                        wl.id AS workout_id,
+                        wl.date AS workout_date,
+                        NULLIF(set_item.item->>'weight', '')::double precision AS weight,
+                        NULLIF(set_item.item->>'reps', '')::int AS reps
+                    FROM workout_logs wl
+                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(
+                        COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
+                    ) AS set_item(item)
+                    WHERE wl.user_id = :user_id
+                      AND wl.date >= :date_from
+                      AND wl.date <= :date_to
+                      AND COALESCE((set_item.item->>'completed')::boolean, false) = true
+                ),
+                workout_totals AS (
+                    SELECT
+                        COUNT(DISTINCT wl.id) AS total_workouts,
+                        COUNT(DISTINCT wl.date) AS active_days
+                    FROM workout_logs wl
+                    WHERE wl.user_id = :user_id
+                      AND wl.date >= :date_from
+                      AND wl.date <= :date_to
+                      AND COALESCE(wl.duration, 0) > 0
+                )
+                SELECT
+                    wt.total_workouts,
+                    wt.active_days,
+                    COALESCE(COUNT(ps.workout_id), 0) AS total_sets,
+                    COALESCE(SUM(ps.reps), 0) AS total_reps,
+                    COALESCE(SUM(COALESCE(ps.weight, 0) * COALESCE(ps.reps, 0)), 0) AS total_volume
+                FROM workout_totals wt
+                LEFT JOIN parsed_sets ps ON true
+                GROUP BY wt.total_workouts, wt.active_days
+                """
+            ),
+            {
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+            },
+        )
+        row = result.mappings().first()
+        return dict(row) if row else {
+            "total_workouts": 0,
+            "active_days": 0,
+            "total_sets": 0,
+            "total_reps": 0,
+            "total_volume": 0,
+        }
+
+    async def get_progress_volume_trend(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> List[Dict[str, Any]]:
+        result = await self.db.execute(
+            text(
+                """
+                WITH parsed_sets AS (
+                    SELECT
+                        wl.id AS workout_id,
+                        wl.date AS workout_date,
+                        NULLIF(set_item.item->>'weight', '')::double precision AS weight,
+                        NULLIF(set_item.item->>'reps', '')::int AS reps
+                    FROM workout_logs wl
+                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(
+                        COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
+                    ) AS set_item(item)
+                    WHERE wl.user_id = :user_id
+                      AND wl.date >= :date_from
+                      AND wl.date <= :date_to
+                      AND COALESCE((set_item.item->>'completed')::boolean, false) = true
+                )
+                SELECT
+                    ps.workout_date AS date,
+                    COUNT(DISTINCT ps.workout_id) AS workout_count,
+                    COUNT(*) AS total_sets,
+                    COALESCE(SUM(ps.reps), 0) AS total_reps,
+                    COALESCE(SUM(COALESCE(ps.weight, 0) * COALESCE(ps.reps, 0)), 0) AS total_volume
+                FROM parsed_sets ps
+                GROUP BY ps.workout_date
+                ORDER BY ps.workout_date ASC
+                """
+            ),
+            {
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+            },
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def get_progress_frequency_trend(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> List[Dict[str, Any]]:
+        result = await self.db.execute(
+            text(
+                """
+                WITH workout_days AS (
+                    SELECT
+                        wl.date AS workout_date,
+                        date_trunc('week', wl.date::timestamp)::date AS week_start,
+                        (date_trunc('week', wl.date::timestamp)::date + INTERVAL '6 days')::date AS week_end,
+                        COUNT(*) AS workout_count
+                    FROM workout_logs wl
+                    WHERE wl.user_id = :user_id
+                      AND wl.date >= :date_from
+                      AND wl.date <= :date_to
+                      AND COALESCE(wl.duration, 0) > 0
+                    GROUP BY wl.date, week_start, week_end
+                )
+                SELECT
+                    wd.week_start,
+                    wd.week_end,
+                    COUNT(*) AS active_days,
+                    COALESCE(SUM(wd.workout_count), 0) AS workout_count
+                FROM workout_days wd
+                GROUP BY wd.week_start, wd.week_end
+                ORDER BY wd.week_start ASC
+                """
+            ),
+            {
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+            },
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def get_progress_best_sets(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+        limit: int = 5,
+    ) -> List[Dict[str, Any]]:
+        result = await self.db.execute(
+            text(
+                """
+                WITH parsed_sets AS (
+                    SELECT
+                        wl.date AS workout_date,
+                        (exercise_item.item->>'exercise_id')::int AS exercise_id,
+                        COALESCE(NULLIF(exercise_item.item->>'name', ''), 'Unknown') AS exercise_name,
+                        NULLIF(set_item.item->>'set_number', '')::int AS set_number,
+                        NULLIF(set_item.item->>'weight', '')::double precision AS weight,
+                        NULLIF(set_item.item->>'reps', '')::int AS reps,
+                        COALESCE(NULLIF(set_item.item->>'weight', '')::double precision, 0)
+                            * COALESCE(NULLIF(set_item.item->>'reps', '')::int, 0) AS volume
+                    FROM workout_logs wl
+                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(
+                        COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
+                    ) AS set_item(item)
+                    WHERE wl.user_id = :user_id
+                      AND wl.date >= :date_from
+                      AND wl.date <= :date_to
+                      AND COALESCE((set_item.item->>'completed')::boolean, false) = true
+                      AND exercise_item.item ? 'exercise_id'
+                )
+                SELECT
+                    exercise_id,
+                    exercise_name,
+                    workout_date AS date,
+                    set_number,
+                    weight,
+                    reps,
+                    volume
+                FROM parsed_sets
+                ORDER BY volume DESC, weight DESC NULLS LAST, reps DESC NULLS LAST, workout_date DESC
+                LIMIT :limit
+                """
+            ),
+            {
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+                "limit": limit,
+            },
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def get_progress_pr_events(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        result = await self.db.execute(
+            text(
+                """
+                WITH parsed_sets AS (
+                    SELECT
+                        wl.date AS workout_date,
+                        (exercise_item.item->>'exercise_id')::int AS exercise_id,
+                        COALESCE(NULLIF(exercise_item.item->>'name', ''), 'Unknown') AS exercise_name,
+                        NULLIF(set_item.item->>'weight', '')::double precision AS weight,
+                        NULLIF(set_item.item->>'reps', '')::int AS reps
+                    FROM workout_logs wl
+                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(
+                        COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
+                    ) AS set_item(item)
+                    WHERE wl.user_id = :user_id
+                      AND wl.date <= :date_to
+                      AND COALESCE((set_item.item->>'completed')::boolean, false) = true
+                      AND exercise_item.item ? 'exercise_id'
+                      AND NULLIF(set_item.item->>'weight', '')::double precision IS NOT NULL
+                ),
+                day_best AS (
+                    SELECT
+                        exercise_id,
+                        exercise_name,
+                        workout_date,
+                        weight,
+                        reps,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY exercise_id, workout_date
+                            ORDER BY weight DESC NULLS LAST, reps DESC NULLS LAST
+                        ) AS rn
+                    FROM parsed_sets
+                ),
+                daily AS (
+                    SELECT
+                        exercise_id,
+                        exercise_name,
+                        workout_date,
+                        weight,
+                        reps
+                    FROM day_best
+                    WHERE rn = 1
+                ),
+                with_prev AS (
+                    SELECT
+                        d.*,
+                        MAX(d.weight) OVER (
+                            PARTITION BY d.exercise_id
+                            ORDER BY d.workout_date
+                            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+                        ) AS previous_best_weight
+                    FROM daily d
+                )
+                SELECT
+                    exercise_id,
+                    exercise_name,
+                    workout_date AS date,
+                    weight,
+                    reps,
+                    previous_best_weight,
+                    (weight - previous_best_weight) AS improvement,
+                    CASE
+                        WHEN previous_best_weight IS NULL OR previous_best_weight = 0 THEN NULL
+                        ELSE ((weight - previous_best_weight) / previous_best_weight) * 100
+                    END AS improvement_pct,
+                    (previous_best_weight IS NULL) AS is_first_entry
+                FROM with_prev
+                WHERE workout_date >= :date_from
+                  AND (previous_best_weight IS NULL OR weight > previous_best_weight)
+                ORDER BY workout_date DESC, weight DESC
+                LIMIT :limit
+                """
+            ),
+            {
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+                "limit": limit,
+            },
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def get_workout_post_summary(
+        self,
+        user_id: int,
+        workout_id: int,
+        limit_best_sets: int = 5,
+    ) -> Optional[Dict[str, Any]]:
+        workout_row = (
+            await self.db.execute(
+                text(
+                    """
+                    SELECT id, date, duration
+                    FROM workout_logs
+                    WHERE user_id = :user_id
+                      AND id = :workout_id
+                    LIMIT 1
+                    """
+                ),
+                {
+                    "user_id": user_id,
+                    "workout_id": workout_id,
+                },
+            )
+        ).mappings().first()
+        if not workout_row:
+            return None
+
+        totals_row = (
+            await self.db.execute(
+                text(
+                    """
+                    WITH parsed_sets AS (
+                        SELECT
+                            NULLIF(set_item.item->>'weight', '')::double precision AS weight,
+                            NULLIF(set_item.item->>'reps', '')::int AS reps
+                        FROM workout_logs wl
+                        CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                        CROSS JOIN LATERAL jsonb_array_elements(
+                            COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
+                        ) AS set_item(item)
+                        WHERE wl.user_id = :user_id
+                          AND wl.id = :workout_id
+                          AND COALESCE((set_item.item->>'completed')::boolean, false) = true
+                    )
+                    SELECT
+                        COUNT(*) AS total_sets,
+                        COALESCE(SUM(reps), 0) AS total_reps,
+                        COALESCE(SUM(COALESCE(weight, 0) * COALESCE(reps, 0)), 0) AS total_volume
+                    FROM parsed_sets
+                    """
+                ),
+                {
+                    "user_id": user_id,
+                    "workout_id": workout_id,
+                },
+            )
+        ).mappings().first()
+
+        best_sets = (
+            await self.db.execute(
+                text(
+                    """
+                    WITH parsed_sets AS (
+                        SELECT
+                            (exercise_item.item->>'exercise_id')::int AS exercise_id,
+                            COALESCE(NULLIF(exercise_item.item->>'name', ''), 'Unknown') AS exercise_name,
+                            wl.date AS workout_date,
+                            NULLIF(set_item.item->>'set_number', '')::int AS set_number,
+                            NULLIF(set_item.item->>'weight', '')::double precision AS weight,
+                            NULLIF(set_item.item->>'reps', '')::int AS reps,
+                            COALESCE(NULLIF(set_item.item->>'weight', '')::double precision, 0)
+                                * COALESCE(NULLIF(set_item.item->>'reps', '')::int, 0) AS volume
+                        FROM workout_logs wl
+                        CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                        CROSS JOIN LATERAL jsonb_array_elements(
+                            COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
+                        ) AS set_item(item)
+                        WHERE wl.user_id = :user_id
+                          AND wl.id = :workout_id
+                          AND COALESCE((set_item.item->>'completed')::boolean, false) = true
+                          AND exercise_item.item ? 'exercise_id'
+                    )
+                    SELECT
+                        exercise_id,
+                        exercise_name,
+                        workout_date AS date,
+                        set_number,
+                        weight,
+                        reps,
+                        volume
+                    FROM parsed_sets
+                    ORDER BY volume DESC, weight DESC NULLS LAST, reps DESC NULLS LAST
+                    LIMIT :limit_best_sets
+                    """
+                ),
+                {
+                    "user_id": user_id,
+                    "workout_id": workout_id,
+                    "limit_best_sets": limit_best_sets,
+                },
+            )
+        ).mappings().all()
+
+        return {
+            "workout": dict(workout_row),
+            "totals": dict(totals_row) if totals_row else {
+                "total_sets": 0,
+                "total_reps": 0,
+                "total_volume": 0,
+            },
+            "best_sets": [dict(row) for row in best_sets],
+        }

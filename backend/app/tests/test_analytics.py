@@ -20,6 +20,14 @@ class TestAnalyticsAuthBoundary:
         r = await client.post("/api/v1/analytics/export", json={"format": "json"})
         assert r.status_code == 401
 
+    async def test_progress_insights_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/analytics/progress-insights")
+        assert r.status_code == 401
+
+    async def test_workout_summary_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/analytics/workout-summary?workout_id=1")
+        assert r.status_code == 401
+
 
 @pytest.mark.integration
 class TestAnalyticsEmptyStateContracts:
@@ -96,6 +104,29 @@ class TestAnalyticsEmptyStateContracts:
             assert "signals" in data
         else:
             assert (data.get("error") or {}).get("code") == "analytics_not_found"
+
+    async def test_progress_insights_contract(self, authenticated_client: AsyncClient):
+        if str(settings.DATABASE_URL).startswith("sqlite"):
+            pytest.skip("Progress insights relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
+        r = await authenticated_client.get("/api/v1/analytics/progress-insights?period=30d")
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data.get("period") == "30d"
+        assert "date_from" in data
+        assert "date_to" in data
+        assert isinstance(data.get("summary"), dict)
+        assert isinstance(data.get("volume_trend"), list)
+        assert isinstance(data.get("frequency_trend"), list)
+        assert isinstance(data.get("best_sets"), list)
+        assert isinstance(data.get("pr_events"), list)
+
+    async def test_workout_summary_not_found_contract(self, authenticated_client: AsyncClient):
+        if str(settings.DATABASE_URL).startswith("sqlite"):
+            pytest.skip("Workout summary relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
+        r = await authenticated_client.get("/api/v1/analytics/workout-summary?workout_id=999999")
+        assert r.status_code == 404, r.text
+        data = r.json()
+        assert (data.get("error") or {}).get("code") == "analytics_not_found"
 
     async def test_calendar_contract(self, authenticated_client: AsyncClient):
         # Calendar query uses PostgreSQL aggregates (e.g., bool_or) and isn't portable to SQLite.
