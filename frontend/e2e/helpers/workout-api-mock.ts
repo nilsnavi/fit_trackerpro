@@ -68,6 +68,15 @@ export type WorkoutTemplate = {
     updated_at: string
 }
 
+type TemplateExercise = {
+    exercise_id?: number
+    name?: string
+    sets?: number
+    reps?: number
+    weight?: number
+    duration?: number
+}
+
 export type MockWorkoutApiState = {
     templates: WorkoutTemplate[]
     historyItems: WorkoutHistoryItem[]
@@ -289,11 +298,33 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             state.startRequests.push(payload)
             const workoutId = state.nextWorkoutId++
             const title = String(payload.name ?? 'E2E сессия')
+            const templateId = typeof payload.template_id === 'number' ? payload.template_id : null
+            const template = templateId == null ? null : state.templates.find((item) => item.id === templateId)
+            const templateExercisesRaw = (template?.exercises ?? []) as TemplateExercise[]
+            const exercises: CompletedExercise[] = templateExercisesRaw.map((exercise, exerciseIndex) => {
+                const sets = Math.max(1, Number(exercise.sets ?? 1))
+                const reps = typeof exercise.reps === 'number' ? exercise.reps : undefined
+                const weight = typeof exercise.weight === 'number' ? exercise.weight : undefined
+                const duration = typeof exercise.duration === 'number' ? exercise.duration : undefined
+
+                return {
+                    exercise_id: Number(exercise.exercise_id ?? exerciseIndex + 1),
+                    name: String(exercise.name ?? `Упражнение ${exerciseIndex + 1}`),
+                    sets_completed: Array.from({ length: sets }, (_, setIndex) => ({
+                        set_number: setIndex + 1,
+                        completed: false,
+                        reps,
+                        weight,
+                        duration,
+                    })),
+                }
+            })
+
             const detail: WorkoutHistoryItem = {
                 id: workoutId,
                 date: isoNow(),
                 duration: undefined,
-                exercises: [],
+                exercises,
                 comments: title,
                 tags: typeof payload.type === 'string' ? [String(payload.type)] : [],
                 created_at: isoMinutesAgo(12),
@@ -303,7 +334,7 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, {
                 id: workoutId,
                 user_id: 1,
-                template_id: null,
+                template_id: templateId,
                 date: detail.date,
                 start_time: detail.created_at,
                 status: 'ok',

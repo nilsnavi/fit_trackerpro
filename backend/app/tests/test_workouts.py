@@ -2,6 +2,23 @@ import pytest
 from httpx import AsyncClient
 from uuid import uuid4
 
+from app.settings import settings
+from app.tests.telegram_webapp import build_init_data
+
+
+async def _auth_headers_for_telegram_user(client: AsyncClient, telegram_id: int) -> dict[str, str]:
+    user_obj = {
+        "id": telegram_id,
+        "first_name": f"User{telegram_id}",
+        "last_name": "Test",
+        "username": f"user_{telegram_id}",
+    }
+    init_data = build_init_data(bot_token=settings.TELEGRAM_BOT_TOKEN, user=user_obj)
+    response = await client.post("/api/v1/users/auth/telegram", json={"init_data": init_data})
+    assert response.status_code == 200, response.text
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
 
 @pytest.mark.integration
 class TestWorkoutTemplates:
@@ -771,4 +788,202 @@ class TestWorkoutHistory:
         assert data.get("page") == 1
         assert data.get("page_size") == 20
         assert "total" in data
+
+
+@pytest.mark.integration
+class TestWorkoutValidationAuthorizationLifecycle:
+    async def test_create_template_validation_rejects_empty_exercises(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        payload = {
+            "name": "Invalid template",
+            "type": "strength",
+            "exercises": [],
+            "is_public": False,
+        }
+        response = await authenticated_client.post("/api/v1/workouts/templates", json=payload)
+        assert response.status_code == 422, response.text
+
+    async def test_complete_workout_validation_rejects_invalid_duration(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Validation duration", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json()["id"]
+
+        response = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json={
+                "duration": 0,
+                "exercises": [
+                    {
+                        "exercise_id": 1,
+                        "name": "Push-ups",
+                        "sets_completed": [
+                            {"set_number": 1, "completed": True, "reps": 10, "weight": None},
+                        ],
+                    }
+                ],
+                "comments": "invalid duration",
+                "tags": ["test"],
+            },
+        )
+        assert response.status_code == 422, response.text
+
+    async def test_update_session_validation_rejects_out_of_range_glucose(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Validation glucose", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json()["id"]
+
+        response = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json={
+                "exercises": [],
+                "comments": "glucose test",
+                "tags": [],
+                "glucose_before": 1.9,
+            },
+        )
+        assert response.status_code == 422, response.text
+
+    async def test_authorization_blocks_cross_user_template_and_session_access(
+        self,
+        authenticated_client: AsyncClient,
+        client: AsyncClient,
+    ):
+        create_template = await authenticated_client.post(
+            "/api/v1/workouts/templates",
+            json={
+                "name": "Owner template",
+                "type": "strength",
+                "exercises": [
+                    {
+                        "exercise_id": 1,
+                        "name": "Push-ups",
+                        "sets": 2,
+                        "reps": 10,
+                        "rest_seconds": 60,
+                    }
+                ],
+                "is_public": False,
+            },
+        )
+        assert create_template.status_code in (200, 201), create_template.text
+        template_id = create_template.json()["id"]
+
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"template_id": template_id},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json()["id"]
+
+        other_headers = await _auth_headers_for_telegram_user(client, telegram_id=987654321)
+
+        template_by_other = await client.get(
+            f"/api/v1/workouts/templates/{template_id}",
+            headers=other_headers,
+        )
+        assert template_by_other.status_code == 404, template_by_other.text
+
+        workout_by_other = await client.get(
+            f"/api/v1/workouts/history/{workout_id}",
+            headers=other_headers,
+        )
+        assert workout_by_other.status_code == 404, workout_by_other.text
+
+        update_by_other = await client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json={"exercises": [], "comments": "hack", "tags": []},
+            headers=other_headers,
+        )
+        assert update_by_other.status_code == 404, update_by_other.text
+
+    async def test_session_lifecycle_complete_is_idempotent_without_extra_writes(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Lifecycle complete", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json()["id"]
+
+        payload = {
+            "duration": 35,
+            "exercises": [
+                {
+                    "exercise_id": 1,
+                    "name": "Push-ups",
+                    "sets_completed": [
+                        {"set_number": 1, "completed": True, "reps": 12, "weight": None},
+                    ],
+                }
+            ],
+            "comments": "done",
+            "tags": ["strength"],
+        }
+
+        first = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json=payload,
+        )
+        assert first.status_code == 200, first.text
+        first_json = first.json()
+
+        second = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json=payload,
+        )
+        assert second.status_code == 200, second.text
+        second_json = second.json()
+
+        assert second_json.get("version") == first_json.get("version")
+        assert "duplicate request ignored" in (second_json.get("message") or "").lower()
+
+    async def test_fast_sequential_session_updates_detect_stale_expected_version(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Fast updates", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json()["id"]
+
+        first = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json={
+                "exercises": [],
+                "comments": "first click",
+                "tags": ["strength"],
+                "expected_version": 1,
+            },
+        )
+        assert first.status_code == 200, first.text
+        assert first.json().get("version") == 2
+
+        second = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json={
+                "exercises": [],
+                "comments": "second stale click",
+                "tags": ["strength"],
+                "expected_version": 1,
+            },
+        )
+        assert second.status_code == 409, second.text
 
