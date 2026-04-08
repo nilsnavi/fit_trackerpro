@@ -45,6 +45,9 @@ interface ActiveExerciseListProps {
     onAdjustWeight: (exerciseIndex: number, setNumber: number, delta: number) => void
     onUpdateSet: (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
     onNotesChange: (exerciseIndex: number, notes: string | undefined) => void
+    weightRecommendation?: { suggested_weight?: number; message?: string }
+    isWeightRecLoading?: boolean
+    isWeightRecError?: boolean
 }
 
 export const ActiveExerciseList = memo(function ActiveExerciseList({
@@ -66,6 +69,9 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
     onAdjustWeight,
     onUpdateSet,
     onNotesChange,
+    weightRecommendation,
+    isWeightRecLoading,
+    isWeightRecError,
 }: ActiveExerciseListProps) {
     const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Record<string, true>>({})
     const getIncrementBase = useWorkoutQuickIncrementsStore((s) => s.getIncrementBase)
@@ -289,25 +295,28 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                         </button>
                                                     ))}
                                                 </div>
-                                                {exercise.sets_completed.map((set) => (
-                                                    <ExerciseSetRow
-                                                        key={set.set_number}
-                                                        set={set}
-                                                        exerciseIndex={exerciseIndex}
-                                                        isCurrent={
-                                                            isCurrentExercise &&
-                                                            set.set_number - 1 === currentSetIndex
-                                                        }
-                                                        previousBestLabel={previousBestLabel}
-                                                        onFocusSet={onSetCurrentPosition}
-                                                        onToggleCompleted={onToggleSetCompleted}
-                                                        onSkipSet={onSkipSet}
-                                                        onCopyPrevious={onCopyPreviousSet}
-                                                        onAdjustWeight={onAdjustWeight}
-                                                        onUpdateSet={onUpdateSet}
-                                                        weightDeltas={weightDeltas}
-                                                    />
-                                                ))}
+                                                {exercise.sets_completed.map((set) => {
+                                                    const isCurrentSet = isCurrentExercise && set.set_number - 1 === currentSetIndex
+                                                    return (
+                                                        <ExerciseSetRow
+                                                            key={set.set_number}
+                                                            set={set}
+                                                            exerciseIndex={exerciseIndex}
+                                                            isCurrent={isCurrentSet}
+                                                            previousBestLabel={previousBestLabel}
+                                                            onFocusSet={onSetCurrentPosition}
+                                                            onToggleCompleted={onToggleSetCompleted}
+                                                            onSkipSet={onSkipSet}
+                                                            onCopyPrevious={onCopyPreviousSet}
+                                                            onAdjustWeight={onAdjustWeight}
+                                                            onUpdateSet={onUpdateSet}
+                                                            weightDeltas={weightDeltas}
+                                                            weightRecommendation={isCurrentSet ? weightRecommendation : undefined}
+                                                            isWeightRecLoading={isCurrentSet ? isWeightRecLoading : undefined}
+                                                            isWeightRecError={isCurrentSet ? isWeightRecError : undefined}
+                                                        />
+                                                    )
+                                                })}
                                             </div>
 
                                             {isCurrentExercise && (

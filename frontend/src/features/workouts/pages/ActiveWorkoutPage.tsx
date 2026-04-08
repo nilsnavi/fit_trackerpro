@@ -34,6 +34,17 @@ import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/Wor
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
 import { ActiveExerciseList } from '@features/workouts/active/components/ActiveExerciseList'
+import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
+    // Получение рекомендации веса для текущего упражнения
+    const {
+        data: weightRecommendation,
+        isLoading: isWeightRecLoading,
+        isError: isWeightRecError,
+    } = useWeightRecommendation(
+        workoutId,
+        currentExercise?.exercise_id ?? 0,
+        Boolean(isActiveDraft && currentExercise?.exercise_id && currentSet?.rpe != null)
+    )
 import { AddExerciseModal } from '@features/workouts/active/modals/AddExerciseModal'
 import { AddTimerModal } from '@features/workouts/active/modals/AddTimerModal'
 import { ExerciseStructureEditorModal } from '@features/workouts/active/modals/ExerciseStructureEditorModal'
@@ -1034,6 +1045,9 @@ export function ActiveWorkoutPage() {
                         onAdjustWeight={handleAdjustWeight}
                         onUpdateSet={updateSet}
                         onNotesChange={handleExerciseNotesChange}
+                        weightRecommendation={weightRecommendation}
+                        isWeightRecLoading={isWeightRecLoading}
+                        isWeightRecError={isWeightRecError}
                     />
 
                     {isActiveDraft && (
