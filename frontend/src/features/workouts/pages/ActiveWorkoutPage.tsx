@@ -6,6 +6,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
 import { Plus, Timer } from 'lucide-react'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
+import { useSyncQueueWithRetry } from '@shared/hooks/useSyncQueueWithRetry'
+import { useOfflineExerciseActionQueue } from '@shared/hooks/useOfflineExerciseActionQueue'
+import { useConflictResolution, ConflictResolutionUI } from '@features/workouts/components/ConflictResolutionUI'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
@@ -27,6 +30,7 @@ import { WorkoutActionRail } from '@features/workouts/components/WorkoutActionRa
 import { WorkoutModal } from '@features/workouts/components/WorkoutModal'
 import { useActiveWorkoutActions, useActiveWorkoutStore, useWorkoutRestPresetsStore, useWorkoutSessionDraftStore } from '@/state/local'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
+import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/WorkoutSyncQueueStatus'
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
 import { ActiveExerciseList } from '@features/workouts/active/components/ActiveExerciseList'
@@ -179,6 +183,11 @@ export function ActiveWorkoutPage() {
     const { data: profile } = useCurrentUserQuery()
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
+
+    // Offline sync и conflict resolution
+    const { failedCount: syncFailedCount } = useSyncQueueWithRetry()
+    const { conflict: conflictInfo, isOpen: isConflictOpen, closeConflict } = useConflictResolution()
+    const exerciseActionQueue = useOfflineExerciseActionQueue(workoutId)
 
     const restPresetScopeKey = useMemo(() => {
         const userKey = profile?.id != null ? String(profile.id) : 'anon'
@@ -929,6 +938,14 @@ export function ActiveWorkoutPage() {
                 syncState={syncState}
             />
 
+            {/* Статус синхронизации очереди */}
+            {isActiveDraft && workoutId && (
+                <WorkoutSyncQueueStatus
+                    workoutId={workoutId}
+                    showDetails={false}
+                />
+            )}
+
             {isLoading && <div className="text-sm text-telegram-hint">Загрузка...</div>}
             {!isLoading && errorMessage && <div className="text-sm text-danger">{errorMessage}</div>}
 
@@ -1221,6 +1238,25 @@ export function ActiveWorkoutPage() {
                             },
                         ],
                     ]}
+                />
+            )}
+
+            {/* Conflict Resolution Modal */}
+            {isConflictOpen && conflictInfo && (
+                <ConflictResolutionUI
+                    conflict={conflictInfo}
+                    onResolve={(strategy) => {
+                        // Handle conflict resolution: local or server
+                        if (strategy === 'local') {
+                            toast.success('Ваши изменения сохранены')
+                        } else {
+                            // Reload from server
+                            void queryClient.invalidateQueries({ queryKey: detailQueryKey })
+                            toast.info('Данные обновлены с сервера')
+                        }
+                        closeConflict()
+                    }}
+                    onCancel={closeConflict}
                 />
             )}
         </div>
