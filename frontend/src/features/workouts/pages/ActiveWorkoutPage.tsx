@@ -50,6 +50,7 @@ import { AddTimerModal } from '@features/workouts/active/modals/AddTimerModal'
 import { ExerciseStructureEditorModal } from '@features/workouts/active/modals/ExerciseStructureEditorModal'
 import { FinishWorkoutModal } from '@features/workouts/active/modals/FinishWorkoutModal'
 import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
+import { ExerciseRestSettingsModal } from '@features/workouts/active/modals/ExerciseRestSettingsModal'
 import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
@@ -141,8 +142,10 @@ export function ActiveWorkoutPage() {
         setCurrentPosition,
         startRestTimer,
         skipRestTimer,
+        stopRestTimer,
         setRestDefaultSeconds,
         reset: resetActiveWorkoutState,
+        recordActualRestTime, // Добавляем для записи фактического времени отдыха
     } = useActiveWorkoutActions()
 
     const workoutId = Number.parseInt(id ?? '', 10)
@@ -176,6 +179,7 @@ export function ActiveWorkoutPage() {
     const [pendingDeleteExerciseIndex, setPendingDeleteExerciseIndex] = useState<number | null>(null)
     const [isRestPresetsModalOpen, setIsRestPresetsModalOpen] = useState(false)
     const [restPresetsDraft, setRestPresetsDraft] = useState('')
+    const [isExerciseRestSettingsOpen, setIsExerciseRestSettingsOpen] = useState(false) // Состояние для модалки настроек отдыха упражнения
     const isCompletingRef = useRef(false)
 
     const isActiveDraft =
@@ -769,7 +773,7 @@ export function ActiveWorkoutPage() {
         setIsFinishSheetOpen(false)
         setAddItemKind(null)
         closeStructureEditor()
-        skipRestTimer()
+        handleSkipRestWithAnalytics() // Используем обертку с аналитикой
         resetActiveWorkoutState()
         abandonWorkoutSessionDraft()
         clearActiveWorkoutDraft()
@@ -900,8 +904,44 @@ export function ActiveWorkoutPage() {
 
     const handleStartQuickRest = useCallback(() => {
         tg.hapticFeedback({ type: 'selection' })
-        startRestTimer(restDefaultSeconds)
-    }, [restDefaultSeconds, startRestTimer, tg])
+        
+        // Используем персональное время отдыха для текущего упражнения, если оно есть
+        let restDuration = restDefaultSeconds
+        if (currentExercise?.exercise_id) {
+            const settings = useActiveWorkoutStore.getState().exerciseRestSettings[currentExercise.exercise_id]
+            if (settings && !settings.use_global_default) {
+                restDuration = settings.custom_rest_seconds
+            }
+        }
+        
+        startRestTimer(restDuration)
+    }, [restDefaultSeconds, startRestTimer, tg, currentExercise])
+
+    // Обертка для пропуска таймера с записью фактического времени отдыха
+    const handleSkipRestWithAnalytics = useCallback(() => {
+        const state = useActiveWorkoutStore.getState()
+        const actualRestSeconds = state.restTimer.durationSeconds - state.restTimer.remainingSeconds
+        
+        // Записываем фактическое время отдыха для текущего упражнения
+        if (currentExercise?.exercise_id && actualRestSeconds > 0) {
+            recordActualRestTime(currentExercise.exercise_id, actualRestSeconds)
+        }
+        
+        skipRestTimer()
+    }, [skipRestTimer, recordActualRestTime, currentExercise])
+
+    // Обертка для остановки таймера с записью фактического времени отдыха
+    const handleStopRestWithAnalytics = useCallback(() => {
+        const state = useActiveWorkoutStore.getState()
+        const actualRestSeconds = state.restTimer.durationSeconds - state.restTimer.remainingSeconds
+        
+        // Записываем фактическое время отдыха для текущего упражнения
+        if (currentExercise?.exercise_id && actualRestSeconds > 0) {
+            recordActualRestTime(currentExercise.exercise_id, actualRestSeconds)
+        }
+        
+        stopRestTimer()
+    }, [stopRestTimer, recordActualRestTime, currentExercise])
 
     const handleSkipCurrentSetQuick = useCallback(() => {
         if (!currentSet) return
@@ -1007,7 +1047,10 @@ export function ActiveWorkoutPage() {
                         <p className="text-sm text-danger">{getErrorMessage(updateSessionMutation.error)}</p>
                     )}
 
-                    <RestTimerPanel />
+                    <RestTimerPanel 
+                        onSkipWithAnalytics={handleSkipRestWithAnalytics}
+                        onStopWithAnalytics={handleStopRestWithAnalytics}
+                    />
 
                     <CurrentExerciseCard
                         exerciseName={currentContextCard.exerciseName}
@@ -1024,6 +1067,11 @@ export function ActiveWorkoutPage() {
                         onSkipSet={handleSkipCurrentSetQuick}
                         onStartRest={handleStartQuickRest}
                         onOpenRestPresets={() => setIsRestPresetsModalOpen(true)}
+                        onOpenExerciseRestSettings={
+                            currentExercise?.exercise_id
+                                ? () => setIsExerciseRestSettingsOpen(true)
+                                : undefined
+                        }
                     />
 
                     <ActiveExerciseList
@@ -1271,6 +1319,16 @@ export function ActiveWorkoutPage() {
                         closeConflict()
                     }}
                     onCancel={closeConflict}
+                />
+            )}
+
+            {/* Exercise Rest Settings Modal */}
+            {currentExercise?.exercise_id && (
+                <ExerciseRestSettingsModal
+                    isOpen={isExerciseRestSettingsOpen}
+                    onClose={() => setIsExerciseRestSettingsOpen(false)}
+                    exerciseId={currentExercise.exercise_id}
+                    exerciseName={currentExercise.name}
                 />
             )}
         </div>

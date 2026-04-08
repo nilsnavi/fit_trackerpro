@@ -18,6 +18,7 @@ interface CurrentExerciseCardProps {
     onSkipSet: () => void
     onStartRest: () => void
     onOpenRestPresets: () => void
+    onOpenExerciseRestSettings?: () => void // Новая пропса для настроек отдыха упражнения
 }
 
 function formatRemainingSets(remainingSets: number): string {
@@ -50,6 +51,7 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
     onSkipSet,
     onStartRest,
     onOpenRestPresets,
+    onOpenExerciseRestSettings,
 }: CurrentExerciseCardProps) {
     const progressPercent = totalSetCount > 0 ? Math.round((completedSetCount / totalSetCount) * 100) : 0
 
@@ -131,6 +133,20 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
                     Пресеты
                 </Button>
             </div>
+
+            {/* Кнопка настроек персонального отдыха для текущего упражнения */}
+            {onOpenExerciseRestSettings && (
+                <button
+                    type="button"
+                    onClick={onOpenExerciseRestSettings}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition-colors group"
+                >
+                    <Settings2 className="h-4 w-4 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                        Настроить отдых для этого упражнения
+                    </span>
+                </button>
+            )}
         </section>
     )
 })
