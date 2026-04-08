@@ -5,16 +5,21 @@ const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000'
 export default defineConfig({
     testDir: './e2e',
     outputDir: './test-results',
+    
+    // Default timeout: 30s for most tests
     timeout: 30_000,
     expect: { timeout: 10_000 },
 
+    // Retries: 2x in CI to handle flakiness, 0 locally for faster feedback
     fullyParallel: true,
     retries: process.env.CI ? 2 : 0,
+    // Workers: 2 in CI (sequential workout tests), undefined locally (auto)
     workers: process.env.CI ? 2 : undefined,
 
     reporter: [
         ['list'],
         ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        ...(process.env.CI ? [['github']] : []),
     ],
 
     use: {
