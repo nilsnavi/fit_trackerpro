@@ -26,36 +26,13 @@ class WorkoutsRepository(SQLAlchemyRepository):
         workout_session_id: int,
         exercise_id: int,
     ) -> Optional[WorkoutSet]:
-        """
-        Получает последний сет для упражнения в сессии.
-        exercise_id - это ID упражнения из справочника (reference data).
-        """
-        # Сначала находим workout_session_exercise по exercise_id (справочник)
-        session_exercise_result = await self.db.execute(
-            select(WorkoutSessionExercise.id)
-            .where(
-                and_(
-                    WorkoutSessionExercise.user_id == user_id,
-                    WorkoutSessionExercise.workout_session_id == workout_session_id,
-                    WorkoutSessionExercise.exercise_id == exercise_id,
-                )
-            )
-            .order_by(WorkoutSessionExercise.created_at.desc())
-            .limit(1)
-        )
-        session_exercise_id = session_exercise_result.scalar_one_or_none()
-        
-        if not session_exercise_id:
-            return None
-        
-        # Теперь ищем последний сет для этого session_exercise
         result = await self.db.execute(
             select(WorkoutSet)
             .where(
                 and_(
                     WorkoutSet.user_id == user_id,
                     WorkoutSet.workout_session_id == workout_session_id,
-                    WorkoutSet.workout_session_exercise_id == session_exercise_id,
+                    WorkoutSet.workout_session_exercise_id == exercise_id,
                 )
             )
             .order_by(WorkoutSet.set_number.desc())
