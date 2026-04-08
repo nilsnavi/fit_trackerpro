@@ -20,4 +20,5 @@ export type { ActiveWorkoutSyncState, ActiveWorkoutRestTimerState } from '../sto
 export {
     useActiveWorkoutStateSlice,
     useActiveWorkoutActions,
+    useRestDurationForExercise,
 } from '../stores/activeWorkoutStore'
