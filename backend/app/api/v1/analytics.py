@@ -21,11 +21,13 @@ from app.schemas.analytics import (
     MuscleImbalanceSignalsResponse,
     MuscleLoadEntry,
     MuscleLoadTableResponse,
+    ProgressInsightsResponse,
     RecoveryStateRecalculateResponse,
     RecoveryStateResponse,
     TrainingLoadDailyEntry,
     TrainingLoadDailyTableResponse,
     WorkoutCalendarResponse,
+    WorkoutPostSummaryResponse,
 )
 from app.settings import settings
 
@@ -156,6 +158,44 @@ async def get_exercise_progress(
         date_to=date_to,
         max_exercises=max_exercises,
         max_data_points=max_data_points,
+    )
+
+
+@router.get("/progress-insights", response_model=ProgressInsightsResponse)
+async def get_progress_insights(
+    period: str = Query("30d", pattern="^(7d|30d|90d|1y|all)$"),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    limit_best_sets: int = Query(5, ge=1, le=20),
+    limit_pr_events: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = AnalyticsService(db)
+    return await service.get_progress_insights(
+        user_id=current_user.id,
+        period=period,
+        date_from=date_from,
+        date_to=date_to,
+        limit_best_sets=limit_best_sets,
+        limit_pr_events=limit_pr_events,
+    )
+
+
+@router.get("/workout-summary", response_model=WorkoutPostSummaryResponse)
+async def get_workout_post_summary(
+    workout_id: int = Query(..., ge=1),
+    limit_best_sets: int = Query(5, ge=1, le=20),
+    limit_pr_events: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = AnalyticsService(db)
+    return await service.get_workout_post_summary(
+        user_id=current_user.id,
+        workout_id=workout_id,
+        limit_best_sets=limit_best_sets,
+        limit_pr_events=limit_pr_events,
     )
 
 

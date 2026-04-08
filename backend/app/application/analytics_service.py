@@ -36,10 +36,17 @@ from app.schemas.analytics import (
     MuscleImbalanceSignalsResponse,
     MuscleLoadEntry,
     MuscleLoadTableResponse,
+    ProgressInsightsBestSetItem,
+    ProgressInsightsFrequencyPoint,
+    ProgressInsightsPRItem,
+    ProgressInsightsResponse,
+    ProgressInsightsSummary,
+    ProgressInsightsVolumePoint,
     RecoveryStateRecalculateResponse,
     RecoveryStateResponse,
     TrainingLoadDailyEntry,
     TrainingLoadDailyTableResponse,
+    WorkoutPostSummaryResponse,
     WorkoutCalendarResponse,
     WorkoutCalendarSummary,
 )
@@ -73,6 +80,11 @@ class AnalyticsService:
         if effective_date_from > effective_date_to:
             raise AnalyticsValidationError("date_from cannot be greater than date_to")
         return effective_date_from, effective_date_to
+
+    @staticmethod
+    def _resolve_period_days(period: str, default_days: int = 30) -> int:
+        days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 3650}
+        return days_map.get(period, default_days)
 
     async def get_daily_training_load(
         self,
@@ -162,7 +174,7 @@ class AnalyticsService:
             date_from=effective_date_from,
             date_to=effective_date_to,
         )
-        payload = model.model_dump(mode="json", by_alias=True)
+        payload = model.model_dump(mode="json")
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
         return model
 
@@ -256,7 +268,7 @@ class AnalyticsService:
             date_from=effective_date_from,
             date_to=effective_date_to,
         )
-        payload = model.model_dump(mode="json", by_alias=True)
+        payload = model.model_dump(mode="json")
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
         return model
 
@@ -350,8 +362,7 @@ class AnalyticsService:
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
     ) -> List[ExerciseProgressResponse]:
-        days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 3650}
-        days = days_map.get(period, 30)
+        days = self._resolve_period_days(period)
         resolved_date_to = date_to or date.today()
         resolved_date_from = date_from or (resolved_date_to - timedelta(days=days))
         if resolved_date_from > resolved_date_to:
@@ -451,6 +462,224 @@ class AnalyticsService:
         payload = [item.model_dump(mode="json") for item in responses]
         await set_cache_json(cache_key, payload, ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS)
         return responses
+
+    async def get_progress_insights(
+        self,
+        user_id: int,
+        period: str,
+        date_from: Optional[date],
+        date_to: Optional[date],
+        limit_best_sets: int,
+        limit_pr_events: int,
+    ) -> ProgressInsightsResponse:
+        days = self._resolve_period_days(period)
+        resolved_date_to = date_to or date.today()
+        resolved_date_from = date_from or (resolved_date_to - timedelta(days=days))
+        if resolved_date_from > resolved_date_to:
+            raise AnalyticsValidationError("date_from cannot be greater than date_to")
+
+        cache_key = self._build_cache_key(
+            "progress-insights",
+            user_id,
+            period=period,
+            date_from=resolved_date_from.isoformat(),
+            date_to=resolved_date_to.isoformat(),
+            limit_best_sets=limit_best_sets,
+            limit_pr_events=limit_pr_events,
+        )
+        cached = await get_cache_json(cache_key)
+        if cached is not None:
+            return ProgressInsightsResponse.model_validate(cached)
+
+        summary_row = await self.repository.get_progress_insights_summary(
+            user_id=user_id,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+        )
+        volume_rows = await self.repository.get_progress_volume_trend(
+            user_id=user_id,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+        )
+        frequency_rows = await self.repository.get_progress_frequency_trend(
+            user_id=user_id,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+        )
+        best_set_rows = await self.repository.get_progress_best_sets(
+            user_id=user_id,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            limit=limit_best_sets,
+        )
+        pr_rows = await self.repository.get_progress_pr_events(
+            user_id=user_id,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            limit=limit_pr_events,
+        )
+
+        total_workouts = int(summary_row.get("total_workouts") or 0)
+        weeks = max(1.0, ((resolved_date_to - resolved_date_from).days + 1) / 7)
+        summary = ProgressInsightsSummary(
+            total_workouts=total_workouts,
+            active_days=int(summary_row.get("active_days") or 0),
+            total_sets=int(summary_row.get("total_sets") or 0),
+            total_reps=int(summary_row.get("total_reps") or 0),
+            total_volume=round(float(summary_row.get("total_volume") or 0), 2),
+            average_workouts_per_week=round(total_workouts / weeks, 2),
+        )
+
+        payload = ProgressInsightsResponse(
+            period=period,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            summary=summary,
+            volume_trend=[
+                ProgressInsightsVolumePoint(
+                    date=row["date"],
+                    workout_count=int(row.get("workout_count") or 0),
+                    total_sets=int(row.get("total_sets") or 0),
+                    total_reps=int(row.get("total_reps") or 0),
+                    total_volume=round(float(row.get("total_volume") or 0), 2),
+                )
+                for row in volume_rows
+            ],
+            frequency_trend=[
+                ProgressInsightsFrequencyPoint(
+                    week_start=row["week_start"],
+                    week_end=row["week_end"],
+                    active_days=int(row.get("active_days") or 0),
+                    workout_count=int(row.get("workout_count") or 0),
+                )
+                for row in frequency_rows
+            ],
+            best_sets=[
+                ProgressInsightsBestSetItem(
+                    exercise_id=int(row["exercise_id"]),
+                    exercise_name=row["exercise_name"],
+                    date=row["date"],
+                    set_number=int(row["set_number"]) if row.get("set_number") is not None else None,
+                    weight=float(row["weight"]) if row.get("weight") is not None else None,
+                    reps=int(row["reps"]) if row.get("reps") is not None else None,
+                    volume=round(float(row.get("volume") or 0), 2),
+                )
+                for row in best_set_rows
+            ],
+            pr_events=[
+                ProgressInsightsPRItem(
+                    exercise_id=int(row["exercise_id"]),
+                    exercise_name=row["exercise_name"],
+                    date=row["date"],
+                    weight=float(row["weight"]) if row.get("weight") is not None else None,
+                    reps=int(row["reps"]) if row.get("reps") is not None else None,
+                    previous_best_weight=(
+                        float(row["previous_best_weight"])
+                        if row.get("previous_best_weight") is not None
+                        else None
+                    ),
+                    improvement=float(row["improvement"]) if row.get("improvement") is not None else None,
+                    improvement_pct=(
+                        round(float(row["improvement_pct"]), 2)
+                        if row.get("improvement_pct") is not None
+                        else None
+                    ),
+                    is_first_entry=bool(row.get("is_first_entry")),
+                )
+                for row in pr_rows
+            ],
+        )
+        await set_cache_json(
+            cache_key,
+            payload.model_dump(mode="json"),
+            ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS,
+        )
+        return payload
+
+    async def get_workout_post_summary(
+        self,
+        user_id: int,
+        workout_id: int,
+        limit_best_sets: int,
+        limit_pr_events: int,
+    ) -> WorkoutPostSummaryResponse:
+        cache_key = self._build_cache_key(
+            "workout-post-summary",
+            user_id,
+            workout_id=workout_id,
+            limit_best_sets=limit_best_sets,
+            limit_pr_events=limit_pr_events,
+        )
+        cached = await get_cache_json(cache_key)
+        if cached is not None:
+            return WorkoutPostSummaryResponse.model_validate(cached)
+
+        raw = await self.repository.get_workout_post_summary(
+            user_id=user_id,
+            workout_id=workout_id,
+            limit_best_sets=limit_best_sets,
+        )
+        if not raw:
+            raise AnalyticsNotFoundError("Workout summary not found")
+
+        workout_data = raw.get("workout", {})
+        totals = raw.get("totals", {})
+        best_sets_rows = raw.get("best_sets", [])
+        pr_rows = await self.repository.get_progress_pr_events(
+            user_id=user_id,
+            date_from=workout_data["date"],
+            date_to=workout_data["date"],
+            limit=limit_pr_events,
+        )
+
+        response = WorkoutPostSummaryResponse(
+            workout_id=int(workout_data["id"]),
+            date=workout_data["date"],
+            duration=int(workout_data.get("duration") or 0),
+            total_sets=int(totals.get("total_sets") or 0),
+            total_reps=int(totals.get("total_reps") or 0),
+            total_volume=round(float(totals.get("total_volume") or 0), 2),
+            best_sets=[
+                ProgressInsightsBestSetItem(
+                    exercise_id=int(row["exercise_id"]),
+                    exercise_name=row["exercise_name"],
+                    date=row["date"],
+                    set_number=int(row["set_number"]) if row.get("set_number") is not None else None,
+                    weight=float(row["weight"]) if row.get("weight") is not None else None,
+                    reps=int(row["reps"]) if row.get("reps") is not None else None,
+                    volume=round(float(row.get("volume") or 0), 2),
+                )
+                for row in best_sets_rows
+            ],
+            pr_events=[
+                ProgressInsightsPRItem(
+                    exercise_id=int(row["exercise_id"]),
+                    exercise_name=row["exercise_name"],
+                    date=row["date"],
+                    weight=float(row["weight"]) if row.get("weight") is not None else None,
+                    reps=int(row["reps"]) if row.get("reps") is not None else None,
+                    previous_best_weight=(
+                        float(row["previous_best_weight"])
+                        if row.get("previous_best_weight") is not None
+                        else None
+                    ),
+                    improvement=float(row["improvement"]) if row.get("improvement") is not None else None,
+                    improvement_pct=(
+                        round(float(row["improvement_pct"]), 2)
+                        if row.get("improvement_pct") is not None
+                        else None
+                    ),
+                    is_first_entry=bool(row.get("is_first_entry")),
+                )
+                for row in pr_rows
+            ],
+        )
+        await set_cache_json(
+            cache_key,
+            response.model_dump(mode="json"),
+            ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS,
+        )
+        return response
 
     async def get_workout_calendar(
         self,

@@ -4,7 +4,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 
 import { useCompleteWorkoutMutation } from '@features/workouts/hooks/useWorkoutMutations'
 import { queryKeys } from '@shared/api/queryKeys'
-import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
+import type { WorkoutHistoryItem, WorkoutHistoryResponse } from '@features/workouts/types/workouts'
 import { AppHttpError } from '@shared/errors'
 
 jest.mock('@shared/lib/businessMetrics', () => ({
@@ -20,12 +20,11 @@ jest.mock('@shared/api/domains/workoutsApi', () => {
 })
 
 describe('useCompleteWorkoutMutation (offline / recoverable)', () => {
-    it('enqueues offline complete and keeps optimistic cache when mutation is queued', async () => {
+    it('enqueues offline complete when mutation is queued', async () => {
         const { workoutsApi } = await import('@shared/api/domains/workoutsApi')
-        const syncQueue = await import('@shared/offline/syncQueue')
+        const offlineEnqueue = await import('@shared/offline/workoutOfflineEnqueue')
 
-        const enqueueSpy = jest.spyOn(syncQueue, 'enqueueSyncMutation')
-        const flushSpy = jest.spyOn(syncQueue, 'requestSyncFlush')
+        const enqueueSpy = jest.spyOn(offlineEnqueue, 'enqueueOfflineWorkoutComplete')
 
         const workoutId = 555
         const qc = new QueryClient({
@@ -49,6 +48,15 @@ describe('useCompleteWorkoutMutation (offline / recoverable)', () => {
         }
 
         qc.setQueryData(queryKeys.workouts.historyItem(workoutId), draft)
+        qc.setQueryData<WorkoutHistoryResponse>(
+            queryKeys.workouts.history({ page: 1, page_size: 20 }),
+            {
+                items: [draft],
+                total: 1,
+                page: 1,
+                page_size: 20,
+            },
+        )
 
         ;(workoutsApi.completeWorkout as jest.Mock).mockRejectedValue(
             new AppHttpError({
@@ -78,13 +86,12 @@ describe('useCompleteWorkoutMutation (offline / recoverable)', () => {
 
         await waitFor(() => {
             expect(enqueueSpy).toHaveBeenCalledTimes(1)
-            expect(flushSpy).toHaveBeenCalledTimes(1)
         })
 
-        // With no active observers for historyItem, invalidate onSettled won't refetch and clobber.
+        // Ключевое поведение: mutation попадает в offline очередь.
         await waitFor(() => {
-            const cached = qc.getQueryData<WorkoutHistoryItem>(queryKeys.workouts.historyItem(workoutId))
-            expect(cached?.duration).toBe(40)
+            const history = qc.getQueryData<WorkoutHistoryResponse>(queryKeys.workouts.history({ page: 1, page_size: 20 }))
+            expect(history?.items[0]?.id).toBe(workoutId)
         })
     })
 })

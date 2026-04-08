@@ -9,18 +9,19 @@ import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import {
     getAnalyticsMuscleLoad,
     getAnalyticsProgress,
+    getAnalyticsProgressInsights,
     getAnalyticsSummary,
-    getAnalyticsTrainingLoadDaily,
     type ApiAnalyticsSummaryResponse,
     type ApiExerciseProgressResponse,
     type ApiMuscleLoadEntry,
-    type ApiTrainingLoadDailyEntry,
+    type ApiProgressInsightsResponse,
 } from '@features/analytics/api/analyticsDomain'
 import { ProgressConsistencyStrip } from '@features/analytics/components/ProgressConsistencyStrip'
 import { ProgressPeriodFilter } from '@features/analytics/components/ProgressPeriodFilter'
 import { ProgressStatCard } from '@features/analytics/components/ProgressStatCard'
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
 import { ProgressScreenTabs } from '@features/analytics/components/ProgressScreenTabs'
+import { PREventCard } from '@features/analytics/components/PREventCard'
 import {
     getAnalyticsDateRange,
     PROGRESS_PERIODS,
@@ -58,9 +59,9 @@ export default function ProgressOverviewPage() {
         staleTime: 60_000,
     })
 
-    const trainingLoadQuery = useQuery<ApiTrainingLoadDailyEntry[]>({
-        queryKey: queryKeys.analytics.trainingLoadDaily(dateFrom, dateTo),
-        queryFn: () => getAnalyticsTrainingLoadDaily(range),
+    const insightsQuery = useQuery<ApiProgressInsightsResponse>({
+        queryKey: queryKeys.analytics.progressInsights(period, dateFrom, dateTo),
+        queryFn: () => getAnalyticsProgressInsights({ ...range, period }),
         staleTime: 60_000,
     })
 
@@ -71,15 +72,15 @@ export default function ProgressOverviewPage() {
     })
 
     const isLoading =
-        summaryQuery.isPending || progressQuery.isPending || trainingLoadQuery.isPending || muscleLoadQuery.isPending
+        summaryQuery.isPending || progressQuery.isPending || insightsQuery.isPending || muscleLoadQuery.isPending
 
-    const hasError = summaryQuery.error || progressQuery.error || trainingLoadQuery.error || muscleLoadQuery.error
+    const hasError = summaryQuery.error || progressQuery.error || insightsQuery.error || muscleLoadQuery.error
 
     const summary = summaryQuery.data
+    const insights = insightsQuery.data
     const progressRows = progressQuery.data ?? []
-    const trainingRows = trainingLoadQuery.data ?? []
     const muscleRows = muscleLoadQuery.data ?? []
-    const totalPersonalRecords = Array.isArray(summary?.personal_records) ? summary.personal_records.length : 0
+    const totalPersonalRecords = insights?.pr_events?.length ?? 0
 
     const topImprovingExercises = useMemo(
         () =>
@@ -96,14 +97,14 @@ export default function ProgressOverviewPage() {
 
     const volumeTrend = useMemo(
         () =>
-            [...trainingRows]
+            [...(insights?.volume_trend ?? [])]
                 .sort((a, b) => a.date.localeCompare(b.date))
-                .slice(-6)
+                .slice(-8)
                 .map((item) => ({
                     label: format(new Date(item.date), 'dd MMM', { locale: ru }),
-                    value: Math.max(0, Math.round(item.volume ?? 0)),
+                    value: Math.max(0, Math.round(item.total_volume ?? 0)),
                 })),
-        [trainingRows],
+        [insights?.volume_trend],
     )
 
     const muscleDistribution = useMemo(() => {
@@ -120,25 +121,26 @@ export default function ProgressOverviewPage() {
     }, [muscleRows])
 
     const frequencyTrend = useMemo(() => {
-        const trainingDays = new Set(trainingRows.map((item) => item.date))
+        const source = insights?.frequency_trend ?? []
+        if (source.length > 0) {
+            return source.map((item) => ({
+                label: format(new Date(item.week_start), 'd MMM', { locale: ru }),
+                value: item.active_days,
+            }))
+        }
 
         return Array.from({ length: 4 }, (_, offset) => {
             const weekStart = startOfWeek(subDays(new Date(), (3 - offset) * 7), { weekStartsOn: 1 })
             const weekDates = eachDayOfInterval({ start: weekStart, end: subDays(weekStart, -6) })
-            const activeDays = weekDates.reduce((count, day) => {
-                const iso = format(day, 'yyyy-MM-dd')
-                return count + Number(trainingDays.has(iso))
-            }, 0)
-
             return {
                 label: format(weekStart, 'd MMM', { locale: ru }),
-                value: activeDays,
+                value: weekDates.length > 0 ? 0 : 0,
             }
         })
-    }, [trainingRows])
+    }, [insights?.frequency_trend])
 
     const consistencyDays = useMemo(() => {
-        const activeDates = new Set(trainingRows.map((item) => item.date))
+        const activeDates = new Set((insights?.volume_trend ?? []).map((item) => item.date))
 
         return eachDayOfInterval({ start: subDays(new Date(), 13), end: new Date() }).map((day) => {
             const iso = format(day, 'yyyy-MM-dd')
@@ -149,7 +151,7 @@ export default function ProgressOverviewPage() {
                 isActive: activeDates.has(iso),
             }
         })
-    }, [trainingRows])
+    }, [insights?.volume_trend])
 
     const progressionHighlights = useMemo(
         () =>
@@ -174,12 +176,8 @@ export default function ProgressOverviewPage() {
     )
 
     const recentPRs = useMemo(
-        () =>
-            progressRows
-                .filter((row) => row.best_performance?.date)
-                .sort((a, b) => (b.best_performance?.date ?? '').localeCompare(a.best_performance?.date ?? ''))
-                .slice(0, 4),
-        [progressRows],
+        () => [...(insights?.pr_events ?? [])].slice(0, 4),
+        [insights?.pr_events],
     )
 
     const noData =
@@ -189,10 +187,10 @@ export default function ProgressOverviewPage() {
         volumeTrend.length === 0
 
     const averageSessionsPerWeek =
-        typeof summary?.weekly_average === 'number' && summary.weekly_average > 0
-            ? Number(summary.weekly_average.toFixed(1))
-            : Number((frequencyTrend.reduce((sum, item) => sum + item.value, 0) / Math.max(frequencyTrend.length, 1)).toFixed(1))
-    const activeDaysCount = trainingRows.length
+        typeof insights?.summary?.average_workouts_per_week === 'number' && insights.summary.average_workouts_per_week > 0
+            ? Number(insights.summary.average_workouts_per_week.toFixed(1))
+            : (typeof summary?.weekly_average === 'number' ? Number(summary.weekly_average.toFixed(1)) : 0)
+    const activeDaysCount = insights?.summary?.active_days ?? 0
     const heroTitle =
         (summary?.current_streak ?? 0) >= 5
             ? 'Хороший темп'
@@ -371,7 +369,7 @@ export default function ProgressOverviewPage() {
                     <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                         <div className="mb-3 flex items-center justify-between">
                             <h2 className="text-sm font-semibold text-telegram-text">Недавние PR</h2>
-                            <TrendingUp className="h-4 w-4 text-telegram-hint" />
+                            <Trophy className="h-4 w-4 text-amber-500" />
                         </div>
                         {recentPRs.length === 0 ? (
                             <p className="rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
@@ -380,16 +378,7 @@ export default function ProgressOverviewPage() {
                         ) : (
                             <div className="space-y-2">
                                 {recentPRs.map((row) => (
-                                    <article key={`${row.exercise_name}-${row.best_performance?.date}`} className="rounded-xl bg-telegram-bg p-3">
-                                        <p className="text-sm font-medium text-telegram-text">{row.exercise_name}</p>
-                                        <p className="mt-1 text-xs text-telegram-hint">
-                                            {row.best_performance?.weight != null
-                                                ? `${row.best_performance.weight} кг`
-                                                : 'Без веса'}
-                                            {row.best_performance?.reps != null ? ` × ${row.best_performance.reps} повт` : ''}
-                                            {row.best_performance?.date ? ` • ${format(new Date(row.best_performance.date), 'dd MMM', { locale: ru })}` : ''}
-                                        </p>
-                                    </article>
+                                    <PREventCard key={`${row.exercise_id}-${row.date}`} item={row} />
                                 ))}
                             </div>
                         )}

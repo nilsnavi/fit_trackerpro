@@ -60,5 +60,8 @@ export const queryKeys = {
         muscleLoad: (dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'muscleLoad', dateFrom, dateTo] as const,
         recoveryState: ['analytics', 'recoveryState'] as const,
+        progressInsights: (period: string, dateFrom: string | null, dateTo: string | null) =>
+            ['analytics', 'progressInsights', period, dateFrom, dateTo] as const,
+        workoutSummary: (workoutId: number) => ['analytics', 'workoutSummary', workoutId] as const,
     },
 } as const
