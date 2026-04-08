@@ -5,6 +5,7 @@ import { PwaUpdatePrompt } from './app/components/PwaUpdatePrompt'
 import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
+import { HealthCheckGate } from './app/providers/HealthCheckGate'
 import { AppShell } from './app/layouts/AppShell'
 import { RouteGuard } from '@shared/auth/RouteGuard'
 import { TelegramAuthBootstrapGate } from '@features/auth/components/TelegramAuthBootstrapGate'
@@ -88,14 +89,15 @@ function SentryErrorFallback({
 export default function App() {
     return (
         <QueryProvider>
-            <Sentry.ErrorBoundary fallback={SentryErrorFallback} showDialog={false}>
-                <TelegramProvider>
-                    <ThemeProvider>
-                        <BrowserRouter>
-                            <PwaUpdatePrompt />
-                            <TelegramAuthBootstrapGate>
-                                <Suspense fallback={<RouteFallbackSpinner />}>
-                                    <Routes>
+            <HealthCheckGate>
+                <Sentry.ErrorBoundary fallback={SentryErrorFallback} showDialog={false}>
+                    <TelegramProvider>
+                        <ThemeProvider>
+                            <BrowserRouter>
+                                <PwaUpdatePrompt />
+                                <TelegramAuthBootstrapGate>
+                                    <Suspense fallback={<RouteFallbackSpinner />}>
+                                        <Routes>
                                         <Route element={<AppShell />}>
                                         <Route
                                             path="/"
@@ -283,6 +285,7 @@ export default function App() {
                     </ThemeProvider>
                 </TelegramProvider>
             </Sentry.ErrorBoundary>
+                    </HealthCheckGate>
         </QueryProvider>
     )
 }

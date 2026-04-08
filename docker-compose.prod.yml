@@ -67,13 +67,7 @@ services:
       - SENTRY_DSN=${SENTRY_DSN}
       - TELEGRAM_BOT_ENABLED=false
     healthcheck:
-      test:
-        [
-          "CMD",
-          "python3",
-          "-c",
-          "import json,sys,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/api/v1/system/health', timeout=5); d=json.load(r); sys.exit(0 if d.get('status')=='healthy' else 1)",
-        ]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health/ready"]
       interval: 30s
       timeout: 5s
       retries: 3

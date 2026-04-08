@@ -9,11 +9,13 @@ from contextlib import asynccontextmanager
 import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.exception_handlers import register_exception_handlers
 from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
 from app.api.v1.registration import register_v1_routes
 from app.api.v1.system import health_check_response
+from app.application.health_check_service import HealthCheckService
 from app.bot import process_webhook_update, setup_bot, start_bot, start_bot_webhook, stop_bot
 from app.core.logging import configure_logging
 from app.core.telemetry import init_sentry, setup_prometheus_metrics
@@ -28,7 +30,7 @@ from app.middleware.request_correlation import RequestCorrelationMiddleware
 from app.middleware.request_logging import StructuredRequestLoggingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sentry_scope import SentryUserContextMiddleware
-from app.schemas.system import HealthCheckResponse
+from app.schemas.system import HealthCheckResponse, LivenessResponse, ReadinessResponse
 from app.settings import settings
 
 configure_logging(settings)
@@ -182,6 +184,44 @@ setup_prometheus_metrics(app, settings)
 )
 async def health_probe():
     return health_check_response()
+
+
+@app.get(
+    "/health/live",
+    tags=[TAG_SYSTEM],
+    summary="Liveness probe (container is running)",
+    response_model=LivenessResponse,
+)
+async def app_liveness():
+    """
+    Liveness probe for container orchestration.
+    Returns 200 if the application process is running.
+    Used by Docker/Kubernetes to determine if container should be restarted.
+    """
+    return await HealthCheckService.liveness()
+
+
+@app.get(
+    "/health/ready",
+    tags=[TAG_SYSTEM],
+    summary="Readiness probe (dependencies are healthy)",
+    response_model=ReadinessResponse,
+)
+async def app_readiness():
+    """
+    Readiness probe for load balancers and orchestrators.
+    Checks all critical dependencies:
+    - Database connectivity
+    - Redis availability (if configured)
+    - External services (if configured)
+
+    Returns 200 only if the application is ready to serve traffic.
+    Used by load balancers to route traffic only to ready instances.
+    """
+    readiness = await HealthCheckService.readiness()
+    if readiness.status != 'ready':
+        return JSONResponse(status_code=503, content=readiness.model_dump())
+    return readiness
 
 
 @app.get("/", tags=[TAG_SYSTEM])
