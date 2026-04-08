@@ -41,6 +41,9 @@ interface ExerciseSetRowProps {
     onAdjustWeight: (exerciseIndex: number, setNumber: number, delta: number) => void
     onUpdateSet: (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
     weightDeltas: number[]
+    weightRecommendation?: { suggested_weight?: number; message?: string }
+    isWeightRecLoading?: boolean
+    isWeightRecError?: boolean
 }
 
 export const ExerciseSetRow = memo(function ExerciseSetRow({
@@ -55,6 +58,9 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
     onAdjustWeight,
     onUpdateSet,
     weightDeltas,
+    weightRecommendation,
+    isWeightRecLoading,
+    isWeightRecError,
 }: ExerciseSetRowProps) {
     const setIndex = set.set_number - 1
     const [showEffort, setShowEffort] = useState(Boolean(set.rpe != null || set.rir != null))
@@ -290,6 +296,26 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
 
             {!isCollapsed ? (
                 <>
+                    {/* Блок рекомендации веса */}
+                    {isCurrent && weightRecommendation && (weightRecommendation.suggested_weight || weightRecommendation.message) && (
+                        <div className="mt-2 rounded-lg border border-primary/40 bg-primary/5 p-2">
+                            <span className="block text-xs font-semibold text-primary mb-1">Рекомендация веса</span>
+                            {isWeightRecLoading ? (
+                                <span className="text-xs text-telegram-hint">Загрузка рекомендации...</span>
+                            ) : isWeightRecError ? (
+                                <span className="text-xs text-danger">Ошибка загрузки рекомендации</span>
+                            ) : (
+                                <>
+                                    {weightRecommendation.suggested_weight && (
+                                        <span className="text-base font-bold text-primary">{weightRecommendation.suggested_weight} кг</span>
+                                    )}
+                                    {weightRecommendation.message && (
+                                        <span className="block text-xs text-telegram-hint mt-1">{weightRecommendation.message}</span>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
                     <p className="mt-1 text-[11px] text-telegram-hint">Предыдущий лучший: {previousBestLabel}</p>
 
                     <div className="mt-2 flex flex-wrap gap-1.5">

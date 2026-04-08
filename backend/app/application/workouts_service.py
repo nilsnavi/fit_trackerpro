@@ -57,6 +57,42 @@ class WorkoutsService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = WorkoutsRepository(db)
 
+    async def get_weight_recommendation(
+        self,
+        user_id: int,
+        workout_session_id: int,
+        exercise_id: int,
+    ) -> dict:
+        """
+        Возвращает рекомендацию по весу для следующего подхода на основе RPE последнего подхода.
+        """
+        last_set = await self.repository.get_last_set_for_exercise(user_id, workout_session_id, exercise_id)
+        if not last_set or last_set.weight is None or last_set.rpe is None:
+            return {"recommendation": "no_data", "message": "Нет данных для рекомендации"}
+
+        weight = float(last_set.weight)
+        rpe = float(last_set.rpe)
+        if rpe < 7:
+            new_weight = round(weight * 1.025, 2)
+            return {
+                "recommendation": "increase",
+                "suggested_weight": new_weight,
+                "message": f"RPE={rpe} (<7): Рекомендуется увеличить вес до {new_weight} кг"
+            }
+        elif 7 <= rpe < 10:
+            return {
+                "recommendation": "keep",
+                "suggested_weight": weight,
+                "message": f"RPE={rpe} (7–9): Оставьте вес {weight} кг"
+            }
+        else:
+            new_weight = round(weight * 0.975, 2)
+            return {
+                "recommendation": "decrease",
+                "suggested_weight": new_weight,
+                "message": f"RPE={rpe} (=10): Рекомендуется уменьшить вес до {new_weight} кг"
+            }
+
     @staticmethod
     def _safe_float(value: object) -> Optional[float]:
         try:
