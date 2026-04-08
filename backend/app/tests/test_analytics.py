@@ -28,6 +28,10 @@ class TestAnalyticsAuthBoundary:
         r = await client.get("/api/v1/analytics/workout-summary?workout_id=1")
         assert r.status_code == 401
 
+    async def test_performance_overview_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/analytics/performance-overview")
+        assert r.status_code == 401
+
 
 @pytest.mark.integration
 class TestAnalyticsEmptyStateContracts:
@@ -119,6 +123,25 @@ class TestAnalyticsEmptyStateContracts:
         assert isinstance(data.get("frequency_trend"), list)
         assert isinstance(data.get("best_sets"), list)
         assert isinstance(data.get("pr_events"), list)
+
+    async def test_performance_overview_contract(self, authenticated_client: AsyncClient):
+        if str(settings.DATABASE_URL).startswith("sqlite"):
+            pytest.skip("Performance overview relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
+        r = await authenticated_client.get("/api/v1/analytics/performance-overview?period=30d")
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data.get("period") == "30d"
+        assert "date_from" in data
+        assert "date_to" in data
+        assert "total_workouts" in data
+        assert "active_days" in data
+        assert "average_workouts_per_week" in data
+        assert "total_volume" in data
+        assert "average_volume_per_workout" in data
+        assert "baseline_estimated_1rm" in data
+        assert "current_estimated_1rm" in data
+        assert "estimated_1rm_progress_pct" in data
+        assert isinstance(data.get("trend"), list)
 
     async def test_workout_summary_not_found_contract(self, authenticated_client: AsyncClient):
         if str(settings.DATABASE_URL).startswith("sqlite"):

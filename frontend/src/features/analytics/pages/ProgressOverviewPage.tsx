@@ -3,14 +3,17 @@ import { useQuery } from '@tanstack/react-query'
 import { eachDayOfInterval, format, parseISO, startOfWeek, subDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Activity, CalendarDays, Dumbbell, Flame, Trophy, TrendingUp } from 'lucide-react'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import {
+    getAnalyticsPerformanceOverview,
     getAnalyticsMuscleLoad,
     getAnalyticsProgress,
     getAnalyticsProgressInsights,
     getAnalyticsSummary,
+    type ApiAnalyticsPerformanceOverviewResponse,
     type ApiAnalyticsSummaryResponse,
     type ApiExerciseProgressResponse,
     type ApiMuscleLoadEntry,
@@ -41,6 +44,25 @@ function formatMetric(value: number): string {
     return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Math.round(value))
 }
 
+function OneRMTooltip({
+    active,
+    payload,
+    label,
+}: {
+    active?: boolean
+    payload?: Array<{ value: number }>
+    label?: string
+}) {
+    if (!active || !payload || payload.length === 0) return null
+    const value = Number(payload[0]?.value ?? 0)
+    return (
+        <div className="rounded-xl border border-border bg-telegram-bg px-3 py-2 shadow-lg">
+            <p className="text-xs font-semibold text-telegram-text">{label}</p>
+            <p className="mt-1 text-xs text-telegram-hint">Оценка 1ПМ: {value.toFixed(1)} кг</p>
+        </div>
+    )
+}
+
 export default function ProgressOverviewPage() {
     const [period, setPeriod] = useState<ProgressPeriod>('30d')
     const range = useMemo(() => getAnalyticsDateRange(period), [period])
@@ -50,6 +72,12 @@ export default function ProgressOverviewPage() {
     const summaryQuery = useQuery<ApiAnalyticsSummaryResponse>({
         queryKey: queryKeys.analytics.summary(period, dateFrom, dateTo),
         queryFn: () => getAnalyticsSummary(range),
+        staleTime: 60_000,
+    })
+
+    const performanceOverviewQuery = useQuery<ApiAnalyticsPerformanceOverviewResponse>({
+        queryKey: queryKeys.analytics.performanceOverview(period, dateFrom, dateTo),
+        queryFn: () => getAnalyticsPerformanceOverview({ ...range, period }),
         staleTime: 60_000,
     })
 
@@ -72,11 +100,21 @@ export default function ProgressOverviewPage() {
     })
 
     const isLoading =
-        summaryQuery.isPending || progressQuery.isPending || insightsQuery.isPending || muscleLoadQuery.isPending
+        summaryQuery.isPending ||
+        performanceOverviewQuery.isPending ||
+        progressQuery.isPending ||
+        insightsQuery.isPending ||
+        muscleLoadQuery.isPending
 
-    const hasError = summaryQuery.error || progressQuery.error || insightsQuery.error || muscleLoadQuery.error
+    const hasError =
+        summaryQuery.error ||
+        performanceOverviewQuery.error ||
+        progressQuery.error ||
+        insightsQuery.error ||
+        muscleLoadQuery.error
 
     const summary = summaryQuery.data
+    const performanceOverview = performanceOverviewQuery.data
     const insights = insightsQuery.data
     const progressRows = progressQuery.data ?? []
     const muscleRows = muscleLoadQuery.data ?? []
@@ -97,14 +135,27 @@ export default function ProgressOverviewPage() {
 
     const volumeTrend = useMemo(
         () =>
-            [...(insights?.volume_trend ?? [])]
+            [...(performanceOverview?.trend ?? [])]
                 .sort((a, b) => a.date.localeCompare(b.date))
                 .slice(-8)
                 .map((item) => ({
                     label: format(new Date(item.date), 'dd MMM', { locale: ru }),
                     value: Math.max(0, Math.round(item.total_volume ?? 0)),
                 })),
-        [insights?.volume_trend],
+        [performanceOverview?.trend],
+    )
+
+    const estimatedOneRmTrend = useMemo(
+        () =>
+            [...(performanceOverview?.trend ?? [])]
+                .filter((item) => typeof item.best_estimated_1rm === 'number')
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .slice(-12)
+                .map((item) => ({
+                    label: format(new Date(item.date), 'dd MMM', { locale: ru }),
+                    value: Number(item.best_estimated_1rm ?? 0),
+                })),
+        [performanceOverview?.trend],
     )
 
     const muscleDistribution = useMemo(() => {
@@ -187,8 +238,11 @@ export default function ProgressOverviewPage() {
         volumeTrend.length === 0
 
     const averageSessionsPerWeek =
-        typeof insights?.summary?.average_workouts_per_week === 'number' && insights.summary.average_workouts_per_week > 0
-            ? Number(insights.summary.average_workouts_per_week.toFixed(1))
+        typeof performanceOverview?.average_workouts_per_week === 'number' &&
+        performanceOverview.average_workouts_per_week > 0
+            ? Number(performanceOverview.average_workouts_per_week.toFixed(1))
+            : typeof insights?.summary?.average_workouts_per_week === 'number' && insights.summary.average_workouts_per_week > 0
+              ? Number(insights.summary.average_workouts_per_week.toFixed(1))
             : (typeof summary?.weekly_average === 'number' ? Number(summary.weekly_average.toFixed(1)) : 0)
     const activeDaysCount = insights?.summary?.active_days ?? 0
     const heroTitle =
@@ -321,6 +375,55 @@ export default function ProgressOverviewPage() {
                     />
 
                     <section className="rounded-2xl bg-telegram-secondary-bg p-4">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-semibold text-telegram-text">Прогресс силы (оценка 1ПМ)</h2>
+                                <p className="mt-1 text-xs text-telegram-hint">
+                                    Расчёт по лучшему подходу дня: {`1ПМ = вес × (1 + повторы / 30)`}.
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-telegram-bg px-3 py-2 text-right">
+                                <p className="text-[11px] uppercase tracking-wide text-telegram-hint">Текущий 1ПМ</p>
+                                <p className="mt-1 text-lg font-semibold text-telegram-text">
+                                    {performanceOverview?.current_estimated_1rm != null
+                                        ? `${performanceOverview.current_estimated_1rm.toFixed(1)} кг`
+                                        : '—'}
+                                </p>
+                                <p className="mt-1 text-xs text-telegram-hint">
+                                    {performanceOverview?.estimated_1rm_progress_pct != null
+                                        ? `${performanceOverview.estimated_1rm_progress_pct > 0 ? '+' : ''}${performanceOverview.estimated_1rm_progress_pct.toFixed(1)}%`
+                                        : 'нет базового значения'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {estimatedOneRmTrend.length === 0 ? (
+                            <p className="rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
+                                Пока недостаточно данных по весам/повторам для расчёта 1ПМ.
+                            </p>
+                        ) : (
+                            <div className="-mx-2 h-56">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={estimatedOneRmTrend} margin={{ top: 8, right: 14, left: 6, bottom: 8 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.3)" />
+                                        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={20} />
+                                        <YAxis tick={{ fontSize: 11 }} width={44} />
+                                        <Tooltip content={<OneRMTooltip />} />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="value"
+                                            stroke="hsl(var(--primary))"
+                                            strokeWidth={2}
+                                            dot={{ r: 2.5 }}
+                                            connectNulls
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-sm font-semibold text-telegram-text">Прогрессия упражнений</h2>
@@ -397,6 +500,18 @@ export default function ProgressOverviewPage() {
                                 <p className="text-xs text-telegram-hint">Среднее в месяц</p>
                                 <p className="mt-1 text-lg font-semibold text-telegram-text">
                                     {summary?.monthly_average ?? 0}
+                                </p>
+                            </article>
+                            <article className="rounded-xl bg-telegram-bg p-3">
+                                <p className="text-xs text-telegram-hint">Суммарный объём</p>
+                                <p className="mt-1 text-lg font-semibold text-telegram-text">
+                                    {formatMetric(performanceOverview?.total_volume ?? insights?.summary?.total_volume ?? 0)}
+                                </p>
+                            </article>
+                            <article className="rounded-xl bg-telegram-bg p-3">
+                                <p className="text-xs text-telegram-hint">Объём на тренировку</p>
+                                <p className="mt-1 text-lg font-semibold text-telegram-text">
+                                    {formatMetric(performanceOverview?.average_volume_per_workout ?? 0)}
                                 </p>
                             </article>
                         </div>

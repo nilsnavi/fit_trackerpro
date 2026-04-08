@@ -48,6 +48,8 @@ export const queryKeys = {
         dashboard: ['analytics', 'dashboard'] as const,
         summary: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'summary', period, dateFrom, dateTo] as const,
+        performanceOverview: (period: string, dateFrom: string | null, dateTo: string | null) =>
+            ['analytics', 'performanceOverview', period, dateFrom, dateTo] as const,
         progress: (
             period: string,
             maxExercises: number,

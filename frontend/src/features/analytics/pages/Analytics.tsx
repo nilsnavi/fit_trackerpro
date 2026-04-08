@@ -46,7 +46,6 @@ import { AnalyticsPageSkeleton } from '@shared/ui/page-skeletons';
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
 import { queryKeys } from '@shared/api/queryKeys';
 import { getErrorMessage } from '@shared/errors';
-import { useRealAnalytics } from '@shared/config/runtime';
 import { toast } from '@shared/stores/toastStore';
 import {
     getAnalyticsMuscleLoad,
@@ -55,7 +54,6 @@ import {
     getAnalyticsSummary,
     getAnalyticsTrainingLoadDaily,
 } from '@features/analytics/api/analyticsDomain';
-import { buildMockAnalytics } from '@features/analytics/mocks/analyticsMock';
 import {
     buildChartDataFromProgress,
     mapKeyMetrics,
@@ -817,7 +815,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
     const apiPeriod = toApiPeriod(period)
     const maxExercises = 50
     const maxDataPoints = 120
-    const isReal = useRealAnalytics()
     const dateRange = useMemo(
         () => buildDateRangeParams(period, customStart, customEnd),
         [period, customStart, customEnd],
@@ -831,7 +828,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
                 ...(dateRange.date_from ? { date_from: dateRange.date_from } : {}),
                 ...(dateRange.date_to ? { date_to: dateRange.date_to } : {}),
             }),
-        enabled: isReal && !isRecoveryScreen,
+        enabled: !isRecoveryScreen,
     })
 
     const progressQuery = useQuery({
@@ -850,45 +847,38 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
                 max_exercises: maxExercises,
                 max_data_points: maxDataPoints,
             }),
-        enabled: isReal && !isRecoveryScreen,
+        enabled: !isRecoveryScreen,
     })
 
     const trainingLoadQuery = useQuery({
         queryKey: queryKeys.analytics.trainingLoadDaily(dateRange.date_from ?? null, dateRange.date_to ?? null),
         queryFn: () => getAnalyticsTrainingLoadDaily(dateRange),
         staleTime: 60_000,
-        enabled: isReal && isRecoveryScreen,
+        enabled: isRecoveryScreen,
     })
 
     const muscleLoadQuery = useQuery({
         queryKey: queryKeys.analytics.muscleLoad(dateRange.date_from ?? null, dateRange.date_to ?? null),
         queryFn: () => getAnalyticsMuscleLoad(dateRange),
         staleTime: 60_000,
-        enabled: isReal && isRecoveryScreen,
+        enabled: isRecoveryScreen,
     })
 
     const recoveryStateQuery = useQuery({
         queryKey: queryKeys.analytics.recoveryState,
         queryFn: () => getAnalyticsRecoveryState(),
         staleTime: 60_000,
-        enabled: isReal && isRecoveryScreen,
+        enabled: isRecoveryScreen,
     })
 
-    const mock = useMemo(() => {
-        if (isReal) return null
-        const date_from = dateRange.date_from ?? format(startOfDay(subDays(new Date(), 30)), 'yyyy-MM-dd')
-        const date_to = dateRange.date_to ?? format(endOfDay(new Date()), 'yyyy-MM-dd')
-        return buildMockAnalytics({ date_from, date_to, period: apiPeriod })
-    }, [apiPeriod, dateRange.date_from, dateRange.date_to, isReal])
+        const summary: ApiAnalyticsSummaryResponse | undefined = summaryQuery.data
+    const progressRows: ApiExerciseProgressResponse[] | undefined = progressQuery.data
+    const trainingLoadRows: ApiTrainingLoadDailyEntry[] | undefined = trainingLoadQuery.data
+    const muscleLoadRows: ApiMuscleLoadEntry[] | undefined = muscleLoadQuery.data
+    const recoveryState: ApiRecoveryStateResponse | undefined = recoveryStateQuery.data
 
-    const summary: ApiAnalyticsSummaryResponse | undefined = isReal ? summaryQuery.data : mock?.summary
-    const progressRows: ApiExerciseProgressResponse[] | undefined = isReal ? progressQuery.data : mock?.progress
-    const trainingLoadRows: ApiTrainingLoadDailyEntry[] | undefined = isReal ? trainingLoadQuery.data : mock?.trainingLoadDaily
-    const muscleLoadRows: ApiMuscleLoadEntry[] | undefined = isReal ? muscleLoadQuery.data : mock?.muscleLoad
-    const recoveryState: ApiRecoveryStateResponse | undefined = isReal ? recoveryStateQuery.data : mock?.recoveryState
-
-    const isAnalyticsPending = isReal && !isRecoveryScreen && (summaryQuery.isPending || progressQuery.isPending)
-    const isAnalyticsError = isReal && !isRecoveryScreen && (summaryQuery.isError || progressQuery.isError)
+    const isAnalyticsPending = !isRecoveryScreen && (summaryQuery.isPending || progressQuery.isPending)
+    const isAnalyticsError = !isRecoveryScreen && (summaryQuery.isError || progressQuery.isError)
 
     const exercises = useMemo((): Exercise[] => {
         return mapProgressToExercises(progressRows)
@@ -1382,25 +1372,25 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
                             <Card variant="info" className="p-3">
                                 <div className="text-xs text-telegram-hint">Объём (период)</div>
                                 <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {isReal && trainingLoadQuery.isPending ? '—' : loadCards.totalVolume}
+                                    {trainingLoadQuery.isPending ? '—' : loadCards.totalVolume}
                                 </div>
                             </Card>
                             <Card variant="info" className="p-3">
                                 <div className="text-xs text-telegram-hint">Усталость (период)</div>
                                 <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {isReal && trainingLoadQuery.isPending ? '—' : loadCards.totalFatigue}
+                                    {trainingLoadQuery.isPending ? '—' : loadCards.totalFatigue}
                                 </div>
                             </Card>
                             <Card variant="info" className="p-3">
                                 <div className="text-xs text-telegram-hint">Средний RPE</div>
                                 <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {isReal && trainingLoadQuery.isPending ? '—' : (loadCards.avgRpe ?? '—')}
+                                    {trainingLoadQuery.isPending ? '—' : (loadCards.avgRpe ?? '—')}
                                 </div>
                             </Card>
                             <Card variant="info" className="p-3">
                                 <div className="text-xs text-telegram-hint">Готовность</div>
                                 <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                                    {isReal && recoveryStateQuery.isPending ? '—' : (loadCards.readiness ?? '—')}
+                                    {recoveryStateQuery.isPending ? '—' : (loadCards.readiness ?? '—')}
                                 </div>
                                 {loadCards.fatigueLevel != null && (
                                     <div className="mt-1 text-xs text-telegram-hint">Уровень усталости: {loadCards.fatigueLevel}</div>
@@ -1478,3 +1468,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
 };
 
 export default Analytics;
+
+
+

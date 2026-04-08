@@ -4,6 +4,9 @@ export const analyticsApi = {
     getSummary(params?: Record<string, unknown>) {
         return api.get('/analytics/summary', params)
     },
+    getPerformanceOverview(params?: Record<string, unknown>) {
+        return api.get('/analytics/performance-overview', params)
+    },
     getProgress(params?: Record<string, unknown>) {
         return api.get('/analytics/progress', params)
     },
