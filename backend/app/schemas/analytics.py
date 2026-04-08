@@ -357,6 +357,32 @@ class ProgressInsightsResponse(BaseModel):
     pr_events: List[ProgressInsightsPRItem] = Field(default_factory=list)
 
 
+class AnalyticsPerformanceTrendPoint(BaseModel):
+    """Daily trend point for high-level performance analytics."""
+
+    date: date
+    workout_count: int
+    total_volume: float
+    best_estimated_1rm: Optional[float] = None
+
+
+class AnalyticsPerformanceOverviewResponse(BaseModel):
+    """Overview metrics for volume, frequency, progress over time and estimated 1RM."""
+
+    period: str
+    date_from: date
+    date_to: date
+    total_workouts: int
+    active_days: int
+    average_workouts_per_week: float
+    total_volume: float
+    average_volume_per_workout: float
+    baseline_estimated_1rm: Optional[float] = None
+    current_estimated_1rm: Optional[float] = None
+    estimated_1rm_progress_pct: Optional[float] = None
+    trend: List[AnalyticsPerformanceTrendPoint] = Field(default_factory=list)
+
+
 class WorkoutPostSummaryResponse(BaseModel):
     """Post-workout snapshot focused on immediate user feedback."""
 

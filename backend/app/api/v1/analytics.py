@@ -14,6 +14,7 @@ from app.application.analytics_service import AnalyticsService
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.analytics import (
+    AnalyticsPerformanceOverviewResponse,
     AnalyticsSummaryResponse,
     DataExportRequest,
     DataExportResponse,
@@ -250,6 +251,23 @@ async def get_analytics_summary(
 ):
     service = AnalyticsService(db)
     return await service.get_analytics_summary(user_id=current_user.id, period=period)
+
+
+@router.get("/performance-overview", response_model=AnalyticsPerformanceOverviewResponse)
+async def get_analytics_performance_overview(
+    period: str = Query("30d", pattern="^(7d|30d|90d|1y|all)$"),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = AnalyticsService(db)
+    return await service.get_performance_overview(
+        user_id=current_user.id,
+        period=period,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @router.get("/muscle-signals", response_model=MuscleImbalanceSignalsResponse)

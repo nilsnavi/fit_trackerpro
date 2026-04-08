@@ -123,8 +123,34 @@ export interface ApiWorkoutPostSummaryResponse {
     pr_events: ApiProgressInsightsPRItem[]
 }
 
+export interface ApiAnalyticsPerformanceTrendPoint {
+    date: ApiDate
+    workout_count: number
+    total_volume: number
+    best_estimated_1rm: number | null
+}
+
+export interface ApiAnalyticsPerformanceOverviewResponse {
+    period: string
+    date_from: ApiDate
+    date_to: ApiDate
+    total_workouts: number
+    active_days: number
+    average_workouts_per_week: number
+    total_volume: number
+    average_volume_per_workout: number
+    baseline_estimated_1rm: number | null
+    current_estimated_1rm: number | null
+    estimated_1rm_progress_pct: number | null
+    trend: ApiAnalyticsPerformanceTrendPoint[]
+}
+
 export function getAnalyticsSummary(params?: Record<string, unknown>) {
     return analyticsApi.getSummary(params) as Promise<ApiAnalyticsSummaryResponse>
+}
+
+export function getAnalyticsPerformanceOverview(params?: Record<string, unknown>) {
+    return analyticsApi.getPerformanceOverview(params) as Promise<ApiAnalyticsPerformanceOverviewResponse>
 }
 
 export function getAnalyticsProgress(params?: Record<string, unknown>) {

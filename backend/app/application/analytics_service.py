@@ -23,6 +23,8 @@ from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.analytics_repository import AnalyticsRepository
 from app.infrastructure.repositories.feature_flags_repository import FeatureFlagsRepository
 from app.schemas.analytics import (
+    AnalyticsPerformanceOverviewResponse,
+    AnalyticsPerformanceTrendPoint,
     AnalyticsSummaryResponse,
     CalendarDayEntry,
     DataExportRequest,
@@ -674,6 +676,98 @@ class AnalyticsService:
                 for row in pr_rows
             ],
         )
+        await set_cache_json(
+            cache_key,
+            response.model_dump(mode="json"),
+            ttl_seconds=settings.ANALYTICS_CACHE_TTL_SECONDS,
+        )
+        return response
+
+    async def get_performance_overview(
+        self,
+        user_id: int,
+        period: str,
+        date_from: Optional[date],
+        date_to: Optional[date],
+    ) -> AnalyticsPerformanceOverviewResponse:
+        days = self._resolve_period_days(period)
+        resolved_date_to = date_to or date.today()
+        resolved_date_from = date_from or (resolved_date_to - timedelta(days=days))
+        if resolved_date_from > resolved_date_to:
+            raise AnalyticsValidationError("date_from cannot be greater than date_to")
+
+        cache_key = self._build_cache_key(
+            "performance-overview",
+            user_id,
+            period=period,
+            date_from=resolved_date_from.isoformat(),
+            date_to=resolved_date_to.isoformat(),
+        )
+        cached = await get_cache_json(cache_key)
+        if cached is not None:
+            return AnalyticsPerformanceOverviewResponse.model_validate(cached)
+
+        summary_row = await self.repository.get_performance_overview_summary(
+            user_id=user_id,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+        )
+        trend_rows = await self.repository.get_performance_overview_trend(
+            user_id=user_id,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+        )
+
+        total_workouts = int(summary_row.get("total_workouts") or 0)
+        active_days = int(summary_row.get("active_days") or 0)
+        total_volume = round(float(summary_row.get("total_volume") or 0), 2)
+
+        baseline_1rm = (
+            round(float(summary_row["baseline_estimated_1rm"]), 2)
+            if summary_row.get("baseline_estimated_1rm") is not None
+            else None
+        )
+        current_1rm = (
+            round(float(summary_row["current_estimated_1rm"]), 2)
+            if summary_row.get("current_estimated_1rm") is not None
+            else None
+        )
+        estimated_1rm_progress_pct = None
+        if baseline_1rm is not None and current_1rm is not None and baseline_1rm > 0:
+            estimated_1rm_progress_pct = round(((current_1rm - baseline_1rm) / baseline_1rm) * 100, 2)
+
+        total_days = (resolved_date_to - resolved_date_from).days + 1
+        weeks = max(1.0, total_days / 7)
+        average_workouts_per_week = round(total_workouts / weeks, 2)
+        average_volume_per_workout = round(total_volume / total_workouts, 2) if total_workouts > 0 else 0.0
+
+        response = AnalyticsPerformanceOverviewResponse(
+            period=period,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            total_workouts=total_workouts,
+            active_days=active_days,
+            average_workouts_per_week=average_workouts_per_week,
+            total_volume=total_volume,
+            average_volume_per_workout=average_volume_per_workout,
+            baseline_estimated_1rm=baseline_1rm,
+            current_estimated_1rm=current_1rm,
+            estimated_1rm_progress_pct=estimated_1rm_progress_pct,
+            trend=[
+                AnalyticsPerformanceTrendPoint(
+                    date=row["date"],
+                    workout_count=int(row.get("workout_count") or 0),
+                    total_volume=round(float(row.get("total_volume") or 0), 2),
+                    best_estimated_1rm=(
+                        round(float(row["best_estimated_1rm"]), 2)
+                        if row.get("best_estimated_1rm") is not None
+                        else None
+                    ),
+                )
+                for row in trend_rows
+            ],
+        )
+
         await set_cache_json(
             cache_key,
             response.model_dump(mode="json"),
