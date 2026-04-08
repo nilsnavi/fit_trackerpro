@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.audit import (
     AUTH_ACCOUNT_DELETE,
     AUTH_LOGOUT,
+    AUTH_ONBOARDING_UPDATE,
     AUTH_PROFILE_UPDATE,
     AUTH_REFRESH,
     AUTH_TELEGRAM_LOGIN,
@@ -19,12 +22,15 @@ from app.infrastructure.telegram_auth import validate_and_get_user
 from app.schemas.auth import (
     AuthResponse,
     LogoutResponse,
+    OnboardingRequest,
+    OnboardingResponse,
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
     TelegramUserData,
     UserProfileResponse,
     UserProfileUpdate,
+    UserProfileData,
     user_profile_from_db,
 )
 from app.settings import settings
@@ -53,17 +59,28 @@ class AuthService:
         telegram_id = telegram_user_data["id"]
         user = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
         if user is None:
+            telegram_photo_url = telegram_user_data.get("photo_url")
             user = User(
                 telegram_id=telegram_id,
                 username=telegram_user_data.get("username"),
                 first_name=telegram_user_data.get("first_name"),
-                profile={"equipment": [], "limitations": [], "goals": []},
+                profile={
+                    "equipment": [],
+                    "limitations": [],
+                    "goals": [],
+                    "telegram_photo_url": telegram_photo_url,
+                    "onboarding_completed": False,
+                },
                 settings={"theme": "telegram", "notifications": True, "units": "metric"},
             )
             return await self.repository.insert_user(user), True
 
         user.username = telegram_user_data.get("username") or user.username
         user.first_name = telegram_user_data.get("first_name") or user.first_name
+        profile_data = dict(user.profile or {})
+        if telegram_user_data.get("photo_url"):
+            profile_data["telegram_photo_url"] = telegram_user_data.get("photo_url")
+            user.profile = profile_data
         await self.repository.commit_user_fields()
         return user, False
 
@@ -83,6 +100,7 @@ class AuthService:
         user, created = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
         refresh_token = create_refresh_token(user.telegram_id)
+        onboarding_required = bool(created or not (user.profile or {}).get("onboarding_completed", False))
 
         audit_log(
             action=AUTH_TELEGRAM_LOGIN,
@@ -108,8 +126,42 @@ class AuthService:
             user=user_response,
             access_token=access_token,
             refresh_token=refresh_token,
+            is_new_user=created,
+            onboarding_required=onboarding_required,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
+
+    async def save_onboarding(
+        self,
+        current_user: User,
+        payload: OnboardingRequest,
+        client_ip: str | None = None,
+    ) -> OnboardingResponse:
+        profile = dict(current_user.profile or {})
+        profile["fitness_goal"] = payload.fitness_goal
+        profile["experience_level"] = payload.experience_level
+        profile["onboarding_completed"] = True
+        profile["onboarding_completed_at"] = datetime.now(timezone.utc).isoformat()
+        current_user.profile = profile
+
+        await self.repository.save_profile(current_user)
+
+        audit_log(
+            action=AUTH_ONBOARDING_UPDATE,
+            user_db_id=current_user.id,
+            telegram_id=current_user.telegram_id,
+            client_ip=client_ip,
+            meta={
+                "fitness_goal": payload.fitness_goal,
+                "experience_level": payload.experience_level,
+            },
+        )
+
+        return OnboardingResponse(
+            success=True,
+            message="Onboarding saved",
+            profile=UserProfileData.model_validate(current_user.profile or {}),
         )
 
     async def update_profile(

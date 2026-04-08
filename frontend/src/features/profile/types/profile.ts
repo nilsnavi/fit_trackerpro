@@ -12,6 +12,11 @@ export interface UserProfile {
         target_weight?: number
         height?: number
         birth_date?: string
+        fitness_goal?: 'strength' | 'weight_loss' | 'endurance'
+        experience_level?: 'beginner' | 'intermediate' | 'advanced'
+        onboarding_completed?: boolean
+        onboarding_completed_at?: string
+        telegram_photo_url?: string
     }
     settings: {
         theme?: string

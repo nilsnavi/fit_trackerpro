@@ -7,6 +7,7 @@ import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
 import { AppShell } from './app/layouts/AppShell'
 import { RouteGuard } from '@shared/auth/RouteGuard'
+import { TelegramAuthBootstrapGate } from '@features/auth/components/TelegramAuthBootstrapGate'
 import {
     ActiveWorkoutSkeleton,
     CatalogPageSkeleton,
@@ -92,9 +93,10 @@ export default function App() {
                     <ThemeProvider>
                         <BrowserRouter>
                             <PwaUpdatePrompt />
-                            <Suspense fallback={<RouteFallbackSpinner />}>
-                                <Routes>
-                                    <Route element={<AppShell />}>
+                            <TelegramAuthBootstrapGate>
+                                <Suspense fallback={<RouteFallbackSpinner />}>
+                                    <Routes>
+                                        <Route element={<AppShell />}>
                                         <Route
                                             path="/"
                                             element={
@@ -271,11 +273,12 @@ export default function App() {
                                                 </RouteGuard>
                                             }
                                         />
-                                        <Route path="*" element={<Navigate to="/" replace />} />
-                                    </Route>
-                                </Routes>
-                            </Suspense>
-                                                    <Toaster />
+                                            <Route path="*" element={<Navigate to="/" replace />} />
+                                        </Route>
+                                    </Routes>
+                                </Suspense>
+                            </TelegramAuthBootstrapGate>
+                            <Toaster />
                         </BrowserRouter>
                     </ThemeProvider>
                 </TelegramProvider>

@@ -4,7 +4,7 @@ services:
     image: ngrok/ngrok:latest
     container_name: fittracker-ngrok
     restart: unless-stopped
-    command: start --all --config /etc/ngrok.yml --pooling-enabled
+    command: start --all --config /etc/ngrok.yml
     environment:
       - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
       - http_proxy=

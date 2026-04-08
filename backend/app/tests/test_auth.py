@@ -58,6 +58,8 @@ async def test_authentication_flow(client: AsyncClient, mock_telegram_auth_body:
     data = response.json()
     assert data.get("access_token")
     assert data.get("refresh_token")
+    assert data.get("is_new_user") is True
+    assert data.get("onboarding_required") is True
     token = data["access_token"]
 
     me = await client.get(
@@ -65,6 +67,39 @@ async def test_authentication_flow(client: AsyncClient, mock_telegram_auth_body:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert me.status_code == 200
+
+
+@pytest.mark.integration
+@pytest.mark.auth
+async def test_onboarding_flow(client: AsyncClient, mock_telegram_auth_body: dict):
+    """New user can save onboarding and it persists in profile."""
+    auth_response = await client.post(
+        "/api/v1/users/auth/telegram",
+        json=mock_telegram_auth_body,
+    )
+    assert auth_response.status_code == 200
+    token = auth_response.json()["access_token"]
+
+    onboarding = await client.post(
+        "/api/v1/users/auth/onboarding",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"fitness_goal": "strength", "experience_level": "beginner"},
+    )
+    assert onboarding.status_code == 200
+    onboarding_data = onboarding.json()
+    assert onboarding_data["success"] is True
+    assert onboarding_data["profile"]["fitness_goal"] == "strength"
+    assert onboarding_data["profile"]["experience_level"] == "beginner"
+    assert onboarding_data["profile"]["onboarding_completed"] is True
+
+    re_auth = await client.post(
+        "/api/v1/users/auth/telegram",
+        json=mock_telegram_auth_body,
+    )
+    assert re_auth.status_code == 200
+    re_auth_data = re_auth.json()
+    assert re_auth_data.get("is_new_user") is False
+    assert re_auth_data.get("onboarding_required") is False
 
 
 @pytest.mark.unit
