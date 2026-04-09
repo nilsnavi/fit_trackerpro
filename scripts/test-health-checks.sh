@@ -45,21 +45,27 @@ check_endpoint() {
 }
 
 # Test liveness probe
+# Liveness: confirms the process is alive and not deadlocked.
+# Kubernetes/Docker will restart the container if this fails.
 echo "1. Testing Liveness Probe (/health/live)"
+echo "   Semantic: Is the application process alive? (restart if not)"
 echo "==========================================="
-check_endpoint "$HEALTH_LIVE_URL" "Liveness Probe" || exit 1
+check_endpoint "$HEALTH_LIVE_URL" "Liveness Probe (/health/live)" || exit 1
 
 # Test readiness probe
+# Readiness: confirms all dependencies (DB, Redis, etc.) are reachable.
+# The container will NOT receive traffic until this probe returns 200.
 echo "2. Testing Readiness Probe (/health/ready)"
+echo "   Semantic: Are all dependencies healthy? (route traffic only if yes)"
 echo "==========================================="
-if check_endpoint "$HEALTH_READY_URL" "Readiness Probe"; then
+if check_endpoint "$HEALTH_READY_URL" "Readiness Probe (/health/ready)"; then
     # Parse readiness response
     status=$(curl -s "$HEALTH_READY_URL" | jq -r '.status')
     
     if [ "$status" = "ready" ]; then
-        echo -e "${GREEN}Backend is READY to serve traffic${NC}"
+        echo -e "${GREEN}Backend is READY to serve traffic (all dependencies healthy)${NC}"
     else
-        echo -e "${YELLOW}Backend is NOT READY (status: $status)${NC}"
+        echo -e "${YELLOW}Backend is NOT READY — dependencies unhealthy (status: $status)${NC}"
     fi
     echo ""
 fi

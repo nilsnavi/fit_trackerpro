@@ -66,6 +66,8 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
       - SENTRY_DSN=${SENTRY_DSN}
       - TELEGRAM_BOT_ENABLED=false
+    # Readiness probe: checks DB, Redis, and external service connectivity.
+    # Container receives traffic only when all dependencies are healthy.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health/ready"]
       interval: 30s

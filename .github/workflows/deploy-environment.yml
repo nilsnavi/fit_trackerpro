@@ -301,6 +301,9 @@ jobs:
           curl -fsS "${HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null
           echo "Health JSON validated: status=healthy"
 
+          READY_URL="${API_BASE_TRIMMED}/system/ready"
+          smoke_check "backend readiness (GET /api/v1/system/ready)" "${READY_URL}" "200"
+
           smoke_check "nginx→backend health (GET /health)" "${NGINX_HEALTH_URL}" "200"
           curl -fsS "${NGINX_HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null
 
@@ -422,7 +425,8 @@ jobs:
   notify:
     name: Notify Deployment Result (${{ inputs.deploy_environment }})
     runs-on: ubuntu-latest
-    needs: [pre-deploy-validate, migrate, deploy, verify, rollback, record-stable]
+    needs:
+      [pre-deploy-validate, migrate, deploy, verify, rollback, record-stable]
     if: ${{ always() }}
 
     steps:

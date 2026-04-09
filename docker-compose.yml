@@ -91,6 +91,8 @@ services:
       - /app/__pycache__
     ports:
       - "18000:8000"
+    # Readiness probe: checks DB, Redis, and external service connectivity.
+    # Container receives traffic only when all dependencies are healthy.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health/ready"]
       interval: 30s
