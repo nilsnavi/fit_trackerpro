@@ -183,7 +183,7 @@ export function ActiveWorkoutPage() {
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
     // Offline sync и conflict resolution
-    useSyncQueueWithRetry()
+    const { pendingItems: syncPendingItems } = useSyncQueueWithRetry()
     const { conflict: conflictInfo, isOpen: isConflictOpen, closeConflict } = useConflictResolution()
 
     const restPresetScopeKey = useMemo(() => {
@@ -932,6 +932,7 @@ export function ActiveWorkoutPage() {
             <ActiveWorkoutHeader
                 onBack={() => guardedAction(() => navigate('/workouts'))}
                 syncState={syncState}
+                pendingCount={syncPendingItems.length}
             />
 
             {/* Статус синхронизации очереди */}
@@ -1172,11 +1173,10 @@ export function ActiveWorkoutPage() {
                                         key={`sticky-rest-${seconds}`}
                                         type="button"
                                         onClick={() => handleSelectRestPreset(seconds)}
-                                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                                            restDefaultSeconds === seconds
+                                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${restDefaultSeconds === seconds
                                                 ? 'bg-primary text-primary-foreground'
                                                 : 'bg-telegram-secondary-bg text-telegram-text'
-                                        }`}
+                                            }`}
                                     >
                                         {seconds < 60 ? `${seconds}с` : `${Math.floor(seconds / 60)}м`}
                                     </button>

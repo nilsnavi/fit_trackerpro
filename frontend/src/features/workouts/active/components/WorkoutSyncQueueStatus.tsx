@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+// Note: useMemo kept for derived status calculation only
 import { useNetworkOnline } from '@shared/hooks/useNetworkOnline'
 import { useSyncQueueUiState } from '@shared/hooks/useSyncQueueUiState'
 import { getSyncQueueEngine, type SyncQueueItem } from '@shared/offline/syncQueue'
@@ -49,17 +50,11 @@ export function WorkoutSyncQueueStatus({
         return () => unsubscribe()
     }, [workoutId])
 
-    const workoutItems = useMemo(
-        () => allItems.filter((item) => {
-            const payload = item.payload as Record<string, unknown>
-            return payload?.workoutId === workoutId
-        }),
-        [allItems, workoutId],
-    )
-
-    const failedItems = useMemo(() => workoutItems.filter((item) => item.status === 'failed'), [workoutItems])
-    const pendingItems = useMemo(() => workoutItems.filter((item) => item.status === 'pending'), [workoutItems])
-    const processingItems = useMemo(() => workoutItems.filter((item) => item.status === 'processing'), [workoutItems])
+    // allItems is already filtered by workoutId inside handleChange — no need
+    // to re-filter here (Bug 4: duplicate filter removed).
+    const failedItems = useMemo(() => allItems.filter((item) => item.status === 'failed'), [allItems])
+    const pendingItems = useMemo(() => allItems.filter((item) => item.status === 'pending'), [allItems])
+    const processingItems = useMemo(() => allItems.filter((item) => item.status === 'processing'), [allItems])
 
     // Определяем статус
     const statusType = useMemo(() => {
@@ -153,10 +148,10 @@ export function WorkoutSyncQueueStatus({
             )}
 
             {/* Список элементов если развёрнут */}
-            {isExpanded && showDetails && workoutItems.length > 0 && (
+            {isExpanded && showDetails && allItems.length > 0 && (
                 <div className="mt-2 border rounded-lg p-3 bg-gray-50 space-y-2">
                     <div className="text-xs font-semibold text-gray-600 uppercase">Элементы очереди</div>
-                    {workoutItems.map((item) => (
+                    {allItems.map((item) => (
                         <SyncQueueItemRow
                             key={item.id}
                             item={item}

@@ -4,6 +4,8 @@ import type { ActiveWorkoutSyncState } from '@/state/local'
 
 interface WorkoutSyncIndicatorProps {
     state: ActiveWorkoutSyncState | WorkoutSyncIndicatorState
+    /** Number of operations waiting to sync; shown next to the offline state. */
+    pendingCount?: number
 }
 
 export type WorkoutSyncIndicatorState =
@@ -67,12 +69,18 @@ function normalizeState(
  * Displays sync status indicator.
  * Returns null for `idle` state to avoid visual noise during normal use.
  */
-export const WorkoutSyncIndicator = memo(function WorkoutSyncIndicator({ state }: WorkoutSyncIndicatorProps) {
+export const WorkoutSyncIndicator = memo(function WorkoutSyncIndicator({ state, pendingCount }: WorkoutSyncIndicatorProps) {
     const normalizedState = normalizeState(state)
     if (!normalizedState) return null
 
     const config = SYNC_CONFIG[normalizedState]
     if (!config) return null
+
+    // When offline and there are queued operations, show the count for clarity.
+    const labelText =
+        normalizedState === 'offline' && pendingCount != null && pendingCount > 0
+            ? `Офлайн • ${pendingCount} в очереди`
+            : config.text
 
     return (
         <div
@@ -82,7 +90,7 @@ export const WorkoutSyncIndicator = memo(function WorkoutSyncIndicator({ state }
             className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium ${config.className}`}
         >
             {config.icon}
-            <span className="leading-none">{config.text}</span>
+            <span className="leading-none">{labelText}</span>
         </div>
     )
 })
