@@ -7,6 +7,7 @@ import type {
 import { useUpdateWorkoutSessionMutation, useStartWorkoutMutation } from './useWorkoutMutations'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue'
+import { toast } from '@shared/stores/toastStore'
 
 export type StartWorkoutSessionParams = {
     startPayload: WorkoutStartRequest
@@ -45,6 +46,7 @@ export function useWorkoutSessionStarter() {
                 return started
             } catch (err) {
                 if (isOfflineMutationQueuedError(err)) {
+                    toast.info('Старт тренировки в очереди — отправим при восстановлении сети')
                     onOfflineQueued?.()
                     return null
                 }

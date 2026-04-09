@@ -21,6 +21,7 @@ import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { toast } from '@shared/stores/toastStore'
 import { getErrorMessage } from '@shared/errors'
+import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue'
 import { queryKeys } from '@shared/api/queryKeys'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatExercises } from '@features/workouts/lib/workoutModeHelpers'
@@ -800,7 +801,7 @@ export function ActiveWorkoutPage() {
 
         setPendingDeleteExerciseIndex(null)
         setIsDeleteExerciseConfirmOpen(false)
-        toast.info('Упражнение удалено')
+        toast.info(navigator.onLine ? 'Упражнение удалено' : 'Упражнение удалено (сохранено локально)')
     }
 
     const handleCompleteSession = useCallback((tagsOverride?: string[]) => {
@@ -852,6 +853,13 @@ export function ActiveWorkoutPage() {
                     navigate(`/workouts/${data.id}`)
                 },
                 onError: (error) => {
+                    if (isOfflineMutationQueuedError(error)) {
+                        setIsFinishSheetOpen(false)
+                        clearActiveWorkoutDraft()
+                        toast.info('Тренировка завершена — результат отправится при восстановлении сети')
+                        navigate('/workouts', { replace: true })
+                        return
+                    }
                     const message = getErrorMessage(error)
                     setSessionError(message)
                     toast.error(message)
@@ -1077,6 +1085,7 @@ export function ActiveWorkoutPage() {
                             tagsDraft={finishTagsDraft}
                             isPending={completeMutation.isPending}
                             errorMessage={sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
+                            syncState={syncState}
                             onClose={() => setIsFinishSheetOpen(false)}
                             onConfirm={handleConfirmFinishFromSheet}
                             onChangeTagsDraft={setFinishTagsDraft}

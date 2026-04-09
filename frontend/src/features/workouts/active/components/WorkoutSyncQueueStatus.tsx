@@ -31,6 +31,7 @@ export function WorkoutSyncQueueStatus({
     const { queuedCount, failedCount, isFlushing, retryInSec } = useSyncQueueUiState()
     const [allItems, setAllItems] = useState<SyncQueueItem[]>([])
     const [isExpanded, setIsExpanded] = useState(false)
+    const [hideSynced, setHideSynced] = useState(false)
 
     // Подписаться на изменения очереди
     useEffect(() => {
@@ -64,6 +65,19 @@ export function WorkoutSyncQueueStatus({
         if (pendingItems.length > 0 || queuedCount > 0) return 'queued' as const
         return 'synced' as const
     }, [online, isFlushing, processingItems.length, failedItems.length, pendingItems.length, queuedCount])
+
+    // Auto-hide synced badge через 3 секунды, показать сразу при других статусах
+    useEffect(() => {
+        if (statusType !== 'synced') {
+            setHideSynced(false)
+            return
+        }
+        const timer = setTimeout(() => setHideSynced(true), 3000)
+        return () => clearTimeout(timer)
+    }, [statusType])
+
+    // Скрыть компонент полностью, когда всё синхронизировано и прошло 3с
+    if (statusType === 'synced' && hideSynced) return null
 
     const statusConfig = {
         offline: {

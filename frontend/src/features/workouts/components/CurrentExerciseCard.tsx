@@ -30,12 +30,25 @@ function formatRemainingSets(remainingSets: number): string {
     return `Осталось ${normalized} подходов`
 }
 
-function formatSyncState(syncState: ActiveWorkoutSyncState): string {
-    if (syncState === 'syncing') return 'Синхронизация...'
-    if (syncState === 'error') return 'Ошибка синхронизации'
-    if (syncState === 'synced') return 'Сохранено'
-    if (syncState === 'offline-queued') return 'Офлайн'
-    return 'Локально'
+/** Цветовая точка + короткий лейбл синхронизации. Скрывается при idle и synced. */
+function SyncStateDot({ syncState }: { syncState: ActiveWorkoutSyncState }) {
+    if (syncState === 'idle' || syncState === 'synced') return null
+
+    const config: Record<string, { dot: string; label: string }> = {
+        'saved-locally': { dot: 'bg-blue-500', label: 'Сохраняется...' },
+        syncing: { dot: 'bg-blue-500 animate-pulse', label: 'Синк...' },
+        error: { dot: 'bg-danger', label: 'Ошибка' },
+        'offline-queued': { dot: 'bg-warning', label: 'Офлайн' },
+        conflict: { dot: 'bg-danger', label: 'Конфликт' },
+    }
+
+    const entry = config[syncState] ?? { dot: 'bg-telegram-hint', label: 'Локально' }
+    return (
+        <span className="inline-flex items-center gap-1">
+            <span className={`h-1.5 w-1.5 rounded-full ${entry.dot}`} />
+            <span className="text-[11px] text-telegram-hint">{entry.label}</span>
+        </span>
+    )
 }
 
 function formatRestShort(seconds: number): string {
@@ -68,15 +81,15 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
                     <p className="text-xs uppercase tracking-wide text-telegram-hint">Сейчас</p>
                     <h2 className="truncate text-base font-semibold text-telegram-text">{exerciseName}</h2>
                 </div>
-                <span className="rounded-full bg-telegram-bg px-2 py-1 text-xs text-telegram-hint">
-                    {formatSyncState(syncState)}
-                </span>
             </div>
 
             <div className="rounded-2xl bg-telegram-bg/70 p-3">
                 <div className="flex items-center justify-between gap-3 text-xs text-telegram-hint">
                     <span>Прогресс сессии</span>
-                    <span className="font-medium text-telegram-text">{completedSetCount}/{totalSetCount} подходов</span>
+                    <div className="flex items-center gap-2">
+                        <SyncStateDot syncState={syncState} />
+                        <span className="font-medium text-telegram-text">{completedSetCount}/{totalSetCount} подходов</span>
+                    </div>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-telegram-secondary-bg">
                     <div
