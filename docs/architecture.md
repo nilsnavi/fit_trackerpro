@@ -77,5 +77,5 @@ Source of truth схемы БД:
 - Deploy/smoke/rollback: `.github/workflows/deploy.yml`
 - Runtime: `docker-compose.prod.yml`, каталог `~/fittracker-pro`, прокси `nginx/nginx.conf`
 
-Подробности: `docs/deployment.md`.
+Подробности: `docs/DEPLOYMENT.md`.
 
