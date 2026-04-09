@@ -26,6 +26,7 @@ export function SyncQueueRunner() {
             if (!mounted.current) return
             if (n > 0) {
                 void queryClient.invalidateQueries({ queryKey: ['workouts'] })
+                void queryClient.invalidateQueries({ queryKey: ['analytics'] })
             }
         }
 

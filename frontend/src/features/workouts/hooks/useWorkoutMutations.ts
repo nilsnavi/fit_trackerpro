@@ -501,6 +501,7 @@ export function useCompleteWorkoutMutation() {
         },
         onSettled: () => {
             invalidateWorkouts(queryClient)
+            void queryClient.invalidateQueries({ queryKey: ['analytics'] })
         },
     })
 }
