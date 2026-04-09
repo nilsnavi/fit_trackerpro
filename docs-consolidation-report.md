@@ -7,7 +7,7 @@
 - `README.md` — **entrypoint** + быстрый старт + “source of truth”
 - `docs/DOCS_INDEX.md` — индекс/навигация и зоны ответственности
 - `docs/local-development.md` — локальная разработка
-- `docs/deployment.md` — production деплой
+- `docs/DEPLOYMENT.md` — production деплой
 - `docs/architecture.md` — архитектура (as-is + обязательные принципы)
 - `docs/security.md` — безопасность (канон)
 - `docs/offline-pwa.md` — офлайн и PWA (канон)
@@ -42,7 +42,7 @@
 
 - Добавлены канонические документы:
   - `docs/local-development.md`
-  - `docs/deployment.md`
+  - `docs/DEPLOYMENT.md`
   - `docs/architecture.md`
   - `docs/security.md`
   - `docs/offline-pwa.md`
@@ -57,5 +57,5 @@
 ## Рекомендации дальше (не обязательно, но полезно)
 
 - В `docs/current-architecture.md` и `docs/target-architecture.md` заменить устаревшие пути `backend/app/services|repositories|models` на фактические (`application/domain/infrastructure`) или добавить явную пометку “historical”.
-- По желанию — добавить в `docs/deployment.md` короткую секцию про `deploy.sh` как “не использовать” (ссылка уже есть в legacy документах).
+- По желанию — добавить в `docs/DEPLOYMENT.md` короткую секцию про `deploy.sh` как "не использовать" (ссылка уже есть в legacy документах).
 

@@ -362,4 +362,4 @@ docker compose restart frontend
 - [QUICKSTART.md](./QUICKSTART.md) - быстрая инструкция
 - [LAUNCH_GUIDE.md](./LAUNCH_GUIDE.md) - подробный гайд
 - [README.md](./README.md) - основная документация
-- [docs/deployment.md](./docs/deployment.md) - production деплой
+- [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) - production деплой
