@@ -101,3 +101,12 @@ class ExercisesRepository(SQLAlchemyRepository):
         await self.commit()
         await self.refresh(exercise)
         return exercise
+
+    async def find_ids_by_slugs(self, slugs: list[str]) -> dict[str, int]:
+        result = await self.db.execute(
+            select(Exercise.slug, Exercise.id).where(
+                Exercise.slug.in_(slugs),
+                Exercise.status == "active",
+            )
+        )
+        return {row.slug: row.id for row in result.all()}

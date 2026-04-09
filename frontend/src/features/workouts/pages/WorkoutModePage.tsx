@@ -11,9 +11,11 @@ import {
     useWorkoutModePage,
 } from '@features/workouts/workoutMode'
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
+import { usePersonalizedConfig } from '@features/workouts/config/usePersonalizedConfig'
 
 function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
-    const vm = useWorkoutModePage(config)
+    const personalizedConfig = usePersonalizedConfig(config)
+    const vm = useWorkoutModePage(personalizedConfig)
 
     return (
         <>
@@ -27,7 +29,7 @@ function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {
             />
 
             <WorkoutModePageView
-                config={config}
+                config={personalizedConfig}
                 selectedPresetId={vm.selectedPresetId}
                 onSelectPreset={vm.handleSelectPreset}
                 onStart={vm.handleSaveAndStartWithValidationUx}

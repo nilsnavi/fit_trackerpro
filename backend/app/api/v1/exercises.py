@@ -51,6 +51,17 @@ async def get_exercises(
     )
 
 
+@router.get("/by-slugs")
+async def get_exercises_by_slugs(
+    slugs: list[str] = Query(..., max_length=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, int]:
+    """Resolve exercise slugs to IDs. Used by goal-based program presets."""
+    service = ExercisesService(db)
+    return await service.get_ids_by_slugs(slugs)
+
+
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
 async def get_exercise(
     exercise_id: int,

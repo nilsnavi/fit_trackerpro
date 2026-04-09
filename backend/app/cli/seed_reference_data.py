@@ -72,6 +72,9 @@ async def _upsert_ref_table(
     for r in rows:
         item = {k: r.get(k) for k in allowed if k in r}
         item.setdefault("metadata", {})
+        # Serialize dict/list values to JSON strings for asyncpg compatibility.
+        if isinstance(item.get("metadata"), (dict, list)):
+            item["metadata"] = json.dumps(item["metadata"])
         normalized.append(item)
 
     cols = sorted({k for r in normalized for k in r.keys()})
@@ -79,7 +82,10 @@ async def _upsert_ref_table(
         raise ValueError(f"{table}: missing required field 'code'")
 
     insert_cols = ", ".join(cols)
-    values_cols = ", ".join(f":{c}" for c in cols)
+    values_cols = ", ".join(
+        f"CAST(:{c} AS jsonb)" if c == "metadata" else f":{c}"
+        for c in cols
+    )
 
     update_cols = [c for c in cols if c != "code"]
     update_set = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols)

@@ -179,3 +179,6 @@ class ExercisesService:
         return ExerciseMuscleGroupsResponse.model_validate(
             {"muscle_groups": [{"value": r.code, "label": r.label} for r in rows]}
         )
+
+    async def get_ids_by_slugs(self, slugs: list[str]) -> dict[str, int]:
+        return await self.repository.find_ids_by_slugs(slugs)

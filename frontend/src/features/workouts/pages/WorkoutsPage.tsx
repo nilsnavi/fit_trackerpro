@@ -16,10 +16,11 @@ import {
 } from 'lucide-react'
 import { RotateCcw } from 'lucide-react'
 import {
-    WORKOUT_MODE_ORDER,
     WORKOUT_TYPE_CONFIGS,
     getWorkoutListTypeConfig,
 } from '@features/workouts/config/workoutTypeConfigs'
+import { getOrderedModes } from '@features/workouts/config/recommendedMode'
+import { useProfile } from '@features/profile/hooks/useProfile'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
 import { useWorkoutsPageState } from '@features/workouts/hooks/useWorkoutsPageState'
@@ -33,6 +34,7 @@ import { Button } from '@shared/ui/Button'
 import { SectionHeader } from '@shared/ui/SectionHeader'
 import { useWorkoutTemplatePinsStore } from '@/state/local'
 import { WorkoutActionRail } from '@features/workouts/components/WorkoutActionRail'
+import { GoalProgramsSection } from '@features/workouts/components/GoalProgramsSection'
 
 const TEMPLATE_TYPE_LABEL: Record<BackendWorkoutType, string> = {
     cardio: 'Кардио',
@@ -79,6 +81,12 @@ export function WorkoutsPage() {
     const templates = useMemo(() => templatesData?.items ?? [], [templatesData?.items])
     const pinnedTemplateIds = useWorkoutTemplatePinsStore((s) => s.pinnedTemplateIds)
     const togglePinnedTemplate = useWorkoutTemplatePinsStore((s) => s.togglePinnedTemplate)
+
+    const { profile: userProfile } = useProfile()
+    const { order: modeOrder, recommended: recommendedMode } = useMemo(
+        () => getOrderedModes(userProfile?.profile?.fitness_goal),
+        [userProfile?.profile?.fitness_goal],
+    )
 
     const workouts = useMemo(
         () => (workoutHistory?.items ?? []).map(toWorkoutListItem),
@@ -288,6 +296,9 @@ export function WorkoutsPage() {
                 </div>
             )}
 
+            {/* ── Goal-based program presets ────────────────────── */}
+            <GoalProgramsSection />
+
             {/* ── 2. Quick start ──────────────────────────────────── */}
             <div className="space-y-3">
                 <button
@@ -331,20 +342,26 @@ export function WorkoutsPage() {
                         <Plus className="h-5 w-5 text-primary" />
                         <span className="text-sm font-semibold">Конструктор</span>
                     </button>
-                    {WORKOUT_MODE_ORDER.map((mode) => {
+                    {modeOrder.map((mode) => {
                         const modeConfig = WORKOUT_TYPE_CONFIGS[mode]
                         const ModeIcon = modeConfig.icon
+                        const isRecommended = mode === recommendedMode
                         return (
                             <button
                                 key={mode}
                                 onClick={() => handleOpenMode(mode)}
-                                className={`rounded-xl bg-gradient-to-br ${modeConfig.themeClass} px-4 py-3 text-left text-white active:scale-[0.98] transition-transform`}
+                                className={`relative rounded-xl bg-gradient-to-br ${modeConfig.themeClass} px-4 py-3 text-left text-white active:scale-[0.98] transition-transform${isRecommended ? ' ring-2 ring-white/40' : ''}`}
                             >
                                 <div className="flex items-center gap-2">
                                     <ModeIcon className="h-4 w-4 shrink-0" />
                                     <span className="text-sm font-semibold leading-tight">{modeConfig.title}</span>
                                 </div>
                                 <div className="mt-1 text-xs text-white/80 leading-tight">{modeConfig.subtitle}</div>
+                                {isRecommended && (
+                                    <span className="absolute top-1.5 right-1.5 rounded-full bg-white/25 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
+                                        Рекомендуем
+                                    </span>
+                                )}
                             </button>
                         )
                     })}

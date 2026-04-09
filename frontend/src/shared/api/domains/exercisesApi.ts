@@ -39,4 +39,7 @@ export const exercisesApi = {
     muscleGroups() {
         return api.get<ExerciseMuscleGroupsApiResponse>('/exercises/muscle-groups/list')
     },
+    getBySlugs(slugs: string[]): Promise<Record<string, number>> {
+        return api.get<Record<string, number>>('/exercises/by-slugs', { slugs })
+    },
 }
