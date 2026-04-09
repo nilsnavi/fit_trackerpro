@@ -1,13 +1,15 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@shared/ui/Button'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
-import { WorkoutModePageView } from '@features/workouts/workoutMode/WorkoutModePageView'
-import { getWorkoutModePageConfig } from '@features/workouts/workoutMode/workoutModePageModel'
-import { AddExerciseSheet } from '@features/workouts/workoutMode/AddExerciseSheet'
-import { WorkoutModeExerciseList } from '@features/workouts/workoutMode/WorkoutModeExerciseList'
-import { WorkoutModeStickyFooter } from '@features/workouts/workoutMode/WorkoutModeStickyFooter'
-import { WorkoutModeTitleSection } from '@features/workouts/mode/components/WorkoutModeTitleSection'
-import { useWorkoutModePage } from '@features/workouts/mode/hooks'
+import {
+    WorkoutModePageView,
+    getWorkoutModePageConfig,
+    AddExerciseSheet,
+    WorkoutModeExerciseList,
+    WorkoutModeStickyFooter,
+    WorkoutModeTitleSection,
+    useWorkoutModePage,
+} from '@features/workouts/workoutMode'
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
 
 function WorkoutModePageContent({ config }: { config: WorkoutTypeConfig }) {

@@ -3,7 +3,7 @@ import type {
     ModeExerciseParams,
     WorkoutModeEditorValidationErrors,
     WorkoutModeExerciseItem,
-} from '@features/workouts/workoutMode/workoutModeEditorTypes'
+} from '../workoutModeEditorTypes'
 
 export interface UseWorkoutModePageResult {
     editorTitle: string

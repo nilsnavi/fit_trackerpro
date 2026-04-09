@@ -21,7 +21,7 @@ import type {
     EditorWorkoutMode,
     ModeExerciseParams,
     WorkoutModeExerciseItem,
-} from '@features/workouts/workoutMode/workoutModeEditorTypes'
+} from '../workoutModeEditorTypes'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
 interface UseWorkoutModeHandlersParams {

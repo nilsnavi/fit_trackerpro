@@ -1,5 +1,5 @@
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
-import type { EditorWorkoutMode } from '@features/workouts/workoutMode/workoutModeEditorTypes'
+import type { EditorWorkoutMode } from '../workoutModeEditorTypes'
 
 export interface UseWorkoutModePageEffectsParams {
     config: WorkoutTypeConfig
