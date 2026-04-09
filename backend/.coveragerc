@@ -5,6 +5,10 @@ omit =
     app/main.py
 
 [report]
+fail_under = 60
 exclude_lines =
     pragma: no cover
     if TYPE_CHECKING:
+    raise NotImplementedError
+    \.\.\.
+    @(abc\.)?abstractmethod

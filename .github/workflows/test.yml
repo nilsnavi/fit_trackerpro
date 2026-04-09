@@ -218,6 +218,28 @@ jobs:
           DEBUG: true
         run: pytest
 
+      - name: Enforce critical module coverage (settings + telegram env)
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
+          DATABASE_URL_SYNC: postgresql://test:test@localhost:5432/test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci-only
+          TELEGRAM_BOT_TOKEN: test-token
+          TELEGRAM_WEBAPP_URL: https://test.example.com
+          ENVIRONMENT: test
+          DEBUG: true
+        run: |
+          pytest app/tests/test_config_validation.py app/tests/test_env_consistency.py \
+            --cov=app/settings \
+            --cov-fail-under=80 \
+            --no-header -q --tb=short
+
+      - name: Enforce zero-coverage guard (workout domain + middleware)
+        run: |
+          python -m coverage report \
+            --include="app/domain/workout_template.py,app/domain/workout_log.py,app/domain/workout_set.py,app/middleware/*" \
+            --fail-under=40
+
       - name: Reference data seed check
         env:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
@@ -260,4 +282,3 @@ jobs:
             --file frontend/Dockerfile \
             --tag fittracker-frontend:smoke \
             ./frontend
-
