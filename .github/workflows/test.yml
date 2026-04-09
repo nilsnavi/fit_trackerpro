@@ -162,6 +162,17 @@ jobs:
       run:
         working-directory: ./backend
 
+    # Shared env for all backend test steps — DB, Redis, secrets, feature flags
+    env:
+      DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
+      DATABASE_URL_SYNC: postgresql://test:test@localhost:5432/test
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: test-secret-key-for-ci-only
+      TELEGRAM_BOT_TOKEN: test-token
+      TELEGRAM_WEBAPP_URL: https://test.example.com
+      ENVIRONMENT: test
+      DEBUG: true
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -207,27 +218,9 @@ jobs:
         run: ruff check app
 
       - name: Run tests with coverage
-        env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
-          DATABASE_URL_SYNC: postgresql://test:test@localhost:5432/test
-          REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: test-secret-key-for-ci-only
-          TELEGRAM_BOT_TOKEN: test-token
-          TELEGRAM_WEBAPP_URL: https://test.example.com
-          ENVIRONMENT: test
-          DEBUG: true
         run: pytest
 
       - name: Enforce critical module coverage (settings + telegram env)
-        env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
-          DATABASE_URL_SYNC: postgresql://test:test@localhost:5432/test
-          REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: test-secret-key-for-ci-only
-          TELEGRAM_BOT_TOKEN: test-token
-          TELEGRAM_WEBAPP_URL: https://test.example.com
-          ENVIRONMENT: test
-          DEBUG: true
         run: |
           pytest app/tests/test_config_validation.py app/tests/test_env_consistency.py \
             --cov=app/settings \
@@ -242,14 +235,6 @@ jobs:
 
       - name: Reference data seed check
         env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
-          DATABASE_URL_SYNC: postgresql://test:test@localhost:5432/test
-          REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: test-secret-key-for-ci-only
-          TELEGRAM_BOT_TOKEN: test-token
-          TELEGRAM_WEBAPP_URL: https://test.example.com
-          ENVIRONMENT: test
-          DEBUG: true
           REFERENCE_DATA_DIR: reference_data
         run: |
           python -m app.cli.seed_reference_data apply --dry-run

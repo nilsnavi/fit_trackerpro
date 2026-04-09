@@ -34,7 +34,7 @@ jobs:
     name: CodeQL Analyze
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         language: [python, javascript-typescript]
     permissions:

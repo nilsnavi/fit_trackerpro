@@ -18,8 +18,6 @@ import type {
     WorkoutHistoryItem,
     WorkoutSessionUpdateRequest,
 } from '@features/workouts/types/workouts'
-import { toast } from '@shared/stores/toastStore'
-
 jest.mock('@shared/stores/toastStore', () => ({
     toast: {
         info: jest.fn(),

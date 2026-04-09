@@ -5,15 +5,15 @@ These tests are fully in-memory (no database required).
 import pytest
 
 from app.domain.exceptions import (
-    WorkoutNotFoundError,
-    WorkoutConflictError,
     DomainError,
+    WorkoutConflictError,
+    WorkoutNotFoundError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Domain exceptions
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestDomainExceptions:
@@ -46,9 +46,9 @@ class TestDomainExceptions:
         assert err.message == "Workout #42 not found"
 
     def test_all_domain_errors_are_exceptions(self):
-        """All DomainError subclasses must be catchable as Exception."""
+        """All DomainError subclasses must be catchable as DomainError."""
         for cls in (WorkoutNotFoundError, WorkoutConflictError):
-            with pytest.raises(Exception):
+            with pytest.raises(DomainError):
                 raise cls()
 
 

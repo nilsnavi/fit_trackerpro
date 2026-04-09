@@ -1,6 +1,22 @@
 import '@testing-library/jest-dom';
 import { jest } from '@jest/globals';
 
+// Polyfill Web Fetch API globals (Response, Request, Headers) for jsdom test environment.
+// jest-environment-jsdom v29 / jsdom 20 does not expose these to the global scope by default.
+if (typeof globalThis.Response === 'undefined') {
+    // node-fetch v2 is a transitive dependency — safe to polyfill here.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const nf = require('node-fetch')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.Response = nf.Response as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.Request = nf.Request as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.Headers = nf.Headers as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.fetch = nf.default as any
+}
+
 // Мок Telegram WebApp
 Object.defineProperty(window, 'Telegram', {
     value: {

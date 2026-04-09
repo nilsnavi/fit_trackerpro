@@ -4,40 +4,46 @@ import { MemoryRouter } from 'react-router-dom'
 import { RouteErrorBoundary } from '../RouteErrorBoundary'
 
 // Mock @sentry/react so ErrorBoundary calls the fallback prop with controlled props.
-jest.mock('@sentry/react', () => ({
-    ErrorBoundary: ({
-        children,
-        fallback,
-    }: {
-        children: React.ReactNode
-        fallback: (props: {
-            error: unknown
-            componentStack: string
-            eventId: string
-            resetError: () => void
-        }) => React.ReactNode
-        showDialog?: boolean
-    }) => {
-        const [hasError, setHasError] = React.useState(false)
+jest.mock('@sentry/react', () => {
+    const ReactInMock = require('react')
+    return {
+        ErrorBoundary: ({
+            children,
+            fallback,
+        }: {
+            children: React.ReactNode
+            fallback: (props: {
+                error: unknown
+                componentStack: string
+                eventId: string
+                resetError: () => void
+            }) => React.ReactNode
+            showDialog?: boolean
+        }) => {
+            const [hasError, setHasError] = ReactInMock.useState(false)
 
-        if (hasError) {
-            return fallback({
-                error: new Error('Test error'),
-                componentStack: '\n  at Child',
-                eventId: 'evt-abc-123',
-                resetError: () => setHasError(false),
-            })
-        }
+            if (hasError) {
+                return fallback({
+                    error: new Error('Test error'),
+                    componentStack: '\n  at Child',
+                    eventId: 'evt-abc-123',
+                    resetError: () => setHasError(false),
+                })
+            }
 
-        // Wrap children; child can throw to trigger fallback in tests.
-        return (
-            <div>
-                <button data-testid="trigger-error" onClick={() => setHasError(true)} />
-                {children}
-            </div>
-        )
-    },
-}))
+            // Wrap children; child can throw to trigger fallback in tests.
+            return ReactInMock.createElement(
+                'div',
+                null,
+                ReactInMock.createElement('button', {
+                    'data-testid': 'trigger-error',
+                    onClick: () => setHasError(true),
+                }),
+                children,
+            )
+        },
+    }
+})
 
 function renderBoundary(props: { screenTitle?: string } = {}) {
     return render(

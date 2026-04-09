@@ -89,6 +89,16 @@ jest.mock('@app/sentry', () => ({
     setSentryClientContext: jest.fn(),
 }))
 
+// Prevent HealthCheckGate from calling real backend in smoke tests
+jest.mock('@shared/hooks/useBackendHealth', () => ({
+    useBackendHealth: () => ({ isReady: true, isLoading: false }),
+}))
+
+// Bypass Telegram authentication gate — smoke tests don't need Telegram context
+jest.mock('@features/auth/components/TelegramAuthBootstrapGate', () => ({
+    TelegramAuthBootstrapGate: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 function renderAt(path: string) {
     window.history.pushState({}, '', path)
     return render(<App />)

@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from .glucose_log import GlucoseLog
     from .muscle_load import MuscleLoad
     from .recovery_state import RecoveryState
-    from .training_load_daily import TrainingLoadDaily
     from .template_exercise import TemplateExercise
+    from .training_load_daily import TrainingLoadDaily
     from .user_achievement import UserAchievement
     from .workout_log import WorkoutLog
     from .workout_session_exercise import WorkoutSessionExercise

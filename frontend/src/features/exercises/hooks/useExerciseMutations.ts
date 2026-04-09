@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { exercisesApi } from '@shared/api/domains/exercisesApi'
+import { queryKeys } from '@shared/api/queryKeys'
+import { EXERCISES_CATALOG_LIST_PARAMS } from '@features/exercises/constants/catalogQueryParams'
 
 async function invalidateExercisesCatalog(queryClient: ReturnType<typeof useQueryClient>) {
     await queryClient.invalidateQueries({
-        queryKey: ['exercises', 'list'],
+        queryKey: queryKeys.exercises.list(EXERCISES_CATALOG_LIST_PARAMS),
     })
 }
 

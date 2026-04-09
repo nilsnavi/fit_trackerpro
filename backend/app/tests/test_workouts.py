@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
-from uuid import uuid4
 
 from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
