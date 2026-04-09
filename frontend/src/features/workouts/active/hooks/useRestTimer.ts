@@ -8,12 +8,8 @@ interface UseRestTimerParams {
     durationSeconds: number
     tick: () => void
     onComplete?: () => void
-    onAutoAdvance?: () => void
     soundEnabled?: boolean
     vibrationEnabled?: boolean
-    autoAdvanceEnabled?: boolean
-    autoAdvanceCountdown?: number
-    requireConfirmation?: boolean
 }
 
 /**
@@ -22,7 +18,9 @@ interface UseRestTimerParams {
  */
 function createCompletionSound(): void {
     try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const AudioCtx = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+        if (!AudioCtx) return
+        const audioContext = new AudioCtx()
         
         // Create oscillator for beep sound
         const oscillator = audioContext.createOscillator()
@@ -78,17 +76,12 @@ export function useRestTimer({
     durationSeconds,
     tick, 
     onComplete,
-    onAutoAdvance,
     soundEnabled = true,
     vibrationEnabled = true,
-    autoAdvanceEnabled = false,
-    autoAdvanceCountdown = 3,
-    requireConfirmation = true,
 }: UseRestTimerParams) {
     const tg = useTelegramWebApp()
     const previousRemainingRef = useRef<number>(remainingSeconds)
     const hasNotifiedRef = useRef<boolean>(false)
-    const autoAdvanceTriggeredRef = useRef<boolean>(false)
     
     // Timer tick interval
     useEffect(() => {
@@ -134,30 +127,11 @@ export function useRestTimer({
             if (onComplete) {
                 onComplete()
             }
-            
-            // Trigger auto-advance if enabled
-            if (autoAdvanceEnabled && !autoAdvanceTriggeredRef.current) {
-                autoAdvanceTriggeredRef.current = true
-                
-                // If confirmation required, wait for countdown
-                if (requireConfirmation) {
-                    // Start countdown - will be handled by separate effect
-                    console.log('Starting auto-advance countdown')
-                } else {
-                    // Immediate auto-advance
-                    setTimeout(() => {
-                        if (onAutoAdvance) {
-                            onAutoAdvance()
-                        }
-                    }, 500)
-                }
-            }
         }
         
         // Reset notification flag when timer is restarted
         if (remainingSeconds === durationSeconds && durationSeconds > 0) {
             hasNotifiedRef.current = false
-            autoAdvanceTriggeredRef.current = false
         }
         
         // Warning vibration at 3 seconds remaining
@@ -165,39 +139,7 @@ export function useRestTimer({
             tg.hapticFeedback({ type: 'impact', style: 'light' })
         }
         
-    }, [remainingSeconds, durationSeconds, onComplete, onAutoAdvance, soundEnabled, vibrationEnabled, autoAdvanceEnabled, requireConfirmation, tg])
-    
-    // Auto-advance countdown effect
-    useEffect(() => {
-        if (!autoAdvanceEnabled || !requireConfirmation) return
-        if (remainingSeconds !== 0) return
-        if (!hasNotifiedRef.current || autoAdvanceTriggeredRef.current) return
-        
-        // Start countdown
-        let countdown = autoAdvanceCountdown
-        const countdownInterval = window.setInterval(() => {
-            countdown--
-            
-            // Vibration for each countdown second
-            if (vibrationEnabled && tg.hapticFeedback && countdown > 0) {
-                tg.hapticFeedback({ type: 'impact', style: 'light' })
-            }
-            
-            // Countdown complete - trigger auto-advance
-            if (countdown <= 0) {
-                window.clearInterval(countdownInterval)
-                autoAdvanceTriggeredRef.current = true
-                
-                if (onAutoAdvance) {
-                    onAutoAdvance()
-                }
-            }
-        }, 1000)
-        
-        return () => {
-            window.clearInterval(countdownInterval)
-        }
-    }, [autoAdvanceEnabled, requireConfirmation, remainingSeconds, autoAdvanceCountdown, onAutoAdvance, vibrationEnabled, tg])
+    }, [remainingSeconds, durationSeconds, onComplete, soundEnabled, vibrationEnabled, tg])
     
     // Format time as MM:SS
     const formatRestTime = useMemo(() => {
@@ -209,15 +151,7 @@ export function useRestTimer({
         }
     }, [])
     
-    // Calculate progress percentage (0-100)
-    const progressPercentage = useMemo(() => {
-        if (durationSeconds <= 0) return 0
-        const elapsed = durationSeconds - remainingSeconds
-        return Math.min(100, Math.max(0, (elapsed / durationSeconds) * 100))
-    }, [remainingSeconds, durationSeconds])
-
     return {
         formatRestTime,
-        progressPercentage,
     }
 }

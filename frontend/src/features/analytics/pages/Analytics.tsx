@@ -11,6 +11,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from 'recharts';
+import type { MouseHandlerDataParam } from 'recharts';
 import {
     format,
     subDays,
@@ -965,11 +966,12 @@ const Analytics: React.FC<AnalyticsProps> = ({ forcedScreen }) => {
         return `Нагрузка распределена относительно ровно между ${primary.muscleGroup.toLowerCase()} и ${secondary.muscleGroup.toLowerCase()}. Это хороший сигнал по балансу программы.`
     }, [topMuscleLoad])
 
-    // Handle chart click
-    const handleChartClick = useCallback((data: { activeLabel?: string; activePayload?: unknown[] } | undefined) => {
-        if (!data || !data.activeLabel || !data.activePayload) return;
+    // Handle chart click (Recharts 3: handler receives state + native event)
+    const handleChartClick = useCallback((state: MouseHandlerDataParam) => {
+        const label = state.activeLabel
+        if (label === undefined || label === null) return
 
-        const formatted = data.activeLabel;
+        const formatted = String(label)
         const row = chartData.find((d) => d.formattedDate === formatted)
         if (!row) return
 

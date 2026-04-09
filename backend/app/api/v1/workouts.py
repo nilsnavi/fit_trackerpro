@@ -1,19 +1,3 @@
-@router.get("/sessions/{session_id}/exercises/{exercise_id}/weight-recommendation")
-async def get_weight_recommendation(
-    session_id: int,
-    exercise_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db),
-):
-    """
-    Возвращает рекомендацию по весу для следующего подхода на основе RPE последнего подхода.
-    """
-    service = WorkoutsService(db)
-    return await service.get_weight_recommendation(
-        user_id=current_user.id,
-        workout_session_id=session_id,
-        exercise_id=exercise_id,
-    )
 """
 Workouts API Router
 HTTP-only endpoints delegating business logic to services
@@ -342,3 +326,21 @@ async def get_workouts_calendar_month(
             }
         )
     return items
+
+
+@router.get("/sessions/{session_id}/exercises/{exercise_id}/weight-recommendation")
+async def get_weight_recommendation(
+    session_id: int,
+    exercise_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Возвращает рекомендацию по весу для следующего подхода на основе RPE последнего подхода.
+    """
+    service = WorkoutsService(db)
+    return await service.get_weight_recommendation(
+        user_id=current_user.id,
+        workout_session_id=session_id,
+        exercise_id=exercise_id,
+    )

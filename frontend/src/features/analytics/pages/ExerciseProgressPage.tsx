@@ -105,7 +105,7 @@ export default function ExerciseProgressPage() {
 
     const isLoading = summaryQuery.isPending || progressQuery.isPending || insightsQuery.isPending
     const error = summaryQuery.error ?? progressQuery.error ?? insightsQuery.error
-    const progressRows = progressQuery.data ?? []
+    const progressRows = useMemo(() => progressQuery.data ?? [], [progressQuery.data])
     const exercises = useMemo(() => mapProgressToExercises(progressRows), [progressRows])
     const defaultExerciseIds = useMemo(
         () =>

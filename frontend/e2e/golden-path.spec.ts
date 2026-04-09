@@ -14,12 +14,7 @@
  */
 
 import { test, expect } from '@playwright/test'
-import {
-    type MockWorkoutApiState,
-    buildWorkoutState,
-    seedAuth,
-    mockWorkoutApi,
-} from './helpers/workout-api-mock'
+import { buildWorkoutState, seedAuth, mockWorkoutApi } from './helpers/workout-api-mock'
 
 test.describe('golden path: complete user workout flow @regression @golden-path', () => {
     test.describe.configure({ timeout: 60_000 })
@@ -68,12 +63,6 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
         // ─────────────────────────────────────────────────────────────────────────
         // STEP 3: Create a new workout (enter mode)
         // ─────────────────────────────────────────────────────────────────────────
-        // Click "Новая тренировка" or "Начать новую тренировку"
-        const startNewBtn =
-            page.getByRole('button', { name: /Новая тренировка|Начать новую/i }) ||
-            page.getByRole('link', { name: /Новая тренировка|Начать новую/i })
-        const newWorkoutLinkOrBtn = page.getByRole('link', { name: /Новая|режим/i }).first()
-
         // Alternative: click on mode type directly (e.g., strength)
         await page.getByRole('link', { name: /Силовая|Strength/i }).first().click()
         await expect(page).toHaveURL(/\/workouts\/mode\/\w+(?:\?.*)?$/)

@@ -635,10 +635,11 @@ export const Catalog: React.FC = () => {
     const parseAdminIds = useCallback((raw: string | null | undefined): number[] => {
         if (!raw) return [];
         return raw
-            .replace(/[\[\]]/g, '')
+            .replace(/\[/g, '')
+            .replace(/\]/g, '')
             .split(',')
-            .map((value) => Number.parseInt(value.trim(), 10))
-            .filter((value) => Number.isFinite(value) && value > 0);
+            .map((value: string) => Number.parseInt(value.trim(), 10))
+            .filter((value: number) => Number.isFinite(value) && value > 0);
     }, []);
 
     const adminTelegramIds = useMemo(() => {

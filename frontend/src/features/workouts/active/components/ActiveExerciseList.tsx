@@ -34,7 +34,7 @@ interface ActiveExerciseListProps {
     previousBestLabelsByExercise: Map<string, string>
     canReorder: boolean
     onDragEnd: (event: DragEndEvent) => void
-    onOpenStructureEditor: (exerciseIndex: number) => void
+    onOpenStructureEditor?: (exerciseIndex: number) => void
     onAddSet: () => void
     onRemoveSet: () => void
     onDeleteExercise: (exerciseIndex: number) => void
@@ -206,14 +206,16 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => onOpenStructureEditor(exerciseIndex)}
-                                                className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg"
-                                                aria-label="Изменить структуру упражнения"
-                                            >
-                                                <PencilRuler className="h-4 w-4" />
-                                            </button>
+                                            {onOpenStructureEditor && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onOpenStructureEditor(exerciseIndex)}
+                                                    className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg"
+                                                    aria-label="Изменить структуру упражнения"
+                                                >
+                                                    <PencilRuler className="h-4 w-4" />
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() => toggleCollapsed(itemId)}

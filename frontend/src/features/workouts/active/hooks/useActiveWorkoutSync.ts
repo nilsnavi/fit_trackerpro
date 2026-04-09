@@ -301,7 +301,7 @@ export function useActiveWorkoutSync({
 
             executeSyncRef.current()
         })
-    }, []) // stable
+    }, [resolveFlushWaiters])
 
     const hasUnsyncedChanges = useCallback(() => {
         const currentWorkout = workoutRef.current

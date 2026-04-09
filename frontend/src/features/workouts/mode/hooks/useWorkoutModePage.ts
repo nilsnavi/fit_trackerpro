@@ -9,6 +9,7 @@ import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConf
 
 export function useWorkoutModePage(config: WorkoutTypeConfig): UseWorkoutModePageResult {
     const state = useWorkoutModePageState({ config })
+    const { setDescOpen } = state
 
     const { isConfirmOpen: isLeaveConfirmOpen, guardedAction, onLeave, onStay } = useUnsavedChangesGuard({
         isDirty: state.isDirty,
@@ -69,8 +70,8 @@ export function useWorkoutModePage(config: WorkoutTypeConfig): UseWorkoutModePag
     })
 
     const toggleDesc = useCallback(() => {
-        state.setDescOpen((prev) => !prev)
-    }, [state.setDescOpen])
+        setDescOpen((prev) => !prev)
+    }, [setDescOpen])
 
     return {
         editorTitle: state.editorTitle,

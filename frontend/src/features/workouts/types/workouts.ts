@@ -12,16 +12,6 @@ export interface ExerciseInTemplate {
     rest_seconds: number
     weight?: number
     notes?: string
-    custom_rest_enabled?: boolean // Флаг использования персонального времени отдыха
-}
-
-/** Настройки отдыха для конкретного упражнения */
-export interface ExerciseRestSettings {
-    exercise_id: number
-    custom_rest_seconds: number
-    use_global_default: boolean
-    last_used_seconds?: number // Фактическое время последнего отдыха
-    usage_count?: number // Сколько раз использовалось
 }
 
 export interface WorkoutTemplateCreateRequest {

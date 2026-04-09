@@ -4,6 +4,10 @@ from httpx import AsyncClient
 from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
 
+# Не совпадает с authenticated_client (123456789), иначе интеграционный тест «новый пользователь»
+# падает после любого теста, уже создавшего пользователя в общей in-memory БД.
+_AUTH_FLOW_UNIQUE_TG_ID = 910_010_020
+
 
 @pytest.mark.unit
 @pytest.mark.auth
@@ -48,11 +52,13 @@ async def test_protected_endpoint_with_invalid_token(client: AsyncClient):
 
 @pytest.mark.integration
 @pytest.mark.auth
-async def test_authentication_flow(client: AsyncClient, mock_telegram_auth_body: dict):
+async def test_authentication_flow(client: AsyncClient, mock_telegram_user: dict):
     """Telegram initData → JWT and access to /users/me."""
+    fresh_user = {**mock_telegram_user, "id": _AUTH_FLOW_UNIQUE_TG_ID}
+    init_data = build_init_data(bot_token=settings.TELEGRAM_BOT_TOKEN, user=fresh_user)
     response = await client.post(
         "/api/v1/users/auth/telegram",
-        json=mock_telegram_auth_body,
+        json={"init_data": init_data},
     )
     assert response.status_code == 200
     data = response.json()

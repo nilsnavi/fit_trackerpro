@@ -116,8 +116,8 @@ export default function ProgressOverviewPage() {
     const summary = summaryQuery.data
     const performanceOverview = performanceOverviewQuery.data
     const insights = insightsQuery.data
-    const progressRows = progressQuery.data ?? []
-    const muscleRows = muscleLoadQuery.data ?? []
+    const progressRows = useMemo(() => progressQuery.data ?? [], [progressQuery.data])
+    const muscleRows = useMemo(() => muscleLoadQuery.data ?? [], [muscleLoadQuery.data])
     const totalPersonalRecords = insights?.pr_events?.length ?? 0
 
     const topImprovingExercises = useMemo(
