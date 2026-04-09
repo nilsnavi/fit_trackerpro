@@ -396,6 +396,44 @@ When adding new E2E tests:
 5. Handle optional UI elements gracefully
 6. Add assertions for critical steps
 
+## Auth Flow Unit Tests
+
+In addition to E2E tests, the auth layer is covered by Jest unit tests at
+`frontend/src/__tests__/auth/`:
+
+| File | Coverage |
+|------|----------|
+| `authStore.test.ts` | Token CRUD, localStorage sync, `isAuthenticated` derivation |
+| `routeGuard.test.tsx` | `ProtectedRoute` redirect, `RouteGuard` with `isPublic` |
+| `TelegramAuthBootstrapGate.test.tsx` | All bootstrap states (loading, ready, error, no_telegram, expired), onboarding, session recovery via `auth:session-expired` |
+| `authFlow.test.tsx` | Happy-path login via Telegram + redirect |
+
+Run:
+```bash
+npm test -- --testPathPattern=auth
+```
+
+### Local Telegram Auth Testing
+
+To test the auth flow locally without a real Telegram Mini App:
+
+1. **Backend**: start with `TELEGRAM_BOT_TOKEN` matching a real BotFather token.
+2. **Frontend**: the `TelegramAuthBootstrapGate` falls back to `/login` outside Telegram.
+   For quick dev access, set a valid token in localStorage:
+   ```js
+   localStorage.setItem('auth_token', '<jwt-from-backend-test>')
+   ```
+3. **E2E**: use `setupTelegramWebApp(page)` from `helpers/telegram-mock.ts` which injects
+   a full mock of `window.Telegram.WebApp` including `initData`. The backend `/auth/telegram`
+   endpoint is mocked via `page.route()`.
+
+### Session Expiry Flow
+
+When an API request returns 401 and token refresh fails:
+- **Inside Telegram**: the API client dispatches `auth:session-expired`, and
+  `TelegramAuthBootstrapGate` re-authenticates using fresh `initData` — no redirect.
+- **Outside Telegram**: hard redirect to `/login?from=<returnUrl>`.
+
 Example template:
 ```typescript
 test('clear description @regression', async ({ authenticatedPage }) => {

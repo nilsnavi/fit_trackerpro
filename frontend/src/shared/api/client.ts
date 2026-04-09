@@ -17,6 +17,30 @@ function isPublicAuthRequest(config: RetryableRequestConfig | undefined): boolea
     )
 }
 
+function isTelegramContext(): boolean {
+    try {
+        const webApp = (window as { Telegram?: { WebApp?: { initData?: string } } })
+            .Telegram?.WebApp
+        return Boolean(webApp?.initData)
+    } catch {
+        return false
+    }
+}
+
+/** Dispatch a custom event so TelegramAuthBootstrapGate can re-authenticate. */
+export function dispatchSessionExpired(): void {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:session-expired'))
+    }
+}
+
+/**
+ * Shared refresh promise to deduplicate concurrent 401 refresh attempts.
+ * When multiple requests fail with 401 at the same time, only one refresh
+ * call is made; the others wait for the same promise.
+ */
+let refreshPromise: Promise<{ access_token: string; refresh_token: string }> | null = null
+
 class ApiService {
     private client: AxiosInstance
 
@@ -59,7 +83,8 @@ class ApiService {
                     ? (error.config as RetryableRequestConfig | undefined)
                     : undefined
 
-                // Refresh-once strategy: if access token expired, try refresh token and retry request.
+                // Deduplicated refresh strategy: on 401, share a single refresh
+                // call across all concurrent requests that failed at the same time.
                 if (
                     clientError.status === 401 &&
                     originalConfig &&
@@ -69,17 +94,25 @@ class ApiService {
                     if (refreshToken) {
                         try {
                             originalConfig._retry = true
-                            const res = await this.client.post<{
-                                access_token: string
-                                refresh_token: string
-                            }>('/users/auth/refresh', { refresh_token: refreshToken })
+
+                            if (!refreshPromise) {
+                                refreshPromise = this.client
+                                    .post<{ access_token: string; refresh_token: string }>(
+                                        '/users/auth/refresh',
+                                        { refresh_token: refreshToken },
+                                    )
+                                    .then((res) => res.data)
+                                    .finally(() => { refreshPromise = null })
+                            }
+
+                            const tokens = await refreshPromise
                             useAuthStore.getState().setTokens({
-                                accessToken: res.data.access_token,
-                                refreshToken: res.data.refresh_token,
+                                accessToken: tokens.access_token,
+                                refreshToken: tokens.refresh_token,
                             })
                             return await this.client.request(originalConfig)
                         } catch {
-                            // fall through to redirect boundary below
+                            refreshPromise = null
                             useAuthStore.getState().clear()
                         }
                     }
@@ -91,14 +124,19 @@ class ApiService {
                     !isPublicAuthRequest(originalConfig) &&
                     window.location.pathname !== '/login'
                 ) {
-                    // Minimal auth boundary UX: redirect to login and preserve return URL.
-                    const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
-                    try {
-                        sessionStorage.setItem('return_url_after_login', returnUrl)
-                    } catch {
-                        // ignore
+                    if (isTelegramContext()) {
+                        // In Telegram Mini App: signal the bootstrap gate to
+                        // re-authenticate transparently instead of redirecting.
+                        dispatchSessionExpired()
+                    } else {
+                        const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+                        try {
+                            sessionStorage.setItem('return_url_after_login', returnUrl)
+                        } catch {
+                            // ignore
+                        }
+                        window.location.href = `/login?from=${encodeURIComponent(returnUrl)}`
                     }
-                    window.location.href = `/login?from=${encodeURIComponent(returnUrl)}`
                 }
                 if (clientError.status != null) {
                     console.error('API Error:', clientError)
