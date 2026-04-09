@@ -3,6 +3,8 @@ import { CheckCircle2, Settings2, SkipForward, TimerReset } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import type { ActiveWorkoutSyncState } from '@/state/local'
 
+const QUICK_REST_PRESETS = [45, 60, 90, 120]
+
 interface CurrentExerciseCardProps {
     exerciseName: string
     previousBest: string
@@ -18,6 +20,7 @@ interface CurrentExerciseCardProps {
     onSkipSet: () => void
     onStartRest: () => void
     onOpenRestPresets: () => void
+    onSelectRestPreset?: (seconds: number) => void
 }
 
 function formatRemainingSets(remainingSets: number): string {
@@ -35,6 +38,10 @@ function formatSyncState(syncState: ActiveWorkoutSyncState): string {
     return 'Локально'
 }
 
+function formatRestShort(seconds: number): string {
+    return seconds < 60 ? `${seconds}с` : `${Math.floor(seconds / 60)}м`
+}
+
 export const CurrentExerciseCard = memo(function CurrentExerciseCard({
     exerciseName,
     previousBest,
@@ -50,6 +57,7 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
     onSkipSet,
     onStartRest,
     onOpenRestPresets,
+    onSelectRestPreset,
 }: CurrentExerciseCardProps) {
     const progressPercent = totalSetCount > 0 ? Math.round((completedSetCount / totalSetCount) * 100) : 0
 
@@ -113,6 +121,26 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
                 </Button>
             </div>
 
+            {/* Quick Rest Presets */}
+            {onSelectRestPreset && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                    <span className="shrink-0 text-[11px] text-telegram-hint">Отдых:</span>
+                    {QUICK_REST_PRESETS.map((seconds) => (
+                        <button
+                            key={`rest-preset-${seconds}`}
+                            type="button"
+                            onClick={() => onSelectRestPreset(seconds)}
+                            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${restDefaultSeconds === seconds
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-telegram-bg text-telegram-text'
+                                }`}
+                        >
+                            {formatRestShort(seconds)}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             <div className="grid grid-cols-[1fr_auto] gap-2">
                 <Button
                     type="button"
@@ -120,7 +148,7 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
                     onClick={onStartRest}
                     leftIcon={<TimerReset className="h-4 w-4" />}
                 >
-                    Отдых {restDefaultSeconds < 60 ? `${restDefaultSeconds}с` : `${Math.floor(restDefaultSeconds / 60)}м`}
+                    Отдых {formatRestShort(restDefaultSeconds)}
                 </Button>
                 <Button
                     type="button"

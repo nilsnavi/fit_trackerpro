@@ -50,6 +50,21 @@ interface ActiveExerciseListProps {
     isWeightRecError?: boolean
 }
 
+// Helper to get previous set values for a given set
+function getPreviousSetForDisplay(exercise: CompletedExercise, setNumber: number): Partial<CompletedSet> | undefined {
+    // Get the previous set in the same exercise
+    const previousSet = exercise.sets_completed[setNumber - 2]
+    if (previousSet) {
+        return {
+            weight: previousSet.weight,
+            reps: previousSet.reps,
+            duration: previousSet.duration,
+            distance: previousSet.distance,
+        }
+    }
+    return undefined
+}
+
 export const ActiveExerciseList = memo(function ActiveExerciseList({
     incrementScopePrefix,
     exercises,
@@ -287,11 +302,10 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                             key={`${itemId}-inc-${option}`}
                                                             type="button"
                                                             onClick={() => setIncrementBase(incrementScopeKey, option)}
-                                                            className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
-                                                                incrementBase === option
-                                                                    ? 'bg-primary text-primary-foreground'
-                                                                    : 'bg-telegram-bg text-telegram-hint'
-                                                            }`}
+                                                            className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${incrementBase === option
+                                                                ? 'bg-primary text-primary-foreground'
+                                                                : 'bg-telegram-bg text-telegram-hint'
+                                                                }`}
                                                         >
                                                             {option}
                                                         </button>
@@ -299,6 +313,7 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                 </div>
                                                 {exercise.sets_completed.map((set) => {
                                                     const isCurrentSet = isCurrentExercise && set.set_number - 1 === currentSetIndex
+                                                    const previousSetValues = getPreviousSetForDisplay(exercise, set.set_number)
                                                     return (
                                                         <ExerciseSetRow
                                                             key={set.set_number}
@@ -306,6 +321,7 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                                                             exerciseIndex={exerciseIndex}
                                                             isCurrent={isCurrentSet}
                                                             previousBestLabel={previousBestLabel}
+                                                            previousSetValues={previousSetValues}
                                                             onFocusSet={onSetCurrentPosition}
                                                             onToggleCompleted={onToggleSetCompleted}
                                                             onSkipSet={onSkipSet}
