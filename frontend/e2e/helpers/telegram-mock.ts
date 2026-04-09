@@ -143,18 +143,18 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                     close: () => {
                         // Stub: Close Mini App
                     },
-                    onEvent: (eventType: string, callback: () => void) => {
+                    onEvent: (eventType: string, _callback: () => void) => {
                         // Stub: Register event listener
                         console.log(`[Telegram] Event registered: ${eventType}`)
                     },
-                    offEvent: (eventType: string, callback?: () => void) => {
+                    offEvent: (_eventType: string, _callback?: () => void) => {
                         // Stub: Unregister event listener
                     },
                     sendData: (data: Record<string, unknown>) => {
                         // Stub: Send data to Telegram
                         console.log('[Telegram] Data sent:', data)
                     },
-                    openLink: (url: string, options?: { tryInstantView?: boolean }) => {
+                    openLink: (url: string, _options?: { tryInstantView?: boolean }) => {
                         // Stub: Open URL
                         window.location.href = url
                     },
@@ -162,26 +162,26 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                         // Stub: Open Telegram link
                         console.log(`[Telegram] Opening Telegram link: ${url}`)
                     },
-                    openInvoice: (url: string, callback?: () => void) => {
+                    openInvoice: (url: string, _callback?: () => void) => {
                         // Stub: Open invoice
                         console.log(`[Telegram] Opening invoice: ${url}`)
                     },
-                    showPopup: (params: Record<string, unknown>, callback?: (buttonId?: string) => void) => {
+                    showPopup: (params: Record<string, unknown>, _callback?: (buttonId?: string) => void) => {
                         // Stub: Show popup
                         console.log('[Telegram] Popup shown:', params)
-                        if (callback) callback('ok')
+                        if (_callback) _callback('ok')
                     },
-                    showAlert: (message: string, callback?: () => void) => {
+                    showAlert: (message: string, _callback?: () => void) => {
                         // Stub: Show alert
                         alert(message)
-                        if (callback) callback()
+                        if (_callback) _callback()
                     },
-                    showConfirm: (message: string, callback?: (confirmed: boolean) => void) => {
+                    showConfirm: (message: string, _callback?: (confirmed: boolean) => void) => {
                         // Stub: Show confirm
                         const confirmed = confirm(message)
-                        if (callback) callback(confirmed)
+                        if (_callback) _callback(confirmed)
                     },
-                    showScanQrPopup: (params: Record<string, unknown>, callback?: (data?: string) => void) => {
+                    showScanQrPopup: (params: Record<string, unknown>, _callback?: (data?: string) => void) => {
                         // Stub: Show QR scanner
                         console.log('[Telegram] QR scanner showed:', params)
                     },
@@ -212,7 +212,7 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                         hide: () => {
                             console.log('[Telegram] Settings button hidden')
                         },
-                        onClick: (callback: () => void) => {
+                        onClick: (_callback: () => void) => {
                             console.log('[Telegram] Settings button click handler registered')
                         },
                     },
@@ -224,7 +224,7 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                         hide: () => {
                             console.log('[Telegram] Back button hidden')
                         },
-                        onClick: (callback: () => void) => {
+                        onClick: (_callback: () => void) => {
                             console.log('[Telegram] Back button click handler registered')
                         },
                     },
@@ -259,7 +259,7 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                         setParams: (params: Record<string, unknown>) => {
                             console.log('[Telegram] MainButton params set:', params)
                         },
-                        onClick: (callback: () => void) => {
+                        onClick: (_callback: () => void) => {
                             console.log('[Telegram] MainButton click handler registered')
                         },
                     },
@@ -287,7 +287,7 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                         setParams: (params: Record<string, unknown>) => {
                             console.log('[Telegram] SecondaryButton params set:', params)
                         },
-                        onClick: (callback: () => void) => {
+                        onClick: (_callback: () => void) => {
                             console.log('[Telegram] SecondaryButton click handler registered')
                         },
                     },
@@ -325,12 +325,12 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                         authenticate: async () => {
                             return true
                         },
-                        requestAccess: async (reason: string) => {
+                        requestAccess: async (_reason: string) => {
                             return true
                         },
                         update: () => {},
                     },
-                    isVersionAtLeast: (version: string) => {
+                    isVersionAtLeast: (_version: string) => {
                         return true
                     },
                 },

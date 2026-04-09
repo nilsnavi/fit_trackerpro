@@ -1,3 +1,7 @@
+# Зависимости Python задаются только в requirements/*.txt (см. README).
+# backend/requirements.txt подключает dev-набор для локальной разработки;
+# Docker/production используют requirements/prod.txt.
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100

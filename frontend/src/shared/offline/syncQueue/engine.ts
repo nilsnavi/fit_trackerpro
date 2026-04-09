@@ -158,6 +158,41 @@ export class SyncQueueEngine {
         this.notify()
     }
 
+    /** Получить все элементы очереди */
+    getAllItems(): SyncQueueItem[] {
+        return [...this.items]
+    }
+
+    /** Повторить попытку для конкретного элемента */
+    async retryItem(itemId: string): Promise<void> {
+        const idx = this.items.findIndex((i) => i.id === itemId)
+        if (idx === -1) return
+
+        const item = this.items[idx]
+        this.items[idx] = {
+            ...item,
+            status: 'pending',
+            attempts: 0,
+            lastError: undefined,
+            failedAt: undefined,
+            nextRetryAt: 0,
+        }
+        this.persist()
+        this.notify()
+
+        // Запустить flush если онлайн
+        try {
+            await this.flush()
+        } catch {
+            // Игнорируем ошибки при автоматическом flush
+        }
+    }
+
+    /** Удалить элемент по ID */
+    deleteItem(itemId: string): void {
+        this.removeById(itemId)
+    }
+
     /**
      * Отправляет pending-элементы по порядку. При recoverable ошибке останавливается
      * (backoff на элементе). При «жёсткой» ошибке (4xx и т.д.) удаляет элемент и продолжает.

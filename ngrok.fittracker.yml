@@ -1,7 +1,8 @@
 version: "2"
 tunnels:
-  fittracker:
+  fittracker-frontend:
     proto: http
-    addr: http://edge:80
-    pooling_enabled: true
-
+    addr: frontend:80
+  fittracker-backend:
+    proto: http
+    addr: backend:8000

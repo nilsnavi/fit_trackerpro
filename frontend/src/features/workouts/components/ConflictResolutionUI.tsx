@@ -214,6 +214,7 @@ function renderDataPreview(data: unknown): string | React.ReactNode {
 /**
  * Hook для управления конфликтами разрешения.
  */
+// eslint-disable-next-line react-refresh/only-export-components -- hook рядом с UI этого модуля
 export function useConflictResolution() {
     const [conflict, setConflict] = useState<ConflictInfo | null>(null)
     const [isOpen, setIsOpen] = useState(false)

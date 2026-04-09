@@ -60,6 +60,8 @@ export const test = base.extend<TestFixtures>({
      * Provides shared state for tracking API calls in workout tests.
      * Must be used alongside workoutPage fixture.
      */
+    // Playwright: fixture без зависимостей (пустой объект параметров)
+    // eslint-disable-next-line no-empty-pattern -- синтаксис Playwright для fixture без deps
     workoutState: async ({}, use) => {
         const state = buildWorkoutState()
         await use(state)

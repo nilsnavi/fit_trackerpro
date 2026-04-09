@@ -155,7 +155,13 @@ export interface UseSyncQueueByKindOptions {
 
 export function useSyncQueueByKind(options: UseSyncQueueByKindOptions = {}) {
     const { kind, workoutId } = options
-    const { allItems, ...rest } = useSyncQueueWithRetry()
+    const {
+        allItems,
+        failedItems: _failedItems,
+        pendingItems: _pendingItems,
+        processingItems: _processingItems,
+        ...rest
+    } = useSyncQueueWithRetry()
 
     const filteredItems = allItems.filter((item) => {
         if (kind && item.kind !== kind) return false
@@ -166,11 +172,15 @@ export function useSyncQueueByKind(options: UseSyncQueueByKindOptions = {}) {
         return true
     })
 
+    const filteredFailedItems = filteredItems.filter((i) => i.status === 'failed')
+    const filteredPendingItems = filteredItems.filter((i) => i.status === 'pending')
+    const filteredProcessingItems = filteredItems.filter((i) => i.status === 'processing')
+
     return {
         items: filteredItems,
-        failedItems: filteredItems.filter((i) => i.status === 'failed'),
-        pendingItems: filteredItems.filter((i) => i.status === 'pending'),
-        processingItems: filteredItems.filter((i) => i.status === 'processing'),
+        failedItems: filteredFailedItems,
+        pendingItems: filteredPendingItems,
+        processingItems: filteredProcessingItems,
         totalCount: filteredItems.length,
         ...rest,
     }

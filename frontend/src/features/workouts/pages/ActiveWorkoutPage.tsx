@@ -7,7 +7,6 @@ import { Button } from '@shared/ui/Button'
 import { Plus, Timer } from 'lucide-react'
 import { UnsavedChangesModal } from '@shared/ui/UnsavedChangesModal'
 import { useSyncQueueWithRetry } from '@shared/hooks/useSyncQueueWithRetry'
-import { useOfflineExerciseActionQueue } from '@shared/hooks/useOfflineExerciseActionQueue'
 import { useConflictResolution, ConflictResolutionUI } from '@features/workouts/components/ConflictResolutionUI'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
@@ -34,19 +33,16 @@ import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/Wor
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
 import { ActiveExerciseList } from '@features/workouts/active/components/ActiveExerciseList'
-import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
+import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
 import { AddExerciseModal } from '@features/workouts/active/modals/AddExerciseModal'
 import { AddTimerModal } from '@features/workouts/active/modals/AddTimerModal'
-import { ExerciseRestSettingsModal } from '@features/workouts/active/modals/ExerciseRestSettingsModal'
-import { ExerciseStructureEditorModal } from '@features/workouts/active/modals/ExerciseStructureEditorModal'
 import { FinishWorkoutModal } from '@features/workouts/active/modals/FinishWorkoutModal'
+import { AbandonWorkoutConfirmModal } from '@features/workouts/active/modals/AbandonWorkoutConfirmModal'
 import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
-import { useWorkoutStructureEditor } from '@features/workouts/active/hooks/useWorkoutStructureEditor'
 import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
-import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
 import type {
     CompletedSet,
     CompletedExercise,
@@ -132,10 +128,8 @@ export function ActiveWorkoutPage() {
         setCurrentPosition,
         startRestTimer,
         skipRestTimer,
-        stopRestTimer,
         setRestDefaultSeconds,
         reset: resetActiveWorkoutState,
-        recordActualRestTime, // Добавляем для записи фактического времени отдыха
     } = useActiveWorkoutActions()
 
     const workoutId = Number.parseInt(id ?? '', 10)
@@ -169,7 +163,6 @@ export function ActiveWorkoutPage() {
     const [pendingDeleteExerciseIndex, setPendingDeleteExerciseIndex] = useState<number | null>(null)
     const [isRestPresetsModalOpen, setIsRestPresetsModalOpen] = useState(false)
     const [restPresetsDraft, setRestPresetsDraft] = useState('')
-    const [isExerciseRestSettingsOpen, setIsExerciseRestSettingsOpen] = useState(false) // Состояние для модалки настроек отдыха упражнения
     const isCompletingRef = useRef(false)
 
     const isActiveDraft =
@@ -245,17 +238,6 @@ export function ActiveWorkoutPage() {
         currentSetIndex,
         setCurrentPosition,
         updateSet,
-    })
-
-    const {
-        structureEditor,
-        setStructureEditor,
-        openStructureEditor,
-        closeStructureEditor,
-        handleSaveStructure,
-    } = useWorkoutStructureEditor({
-        exercises: workout?.exercises ?? [],
-        patchItem,
     })
 
     // Получение рекомендации веса для текущего упражнения
@@ -772,8 +754,7 @@ export function ActiveWorkoutPage() {
         setIsAbandonConfirmOpen(false)
         setIsFinishSheetOpen(false)
         setAddItemKind(null)
-        closeStructureEditor()
-        handleSkipRestWithAnalytics() // Используем обертку с аналитикой
+        skipRestTimer()
         resetActiveWorkoutState()
         abandonWorkoutSessionDraft()
         clearActiveWorkoutDraft()
@@ -904,31 +885,8 @@ export function ActiveWorkoutPage() {
 
     const handleStartQuickRest = useCallback(() => {
         tg.hapticFeedback({ type: 'selection' })
-        
-        // Используем персональное время отдыха для текущего упражнения, если оно есть
-        let restDuration = restDefaultSeconds
-        if (currentExercise?.exercise_id) {
-            const settings = useActiveWorkoutStore.getState().exerciseRestSettings[currentExercise.exercise_id]
-            if (settings && !settings.use_global_default) {
-                restDuration = settings.custom_rest_seconds
-            }
-        }
-        
-        startRestTimer(restDuration)
-    }, [restDefaultSeconds, startRestTimer, tg, currentExercise])
-
-    // Обертка для пропуска таймера с записью фактического времени отдыха
-    const handleSkipRestWithAnalytics = useCallback(() => {
-        const state = useActiveWorkoutStore.getState()
-        const actualRestSeconds = state.restTimer.durationSeconds - state.restTimer.remainingSeconds
-        
-        // Записываем фактическое время отдыха для текущего упражнения
-        if (currentExercise?.exercise_id && actualRestSeconds > 0) {
-            recordActualRestTime(currentExercise.exercise_id, actualRestSeconds)
-        }
-        
-        skipRestTimer()
-    }, [skipRestTimer, recordActualRestTime, currentExercise])
+        startRestTimer(restDefaultSeconds)
+    }, [restDefaultSeconds, startRestTimer, tg])
 
     const handleSkipCurrentSetQuick = useCallback(() => {
         if (!currentSet) return
@@ -1034,9 +992,7 @@ export function ActiveWorkoutPage() {
                         <p className="text-sm text-danger">{getErrorMessage(updateSessionMutation.error)}</p>
                     )}
 
-                    <RestTimerPanel 
-                        onSkipWithAnalytics={handleSkipRestWithAnalytics}
-                    />
+                    <RestTimerPanel />
 
                     <CurrentExerciseCard
                         exerciseName={currentContextCard.exerciseName}
@@ -1053,11 +1009,6 @@ export function ActiveWorkoutPage() {
                         onSkipSet={handleSkipCurrentSetQuick}
                         onStartRest={handleStartQuickRest}
                         onOpenRestPresets={() => setIsRestPresetsModalOpen(true)}
-                        onOpenExerciseRestSettings={
-                            currentExercise?.exercise_id
-                                ? () => setIsExerciseRestSettingsOpen(true)
-                                : undefined
-                        }
                     />
 
                     <ActiveExerciseList
@@ -1068,7 +1019,6 @@ export function ActiveWorkoutPage() {
                         previousBestLabelsByExercise={previousBestLabelsByExercise}
                         canReorder={isActiveDraft}
                         onDragEnd={handleDragEnd}
-                        onOpenStructureEditor={openStructureEditor}
                         onAddSet={handleAddSetToCurrentExercise}
                         onRemoveSet={handleRemoveLastSetFromCurrentExercise}
                         onDeleteExercise={handleDeleteExerciseRequest}
@@ -1175,15 +1125,7 @@ export function ActiveWorkoutPage() {
                         />
                     )}
 
-                    {structureEditor != null && (
-                        <ExerciseStructureEditorModal
-                            isOpen
-                            editorState={structureEditor}
-                            onClose={closeStructureEditor}
-                            onChange={setStructureEditor}
-                            onSave={handleSaveStructure}
-                        />
-                    )}
+                    {/* ExerciseStructureEditorModal удален */}
 
                     <WorkoutModal
                         isOpen={isRestPresetsModalOpen}
@@ -1305,16 +1247,6 @@ export function ActiveWorkoutPage() {
                         closeConflict()
                     }}
                     onCancel={closeConflict}
-                />
-            )}
-
-            {/* Exercise Rest Settings Modal */}
-            {currentExercise?.exercise_id && (
-                <ExerciseRestSettingsModal
-                    isOpen={isExerciseRestSettingsOpen}
-                    onClose={() => setIsExerciseRestSettingsOpen(false)}
-                    exerciseId={currentExercise.exercise_id}
-                    exerciseName={currentExercise.name}
                 />
             )}
         </div>

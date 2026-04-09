@@ -76,8 +76,8 @@ export default function RecoveryPage() {
     const isLoading = recoveryQuery.isPending || dailyLoadQuery.isPending || muscleLoadQuery.isPending
     const error = recoveryQuery.error ?? dailyLoadQuery.error ?? muscleLoadQuery.error
 
-    const dailyLoad = dailyLoadQuery.data ?? []
-    const muscleLoad = muscleLoadQuery.data ?? []
+    const dailyLoad = useMemo(() => dailyLoadQuery.data ?? [], [dailyLoadQuery.data])
+    const muscleLoad = useMemo(() => muscleLoadQuery.data ?? [], [muscleLoadQuery.data])
     const readiness = recoveryQuery.data?.readinessScore ?? 0
     const fatigue = recoveryQuery.data?.fatigueLevel ?? 0
 

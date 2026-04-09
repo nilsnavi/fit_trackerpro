@@ -195,12 +195,6 @@ function SyncQueueItemRow({ item, onRetry }: SyncQueueItemRowProps) {
         failed: '❌',
     }[item.status]
 
-    const statusLabel = {
-        pending: 'Ожидание',
-        processing: 'Обработка',
-        failed: 'Ошибка',
-    }[item.status]
-
     return (
         <div className="flex items-center justify-between text-xs p-2 bg-white rounded border border-gray-200 gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -258,7 +252,8 @@ function getPayloadPreview(kind: string, payload: Record<string, unknown> | unde
         return `Упражнение: ${payload.exerciseIndex || '?'}, Подход: ${payload.setIndex || '?'}`
     }
     if (kind.includes('SESSION_COMPLETE')) {
-        return `Время: ${payload.totalSeconds ? Math.floor(payload.totalSeconds / 60) + 'мин' : '?'}`
+        const totalSec = payload.totalSeconds as number | undefined
+        return `Время: ${totalSec ? Math.floor(totalSec / 60) + 'мин' : '?'}`
     }
     if (kind.includes('TEMPLATE')) {
         return `${payload.name || 'без названия'}`
