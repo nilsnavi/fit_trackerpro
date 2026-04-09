@@ -86,8 +86,10 @@ export function useActiveWorkoutDraftPersist(
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
+      // Only remove the listener — do NOT call handleBeforeUnload() here.
+      // Calling it on component unmount (e.g. navigation) would double-save
+      // the draft, potentially overwriting newer server state (Bug 2).
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      handleBeforeUnload()
     }
   }, [
     currentExerciseIndex,

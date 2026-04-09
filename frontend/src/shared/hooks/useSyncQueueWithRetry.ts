@@ -31,7 +31,7 @@ interface UseSyncQueueWithRetryActions {
     getItemError: (itemId: string) => string | undefined
 }
 
-export interface UseSyncQueueWithRetryResult extends UseSyncQueueWithRetryState, UseSyncQueueWithRetryActions {}
+export interface UseSyncQueueWithRetryResult extends UseSyncQueueWithRetryState, UseSyncQueueWithRetryActions { }
 
 /**
  * Хук для управления очередью синхронизации с поддержкой retry.
@@ -61,26 +61,22 @@ export function useSyncQueueWithRetry(): UseSyncQueueWithRetryResult {
     useEffect(() => {
         const engine = getSyncQueueEngine()
 
+        // Compute both allItems and isSyncing in a single update to avoid
+        // stale reads and eliminate the 100ms polling interval (Bug 3).
         const updateItems = () => {
-            setAllItems([...engine.getAllItems()])
+            const items = engine.getAllItems()
+            setAllItems([...items])
+            setIsSyncing(items.some((item) => item.status === 'processing'))
         }
 
         // Initial load
         updateItems()
 
-        // Subscribe to changes
+        // Single subscription drives all state — no polling needed.
         const unsubscribe = engine.subscribe(updateItems)
-
-        // Monitor processing state
-        const processingInterval = setInterval(() => {
-            const items = engine.getAllItems()
-            const hasProcessing = items.some((item) => item.status === 'processing')
-            setIsSyncing(hasProcessing)
-        }, 100)
 
         return () => {
             unsubscribe()
-            clearInterval(processingInterval)
         }
     }, [])
 

@@ -292,7 +292,7 @@ export function useActiveWorkoutSync({
                 Boolean(currentWorkout) &&
                 lastPersistedSnapshotRef.current !== null &&
                 JSON.stringify(buildSyncPayloadRef.current(currentWorkout as WorkoutHistoryItem)) !==
-                    lastPersistedSnapshotRef.current
+                lastPersistedSnapshotRef.current
 
             if (!inFlightRef.current && !hasUnsyncedChanges) {
                 resolveFlushWaiters()
@@ -464,8 +464,17 @@ export function useActiveWorkoutSync({
 
         const handleOnline = () => {
             setIsOffline(false)
-            // Flush queued changes as soon as the connection is restored.
-            if (hasUnsyncedChanges()) {
+            // Cancel any pending debounce to avoid a duplicate request racing
+            // with the reconnect flush (Bug 1: duplicate mutations on reconnect).
+            if (debounceTimerRef.current !== null) {
+                window.clearTimeout(debounceTimerRef.current)
+                debounceTimerRef.current = null
+            }
+            // Always attempt a flush — executeSync guards via inFlightRef and
+            // snapshot comparison, so calling it unconditionally is safe.
+            // This also handles Bug 5: when lastPersistedSnapshotRef is still null
+            // (app opened offline before first baseline was established).
+            if (isActiveDraftRef.current) {
                 executeSyncRef.current()
             }
         }
