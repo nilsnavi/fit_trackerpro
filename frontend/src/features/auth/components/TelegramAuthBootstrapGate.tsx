@@ -11,7 +11,7 @@ import { Button } from '@shared/ui/Button'
 import { Card } from '@shared/ui/Card'
 import { getAuthTokens, useAuthStore } from '@/stores/authStore'
 
-type BootstrapStatus = 'loading' | 'ready' | 'error' | 'no_telegram'
+type BootstrapStatus = 'loading' | 'ready' | 'error' | 'no_telegram' | 'expired'
 
 type TelegramLoginFallbackResponse = {
     access_token: string
@@ -151,6 +151,21 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
         void runBootstrap()
     }, [attempt, runBootstrap])
 
+    // Listen for session-expired events dispatched by the API client interceptor.
+    // This lets us re-authenticate transparently inside Telegram Mini App instead
+    // of hard-redirecting to /login.
+    useEffect(() => {
+        const handleExpired = () => {
+            clearAuth()
+            setStatus('expired')
+            // Auto-retry after a short delay to give a visual cue
+            const timer = setTimeout(() => setAttempt((v) => v + 1), 1200)
+            return () => clearTimeout(timer)
+        }
+        window.addEventListener('auth:session-expired', handleExpired)
+        return () => window.removeEventListener('auth:session-expired', handleExpired)
+    }, [clearAuth])
+
     const retry = useCallback(() => {
         setAttempt((value) => value + 1)
     }, [])
@@ -178,6 +193,22 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
                     </p>
                     <Button type="button" className="mt-4 w-full" onClick={retry}>
                         Повторить
+                    </Button>
+                </Card>
+            </div>
+        )
+    }
+
+    if (status === 'expired') {
+        return (
+            <div className="flex min-h-dvh items-center justify-center p-4">
+                <Card variant="info" className="w-full max-w-md">
+                    <h1 className="text-lg font-semibold text-telegram-text">Сессия истекла</h1>
+                    <p className="mt-2 text-sm text-telegram-hint">
+                        Восстанавливаем подключение...
+                    </p>
+                    <Button type="button" variant="secondary" className="mt-4 w-full" onClick={retry}>
+                        Повторить вход
                     </Button>
                 </Card>
             </div>

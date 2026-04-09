@@ -122,3 +122,50 @@ async def test_logout(client: AsyncClient):
     """Logout requires authentication."""
     response = await client.post("/api/v1/users/auth/logout")
     assert response.status_code == 401
+
+
+@pytest.mark.integration
+@pytest.mark.auth
+async def test_token_refresh_happy_path(client: AsyncClient, mock_telegram_auth_body: dict):
+    """Valid refresh token returns new token pair that grants access to /me."""
+    # Authenticate to get initial tokens
+    auth_resp = await client.post(
+        "/api/v1/users/auth/telegram",
+        json=mock_telegram_auth_body,
+    )
+    assert auth_resp.status_code == 200
+    refresh_token = auth_resp.json()["refresh_token"]
+    assert refresh_token
+
+    # Refresh
+    refresh_resp = await client.post(
+        "/api/v1/users/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert refresh_resp.status_code == 200
+    refresh_data = refresh_resp.json()
+    new_access = refresh_data["access_token"]
+    new_refresh = refresh_data["refresh_token"]
+    assert new_access
+    assert new_refresh
+    assert refresh_data["token_type"] == "bearer"
+    assert refresh_data["expires_in"] > 0
+
+    # New access token works for /me
+    me_resp = await client.get(
+        "/api/v1/users/auth/me",
+        headers={"Authorization": f"Bearer {new_access}"},
+    )
+    assert me_resp.status_code == 200
+
+
+@pytest.mark.unit
+@pytest.mark.auth
+async def test_token_refresh_invalid_token(client: AsyncClient):
+    """Refresh with a garbage token returns 401 or 422."""
+    response = await client.post(
+        "/api/v1/users/auth/refresh",
+        json={"refresh_token": "not-a-valid-jwt"},
+    )
+    # Server may reject at validation (422) or auth (401) layer
+    assert response.status_code in (401, 422)

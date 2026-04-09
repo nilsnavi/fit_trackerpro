@@ -1,7 +1,7 @@
 """
 JWT encoding/decoding and HTTP Bearer scheme (no FastAPI route dependencies).
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -13,15 +13,16 @@ security = HTTPBearer(auto_error=False)
 
 
 def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None) -> str:
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode = {
         "sub": str(user_id),
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": now,
         "type": "access",
     }
 
@@ -33,12 +34,13 @@ def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None)
 
 
 def create_refresh_token(user_id: int) -> str:
-    expire = datetime.utcnow() + timedelta(days=7)
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(days=7)
 
     to_encode = {
         "sub": str(user_id),
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": now,
         "type": "refresh",
     }
 
