@@ -101,3 +101,55 @@ def test_admin_user_ids_rejects_non_numeric_values():
 
     with pytest.raises(ValidationError):
         Settings(**payload)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "token",
+    [
+        "123456789:AAHproduction_token_not_equal_to_dev_default",
+        "987654321:BBxyz-AbCdEfGhIjKlMnOpQrStUvWxYz_12",
+        "100000000:CC_very_long_token_string_for_real_bot",
+    ],
+)
+def test_telegram_bot_token_valid_formats_accepted(token: str):
+    """Tokens matching {digits}:{alphanum_and_dashes} must be accepted."""
+    payload = _valid_settings_payload()
+    payload["TELEGRAM_BOT_TOKEN"] = token
+    # Should not raise
+    s = Settings(**payload)
+    assert s.TELEGRAM_BOT_TOKEN == token
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "token",
+    [
+        "",              # empty
+        "   ",           # whitespace only
+        "your_telegram_bot_token_here",  # placeholder
+    ],
+)
+def test_telegram_bot_token_invalid_values_rejected(token: str):
+    """Invalid or placeholder tokens must raise ValidationError."""
+    payload = _valid_settings_payload()
+    payload["TELEGRAM_BOT_TOKEN"] = token
+    with pytest.raises(ValidationError):
+        Settings(**payload)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://fittrackpro.ru",
+        "https://app.example.com",
+        "https://t.me/myapp",
+    ],
+)
+def test_telegram_webapp_url_valid_values_accepted(url: str):
+    """Valid non-placeholder TELEGRAM_WEBAPP_URL values must be accepted."""
+    payload = _valid_settings_payload()
+    payload["TELEGRAM_WEBAPP_URL"] = url
+    s = Settings(**payload)
+    assert s.TELEGRAM_WEBAPP_URL == url

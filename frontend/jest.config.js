@@ -32,18 +32,18 @@ export default {
     ],
     coverageThreshold: {
         global: {
-            // Baseline kept low until overall unit test coverage improves.
-            branches: 0,
-            functions: 0,
-            lines: 0,
-            statements: 0
+            // Realistic baseline: enforces non-zero coverage across the board.
+            branches: 20,
+            functions: 25,
+            lines: 30,
+            statements: 30
         },
-        // Critical offline sync engine already has meaningful tests today.
+        // Critical offline sync engine — raised after new engine tests.
         'src/shared/offline/syncQueue/engine.ts': {
-            branches: 35,
-            functions: 50,
-            lines: 65,
-            statements: 65
+            branches: 55,
+            functions: 70,
+            lines: 75,
+            statements: 75
         },
         'src/shared/offline/syncQueue/recoverableError.ts': {
             branches: 60,
@@ -63,18 +63,40 @@ export default {
             lines: 100,
             statements: 100
         },
-        // Telegram environment detection is a fragile integration boundary.
-        'src/shared/lib/telegramEnv.ts': {
+        // Conflict resolution — offline sync boundary.
+        'src/shared/offline/conflictResolution.ts': {
+            branches: 70,
+            functions: 80,
+            lines: 80,
+            statements: 80
+        },
+        // Offline enqueue helpers — all paths must be covered.
+        'src/shared/offline/workoutOfflineEnqueue.ts': {
             branches: 60,
             functions: 80,
             lines: 80,
             statements: 80
         },
+        // Telegram environment detection is a fragile integration boundary.
+        'src/shared/lib/telegramEnv.ts': {
+            branches: 80,
+            functions: 100,
+            lines: 100,
+            statements: 100
+        },
+        // Error normalisation — critical for all API error handling.
+        'src/shared/errors/normalizeError.ts': {
+            branches: 65,
+            functions: 80,
+            lines: 80,
+            statements: 80
+        },
+        // RouteErrorBoundary — raised from near-zero to meaningful threshold.
         'src/shared/ui/RouteErrorBoundary.tsx': {
-            branches: 0,
-            functions: 20,
-            lines: 60,
-            statements: 60
+            branches: 40,
+            functions: 60,
+            lines: 70,
+            statements: 70
         },
         'src/shared/ui/Button.tsx': {
             branches: 80,
