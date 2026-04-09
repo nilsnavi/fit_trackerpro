@@ -32,6 +32,7 @@ import { ActiveWorkoutHeader } from '@features/workouts/active/components/Active
 import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/WorkoutSyncQueueStatus'
 import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
 import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
+import { FloatingRestTimer } from '@features/workouts/active/components/FloatingRestTimer'
 import { ActiveExerciseList } from '@features/workouts/active/components/ActiveExerciseList'
 import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
 import { AddExerciseModal } from '@features/workouts/active/modals/AddExerciseModal'
@@ -164,6 +165,7 @@ export function ActiveWorkoutPage() {
     const [isRestPresetsModalOpen, setIsRestPresetsModalOpen] = useState(false)
     const [restPresetsDraft, setRestPresetsDraft] = useState('')
     const isCompletingRef = useRef(false)
+    // Auto-scroll ref removed - using getElementById
 
     const isActiveDraft =
         workout != null &&
@@ -322,6 +324,21 @@ export function ActiveWorkoutPage() {
             clearActiveWorkoutDraft()
         }
     }, [clearActiveWorkoutDraft, workout])
+
+    // Auto-scroll to current set when exercise/set changes
+    useEffect(() => {
+        if (!isActiveDraft) return
+
+        // Small delay to ensure DOM is updated
+        const timeoutId = setTimeout(() => {
+            document.getElementById('current-active-set')?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            })
+        }, 100)
+
+        return () => clearTimeout(timeoutId)
+    }, [currentExerciseIndex, currentSetIndex, isActiveDraft])
 
     const handleSelectRestPreset = useCallback((seconds: number) => {
         setRestDefaultSeconds(seconds)
@@ -995,6 +1012,8 @@ export function ActiveWorkoutPage() {
 
                     <RestTimerPanel />
 
+                    <FloatingRestTimer />
+
                     <CurrentExerciseCard
                         exerciseName={currentContextCard.exerciseName}
                         previousBest={currentContextCard.previousBest}
@@ -1010,6 +1029,7 @@ export function ActiveWorkoutPage() {
                         onSkipSet={handleSkipCurrentSetQuick}
                         onStartRest={handleStartQuickRest}
                         onOpenRestPresets={() => setIsRestPresetsModalOpen(true)}
+                        onSelectRestPreset={handleSelectRestPreset}
                     />
 
                     <ActiveExerciseList
@@ -1174,8 +1194,8 @@ export function ActiveWorkoutPage() {
                                         type="button"
                                         onClick={() => handleSelectRestPreset(seconds)}
                                         className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${restDefaultSeconds === seconds
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-telegram-secondary-bg text-telegram-text'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-telegram-secondary-bg text-telegram-text'
                                             }`}
                                     >
                                         {seconds < 60 ? `${seconds}с` : `${Math.floor(seconds / 60)}м`}
@@ -1252,3 +1272,9 @@ export function ActiveWorkoutPage() {
         </div>
     )
 }
+
+
+
+
+
+

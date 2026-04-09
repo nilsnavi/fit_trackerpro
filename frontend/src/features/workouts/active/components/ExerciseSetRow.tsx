@@ -1,10 +1,13 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, ChevronUp, Minus, Plus } from 'lucide-react'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedSet } from '@features/workouts/types/workouts'
 
 const RPE_OPTIONS = [6, 7, 8, 9, 10]
 const RIR_OPTIONS = [0, 1, 2, 3, 4]
+
+// Quick increment step options
+const WEIGHT_STEP_OPTIONS = [0.5, 1, 2.5, 5]
 
 function toMinutes(durationSeconds?: number): number {
     if (typeof durationSeconds !== 'number' || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
@@ -34,6 +37,7 @@ interface ExerciseSetRowProps {
     exerciseIndex: number
     isCurrent: boolean
     previousBestLabel: string
+    previousSetValues?: Partial<CompletedSet>
     onFocusSet: (exerciseIndex: number, setIndex: number) => void
     onToggleCompleted: (exerciseIndex: number, setNumber: number, nextCompleted: boolean) => void
     onSkipSet: () => void
@@ -51,6 +55,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
     exerciseIndex,
     isCurrent,
     previousBestLabel,
+    previousSetValues,
     onFocusSet,
     onToggleCompleted,
     onSkipSet,
@@ -65,6 +70,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
     const setIndex = set.set_number - 1
     const [showEffort, setShowEffort] = useState(Boolean(set.rpe != null || set.rir != null))
     const [isExpanded, setIsExpanded] = useState(isCurrent)
+    const [weightStep, setWeightStep] = useState(1)
     const repsInputRef = useRef<HTMLInputElement | null>(null)
     const weightInputRef = useRef<HTMLInputElement | null>(null)
     const durationInputRef = useRef<HTMLInputElement | null>(null)
@@ -250,6 +256,15 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
 
     const isCollapsed = !isCurrent && !isExpanded
 
+    // Format previous set values for hint display
+    const previousSetHint = useMemo(() => {
+        if (!previousSetValues) return null
+        const parts: string[] = []
+        if (previousSetValues.weight != null) parts.push(`${previousSetValues.weight} кг`)
+        if (previousSetValues.reps != null) parts.push(`${previousSetValues.reps} повт`)
+        return parts.length > 0 ? parts.join(' x ') : null
+    }, [previousSetValues])
+
     return (
         <div
             className={`rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text ${isCurrent ? 'border border-primary/35 bg-primary/5' : 'border border-transparent'}`}
@@ -317,40 +332,91 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         </div>
                     )}
                     <p className="mt-1 text-[11px] text-telegram-hint">Предыдущий лучший: {previousBestLabel}</p>
+                    {previousSetHint && isCurrent && (
+                        <p className="mt-0.5 text-[11px] font-medium text-primary">Прошлый подход: {previousSetHint}</p>
+                    )}
 
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                        {isCardioSet ? null : (
-                            <>
+                    {/* Consolidated Weight Adjustment Bar */}
+                    {!isCardioSet && isCurrent && (
+                        <div className="mt-2 space-y-1.5">
+                            {/* Step selector */}
+                            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
+                                <span className="shrink-0 text-[10px] text-telegram-hint">Шаг:</span>
+                                {WEIGHT_STEP_OPTIONS.map((step) => (
+                                    <button
+                                        key={`step-${step}`}
+                                        type="button"
+                                        onClick={() => setWeightStep(step)}
+                                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${weightStep === step
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-telegram-bg text-telegram-hint'
+                                            }`}
+                                    >
+                                        {step}
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Weight adjustment buttons */}
+                            <div className="flex items-center gap-2">
                                 <button
                                     type="button"
                                     onClick={handleCopyPrevious}
-                                    className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
+                                    className="flex min-h-[44px] flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
                                 >
                                     Как прошлый
                                 </button>
-                                {weightDeltas.map((delta) => (
-                                    <button
-                                        key={`minus-${delta}`}
-                                        type="button"
-                                        onClick={() => handleAdjustWeight(-delta)}
-                                        className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
-                                    >
-                                        -{delta}
-                                    </button>
-                                ))}
-                                {weightDeltas.map((delta) => (
-                                    <button
-                                        key={delta}
-                                        type="button"
-                                        onClick={() => handleAdjustWeight(delta)}
-                                        className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
-                                    >
-                                        +{delta}
-                                    </button>
-                                ))}
-                            </>
-                        )}
-                    </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleAdjustWeight(-weightStep)}
+                                    className="flex min-h-[44px] w-[52px] touch-manipulation items-center justify-center rounded-lg bg-telegram-bg text-sm font-bold text-telegram-text active:bg-telegram-secondary-bg"
+                                    aria-label={`Уменьшить на ${weightStep}`}
+                                >
+                                    <Minus className="h-5 w-5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleAdjustWeight(weightStep)}
+                                    className="flex min-h-[44px] w-[52px] touch-manipulation items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary active:bg-primary/20"
+                                    aria-label={`Увеличить на ${weightStep}`}
+                                >
+                                    <Plus className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Legacy weight buttons for non-current sets */}
+                    {!isCardioSet && !isCurrent && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                            <button
+                                type="button"
+                                onClick={handleCopyPrevious}
+                                className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
+                            >
+                                Как прошлый
+                            </button>
+                            {weightDeltas.map((delta) => (
+                                <button
+                                    key={`minus-${delta}`}
+                                    type="button"
+                                    onClick={() => handleAdjustWeight(-delta)}
+                                    className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
+                                >
+                                    -{delta}
+                                </button>
+                            ))}
+                            {weightDeltas.map((delta) => (
+                                <button
+                                    key={delta}
+                                    type="button"
+                                    onClick={() => handleAdjustWeight(delta)}
+                                    className="min-h-[40px] touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
+                                >
+                                    +{delta}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     {isCardioSet ? (
                         <div className="mt-2 rounded-xl border border-border bg-telegram-secondary-bg p-3">
@@ -473,24 +539,16 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
 
                     {!isCardioSet && (
                         <div className="mt-2 space-y-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowEffort((prev) => !prev)}
-                            className="min-h-[32px] rounded-lg bg-telegram-bg px-2.5 py-1.5 text-[11px] font-medium text-telegram-hint"
-                        >
-                            {showEffort ? 'Скрыть RPE/RIR' : 'Добавить RPE (опционально)'}
-                        </button>
-
-                        {showEffort && (
-                            <div className="space-y-2">
+                            {/* Inline RPE for current set - always visible */}
+                            {isCurrent ? (
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="text-[11px] text-telegram-hint">RPE</span>
+                                    <span className="text-[10px] text-telegram-hint">RPE</span>
                                     {RPE_OPTIONS.map((value) => (
                                         <button
                                             key={`rpe-${value}`}
                                             type="button"
                                             onClick={() => handleRpeToggle(value)}
-                                            className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rpe === value
+                                            className={`min-h-[32px] min-w-[32px] touch-manipulation rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${set.rpe === value
                                                 ? 'bg-primary text-primary-foreground'
                                                 : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
                                                 }`}
@@ -498,26 +556,65 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                             {value}
                                         </button>
                                     ))}
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="text-[11px] text-telegram-hint">RIR</span>
-                                    {RIR_OPTIONS.map((value) => (
+                                    {set.rpe != null && (
                                         <button
-                                            key={`rir-${value}`}
                                             type="button"
-                                            onClick={() => handleRirToggle(value)}
-                                            className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rir === value
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
-                                                }`}
+                                            onClick={() => onUpdateSet(exerciseIndex, set.set_number, { rpe: undefined })}
+                                            className="min-h-[32px] rounded-lg px-2 py-1.5 text-xs text-telegram-hint"
                                         >
-                                            {value}
+                                            Сбросить
                                         </button>
-                                    ))}
+                                    )}
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEffort((prev) => !prev)}
+                                        className="min-h-[32px] rounded-lg bg-telegram-bg px-2.5 py-1.5 text-[11px] font-medium text-telegram-hint"
+                                    >
+                                        {showEffort ? 'Скрыть RPE/RIR' : 'Добавить RPE (опционально)'}
+                                    </button>
+
+                                    {showEffort && (
+                                        <div className="space-y-2">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <span className="text-[11px] text-telegram-hint">RPE</span>
+                                                {RPE_OPTIONS.map((value) => (
+                                                    <button
+                                                        key={`rpe-${value}`}
+                                                        type="button"
+                                                        onClick={() => handleRpeToggle(value)}
+                                                        className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rpe === value
+                                                            ? 'bg-primary text-primary-foreground'
+                                                            : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
+                                                            }`}
+                                                    >
+                                                        {value}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <span className="text-[11px] text-telegram-hint">RIR</span>
+                                                {RIR_OPTIONS.map((value) => (
+                                                    <button
+                                                        key={`rir-${value}`}
+                                                        type="button"
+                                                        onClick={() => handleRirToggle(value)}
+                                                        className={`min-h-[36px] min-w-[36px] touch-manipulation rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${set.rir === value
+                                                            ? 'bg-primary text-primary-foreground'
+                                                            : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
+                                                            }`}
+                                                    >
+                                                        {value}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
                 </>
@@ -527,3 +624,4 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
 })
 
 ExerciseSetRow.displayName = 'ExerciseSetRow'
+
