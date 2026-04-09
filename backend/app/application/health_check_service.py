@@ -8,6 +8,7 @@ Implements:
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -75,21 +76,24 @@ class HealthCheckService:
     @staticmethod
     async def _check_database() -> DependencyStatus:
         """Check database connectivity."""
+        start = time.monotonic()
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
+            elapsed = (time.monotonic() - start) * 1000
             return DependencyStatus(
                 name="database",
                 healthy=True,
-                response_time_ms=None,
+                response_time_ms=round(elapsed, 1),
                 message=None,
             )
         except Exception as e:
+            elapsed = (time.monotonic() - start) * 1000
             logger.error("Database health check failed: %s", str(e))
             return DependencyStatus(
                 name="database",
                 healthy=False,
-                response_time_ms=None,
+                response_time_ms=round(elapsed, 1),
                 message=f"Database connection failed: {str(e)}",
             )
 
@@ -99,6 +103,7 @@ class HealthCheckService:
         if not settings.ANALYTICS_CACHE_ENABLED:
             return None
 
+        start = time.monotonic()
         try:
             from redis.asyncio import Redis
 
@@ -111,21 +116,23 @@ class HealthCheckService:
 
             try:
                 await redis_client.ping()
+                elapsed = (time.monotonic() - start) * 1000
                 return DependencyStatus(
                     name="redis",
                     healthy=True,
-                    response_time_ms=None,
+                    response_time_ms=round(elapsed, 1),
                     message=None,
                 )
             finally:
                 await redis_client.aclose()
 
         except Exception as e:
+            elapsed = (time.monotonic() - start) * 1000
             logger.error("Redis health check failed: %s", str(e))
             return DependencyStatus(
                 name="redis",
                 healthy=False,
-                response_time_ms=None,
+                response_time_ms=round(elapsed, 1),
                 message=f"Redis connection failed: {str(e)}",
             )
 
@@ -137,27 +144,31 @@ class HealthCheckService:
 
         # For now, we check if the token is configured and valid format
         # In production, you might want to actually test bot API connectivity
+        start = time.monotonic()
         try:
             if not settings.TELEGRAM_BOT_TOKEN or len(settings.TELEGRAM_BOT_TOKEN) < 10:
+                elapsed = (time.monotonic() - start) * 1000
                 return DependencyStatus(
                     name="external_services",
                     healthy=False,
-                    response_time_ms=None,
+                    response_time_ms=round(elapsed, 1),
                     message="Telegram bot token not properly configured",
                 )
 
             # Token format is valid (basic check)
+            elapsed = (time.monotonic() - start) * 1000
             return DependencyStatus(
                 name="external_services",
                 healthy=True,
-                response_time_ms=None,
+                response_time_ms=round(elapsed, 1),
                 message=None,
             )
         except Exception as e:
+            elapsed = (time.monotonic() - start) * 1000
             logger.error("External services health check failed: %s", str(e))
             return DependencyStatus(
                 name="external_services",
                 healthy=False,
-                response_time_ms=None,
+                response_time_ms=round(elapsed, 1),
                 message=f"External services check failed: {str(e)}",
             )
