@@ -48,9 +48,9 @@ from app.schemas.analytics import (
     RecoveryStateResponse,
     TrainingLoadDailyEntry,
     TrainingLoadDailyTableResponse,
-    WorkoutPostSummaryResponse,
     WorkoutCalendarResponse,
     WorkoutCalendarSummary,
+    WorkoutPostSummaryResponse,
 )
 from app.schemas.enums import DataExportStatus
 from app.settings import settings

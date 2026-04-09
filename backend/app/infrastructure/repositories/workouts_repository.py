@@ -10,8 +10,8 @@ from app.domain.exercise import Exercise
 from app.domain.idempotency_record import IdempotencyRecord
 from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
-from app.domain.training_load_daily import TrainingLoadDaily
 from app.domain.template_exercise import TemplateExercise
+from app.domain.training_load_daily import TrainingLoadDaily
 from app.domain.workout_log import WorkoutLog
 from app.domain.workout_session_exercise import WorkoutSessionExercise
 from app.domain.workout_set import WorkoutSet

@@ -28,9 +28,9 @@ from app.schemas.auth import (
     RefreshTokenResponse,
     TelegramAuthRequest,
     TelegramUserData,
+    UserProfileData,
     UserProfileResponse,
     UserProfileUpdate,
-    UserProfileData,
     user_profile_from_db,
 )
 from app.settings import settings
