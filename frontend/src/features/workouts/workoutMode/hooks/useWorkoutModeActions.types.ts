@@ -4,7 +4,7 @@ import type {
     EditorWorkoutMode,
     ModeExerciseParams,
     WorkoutModeExerciseItem,
-} from '@features/workouts/workoutMode/workoutModeEditorTypes'
+} from '../workoutModeEditorTypes'
 
 export interface UseWorkoutModeActionsParams {
     config: WorkoutTypeConfig

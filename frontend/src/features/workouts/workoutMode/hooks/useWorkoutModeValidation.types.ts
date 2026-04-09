@@ -1,4 +1,4 @@
-import type { WorkoutModeExerciseItem } from '@features/workouts/workoutMode/workoutModeEditorTypes'
+import type { WorkoutModeExerciseItem } from '../workoutModeEditorTypes'
 
 export interface UseWorkoutModeValidationParams {
     editorTitle: string

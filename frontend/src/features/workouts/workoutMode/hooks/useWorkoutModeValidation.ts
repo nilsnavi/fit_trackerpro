@@ -10,7 +10,7 @@ import type {
     StrengthExerciseParams,
     WorkoutModeExerciseItem,
     YogaExerciseParams,
-} from '@features/workouts/workoutMode/workoutModeEditorTypes'
+} from '../workoutModeEditorTypes'
 
 function isExerciseFormValid(item: WorkoutModeExerciseItem): boolean {
     if (item.mode === 'strength') {

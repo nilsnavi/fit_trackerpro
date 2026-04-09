@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { EditorWorkoutMode, WorkoutModeEditorValidationErrors, WorkoutModeExerciseItem } from '@features/workouts/workoutMode/workoutModeEditorTypes'
+import type { EditorWorkoutMode, WorkoutModeEditorValidationErrors, WorkoutModeExerciseItem } from '../workoutModeEditorTypes'
 import type { WorkoutTypeConfig } from '@features/workouts/types/workoutTypeConfig'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
