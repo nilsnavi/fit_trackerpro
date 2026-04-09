@@ -1,5 +1,6 @@
 import { WorkoutModal } from './WorkoutModal'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
+import type { ActiveWorkoutSyncState } from '@/state/local'
 
 interface FinishWorkoutSheetProps {
     isOpen: boolean
@@ -9,6 +10,7 @@ interface FinishWorkoutSheetProps {
     tagsDraft: string
     isPending: boolean
     errorMessage?: string | null
+    syncState?: ActiveWorkoutSyncState
     onClose: () => void
     onConfirm: () => void
     onChangeTagsDraft: (value: string) => void
@@ -22,6 +24,7 @@ export function FinishWorkoutSheet({
     tagsDraft,
     isPending,
     errorMessage,
+    syncState,
     onClose,
     onConfirm,
     onChangeTagsDraft,
@@ -86,6 +89,17 @@ export function FinishWorkoutSheet({
                         placeholder="силовая, ноги, прогресс"
                     />
                 </label>
+
+                {(syncState === 'offline-queued' || syncState === 'saved-locally') && (
+                    <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-telegram-text">
+                        Вы офлайн — результат будет отправлен при восстановлении сети
+                    </div>
+                )}
+                {syncState === 'error' && (
+                    <div className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-xs text-danger">
+                        Не удалось синхронизировать последние изменения. Завершение поставит данные в очередь.
+                    </div>
+                )}
 
                 {errorMessage && (
                     <p className="text-sm text-danger">{errorMessage}</p>

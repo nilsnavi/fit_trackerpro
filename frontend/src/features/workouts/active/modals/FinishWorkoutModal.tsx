@@ -1,6 +1,7 @@
 import { FinishWorkoutSheet } from '@features/workouts/components'
 import { formatDurationMinutes } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
+import type { ActiveWorkoutSyncState } from '@/state/local'
 
 interface FinishWorkoutModalProps {
     isOpen: boolean
@@ -10,6 +11,7 @@ interface FinishWorkoutModalProps {
     tagsDraft: string
     isPending: boolean
     errorMessage: string | null
+    syncState?: ActiveWorkoutSyncState
     onClose: () => void
     onConfirm: () => void
     onChangeTagsDraft: (value: string) => void
@@ -23,6 +25,7 @@ export function FinishWorkoutModal({
     tagsDraft,
     isPending,
     errorMessage,
+    syncState,
     onClose,
     onConfirm,
     onChangeTagsDraft,
@@ -39,6 +42,7 @@ export function FinishWorkoutModal({
             onChangeTagsDraft={onChangeTagsDraft}
             isPending={isPending}
             errorMessage={errorMessage}
+            syncState={syncState}
         />
     )
 }

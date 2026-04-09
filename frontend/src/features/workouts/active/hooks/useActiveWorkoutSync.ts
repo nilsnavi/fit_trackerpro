@@ -428,6 +428,9 @@ export function useActiveWorkoutSync({
 
         setPendingPayload(activeSessionPayload)
         scheduleDebounced()
+        // Мгновенный фидбэк: пользователь видит что изменение захвачено локально,
+        // до того как debounce отправит его на сервер.
+        updateSyncStateRef.current('saved-locally')
     }, [activeSessionPayload, activeSessionSnapshot, isActiveDraft, scheduleDebounced])
 
     // ── Flush triggers: blur / hidden tab / page unload ───────────────────
