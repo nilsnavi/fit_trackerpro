@@ -12,6 +12,8 @@ import {
     Target,
     Info,
     Zap,
+    Loader2,
+    AlertCircle,
 } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
 import { Button } from '@shared/ui/Button';
@@ -19,6 +21,7 @@ import { Card } from '@shared/ui/Card';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { Modal } from '@shared/ui/Modal';
+import { useOneRMExercises, type OneRMExercise } from '@features/analytics/hooks/useOneRMExercises';
 
 // ============================================
 // Types
@@ -47,12 +50,6 @@ interface SavedRecord {
     oneRM: number;
     formula: 'epley' | 'brzycki' | 'average';
     createdAt: string;
-}
-
-interface Exercise {
-    id: number;
-    name: string;
-    category: string;
 }
 
 // ============================================
@@ -107,21 +104,6 @@ const generateWeightZones = (oneRM: number): WeightZone[] => {
         weight: Math.round(oneRM * zone.percentage / 100 * 10) / 10,
     }));
 };
-
-// ============================================
-// Mock Data
-// ============================================
-
-const MOCK_EXERCISES: Exercise[] = [
-    { id: 1, name: 'Жим штанги лёжа', category: 'chest' },
-    { id: 2, name: 'Приседания со штангой', category: 'legs' },
-    { id: 3, name: 'Становая тяга', category: 'back' },
-    { id: 4, name: 'Жим стоя (армейский жим)', category: 'shoulders' },
-    { id: 5, name: 'Тяга штанги в наклоне', category: 'back' },
-    { id: 6, name: 'Жим гантелей лёжа', category: 'chest' },
-    { id: 7, name: 'Приседания с гантелями', category: 'legs' },
-    { id: 8, name: 'Французский жим', category: 'arms' },
-];
 
 // ============================================
 // Components
@@ -243,11 +225,13 @@ const ResultsDisplay: React.FC<{
 };
 
 const ExerciseSelector: React.FC<{
-    exercises: Exercise[];
-    selected: Exercise | null;
-    onChange: (exercise: Exercise | null) => void;
+    exercises: OneRMExercise[];
+    selected: OneRMExercise | null;
+    onChange: (exercise: OneRMExercise | null) => void;
+    isLoading?: boolean;
+    isError?: boolean;
     error?: string;
-}> = ({ exercises, selected, onChange, error }) => {
+}> = ({ exercises, selected, onChange, isLoading, isError: isApiError, error }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
 
@@ -305,7 +289,19 @@ const ExerciseSelector: React.FC<{
                             />
                         </div>
                         <div className="overflow-y-auto max-h-48">
-                            {filtered.map((exercise) => (
+                            {isLoading && exercises.length === 0 && (
+                                <div className="flex items-center justify-center gap-2 px-4 py-6 text-telegram-hint">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm">Загрузка упражнений…</span>
+                                </div>
+                            )}
+                            {isApiError && exercises.length === 0 && (
+                                <div className="flex items-center justify-center gap-2 px-4 py-6 text-danger">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span className="text-sm">Не удалось загрузить упражнения</span>
+                                </div>
+                            )}
+                            {!isLoading && !isApiError && filtered.map((exercise) => (
                                 <button
                                     key={exercise.id}
                                     onClick={() => {
@@ -322,7 +318,7 @@ const ExerciseSelector: React.FC<{
                                     {exercise.name}
                                 </button>
                             ))}
-                            {filtered.length === 0 && (
+                            {!isLoading && !isApiError && filtered.length === 0 && (
                                 <p className="px-4 py-3 text-sm text-telegram-hint text-center">
                                     Ничего не найдено
                                 </p>
@@ -399,7 +395,7 @@ const HistoryList: React.FC<{
 
 interface OneRMCalculatorProps {
     className?: string;
-    initialExercise?: Exercise;
+    initialExercise?: OneRMExercise;
     onSave?: (record: SavedRecord) => void;
 }
 
@@ -408,10 +404,13 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
     initialExercise,
     onSave,
 }) => {
+    // Exercises from API
+    const { exercises, isLoading: isExercisesLoading, isError: isExercisesError } = useOneRMExercises();
+
     // Input state
     const [weight, setWeight] = useState<string>('');
     const [reps, setReps] = useState<string>('');
-    const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(initialExercise || null);
+    const [selectedExercise, setSelectedExercise] = useState<OneRMExercise | null>(initialExercise || null);
 
     // UI state
     const [saveAttempted, setSaveAttempted] = useState(false);
@@ -531,12 +530,15 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
     const handleSelectHistory = useCallback((record: SavedRecord) => {
         setWeight(record.weight.toString());
         setReps(record.reps.toString());
-        const exercise = MOCK_EXERCISES.find(e => e.id === record.exerciseId);
+        const exercise = exercises.find(e => e.id === record.exerciseId);
         if (exercise) {
             setSelectedExercise(exercise);
+        } else {
+            // Graceful fallback for old mock IDs or deleted exercises
+            setSelectedExercise({ id: record.exerciseId, name: record.exerciseName, category: '' });
         }
         setShowHistory(false);
-    }, []);
+    }, [exercises]);
 
     // Clear form
     const handleClear = useCallback(() => {
@@ -613,12 +615,14 @@ const OneRMCalculator: React.FC<OneRMCalculatorProps> = ({
                         Упражнение
                     </label>
                     <ExerciseSelector
-                        exercises={MOCK_EXERCISES}
+                        exercises={exercises}
                         selected={selectedExercise}
                         onChange={(ex) => {
                             setSelectedExercise(ex);
                             setExerciseError(null);
                         }}
+                        isLoading={isExercisesLoading}
+                        isError={isExercisesError}
                         error={exerciseError ?? undefined}
                     />
                 </div>
