@@ -9,11 +9,22 @@ import {
     isoNow,
     isoMinutesAgo,
 } from './helpers/workout-api-mock'
+import { setupTelegramWebApp } from './helpers/telegram-mock'
 
 test.use({ ...devices['Pixel 7'] })
 
 test.describe('mobile workout regressions @regression @mobile', () => {
     test.describe.configure({ timeout: 60_000 })
+
+    test.beforeEach(async ({ page }) => {
+        // Mobile suite runs under a Playwright "project" now; ensure Telegram WebApp exists
+        // to avoid being stuck on the "Open Mini App in Telegram" fallback screen.
+        await setupTelegramWebApp(page, {
+            platform: 'android',
+            safeAreaInset: { top: 0, bottom: 20, left: 0, right: 0 },
+            contentSafeAreaInset: { top: 0, bottom: 20, left: 0, right: 0 },
+        })
+    })
 
     test('resume active workout from hub', async ({ page }) => {
         const draftWorkoutId = 1701
@@ -137,7 +148,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await page.getByRole('button', { name: /Отдых\s/ }).first().click()
 
         await expect(page.getByText('Отдых').first()).toBeVisible()
-        await expect(page.getByRole('button', { name: 'Пропустить' })).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Пропустить' }).last()).toBeVisible()
 
         await page.locator('[data-testid="set-toggle-btn"]').first().click()
         await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)

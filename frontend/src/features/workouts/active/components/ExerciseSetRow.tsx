@@ -267,6 +267,9 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
 
     return (
         <div
+            data-testid="set-row"
+            data-set-number={set.set_number}
+            data-current={isCurrent ? 'true' : 'false'}
             className={`rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text ${isCurrent ? 'border border-primary/35 bg-primary/5' : 'border border-transparent'}`}
         >
             <div className="flex items-center justify-between gap-2">
@@ -281,6 +284,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                     {!isCurrent ? (
                         <button
                             type="button"
+                            data-testid="set-row-expand-btn"
                             onClick={() => setIsExpanded((prev) => !prev)}
                             className="flex min-h-[40px] touch-manipulation items-center gap-1 rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint"
                         >
@@ -290,6 +294,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                     ) : null}
                     <button
                         type="button"
+                        data-testid="set-skip-btn"
                         onClick={handleSkipSet}
                         className="min-h-[40px] touch-manipulation rounded-xl bg-telegram-secondary-bg px-3 py-2 text-xs font-medium text-telegram-hint"
                     >
@@ -346,6 +351,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                     <button
                                         key={`step-${step}`}
                                         type="button"
+                                        data-testid="set-weight-step-btn"
+                                        data-step={step}
                                         onClick={() => setWeightStep(step)}
                                         className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${weightStep === step
                                                 ? 'bg-primary text-primary-foreground'
@@ -360,6 +367,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
+                                    data-testid="set-copy-previous-btn"
                                     onClick={handleCopyPrevious}
                                     className="flex min-h-[44px] flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint active:bg-telegram-secondary-bg"
                                 >
@@ -367,6 +375,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                 </button>
                                 <button
                                     type="button"
+                                    data-testid="set-weight-dec-btn"
+                                    data-step={weightStep}
                                     onClick={() => handleAdjustWeight(-weightStep)}
                                     className="flex min-h-[44px] w-[52px] touch-manipulation items-center justify-center rounded-lg bg-telegram-bg text-sm font-bold text-telegram-text active:bg-telegram-secondary-bg"
                                     aria-label={`Уменьшить на ${weightStep}`}
@@ -375,6 +385,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                 </button>
                                 <button
                                     type="button"
+                                    data-testid="set-weight-inc-btn"
+                                    data-step={weightStep}
                                     onClick={() => handleAdjustWeight(weightStep)}
                                     className="flex min-h-[44px] w-[52px] touch-manipulation items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary active:bg-primary/20"
                                     aria-label={`Увеличить на ${weightStep}`}
@@ -491,6 +503,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                 Вес (кг)
                                 <input
                                     ref={weightInputRef}
+                                    data-testid="set-weight-input"
                                     type="number"
                                     min={0}
                                     step="0.5"
