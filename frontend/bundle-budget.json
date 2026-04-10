@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "measured": {
+    "metric": "gzip"
+  },
+  "thresholds": {
+    "entry": {
+      "maxPerChunkBytes": 122880
+    },
+    "vendor": {
+      "maxTotalBytes": 235520,
+      "maxPerChunkBytes": 143360
+    },
+    "asyncRoute": {
+      "maxPerChunkBytes": 46080,
+      "excludeFileNameIncludes": [
+        "ActiveWorkoutModals-",
+        "ActiveExerciseList.sortable-",
+        "WorkoutBlocksSortableList.impl-",
+        "sortable.esm-"
+      ]
+    },
+    "dnd": {
+      "maxPerChunkBytes": 20480,
+      "maxTotalBytes": 53248
+    },
+    "modal": {
+      "maxPerChunkBytes": 20480
+    }
+  },
+  "classifiers": {
+    "vendor": {
+      "nodeModulesRatioGte": 0.7,
+      "nameIncludes": ["react-vendor", "charts", "telegram-sdk"]
+    },
+    "asyncRoute": {
+      "facadeModuleIdIncludes": ["/src/features/"]
+    },
+    "dnd": {
+      "fileNameIncludes": [
+        "sortable.esm-",
+        "ActiveExerciseList.sortable-",
+        "WorkoutBlocksSortableList.impl-"
+      ]
+    },
+    "modal": {
+      "fileNameIncludes": ["ActiveWorkoutModals-"]
+    }
+  },
+  "notes": [
+    "Budgets target Telegram Mini App mobile UX: keep initial JS light, shift rarely-used code to async chunks.",
+    "Thresholds are gzip bytes; adjust with real device telemetry when available.",
+    "dnd: @dnd-kit + sortable fragments; modal: lazy-loaded Active workout modals.",
+    "asyncRoute excludes dnd/modal file name patterns so shared vendor chunks (e.g. sortable.esm) are not double-checked against page limits."
+  ]
+}
+

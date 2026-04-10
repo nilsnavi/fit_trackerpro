@@ -153,6 +153,10 @@ web_modules/
 
 # Root package.json используется для монорепо-скриптов (frontend+backend).
 
+# --- Frontend bundle budget (генерируется локально/в CI, не коммитить) ---
+frontend/bundle-report.md
+frontend/bundle-report.json
+
 # --- Testing / E2E ---
 playwright-report/
 frontend/playwright-report/
