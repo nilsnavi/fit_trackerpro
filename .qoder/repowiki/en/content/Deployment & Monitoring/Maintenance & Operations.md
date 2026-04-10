@@ -3,7 +3,7 @@
 <cite>
 **Referenced Files in This Document**
 - [README.md](file://README.md)
-- [README-DEPLOYMENT.md](file://README-DEPLOYMENT.md)
+- [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [docs/ENVIRONMENT_SETUP.md](file://docs/ENVIRONMENT_SETUP.md)
 - [docs/PRODUCTION_CHECKLIST.md](file://docs/PRODUCTION_CHECKLIST.md)
@@ -68,7 +68,7 @@ BE --> RD
 
 **Section sources**
 - [README.md:18-43](file://README.md#L18-L43)
-- [README-DEPLOYMENT.md:26-47](file://README-DEPLOYMENT.md#L26-L47)
+- [docs/DEPLOYMENT.md:26-47](file://docs/DEPLOYMENT.md#L26-L47)
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
 
 ## Core Components
@@ -153,7 +153,7 @@ Revert --> Done
 **Section sources**
 - [database/migrations/env.py:1-81](file://database/migrations/env.py#L1-L81)
 - [database/migrations/versions/cd723942379e_initial_schema.py:1-460](file://database/migrations/versions/cd723942379e_initial_schema.py#L1-L460)
-- [README-DEPLOYMENT.md:81-98](file://README-DEPLOYMENT.md#L81-L98)
+- [docs/DEPLOYMENT.md:81-98](file://docs/DEPLOYMENT.md#L81-L98)
 
 ### Database Backups and Restoration
 - Manual backup and restore commands are provided.
@@ -174,11 +174,11 @@ H --> I["psql restore"]
 ```
 
 **Diagram sources**
-- [README-DEPLOYMENT.md:337-348](file://README-DEPLOYMENT.md#L337-L348)
+- [docs/DEPLOYMENT.md:337-348](file://docs/DEPLOYMENT.md#L337-L348)
 - [.github/workflows/deploy.yml:70-72](file://.github/workflows/deploy.yml#L70-L72)
 
 **Section sources**
-- [README-DEPLOYMENT.md:337-348](file://README-DEPLOYMENT.md#L337-L348)
+- [docs/DEPLOYMENT.md:337-348](file://docs/DEPLOYMENT.md#L337-L348)
 - [docs/DEPLOYMENT.md:337-348](file://docs/DEPLOYMENT.md#L337-L348)
 - [.github/workflows/deploy.yml:70-72](file://.github/workflows/deploy.yml#L70-L72)
 
@@ -216,7 +216,7 @@ end
 
 **Section sources**
 - [.github/workflows/deploy.yml:1-156](file://.github/workflows/deploy.yml#L1-L156)
-- [README-DEPLOYMENT.md:100-112](file://README-DEPLOYMENT.md#L100-L112)
+- [docs/DEPLOYMENT.md:100-112](file://docs/DEPLOYMENT.md#L100-L112)
 - [docker-compose.prod.yml:54-101](file://docker-compose.prod.yml#L54-L101)
 
 ### Health Monitoring and Operational Checklists
@@ -241,13 +241,13 @@ Alerts --> |No| OK["Operational"]
 ```
 
 **Diagram sources**
-- [README-DEPLOYMENT.md:171-173](file://README-DEPLOYMENT.md#L171-L173)
+- [docs/DEPLOYMENT.md:171-173](file://docs/DEPLOYMENT.md#L171-L173)
 - [docs/DEPLOYMENT.md:250-256](file://docs/DEPLOYMENT.md#L250-L256)
 - [monitoring/prometheus.yml:31-35](file://monitoring/prometheus.yml#L31-L35)
 - [monitoring/grafana/provisioning/datasources/datasources.yml:3-15](file://monitoring/grafana/provisioning/datasources/datasources.yml#L3-L15)
 
 **Section sources**
-- [README-DEPLOYMENT.md:171-173](file://README-DEPLOYMENT.md#L171-L173)
+- [docs/DEPLOYMENT.md:171-173](file://docs/DEPLOYMENT.md#L171-L173)
 - [docs/DEPLOYMENT.md:250-256](file://docs/DEPLOYMENT.md#L250-L256)
 - [docs/PRODUCTION_CHECKLIST.md:66-116](file://docs/PRODUCTION_CHECKLIST.md#L66-L116)
 - [monitoring/prometheus.yml:1-49](file://monitoring/prometheus.yml#L1-L49)
@@ -313,7 +313,7 @@ Common issues and resolutions:
 - Telegram WebApp not loading: ensure HTTPS, correct domain, and allowed origins.
 
 **Section sources**
-- [README-DEPLOYMENT.md:182-214](file://README-DEPLOYMENT.md#L182-L214)
+- [docs/DEPLOYMENT.md:182-214](file://docs/DEPLOYMENT.md#L182-L214)
 - [docs/DEPLOYMENT.md:350-396](file://docs/DEPLOYMENT.md#L350-L396)
 
 ## Conclusion
@@ -329,7 +329,7 @@ FitTracker Pro’s operations model emphasizes automation, observability, and sa
 - System cleanup: prune unused Docker images and volumes periodically.
 
 **Section sources**
-- [README-DEPLOYMENT.md:337-348](file://README-DEPLOYMENT.md#L337-L348)
+- [docs/DEPLOYMENT.md:337-348](file://docs/DEPLOYMENT.md#L337-L348)
 - [docs/DEPLOYMENT.md:337-348](file://docs/DEPLOYMENT.md#L337-L348)
 - [docs/PRODUCTION_CHECKLIST.md:211-223](file://docs/PRODUCTION_CHECKLIST.md#L211-L223)
 

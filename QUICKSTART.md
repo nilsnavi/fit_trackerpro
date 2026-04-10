@@ -1,6 +1,6 @@
 # FitTracker Pro — быстрый старт
 
-Минимальные шаги, чтобы поднять стек локально через Docker. Подробности: [README.md](./README.md), индекс документации: [docs/DOCS_INDEX.md](./docs/DOCS_INDEX.md).
+Минимальные шаги, чтобы поднять стек локально через Docker. Подробности: [README.md](./README.md), индекс документации: [docs/README.md](./docs/README.md).
 
 ## 1. Клонировать и скопировать env
 
@@ -59,5 +59,5 @@ powershell -ExecutionPolicy Bypass -File .\scripts\dev-up.ps1
 ## Дополнительно
 
 - [LAUNCH_GUIDE.md](./LAUNCH_GUIDE.md) — развёрнутая инструкция.
-- [CHECKLIST.md](./CHECKLIST.md) — чеклист готовности.
-- [TELEGRAM_SETUP.md](./TELEGRAM_SETUP.md) — настройка Telegram Mini App.
+- [Launch readiness checklist](./docs/checklists/launch-readiness.md) — чеклист готовности.
+- [Telegram Mini App setup](./docs/product/telegram-setup.md) — настройка Telegram Mini App.

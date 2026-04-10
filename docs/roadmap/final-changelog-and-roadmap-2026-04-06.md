@@ -1,7 +1,7 @@
 # FitTracker Pro - Final Changelog and Feature Roadmap
 
-Date: 2026-04-06
-Branch: main
+Date: 2026-04-06  
+Branch: main  
 Scope: Consolidated changelog (stability + product) and next-step feature roadmap.
 
 ## 1) Final changelog (high level)
@@ -166,3 +166,4 @@ P2 (after stabilization)
 - No hardcoded/stubbed critical backend paths remain in core flows.
 - CI validates core feature path and blocks regressions.
 - Operational runbooks align with actual deploy/migration behavior.
+

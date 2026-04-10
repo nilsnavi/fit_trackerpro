@@ -220,10 +220,10 @@ Artifacts: playwright-report/ + test-results/
 
 ## 📖 Documentation Links
 
-- **Full Guide:** [frontend/e2e/README.md](./frontend/e2e/README.md)
-- **Implementation Details:** [GOLDEN_PATH_E2E_IMPLEMENTATION.md](./GOLDEN_PATH_E2E_IMPLEMENTATION.md)
-- **Fixtures Reference:** [frontend/e2e/fixtures.ts](./frontend/e2e/fixtures.ts)
-- **Telegram Mock:** [frontend/e2e/helpers/telegram-mock.ts](./frontend/e2e/helpers/telegram-mock.ts)
+- **Full Guide:** `frontend/e2e/README.md`
+- **Implementation Details:** `docs/testing/golden-path-e2e-implementation.md`
+- **Fixtures Reference:** `frontend/e2e/fixtures.ts`
+- **Telegram Mock:** `frontend/e2e/helpers/telegram-mock.ts`
 
 ## ⏱️ Timeouts
 
@@ -237,11 +237,12 @@ Artifacts: playwright-report/ + test-results/
 ## 🎓 Learning Resources
 
 1. **Start here:** `npm run e2e:ui` to see tests run interactively
-2. **Read guide:** [frontend/e2e/README.md](./frontend/e2e/README.md)
-3. **Check examples:** [frontend/e2e/critical-path.workout.spec.ts](./frontend/e2e/critical-path.workout.spec.ts)
-4. **Try fixtures:** [frontend/e2e/fixtures.ts](./frontend/e2e/fixtures.ts)
+2. **Read guide:** `frontend/e2e/README.md`
+3. **Check examples:** `frontend/e2e/critical-path.workout.spec.ts`
+4. **Try fixtures:** `frontend/e2e/fixtures.ts`
 
 ---
 
 **Last Updated:** April 8, 2026  
 **Playwright Version:** Latest (from package.json)
+

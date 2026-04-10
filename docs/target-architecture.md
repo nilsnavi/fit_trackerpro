@@ -123,6 +123,6 @@
 ## Связанные документы
 
 - [`current-architecture.md`](current-architecture.md) — as-is
-- [`README.md`](../README.md), [`README-DEPLOYMENT.md`](../README-DEPLOYMENT.md) — запуск и операции
+- [`README.md`](../README.md), [`docs/DEPLOYMENT.md`](DEPLOYMENT.md) — запуск и операции
 - [`DEPLOYMENT.md`](DEPLOYMENT.md), [`ROLLBACK_STRATEGY.md`](ROLLBACK_STRATEGY.md) — выкат и откат
 - [`env-matrix.md`](env-matrix.md) — переменные окружения

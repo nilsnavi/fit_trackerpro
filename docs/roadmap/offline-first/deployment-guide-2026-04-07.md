@@ -71,9 +71,9 @@ Workout data easily lost when:
 
 | File | Status | Purpose |
 |------|--------|---------|
-| **OFFLINE_FIRST_IMPLEMENTATION_PLAN.md** | ✅ CREATED | Comprehensive 10-section plan |
-| **BACKEND_IDEMPOTENCY_IMPLEMENTATION.md** | ✅ CREATED | Backend spec + code samples |
-| **OFFLINE_FIRST_DEPLOYMENT_GUIDE.md** | ✅ THIS FILE | Integration + testing guide |
+| **docs/roadmap/offline-first/implementation-plan-2026-04-07.md** | ✅ | Comprehensive 10-section plan |
+| **docs/roadmap/offline-first/backend-idempotency-implementation.md** | ✅ | Backend spec + code samples |
+| **docs/roadmap/offline-first/deployment-guide-2026-04-07.md** | ✅ | Integration + testing guide |
 
 ---
 
@@ -455,10 +455,9 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## Documentation References
 
-1. **OFFLINE_FIRST_IMPLEMENTATION_PLAN.md** — Detailed architecture  
-2. **BACKEND_IDEMPOTENCY_IMPLEMENTATION.md** — Backend spec + code  
-3. **offline-pwa.md** — Existing PWA configuration  
-4. **Workout Templates Safety** — Optimistic locking patterns  
+1. **Implementation plan** — `docs/roadmap/offline-first/implementation-plan-2026-04-07.md`
+2. **Backend spec + code** — `docs/roadmap/offline-first/backend-idempotency-implementation.md`
+3. **Offline/PWA canon** — `docs/offline-pwa.md`
 
 ---
 
@@ -490,25 +489,6 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ---
 
-## Questions & Troubleshooting
-
-### Q: What if user edits offline for 30 minutes?
-**A:** Draft persists in localStorage indefinitely. When online, all changes sync as single PATCH. If server conflicts, user gets merge options.
-
-### Q: What happens if idempotency key collision?
-**A:** Extremely unlikely (UUID v4 = 128-bit random). If happens, same dedupeKey ensures deduplication before storage.
-
-### Q: Can user lose data if completing offline?
-**A:** No. Completion queued locally + persisted. Syncs when online with idempotency_key + version guaranteeing safety.
-
-### Q: What about sync queue size limits?
-**A:** `SYNC_QUEUE_MAX_ITEMS = 200`. Older items auto-removed. Workout operations deduplicated (last edit wins).
-
-### Q: Performance impact of localStorage?
-**A:** Debounced to 500ms, ~1-2KB per save. No perceptible UI impact. Faster than API calls.
-
----
-
 ## Next Steps
 
 1. **Review** this entire document with team
@@ -523,3 +503,4 @@ docker-compose -f docker-compose.prod.yml up -d
 **Author:** GitHub Copilot  
 **Date:** April 7, 2026  
 **Status:** 🚀 Ready for Production Implementation
+

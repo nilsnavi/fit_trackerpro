@@ -40,6 +40,6 @@
 
 Production-практика:
 
-- резервная копия перед миграцией (см. `.github/workflows/migrate.yml` и `README-DEPLOYMENT.md`)
+- резервная копия перед миграцией (см. `.github/workflows/migrate.yml` и `docs/DEPLOYMENT.md`)
 - post-migration health checks: `GET /api/v1/system/health`, `GET /api/v1/system/version`
 

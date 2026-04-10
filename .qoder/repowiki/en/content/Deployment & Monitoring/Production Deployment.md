@@ -6,7 +6,7 @@
 - [nginx.conf](file://nginx/nginx.conf)
 - [Dockerfile.backend](file://backend/Dockerfile)
 - [Dockerfile.frontend](file://frontend/Dockerfile)
-- [README-DEPLOYMENT.md](file://README-DEPLOYMENT.md)
+- [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [docs/ENVIRONMENT_SETUP.md](file://docs/ENVIRONMENT_SETUP.md)
 - [backend/app/utils/config.py](file://backend/app/utils/config.py)
@@ -286,7 +286,7 @@ Initial configuration:
 - Configure domain and SSL certificates
 
 **Section sources**
-- [README-DEPLOYMENT.md:171-174](file://README-DEPLOYMENT.md#L171-L174)
+- [docs/DEPLOYMENT.md:171-174](file://docs/DEPLOYMENT.md#L171-L174)
 - [docs/DEPLOYMENT.md:391-396](file://docs/DEPLOYMENT.md#L391-L396)
 
 ### Container Health Checks and Logging
@@ -346,7 +346,7 @@ Common issues and resolutions:
 - Telegram WebApp not loading: ensure HTTPS and correct allowed domains
 
 **Section sources**
-- [README-DEPLOYMENT.md:182-214](file://README-DEPLOYMENT.md#L182-L214)
+- [docs/DEPLOYMENT.md:182-214](file://docs/DEPLOYMENT.md#L182-L214)
 - [docs/DEPLOYMENT.md:350-396](file://docs/DEPLOYMENT.md#L350-L396)
 
 ## Conclusion

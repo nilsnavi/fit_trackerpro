@@ -2,7 +2,7 @@
 
 <cite>
 **Referenced Files in This Document**
-- [README-DEPLOYMENT.md](file://README-DEPLOYMENT.md)
+- [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [deploy.sh](file://deploy.sh)
 - [docker-compose.prod.yml](file://docker-compose.prod.yml)
 - [docker-compose.yml](file://docker-compose.yml)
@@ -96,7 +96,7 @@ MonCompose --> CAdvisor
 - [monitoring/docker-compose.monitoring.yml:1-124](file://monitoring/docker-compose.monitoring.yml#L1-L124)
 
 **Section sources**
-- [README-DEPLOYMENT.md:26-47](file://README-DEPLOYMENT.md#L26-L47)
+- [docs/DEPLOYMENT.md:26-47](file://docs/DEPLOYMENT.md#L26-L47)
 - [docker-compose.yml:1-99](file://docker-compose.yml#L1-L99)
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
 
@@ -146,7 +146,7 @@ Prometheus --> Grafana
 - [monitoring/docker-compose.monitoring.yml:1-124](file://monitoring/docker-compose.monitoring.yml#L1-L124)
 
 **Section sources**
-- [README-DEPLOYMENT.md:100-113](file://README-DEPLOYMENT.md#L100-L113)
+- [docs/DEPLOYMENT.md:100-113](file://docs/DEPLOYMENT.md#L100-L113)
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
 
 ## Detailed Component Analysis
@@ -321,7 +321,7 @@ Common operational issues and resolutions:
 - SSL/TLS problems: Confirm certificate presence, permissions, and Nginx configuration
 
 **Section sources**
-- [README-DEPLOYMENT.md:182-214](file://README-DEPLOYMENT.md#L182-L214)
+- [docs/DEPLOYMENT.md:182-214](file://docs/DEPLOYMENT.md#L182-L214)
 
 ## Conclusion
 FitTracker Pro’s deployment infrastructure combines robust containerization, automated CI/CD, hardened reverse proxy configuration, and comprehensive monitoring. The development and production setups share consistent patterns while emphasizing security, observability, and operational reliability.
