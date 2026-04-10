@@ -126,6 +126,28 @@ unit_frontend:
         coverage_format: cobertura
         path: frontend/coverage/cobertura-coverage.xml
 
+bundle_budget_frontend:
+  stage: test
+  image: node:20-bookworm
+  cache:
+    key: "npm-cache"
+    paths:
+      - frontend/.npm/
+  variables:
+    npm_config_cache: "$CI_PROJECT_DIR/frontend/.npm"
+  script:
+    - cd frontend
+    - npm ci --legacy-peer-deps
+    - BUNDLE_STATS=1 npm run build
+    - npm run bundle:check
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - frontend/bundle-report.md
+      - frontend/bundle-report.json
+      - frontend/dist/bundle-stats.json
+
 e2e_frontend:
   stage: test
   image: node:20-bookworm

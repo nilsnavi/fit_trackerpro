@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "bundle:check": "node scripts/check-bundle-budget.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:precommit": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 9999",
     "typecheck": "tsc --noEmit",

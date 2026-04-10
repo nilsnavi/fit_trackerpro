@@ -41,6 +41,22 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:ci
 
+      - name: Build (emit bundle stats)
+        run: BUNDLE_STATS=1 npm run build
+
+      - name: Enforce bundle performance budgets
+        run: npm run bundle:check
+
+      - name: Upload bundle budget report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-budget-report
+          path: |
+            ./frontend/bundle-report.md
+            ./frontend/bundle-report.json
+            ./frontend/dist/bundle-stats.json
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

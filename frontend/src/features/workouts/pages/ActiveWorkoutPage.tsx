@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -48,7 +48,9 @@ import { useActiveWorkoutCatalogSuggestions } from '@features/workouts/active/ho
 import { ActiveWorkoutSummarySection } from '@features/workouts/active/containers/ActiveWorkoutSummarySection'
 import { ActiveWorkoutExerciseSection } from '@features/workouts/active/containers/ActiveWorkoutExerciseSection'
 import { ActiveWorkoutBottomActions } from '@features/workouts/active/containers/ActiveWorkoutBottomActions'
-import { ActiveWorkoutModals } from '@features/workouts/active/containers/ActiveWorkoutModals'
+const ActiveWorkoutModals = lazy(() =>
+    import('@features/workouts/active/containers/ActiveWorkoutModals').then((m) => ({ default: m.ActiveWorkoutModals })),
+)
 
 export function ActiveWorkoutPage() {
     const { id } = useParams()
@@ -318,6 +320,15 @@ export function ActiveWorkoutPage() {
         goToNextSet()
     }
 
+    const shouldLoadModals =
+        isLeaveConfirmOpen ||
+        completion.isFinishSheetOpen ||
+        completion.isAbandonConfirmOpen ||
+        exerciseActions.isDeleteExerciseConfirmOpen ||
+        exerciseActions.addItemKind != null ||
+        isRestPresetsModalOpen ||
+        isConflictOpen
+
     if (!isLoading && !errorMessage && workout && !isActiveDraft) {
         return (
             <div className="p-4 space-y-4">
@@ -337,71 +348,75 @@ export function ActiveWorkoutPage() {
 
     return (
         <div className={`p-4 space-y-4 ${isActiveDraft ? 'pb-52' : ''}`}>
-            <ActiveWorkoutModals
-                isLeaveConfirmOpen={isLeaveConfirmOpen}
-                onLeave={onLeave}
-                onStay={onStay}
-                isFinishSheetOpen={completion.isFinishSheetOpen}
-                durationMinutes={completion.durationMinutes}
-                completedExercises={completedExercises}
-                comment={workout?.comments ?? ''}
-                tagsDraft={completion.finishTagsDraft}
-                isFinishPending={completeMutation.isPending}
-                finishErrorMessage={completion.sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
-                syncState={syncState}
-                onCloseFinish={completion.closeFinishSheet}
-                onConfirmFinish={completion.handleConfirmFinishFromSheet}
-                onChangeTagsDraft={completion.setFinishTagsDraft}
-                isAbandonConfirmOpen={completion.isAbandonConfirmOpen}
-                onCloseAbandon={completion.closeAbandonConfirm}
-                onConfirmAbandon={completion.handleConfirmAbandonDraft}
-                isDeleteExerciseConfirmOpen={exerciseActions.isDeleteExerciseConfirmOpen}
-                onCloseDeleteExercise={exerciseActions.closeDeleteExerciseConfirm}
-                onConfirmDeleteExercise={exerciseActions.handleConfirmDeleteExercise}
-                addItemKind={exerciseActions.addItemKind}
-                isCatalogLoading={isCatalogLoading}
-                catalogFilter={exerciseActions.exerciseCatalogFilter}
-                searchQuery={exerciseActions.exerciseSearchQuery}
-                selectedExercise={exerciseActions.selectedCatalogExercise}
-                filteredCatalogExercises={filteredCatalogExercises}
-                recentExercises={recentCatalogExercises}
-                favoriteExercises={favoriteCatalogExercises}
-                suggestedExercises={suggestedCatalogExercises}
-                sets={exerciseActions.addItemSets}
-                reps={exerciseActions.addItemReps}
-                weight={exerciseActions.addItemWeight}
-                duration={exerciseActions.addItemDuration}
-                notes={exerciseActions.addItemNotes}
-                onCloseAddItem={exerciseActions.closeAddItemModal}
-                onChangeFilter={exerciseActions.setExerciseCatalogFilter}
-                onChangeSearch={exerciseActions.setExerciseSearchQuery}
-                onSelectExercise={exerciseActions.setSelectedCatalogExercise}
-                onChangeSets={exerciseActions.setAddItemSets}
-                onChangeReps={exerciseActions.setAddItemReps}
-                onChangeWeight={exerciseActions.setAddItemWeight}
-                onChangeDuration={exerciseActions.setAddItemDuration}
-                onChangeNotes={exerciseActions.setAddItemNotes}
-                onSubmitCreateItem={exerciseActions.handleCreateItem}
-                addTimerName={exerciseActions.addItemName}
-                onChangeTimerName={exerciseActions.setAddItemName}
-                isRestPresetsModalOpen={isRestPresetsModalOpen}
-                restPresetsDraft={restPresetsDraft}
-                onCloseRestPresets={closeRestPresets}
-                onChangeRestPresetsDraft={setRestPresetsDraft}
-                onSaveRestPresets={handleSaveRestPresets}
-                isConflictOpen={isConflictOpen}
-                conflictInfo={conflictInfo}
-                onResolveConflict={(strategy) => {
-                    if (strategy === 'local') {
-                        toast.success('Ваши изменения сохранены')
-                    } else {
-                        void queryClient.invalidateQueries({ queryKey: detailQueryKey })
-                        toast.info('Данные обновлены с сервера')
-                    }
-                    closeConflict()
-                }}
-                onCancelConflict={closeConflict}
-            />
+            {shouldLoadModals ? (
+                <Suspense fallback={null}>
+                    <ActiveWorkoutModals
+                        isLeaveConfirmOpen={isLeaveConfirmOpen}
+                        onLeave={onLeave}
+                        onStay={onStay}
+                        isFinishSheetOpen={completion.isFinishSheetOpen}
+                        durationMinutes={completion.durationMinutes}
+                        completedExercises={completedExercises}
+                        comment={workout?.comments ?? ''}
+                        tagsDraft={completion.finishTagsDraft}
+                        isFinishPending={completeMutation.isPending}
+                        finishErrorMessage={completion.sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
+                        syncState={syncState}
+                        onCloseFinish={completion.closeFinishSheet}
+                        onConfirmFinish={completion.handleConfirmFinishFromSheet}
+                        onChangeTagsDraft={completion.setFinishTagsDraft}
+                        isAbandonConfirmOpen={completion.isAbandonConfirmOpen}
+                        onCloseAbandon={completion.closeAbandonConfirm}
+                        onConfirmAbandon={completion.handleConfirmAbandonDraft}
+                        isDeleteExerciseConfirmOpen={exerciseActions.isDeleteExerciseConfirmOpen}
+                        onCloseDeleteExercise={exerciseActions.closeDeleteExerciseConfirm}
+                        onConfirmDeleteExercise={exerciseActions.handleConfirmDeleteExercise}
+                        addItemKind={exerciseActions.addItemKind}
+                        isCatalogLoading={isCatalogLoading}
+                        catalogFilter={exerciseActions.exerciseCatalogFilter}
+                        searchQuery={exerciseActions.exerciseSearchQuery}
+                        selectedExercise={exerciseActions.selectedCatalogExercise}
+                        filteredCatalogExercises={filteredCatalogExercises}
+                        recentExercises={recentCatalogExercises}
+                        favoriteExercises={favoriteCatalogExercises}
+                        suggestedExercises={suggestedCatalogExercises}
+                        sets={exerciseActions.addItemSets}
+                        reps={exerciseActions.addItemReps}
+                        weight={exerciseActions.addItemWeight}
+                        duration={exerciseActions.addItemDuration}
+                        notes={exerciseActions.addItemNotes}
+                        onCloseAddItem={exerciseActions.closeAddItemModal}
+                        onChangeFilter={exerciseActions.setExerciseCatalogFilter}
+                        onChangeSearch={exerciseActions.setExerciseSearchQuery}
+                        onSelectExercise={exerciseActions.setSelectedCatalogExercise}
+                        onChangeSets={exerciseActions.setAddItemSets}
+                        onChangeReps={exerciseActions.setAddItemReps}
+                        onChangeWeight={exerciseActions.setAddItemWeight}
+                        onChangeDuration={exerciseActions.setAddItemDuration}
+                        onChangeNotes={exerciseActions.setAddItemNotes}
+                        onSubmitCreateItem={exerciseActions.handleCreateItem}
+                        addTimerName={exerciseActions.addItemName}
+                        onChangeTimerName={exerciseActions.setAddItemName}
+                        isRestPresetsModalOpen={isRestPresetsModalOpen}
+                        restPresetsDraft={restPresetsDraft}
+                        onCloseRestPresets={closeRestPresets}
+                        onChangeRestPresetsDraft={setRestPresetsDraft}
+                        onSaveRestPresets={handleSaveRestPresets}
+                        isConflictOpen={isConflictOpen}
+                        conflictInfo={conflictInfo}
+                        onResolveConflict={(strategy) => {
+                            if (strategy === 'local') {
+                                toast.success('Ваши изменения сохранены')
+                            } else {
+                                void queryClient.invalidateQueries({ queryKey: detailQueryKey })
+                                toast.info('Данные обновлены с сервера')
+                            }
+                            closeConflict()
+                        }}
+                        onCancelConflict={closeConflict}
+                    />
+                </Suspense>
+            ) : null}
 
             <ActiveWorkoutHeader
                 onBack={() => guardedAction(() => navigate('/workouts'))}

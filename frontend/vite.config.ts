@@ -3,14 +3,73 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { Plugin } from 'vite'
 
 /** Same roots as `compilerOptions.paths` in tsconfig.json */
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const srcDir = path.resolve(__dirname, 'src')
 
+function bundleStatsPlugin(): Plugin {
+    return {
+        name: 'fittracker-bundle-stats',
+        apply: 'build',
+        generateBundle(_outputOptions, bundle) {
+            const chunks = []
+            const assets = []
+
+            for (const [fileName, item] of Object.entries(bundle)) {
+                if (item.type === 'chunk') {
+                    const nodeModulesBytes = Object.entries(item.modules).reduce((acc, [id, m]) => {
+                        if (id.includes('/node_modules/')) return acc + (m.renderedLength ?? 0)
+                        return acc
+                    }, 0)
+                    const totalModuleBytes = Object.values(item.modules).reduce(
+                        (acc, m) => acc + (m.renderedLength ?? 0),
+                        0,
+                    )
+
+                    chunks.push({
+                        fileName,
+                        name: item.name,
+                        isEntry: item.isEntry,
+                        isDynamicEntry: item.isDynamicEntry,
+                        facadeModuleId: item.facadeModuleId,
+                        imports: item.imports,
+                        dynamicImports: item.dynamicImports,
+                        moduleCount: Object.keys(item.modules).length,
+                        nodeModulesBytes,
+                        totalModuleBytes,
+                        nodeModulesRatio:
+                            totalModuleBytes > 0 ? nodeModulesBytes / totalModuleBytes : 0,
+                    })
+                } else if (item.type === 'asset') {
+                    assets.push({
+                        fileName,
+                        name: item.name ?? null,
+                    })
+                }
+            }
+
+            const stats = {
+                formatVersion: 1,
+                generatedAt: new Date().toISOString(),
+                chunks: chunks.sort((a, b) => a.fileName.localeCompare(b.fileName)),
+                assets: assets.sort((a, b) => a.fileName.localeCompare(b.fileName)),
+            }
+
+            this.emitFile({
+                type: 'asset',
+                fileName: 'bundle-stats.json',
+                source: JSON.stringify(stats, null, 2) + '\n',
+            })
+        },
+    }
+}
+
 export default defineConfig({
     plugins: [
         react(),
+        ...(process.env.BUNDLE_STATS ? [bundleStatsPlugin()] : []),
         VitePWA({
             /** Prompt-based updates avoid mixed old/new chunks within one active session. */
             registerType: 'prompt',
