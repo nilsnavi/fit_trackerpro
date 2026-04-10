@@ -24,3 +24,31 @@ if (typeof (globalThis as unknown as Record<string, unknown>).crypto === 'undefi
         })
     }
 }
+
+// Polyfill IndexedDB for jsdom (needed for offline persistence tests).
+try {
+    if (typeof (globalThis as unknown as Record<string, unknown>).indexedDB === 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('fake-indexeddb/auto')
+    }
+} catch {
+    // ignore
+}
+
+// Polyfill structuredClone (required by fake-indexeddb).
+try {
+    if (typeof (globalThis as unknown as Record<string, unknown>).structuredClone === 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const nodeUtil = require('util')
+        if (typeof nodeUtil?.structuredClone === 'function') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ; (globalThis as any).structuredClone = nodeUtil.structuredClone
+        } else {
+            // Safe enough for our tests (we store JSON strings in IndexedDB).
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ; (globalThis as any).structuredClone = (value: any) => JSON.parse(JSON.stringify(value))
+        }
+    }
+} catch {
+    // ignore
+}
