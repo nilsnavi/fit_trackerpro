@@ -30,7 +30,7 @@ export default defineConfig({
     },
 
     webServer: {
-        command: 'npm run dev -- --host 0.0.0.0 --port 3000',
+        command: 'npm run dev -- --host 0.0.0.0 --port 3000 --strictPort',
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         stdout: 'pipe',
@@ -42,6 +42,15 @@ export default defineConfig({
         {
             name: 'chromium',
             use: { ...devices['Desktop Chrome'] },
+        },
+        {
+            name: 'mobile-android',
+            use: { ...devices['Pixel 7'] },
+        },
+        {
+            name: 'mobile-ios',
+            // Use Chromium in CI (no WebKit dependency), but keep iPhone-like viewport/touch.
+            use: { ...devices['iPhone 14'], browserName: 'chromium' },
         },
     ],
 })

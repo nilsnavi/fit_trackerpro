@@ -38,6 +38,11 @@ export interface TelegramWebAppConfig {
     startParam?: string
     theme?: 'light' | 'dark'
     canCloseApp?: boolean
+    platform?: string
+    viewportHeight?: number
+    viewportStableHeight?: number
+    safeAreaInset?: { top: number; bottom: number; left: number; right: number }
+    contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number }
 }
 
 /**
@@ -70,6 +75,11 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
     const startParam = config?.startParam
     const theme = config?.theme ?? 'light'
     const canCloseApp = config?.canCloseApp ?? true
+    const platform = config?.platform ?? 'web'
+    const viewportHeight = config?.viewportHeight ?? 812
+    const viewportStableHeight = config?.viewportStableHeight ?? 800
+    const safeAreaInset = config?.safeAreaInset ?? { top: 0, bottom: 0, left: 0, right: 0 }
+    const contentSafeAreaInset = config?.contentSafeAreaInset ?? { top: 0, bottom: 0, left: 0, right: 0 }
 
     // Build initData string (URL-encoded JSON for backwards compat with real Telegram)
     const initDataObj = {
@@ -98,7 +108,7 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                     initData: data.initDataStr,
                     initDataUnsafe: data.initDataObj,
                     version: '9.0',
-                    platform: 'web',
+                    platform: data.platform,
 
                     // Theme and appearance
                     colorScheme: data.theme === 'dark' ? 'dark' : 'light',
@@ -114,23 +124,23 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
                     sectionHeaderTextColor: data.theme === 'dark' ? '#AAAAAA' : '#999999',
 
                     // Viewport
-                    viewportHeight: 812,
-                    viewportStableHeight: 800,
+                    viewportHeight: data.viewportHeight,
+                    viewportStableHeight: data.viewportStableHeight,
                     isExpanded: true,
 
                     // Capabilities
                     isClosingConfirmationEnabled: false,
                     safeAreaInset: {
-                        top: 0,
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
+                        top: data.safeAreaInset.top,
+                        bottom: data.safeAreaInset.bottom,
+                        left: data.safeAreaInset.left,
+                        right: data.safeAreaInset.right,
                     },
                     contentSafeAreaInset: {
-                        top: 0,
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
+                        top: data.contentSafeAreaInset.top,
+                        bottom: data.contentSafeAreaInset.bottom,
+                        left: data.contentSafeAreaInset.left,
+                        right: data.contentSafeAreaInset.right,
                     },
 
                     // Methods (stubs)
@@ -349,6 +359,11 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
             initDataObj,
             theme,
             canCloseApp,
+            platform,
+            viewportHeight,
+            viewportStableHeight,
+            safeAreaInset,
+            contentSafeAreaInset,
         },
     )
 }

@@ -133,6 +133,7 @@ export function buildUserProfile() {
         first_name: 'E2E',
         last_name: 'Tester',
         profile: {
+            onboarding_completed: true,
             equipment: ['barbell'],
             limitations: [],
             goals: ['strength'],
