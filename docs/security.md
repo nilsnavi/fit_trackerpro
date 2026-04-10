@@ -43,9 +43,9 @@ openssl x509 -in nginx/ssl/fullchain.pem -noout -subject -issuer -enddate
 
 # Nginx-конфиг валиден
 docker run --rm \
-	-v "$PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
-	-v "$PWD/nginx/ssl:/etc/nginx/ssl:ro" \
-	nginx:alpine nginx -t
+  -v "$PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+  -v "$PWD/nginx/ssl:/etc/nginx/ssl:ro" \
+  nginx:alpine nginx -t
 ```
 
 ## 3) Аутентификация и сессии
@@ -81,6 +81,14 @@ docker compose -f docker-compose.prod.yml run --rm -e REFERENCE_DATA_DIR=/app/re
 - [ ] Production использует версионированные теги (`IMAGE_TAG`), не `:latest`
 - [ ] CI security checks зелёные или риски документированы (`.github/workflows/security.yml`)
 - [ ] Dependency audit выполняется регулярно (`pip-audit`, `npm audit`)
+- [ ] `docker-compose.prod.yml` использует hardening:
+  - `no-new-privileges:true`
+  - `cap_drop: [ALL]` (и минимальные `cap_add` только при необходимости)
+  - `read_only: true` для stateless сервисов, где это совместимо с runtime
+  - `tmpfs` для временных директорий (`/tmp`, `/var/run`, `/var/cache/nginx`, `/app/logs`)
+- [ ] Чувствительные bind mounts в production вынесены **вне репозитория**:
+  - TLS (`NGINX_SSL_DIR`)
+  - бэкапы (`BACKUPS_DIR`)
 
 Рекомендованная периодичность:
 
@@ -102,4 +110,3 @@ docker compose -f docker-compose.prod.yml run --rm -e REFERENCE_DATA_DIR=/app/re
 curl -f https://<domain>/api/v1/system/health
 curl -f https://<domain>/api/v1/system/version
 ```
-

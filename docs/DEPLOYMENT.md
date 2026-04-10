@@ -16,6 +16,26 @@
 4. Nginx конфиг валиден: `nginx -t` (см. workflow pre-deploy validate).
 5. Есть свежий pre-deploy backup БД.
 
+## 2.1. Host prerequisites (важно для production)
+
+В `docker-compose.prod.yml` используются **минимизированные bind mounts**. Чувствительные данные должны храниться **вне репозитория** и подключаться через переменные окружения:
+
+- **TLS сертификаты (обязательно)**: `NGINX_SSL_DIR=/absolute/path/to/ssl`
+  - Ожидаемые файлы: `fullchain.pem`, `privkey.pem`
+  - Монтируется в контейнер как `/etc/nginx/ssl:ro`
+- **Каталог бэкапов Postgres (рекомендуется)**: `BACKUPS_DIR=/absolute/path/to/backups`
+  - Монтируется в контейнер как `/backups`
+  - Не храните дампы/архивы в git
+  
+Логи edge `nginx` в production сохраняются в именованный Docker volume `nginx_logs` (не bind mount в рабочую копию репозитория).
+
+Если переменные не заданы, compose использует локальные пути `./nginx/ssl` и `./backups` (допустимо для тестового запуска, но **не рекомендовано** для боевого сервера).
+
+Также обратите внимание на hardening-опции:
+
+- `backend` и edge `nginx` запускаются с `read_only: true` и `no-new-privileges`.
+- `frontend` **не** использует `read_only`, потому что `startup.sh` генерирует `/usr/share/nginx/html/config.js` на старте.
+
 ## 3. Deploy sequence
 
 1. Pull images:
