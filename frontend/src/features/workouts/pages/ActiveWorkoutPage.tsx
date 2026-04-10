@@ -120,6 +120,7 @@ export function ActiveWorkoutPage() {
     const currentSetIndex = useActiveWorkoutStore((s) => s.currentSetIndex)
     const elapsedSeconds = useActiveWorkoutStore((s) => s.elapsedSeconds)
     const restDefaultSeconds = useActiveWorkoutStore((s) => s.restDefaultSeconds)
+    const restTimer = useActiveWorkoutStore((s) => s.restTimer)
     const startedAt = useActiveWorkoutStore((s) => s.startedAt)
 
     const {
@@ -887,14 +888,47 @@ export function ActiveWorkoutPage() {
         handleCompleteSession(parsedTags)
     }
 
+    const getTrackedRestPatch = useCallback((exerciseIndex: number, setNumber: number): Partial<CompletedSet> => {
+        const exercise = workout?.exercises[exerciseIndex]
+        if (!exercise) return {}
+
+        const hasPriorCompletedSet = workout.exercises.some((item, index) => {
+            if (index < exerciseIndex) {
+                return item.sets_completed.some((set) => set.completed)
+            }
+            if (index > exerciseIndex) {
+                return false
+            }
+            return item.sets_completed.some((set) => set.set_number < setNumber && set.completed)
+        })
+
+        if (!hasPriorCompletedSet) {
+            return {}
+        }
+
+        const trackedRestSeconds =
+            restTimer.durationSeconds > 0
+                ? Math.max(0, restTimer.durationSeconds - restTimer.remainingSeconds)
+                : undefined
+
+        return {
+            planned_rest_seconds: restTimer.durationSeconds > 0 ? restTimer.durationSeconds : restDefaultSeconds,
+            actual_rest_seconds: trackedRestSeconds,
+        }
+    }, [restDefaultSeconds, restTimer.durationSeconds, restTimer.remainingSeconds, workout])
+
     const handleToggleSetCompleted = useCallback((exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
         tg.hapticFeedback({ type: 'selection' })
         setCurrentPosition(exerciseIndex, setNumber - 1)
-        updateSet(exerciseIndex, setNumber, { completed: nextCompleted })
+        updateSet(exerciseIndex, setNumber, {
+            completed: nextCompleted,
+            ...(nextCompleted ? getTrackedRestPatch(exerciseIndex, setNumber) : {}),
+        })
         if (nextCompleted) {
             startRestTimer(restDefaultSeconds)
         }
     }, [
+        getTrackedRestPatch,
         restDefaultSeconds,
         setCurrentPosition,
         startRestTimer,

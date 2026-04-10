@@ -37,6 +37,20 @@ jest.mock('@features/analytics/api/analyticsDomain', () => ({
         total_sets: 0,
         total_reps: 0,
         total_volume: 0,
+        session_metrics: {
+            completed_sets: 0,
+            avg_rpe: null,
+            avg_rir: null,
+            total_rest_seconds: 0,
+            avg_rest_seconds: null,
+            rest_tracked_sets: 0,
+            rest_tracking_ratio: 0,
+            rest_consistency_score: null,
+            fatigue_trend: null,
+            effort_distribution: { easy: 0, moderate: 0, hard: 0, maximal: 0 },
+            volume_per_minute: null,
+        },
+        insights: [],
         best_sets: [],
         pr_events: [],
     }),
@@ -142,15 +156,53 @@ describe('WorkoutDetailPage (workout session flow)', () => {
 
     it('renders completed workout summary and actions for finished workout', async () => {
         const { workoutsApi } = await import('@shared/api/domains/workoutsApi')
+        const { getAnalyticsWorkoutSummary } = await import('@features/analytics/api/analyticsDomain')
         const workoutId = 125
         const workout = makeDraftWorkout({ id: workoutId, duration: 50 })
         ;(workoutsApi.getHistoryItem as jest.Mock).mockResolvedValue(workout)
+        ;(getAnalyticsWorkoutSummary as jest.Mock).mockResolvedValue({
+            workout_id: workoutId,
+            date: '2026-03-10',
+            duration: 50,
+            total_sets: 6,
+            total_reps: 42,
+            total_volume: 2520,
+            session_metrics: {
+                completed_sets: 6,
+                avg_rpe: 8.1,
+                avg_rir: 1.8,
+                total_rest_seconds: 360,
+                avg_rest_seconds: 90,
+                rest_tracked_sets: 4,
+                rest_tracking_ratio: 0.8,
+                rest_consistency_score: 84,
+                fatigue_trend: {
+                    opening_avg_rpe: 7.2,
+                    closing_avg_rpe: 8.5,
+                    delta: 1.3,
+                },
+                effort_distribution: { easy: 0, moderate: 2, hard: 3, maximal: 1 },
+                volume_per_minute: 50.4,
+            },
+            insights: [
+                {
+                    code: 'fatigue_trend',
+                    title: 'Усталость росла к концу',
+                    level: 'neutral',
+                    message: 'Финальные подходы ощущались заметно тяжелее стартовых.',
+                },
+            ],
+            best_sets: [],
+            pr_events: [],
+        })
 
         const qc = makeQueryClient()
         qc.setQueryData(queryKeys.workouts.historyItem(workoutId), workout)
         renderWorkoutDetailPage({ id: String(workoutId), queryClient: qc })
 
         expect(await screen.findByText('Итоги')).toBeInTheDocument()
+        expect(await screen.findByText('Практические инсайты')).toBeInTheDocument()
+        expect(screen.getByText('Усталость росла к концу')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /повторить/i })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /сохранить как шаблон/i })).toBeInTheDocument()
     })

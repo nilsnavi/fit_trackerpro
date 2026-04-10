@@ -119,6 +119,34 @@ export interface ApiWorkoutPostSummaryResponse {
     total_sets: number
     total_reps: number
     total_volume: number
+    session_metrics?: {
+        completed_sets: number
+        avg_rpe?: number | null
+        avg_rir?: number | null
+        total_rest_seconds: number
+        avg_rest_seconds?: number | null
+        rest_tracked_sets: number
+        rest_tracking_ratio: number
+        rest_consistency_score?: number | null
+        fatigue_trend?: {
+            opening_avg_rpe: number
+            closing_avg_rpe: number
+            delta: number
+        } | null
+        effort_distribution: {
+            easy: number
+            moderate: number
+            hard: number
+            maximal: number
+        }
+        volume_per_minute?: number | null
+    } | null
+    insights?: Array<{
+        code: string
+        title: string
+        level: string
+        message: string
+    }>
     best_sets: ApiProgressInsightsBestSetItem[]
     pr_events: ApiProgressInsightsPRItem[]
 }

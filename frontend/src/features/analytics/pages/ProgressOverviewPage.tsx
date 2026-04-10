@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { eachDayOfInterval, format, parseISO, startOfWeek, subDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -31,6 +31,10 @@ import {
     type ProgressPeriod,
 } from '@features/analytics/lib/progressDateRange'
 import { SectionHeader } from '@shared/ui/SectionHeader'
+import { workoutsApi } from '@shared/api/domains/workoutsApi'
+import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
+
+const FATIGUE_TREND_POINTS_KEY = 'analytics:fatigueTrendPoints'
 
 function formatMinutes(minutes: number): string {
     if (!Number.isFinite(minutes) || minutes <= 0) return '0 мин'
@@ -42,6 +46,60 @@ function formatMinutes(minutes: number): string {
 
 function formatMetric(value: number): string {
     return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Math.round(value))
+}
+
+function buildFatigueRestTrend(workouts: WorkoutHistoryItem[], points: number) {
+    return [...workouts]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .filter((workout) => {
+            const metrics = workout.session_metrics
+            return (
+                typeof metrics?.avg_rest_seconds === 'number' ||
+                typeof metrics?.fatigue_trend?.delta === 'number'
+            )
+        })
+        .slice(-points)
+        .map((workout) => {
+            const metrics = workout.session_metrics
+            return {
+                label: format(new Date(workout.date), 'dd MMM', { locale: ru }),
+                restSeconds:
+                    typeof metrics?.avg_rest_seconds === 'number'
+                        ? Number(metrics.avg_rest_seconds.toFixed(0))
+                        : null,
+                fatigueDelta:
+                    typeof metrics?.fatigue_trend?.delta === 'number'
+                        ? Number(metrics.fatigue_trend.delta.toFixed(2))
+                        : null,
+            }
+        })
+}
+
+function TrendMixedTooltip({
+    active,
+    payload,
+    label,
+}: {
+    active?: boolean
+    payload?: Array<{ value: number; dataKey?: string; name?: string }>
+    label?: string
+}) {
+    if (!active || !payload || payload.length === 0) return null
+
+    const fatiguePoint = payload.find((item) => item.dataKey === 'fatigueDelta')
+    const restPoint = payload.find((item) => item.dataKey === 'restSeconds')
+
+    return (
+        <div className="rounded-xl border border-border bg-telegram-bg px-3 py-2 shadow-lg">
+            <p className="text-xs font-semibold text-telegram-text">{label}</p>
+            {fatiguePoint ? (
+                <p className="mt-1 text-xs text-telegram-hint">Δ усталости: {Number(fatiguePoint.value).toFixed(2)}</p>
+            ) : null}
+            {restPoint ? (
+                <p className="text-xs text-telegram-hint">Средний отдых: {Math.round(Number(restPoint.value))} сек</p>
+            ) : null}
+        </div>
+    )
 }
 
 function OneRMTooltip({
@@ -65,9 +123,19 @@ function OneRMTooltip({
 
 export default function ProgressOverviewPage() {
     const [period, setPeriod] = useState<ProgressPeriod>('30d')
+    const [fatigueTrendPoints, setFatigueTrendPoints] = useState<8 | 12>(() => {
+        if (typeof window === 'undefined') return 8
+        const saved = window.localStorage.getItem(FATIGUE_TREND_POINTS_KEY)
+        return saved === '12' ? 12 : 8
+    })
     const range = useMemo(() => getAnalyticsDateRange(period), [period])
     const dateFrom = range.date_from ?? null
     const dateTo = range.date_to ?? null
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        window.localStorage.setItem(FATIGUE_TREND_POINTS_KEY, String(fatigueTrendPoints))
+    }, [fatigueTrendPoints])
 
     const summaryQuery = useQuery<ApiAnalyticsSummaryResponse>({
         queryKey: queryKeys.analytics.summary(period, dateFrom, dateTo),
@@ -99,25 +167,34 @@ export default function ProgressOverviewPage() {
         staleTime: 60_000,
     })
 
+    const workoutHistoryQuery = useQuery({
+        queryKey: ['analytics', 'sessionTrend', period, dateFrom, dateTo],
+        queryFn: () => workoutsApi.getHistory({ page: 1, page_size: 80, date_from: dateFrom ?? undefined, date_to: dateTo ?? undefined }),
+        staleTime: 60_000,
+    })
+
     const isLoading =
         summaryQuery.isPending ||
         performanceOverviewQuery.isPending ||
         progressQuery.isPending ||
         insightsQuery.isPending ||
-        muscleLoadQuery.isPending
+        muscleLoadQuery.isPending ||
+        workoutHistoryQuery.isPending
 
     const hasError =
         summaryQuery.error ||
         performanceOverviewQuery.error ||
         progressQuery.error ||
         insightsQuery.error ||
-        muscleLoadQuery.error
+        muscleLoadQuery.error ||
+        workoutHistoryQuery.error
 
     const summary = summaryQuery.data
     const performanceOverview = performanceOverviewQuery.data
     const insights = insightsQuery.data
     const progressRows = useMemo(() => progressQuery.data ?? [], [progressQuery.data])
     const muscleRows = useMemo(() => muscleLoadQuery.data ?? [], [muscleLoadQuery.data])
+    const historyRows = useMemo(() => workoutHistoryQuery.data?.items ?? [], [workoutHistoryQuery.data?.items])
     const totalPersonalRecords = insights?.pr_events?.length ?? 0
 
     const topImprovingExercises = useMemo(
@@ -229,6 +306,11 @@ export default function ProgressOverviewPage() {
     const recentPRs = useMemo(
         () => [...(insights?.pr_events ?? [])].slice(0, 4),
         [insights?.pr_events],
+    )
+
+    const fatigueRestTrend = useMemo(
+        () => buildFatigueRestTrend(historyRows, fatigueTrendPoints),
+        [historyRows, fatigueTrendPoints],
     )
 
     const noData =
@@ -373,6 +455,77 @@ export default function ProgressOverviewPage() {
                         valueFormatter={(value) => `${formatMetric(value)} ед.`}
                         emptyMessage="Недостаточно данных по объёму."
                     />
+
+                    <section className="rounded-2xl bg-telegram-secondary-bg p-4">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-semibold text-telegram-text">Тренд усталости и отдыха</h2>
+                                <p className="mt-1 text-xs text-telegram-hint">
+                                    Небольшой срез по последним сессиям: как менялась субъективная усталость и средние паузы.
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="rounded-xl bg-telegram-bg px-3 py-2 text-right">
+                                    <p className="text-[11px] uppercase tracking-wide text-telegram-hint">Точек</p>
+                                    <p className="mt-1 text-lg font-semibold text-telegram-text">{fatigueRestTrend.length}</p>
+                                </div>
+                                <div className="flex items-center gap-1 rounded-xl bg-telegram-bg p-1">
+                                    {[8, 12].map((value) => {
+                                        const selected = fatigueTrendPoints === value
+                                        return (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() => setFatigueTrendPoints(value as 8 | 12)}
+                                                className={`rounded-lg px-2.5 py-1 text-xs transition ${selected ? 'bg-primary text-white' : 'text-telegram-hint hover:bg-telegram-secondary-bg'}`}
+                                                aria-pressed={selected}
+                                            >
+                                                {value} сессий
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {fatigueRestTrend.length === 0 ? (
+                            <p className="rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
+                                Появится после нескольких завершённых тренировок с данными по RPE или отдыху.
+                            </p>
+                        ) : (
+                            <div className="-mx-2 h-56">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={fatigueRestTrend} margin={{ top: 8, right: 14, left: 6, bottom: 8 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.3)" />
+                                        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={20} />
+                                        <YAxis yAxisId="fatigue" tick={{ fontSize: 11 }} width={44} domain={[-3, 3]} />
+                                        <YAxis yAxisId="rest" orientation="right" tick={{ fontSize: 11 }} width={44} />
+                                        <Tooltip content={<TrendMixedTooltip />} />
+                                        <Line
+                                            yAxisId="fatigue"
+                                            type="monotone"
+                                            dataKey="fatigueDelta"
+                                            name="Δ усталости"
+                                            stroke="hsl(var(--primary))"
+                                            strokeWidth={2}
+                                            dot={{ r: 2.5 }}
+                                            connectNulls
+                                        />
+                                        <Line
+                                            yAxisId="rest"
+                                            type="monotone"
+                                            dataKey="restSeconds"
+                                            name="Отдых, сек"
+                                            stroke="#0ea5e9"
+                                            strokeWidth={2}
+                                            dot={{ r: 2.5 }}
+                                            connectNulls
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+                    </section>
 
                     <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                         <div className="mb-3 flex items-start justify-between gap-3">

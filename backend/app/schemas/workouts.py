@@ -100,6 +100,18 @@ class CompletedSet(BaseModel):
         decimal_places=1,
         description="Reps in Reserve",
     )
+    planned_rest_seconds: Optional[int] = Field(
+        None,
+        ge=0,
+        le=3600,
+        description="Planned rest for the set, in seconds.",
+    )
+    actual_rest_seconds: Optional[int] = Field(
+        None,
+        ge=0,
+        le=3600,
+        description="Tracked actual rest before the set, in seconds.",
+    )
     duration: Optional[int] = Field(
         None,
         ge=0,
@@ -127,6 +139,33 @@ class CompletedExercise(BaseModel):
         None,
         max_length=1000,
     )
+
+
+class SessionFatigueTrend(BaseModel):
+    opening_avg_rpe: float
+    closing_avg_rpe: float
+    delta: float
+
+
+class SessionEffortDistribution(BaseModel):
+    easy: int = 0
+    moderate: int = 0
+    hard: int = 0
+    maximal: int = 0
+
+
+class WorkoutSessionMetrics(BaseModel):
+    completed_sets: int = 0
+    avg_rpe: Optional[float] = None
+    avg_rir: Optional[float] = None
+    total_rest_seconds: int = 0
+    avg_rest_seconds: Optional[float] = None
+    rest_tracked_sets: int = 0
+    rest_tracking_ratio: float = 0.0
+    rest_consistency_score: Optional[float] = None
+    fatigue_trend: Optional[SessionFatigueTrend] = None
+    effort_distribution: SessionEffortDistribution = Field(default_factory=SessionEffortDistribution)
+    volume_per_minute: Optional[float] = None
 
 
 _Tag = Annotated[str, Field(min_length=1, max_length=64)]
@@ -360,6 +399,7 @@ class WorkoutCompleteResponse(BaseModel):
     tags: List[str]
     glucose_before: Optional[float]
     glucose_after: Optional[float]
+    session_metrics: Optional[WorkoutSessionMetrics] = None
     version: int
     completed_at: datetime
     message: str = Field(
@@ -379,6 +419,7 @@ class WorkoutHistoryItem(BaseModel):
     tags: List[str]
     glucose_before: Optional[float]
     glucose_after: Optional[float]
+    session_metrics: Optional[WorkoutSessionMetrics] = None
     version: int
     created_at: datetime
 

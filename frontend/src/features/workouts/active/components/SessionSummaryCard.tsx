@@ -1,5 +1,6 @@
 import { CalendarDays, Clock3 } from 'lucide-react'
 import { formatDate, formatDurationMinutes } from '@features/workouts/lib/workoutDetailFormatters'
+import { buildSessionPreviewLines, computeSessionMetricsPreview } from '@features/workouts/lib/sessionMetrics'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
 interface SessionSummaryCardProps {
@@ -25,6 +26,10 @@ export function SessionSummaryCard({
     onDurationChange,
     onCommentsChange,
 }: SessionSummaryCardProps) {
+    const sessionPreviewLines = buildSessionPreviewLines(
+        workout.session_metrics ?? computeSessionMetricsPreview(workout.exercises, durationMinutes),
+    )
+
     return (
         <div className="rounded-xl bg-telegram-secondary-bg p-4 space-y-4">
             <div className="space-y-1">
@@ -60,6 +65,22 @@ export function SessionSummaryCard({
                     <div className="mt-1 text-sm font-semibold text-telegram-text">{completedSetCount}</div>
                 </div>
             </div>
+
+            {sessionPreviewLines.length > 0 && (
+                <div className="space-y-2">
+                    <div className="text-xs font-medium text-telegram-hint">Короткие инсайты</div>
+                    <div className="flex flex-wrap gap-2">
+                        {sessionPreviewLines.map((line) => (
+                            <span
+                                key={line}
+                                className="rounded-full bg-telegram-bg/70 px-3 py-1.5 text-xs text-telegram-text"
+                            >
+                                {line}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {isActiveDraft && (
                 <div className="space-y-2">
