@@ -8,7 +8,7 @@
 - Production деплой и откат: `docs/DEPLOYMENT.md` и `docs/ROLLBACK_STRATEGY.md`
 - Заголовки безопасности: `backend/app/middleware/security_headers.py`
 - Nginx/TLS: `nginx/nginx.conf`
-- Telegram auth flow: `TELEGRAM_SETUP.md`
+- Telegram auth flow: `docs/product/telegram-setup.md`
 
 ## 1) Секреты и окружение
 

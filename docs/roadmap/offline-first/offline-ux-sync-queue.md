@@ -477,6 +477,7 @@ frontend/src/
 
 ## Ссылки
 
-- [OFFLINE_FIRST_IMPLEMENTATION_PLAN.md](../OFFLINE_FIRST_IMPLEMENTATION_PLAN.md)
-- [OFFLINE_FIRST_SUMMARY.md](../OFFLINE_FIRST_SUMMARY.md)
-- [SyncQueueEngine docs](../frontend/src/shared/offline/syncQueue/engine.ts)
+- `docs/roadmap/offline-first/implementation-plan-2026-04-07.md`
+- `docs/roadmap/offline-first/summary-2026-04-07.md`
+- `frontend/src/shared/offline/syncQueue/engine.ts`
+

@@ -263,8 +263,6 @@ await page.getByLabel('Название').fill('Мой воркаут')
 
 // ✓ Good - Test ID
 await page.locator('[data-testid="add-btn"]').click()
-
-// ✗ Avoid - XPath, CSS selectors for critical actions
 ```
 
 ## 🔍 Troubleshooting
@@ -400,3 +398,4 @@ For questions about:
 **Implementation Date:** April 8, 2026  
 **Status:** ✅ Production Ready  
 **Build Status:** Fails on E2E test failure (as required)
+

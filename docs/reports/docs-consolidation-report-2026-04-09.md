@@ -4,8 +4,8 @@
 
 ## Итоговая структура (канон)
 
-- `README.md` — **entrypoint** + быстрый старт + “source of truth”
-- `docs/DOCS_INDEX.md` — индекс/навигация и зоны ответственности
+- `README.md` — **repo entrypoint** + быстрый старт + “source of truth”
+- `docs/README.md` — **docs entrypoint** (индекс и навигация)
 - `docs/local-development.md` — локальная разработка
 - `docs/DEPLOYMENT.md` — production деплой
 - `docs/architecture.md` — архитектура (as-is + обязательные принципы)
@@ -16,7 +16,7 @@
 
 ### Дублирование
 
-- **Deployment**: пересечение в `README.md`, `README-DEPLOYMENT.md`, `docs/DEPLOYMENT.md` (одни и те же сущности: GHCR, `IMAGE_TAG`, `deploy.yml`, ручные команды).
+- **Deployment**: пересечение в `README.md`, `docs/archive/readme-deployment-legacy.md`, `docs/DEPLOYMENT.md` (одни и те же сущности: GHCR, `IMAGE_TAG`, `deploy.yml`, ручные команды).
 - **Security**: параллельные чеклисты `docs/SECURITY_CHECKLIST.md` (EN) и `docs/security/checklist.md` (RU) частично повторяли друг друга.
 - **Architecture**: часть структуры backend описана в `README.md`, часть — в `docs/current-architecture.md`, часть — в `docs/target-architecture.md`, плюс отдельный канон `docs/architecture/backend.md`.
 - **PWA/offline**: длинный раздел в `README.md`, при этом ожидаемый файл `docs/offline-pwa.md` отсутствовал.
@@ -32,7 +32,7 @@
 
 ### Устаревшее / рискованное
 
-- `README-DEPLOYMENT.md` отмечал, что `deploy.sh` не синхронизирован с текущим CI-пайплайном (оставлено как предупреждение; канон — workflows).
+- `docs/archive/readme-deployment-legacy.md` отмечал, что `deploy.sh` не синхронизирован с текущим CI-пайплайном (оставлено как предупреждение; канон — workflows).
 
 ### Broken structure / broken references
 
@@ -40,18 +40,19 @@
 
 ## Что сделано (изменения)
 
-- Добавлены канонические документы:
+- Добавлены/закреплены канонические документы:
+  - `docs/README.md`
   - `docs/local-development.md`
   - `docs/DEPLOYMENT.md`
   - `docs/architecture.md`
   - `docs/security.md`
   - `docs/offline-pwa.md`
+- `docs/DOCS_INDEX.md` переведён в режим legacy redirect (для обратной совместимости со старыми ссылками).
 - `README.md` превращён в entrypoint:
   - добавлены ссылки на канонические документы
   - добавлен короткий раздел “source of truth”
   - production/architecture/PWA разделы сокращены до ссылок на канон
-- `docs/DOCS_INDEX.md` обновлён под новую структуру и дополнен “source of truth”.
-- `docs/DEPLOYMENT.md`, `README-DEPLOYMENT.md`, `docs/SECURITY_CHECKLIST.md` переведены в режим **legacy redirect** (чтобы не ломать старые ссылки и убрать дубли).
+- `docs/DEPLOYMENT.md`, `docs/archive/readme-deployment-legacy.md`, `docs/SECURITY_CHECKLIST.md` переведены в режим **legacy redirect** (чтобы не ломать старые ссылки и убрать дубли).
 - `docs/PRODUCTION_CHECKLIST.md` приведён к каноническому пути `~/fittracker-pro`.
 
 ## Рекомендации дальше (не обязательно, но полезно)

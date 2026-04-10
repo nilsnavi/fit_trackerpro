@@ -16,7 +16,7 @@
 - [config.py](file://backend/app/utils/config.py)
 - [pytest.ini](file://backend/pytest.ini)
 - [jest.config.js](file://frontend/jest.config.js)
-- [README-DEPLOYMENT.md](file://README-DEPLOYMENT.md)
+- [DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [ENVIRONMENT_SETUP.md](file://docs/ENVIRONMENT_SETUP.md)
 - [docker-compose.monitoring.yml](file://monitoring/docker-compose.monitoring.yml)
@@ -403,7 +403,7 @@ Common issues and resolutions:
   - Verify SLACK_WEBHOOK_URL secret is configured.
 
 **Section sources**
-- [README-DEPLOYMENT.md:182-214](file://README-DEPLOYMENT.md#L182-L214)
+- [docs/DEPLOYMENT.md:182-214](file://docs/DEPLOYMENT.md#L182-L214)
 - [docs/DEPLOYMENT.md:350-397](file://docs/DEPLOYMENT.md#L350-L397)
 - [docker-compose.yml:17-21](file://docker-compose.yml#L17-L21)
 - [docker-compose.prod.yml:18-22](file://docker-compose.prod.yml#L18-L22)

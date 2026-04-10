@@ -256,76 +256,6 @@ async def update_workout_session(
     
     db.session.commit()
     return response
-
-
-async def complete_workout(
-    self,
-    workout_id: int,
-    user_id: int,
-    payload: WorkoutCompleteRequest,
-) -> WorkoutHistoryItem:
-    """Complete session with idempotency and version check."""
-    
-    request_hash = hashlib.sha256(
-        payload.model_dump_json().encode()
-    ).hexdigest()
-    
-    # Replay check
-    cached = await self.idempotency_repo.get_record(
-        user_id=user_id,
-        operation_type='SESSION_COMPLETE',
-        idempotency_key=payload.idempotency_key,
-    )
-    
-    if cached:
-        if cached.request_hash == request_hash:
-            return cached.response_payload
-        else:
-            raise ValueError("Idempotency key reused")
-    
-    # Load and validate version
-    workout = await self.workouts_repo.get(workout_id, user_id)
-    if workout.version != payload.expected_version:
-        raise WorkoutConflictError(
-            expected=payload.expected_version,
-            current=workout.version,
-            workout_id=workout_id,
-        )
-    
-    # Mark as complete
-    workout.duration = payload.duration
-    workout.comments = payload.comments
-    workout.tags = payload.tags
-    workout.completed_at = datetime.utcnow()
-    workout.version += 1  # Version bump on completion
-    
-    # Process glucose data if provided
-    if payload.glucose_data:
-        for reading in payload.glucose_data:
-            await self.health_metrics_repo.create_reading(
-                user_id=user_id,
-                workout_id=workout_id,
-                metric_type='glucose',
-                value=reading.value,
-                timestamp=reading.timestamp,
-            )
-    
-    db.session.add(workout)
-    db.session.flush()
-    
-    response = workout.to_dict()
-    await self.idempotency_repo.create_record(
-        user_id=user_id,
-        operation_type='SESSION_COMPLETE',
-        idempotency_key=payload.idempotency_key,
-        resource_id=workout_id,
-        request_hash=request_hash,
-        response_payload=response,
-        expires_at=datetime.utcnow() + timedelta(days=30),
-    )
-    
-    db.session.commit()
-    return response
 ```
 
 ### 4. API Endpoints
@@ -368,36 +298,6 @@ async def patch_workout_session(
                 'expected_version': e.expected_version,
             },
         )
-
-
-@router.post("/history/{workout_id}/complete")
-async def complete_workout(
-    workout_id: int,
-    payload: WorkoutCompleteRequest,
-    current_user: User = Depends(get_current_user),
-    service: WorkoutsService = Depends(get_workouts_service),
-) -> WorkoutHistoryItemResponse:
-    """
-    Complete active session with idempotency & versioning.
-    
-    Sets completed_at, duration, and increments version.
-    """
-    try:
-        result = await service.complete_workout(
-            workout_id=workout_id,
-            user_id=current_user.id,
-            payload=payload,
-        )
-        return WorkoutHistoryItemResponse.from_orm(result)
-    except WorkoutConflictError as e:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                'error': 'version_conflict',
-                'message': e.detail,
-                'current_version': e.current_version,
-            },
-        )
 ```
 
 ---
@@ -420,94 +320,6 @@ const payload: WorkoutSessionUpdateRequest = {
 // If network fails, retry with same idempotency_key
 ```
 
-### Server Processes
-
-```yaml
-First request (new key):
-  1. Hash request → SHA256
-  2. Check idempotency cache → miss
-  3. Load workout, check version == 3 ✓
-  4. Apply updates
-  5. version = 4, commit
-  6. Store in idempotency cache
-  7. Return response (version: 4)
-
-Retry (same key, same payload):
-  1. Hash request → same SHA256
-  2. Check idempotency cache → hit
-  3. Return cached response (version: 4) — no DB changes
-  
-Conflict scenario (different key, old version):
-  1. Load workout, check version != expected
-  2. Return 409 { current_version: 5 }
-  3. Client shows conflict error, prompts user
-```
-
----
-
-##Testing
-
-### Unit Test Example
-
-```python
-@pytest.mark.asyncio
-async def test_idempotent_session_update():
-    """Same idempotency key returns cached response."""
-    
-    req = WorkoutSessionUpdateRequest(
-        exercises=[...],
-        idempotency_key=uuid4(),
-        expected_version=1,
-    )
-    
-    # First request
-    result1 = await service.update_workout_session(workout_id=1, payload=req)
-    
-    # Second request (same key)
-    result2 = await service.update_workout_session(workout_id=1, payload=req)
-    
-    # Same response, DB not modified twice
-    assert result1 == result2
-    assert result1.version == 2
-
-
-@pytest.mark.asyncio
-async def test_version_conflict():
-    """Old version triggers 409 Conflict."""
-    
-    req = WorkoutSessionUpdateRequest(
-        exercises=[...],
-        idempotency_key=uuid4(),
-        expected_version=1,  # Old version
-    )
-    
-    # Server version is 3
-    workout = Workout(version=3)
-    
-    with pytest.raises(WorkoutConflictError) as exc:
-        await service.update_workout_session(workout_id=1, payload=req)
-    
-    assert exc.value.current_version == 3
-    assert exc.value.expected_version == 1
-```
-
----
-
-## Cleanup Jobs
-
-### Idempotency Record Cleanup
-
-**File:** `backend/app/infrastructure/jobs/cleanup_idempotency.py`
-
-```python
-async def cleanup_expired_idempotency_records():
-    """Remove records older than retention period."""
-    await idempotency_repo.delete_expired()
-    # Retention: 7 days for SESSION_UPDATE, 30 days for SESSION_COMPLETE
-```
-
-Run via cron/Celery daily.
-
 ---
 
 ## Deployment Checklist
@@ -526,3 +338,4 @@ Run via cron/Celery daily.
 
 **Next:** Frontend will send `idempotency_key` and `expected_version` in requests.  
 Backend returns 409 Conflict with `current_version` for client-side merge.
+

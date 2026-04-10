@@ -13,7 +13,7 @@
 - [nginx.conf](file://nginx/nginx.conf)
 - [docker-compose.yml](file://docker-compose.yml)
 - [docker-compose.prod.yml](file://docker-compose.prod.yml)
-- [README-DEPLOYMENT.md](file://README-DEPLOYMENT.md)
+- [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 </cite>
 
 ## Table of Contents
@@ -315,7 +315,7 @@ Operational commands:
   - Open the local port and use configured admin credentials.
 
 **Section sources**
-- [README-DEPLOYMENT.md:155-169](file://README-DEPLOYMENT.md#L155-L169)
+- [docs/DEPLOYMENT.md:155-169](file://docs/DEPLOYMENT.md#L155-L169)
 - [docker-compose.monitoring.yml:25-46](file://monitoring/docker-compose.monitoring.yml#L25-L46)
 - [promtail-config.yml:8-10](file://monitoring/promtail-config.yml#L8-L10)
 - [main.py:31-43](file://backend/app/main.py#L31-L43)

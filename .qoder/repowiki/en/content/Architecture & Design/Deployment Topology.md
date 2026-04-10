@@ -4,7 +4,7 @@
 **Referenced Files in This Document**
 - [docker-compose.yml](file://docker-compose.yml)
 - [docker-compose.prod.yml](file://docker-compose.prod.yml)
-- [README-DEPLOYMENT.md](file://README-DEPLOYMENT.md)
+- [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [docs/ENVIRONMENT_SETUP.md](file://docs/ENVIRONMENT_SETUP.md)
 - [docs/PRODUCTION_CHECKLIST.md](file://docs/PRODUCTION_CHECKLIST.md)
@@ -101,7 +101,7 @@ graf --- mon_network
 **Section sources**
 - [docker-compose.yml:1-99](file://docker-compose.yml#L1-L99)
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
-- [README-DEPLOYMENT.md:26-47](file://README-DEPLOYMENT.md#L26-L47)
+- [docs/DEPLOYMENT.md:26-47](file://docs/DEPLOYMENT.md#L26-L47)
 
 ## Core Components
 - Backend API (FastAPI): Exposes REST endpoints, integrates Sentry for error tracking, and serves metrics for Prometheus.
@@ -363,7 +363,7 @@ Common operational issues and remedies:
 - Telegram WebApp not loading: Confirm HTTPS, allowed domains, CORS, and WEBAPP_URL alignment.
 
 **Section sources**
-- [README-DEPLOYMENT.md:182-214](file://README-DEPLOYMENT.md#L182-L214)
+- [docs/DEPLOYMENT.md:182-214](file://docs/DEPLOYMENT.md#L182-L214)
 - [docs/DEPLOYMENT.md:350-397](file://docs/DEPLOYMENT.md#L350-L397)
 
 ## Conclusion
@@ -397,7 +397,7 @@ FitTracker Pro’s deployment topology leverages Docker Compose for development 
 - Deployment workflow backs up the database before migration and supports rollback with restore.
 
 **Section sources**
-- [README-DEPLOYMENT.md:93-98](file://README-DEPLOYMENT.md#L93-L98)
+- [docs/DEPLOYMENT.md:93-98](file://docs/DEPLOYMENT.md#L93-L98)
 - [docs/DEPLOYMENT.md:337-348](file://docs/DEPLOYMENT.md#L337-L348)
 - [.github/workflows/deploy.yml:70-80](file://.github/workflows/deploy.yml#L70-L80)
 - [.github/workflows/deploy.yml:144-149](file://.github/workflows/deploy.yml#L144-L149)

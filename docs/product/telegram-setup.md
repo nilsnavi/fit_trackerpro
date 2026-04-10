@@ -83,3 +83,4 @@ Plan removal in `v1.2.0` (target date `2026-06-30`).
 - Never expose `TELEGRAM_BOT_TOKEN` in frontend
 - Keep short token TTLs and rotate `SECRET_KEY` when needed
 - Always use HTTPS in production
+

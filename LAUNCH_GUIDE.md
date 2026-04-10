@@ -241,10 +241,10 @@ docker compose exec backend alembic current
 
 ## 📚 Дополнительная документация
 
-- [Основной README](../README.md)
-- [Индекс документации](./DOCS_INDEX.md)
-- [Локальная разработка](./local-development.md)
-- [Деплой](./DEPLOYMENT.md)
-- [Архитектура](./architecture.md)
-- [Настройка окружения](./ENVIRONMENT_SETUP.md)
-- [Production checklist](./PRODUCTION_CHECKLIST.md)
+- [Основной README](./README.md)
+- [Индекс документации](./docs/README.md)
+- [Локальная разработка](./docs/local-development.md)
+- [Деплой](./docs/DEPLOYMENT.md)
+- [Архитектура](./docs/architecture.md)
+- [Настройка окружения](./docs/ENVIRONMENT_SETUP.md)
+- [Production checklist](./docs/PRODUCTION_CHECKLIST.md)

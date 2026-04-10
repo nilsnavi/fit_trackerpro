@@ -2,7 +2,7 @@
 
 <cite>
 **Referenced Files in This Document**
-- [README-DEPLOYMENT.md](file://README-DEPLOYMENT.md)
+- [docs/DEPLOYMENT.md](file://docs/DEPLOYMENT.md)
 - [docker-compose.yml](file://docker-compose.yml)
 - [docker-compose.prod.yml](file://docker-compose.prod.yml)
 - [backend/Dockerfile](file://backend/Dockerfile)
@@ -118,7 +118,7 @@ MIG --> PROD
 - [.github/workflows/migrate.yml:1-124](file://.github/workflows/migrate.yml#L1-L124)
 
 **Section sources**
-- [README-DEPLOYMENT.md:26-47](file://README-DEPLOYMENT.md#L26-L47)
+- [docs/DEPLOYMENT.md:26-47](file://docs/DEPLOYMENT.md#L26-L47)
 - [docker-compose.yml:1-99](file://docker-compose.yml#L1-L99)
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
 - [monitoring/docker-compose.monitoring.yml:1-124](file://monitoring/docker-compose.monitoring.yml#L1-L124)
@@ -205,7 +205,7 @@ Server->>Server : Health check endpoints
 
 **Section sources**
 - [docker-compose.prod.yml:1-132](file://docker-compose.prod.yml#L1-L132)
-- [README-DEPLOYMENT.md:100-114](file://README-DEPLOYMENT.md#L100-L114)
+- [docs/DEPLOYMENT.md:100-114](file://docs/DEPLOYMENT.md#L100-L114)
 - [docs/PRODUCTION_CHECKLIST.md:34-64](file://docs/PRODUCTION_CHECKLIST.md#L34-L64)
 
 ### Enhanced Docker Configuration with Alpine Linux Benefits
@@ -301,7 +301,7 @@ Grafana --> Loki
 - [monitoring/docker-compose.monitoring.yml:1-124](file://monitoring/docker-compose.monitoring.yml#L1-L124)
 - [monitoring/prometheus.yml:1-49](file://monitoring/prometheus.yml#L1-L49)
 - [monitoring/grafana/provisioning/datasources/datasources.yml:1-16](file://monitoring/grafana/provisioning/datasources/datasources.yml#L1-L16)
-- [README-DEPLOYMENT.md:155-174](file://README-DEPLOYMENT.md#L155-L174)
+- [docs/DEPLOYMENT.md:155-174](file://docs/DEPLOYMENT.md#L155-L174)
 
 ### Security Hardening and SSL/TLS
 - SSL/TLS: Nginx handles HTTPS with certificate/key mounting, enforces TLS 1.2/1.3, and redirects HTTP to HTTPS.
@@ -410,7 +410,7 @@ K --> L["Verify Recovery"]
 - CORS and allowed origins: Confirm backend ALLOWED_ORIGINS configuration.
 
 **Section sources**
-- [README-DEPLOYMENT.md:182-228](file://README-DEPLOYMENT.md#L182-L228)
+- [docs/DEPLOYMENT.md:182-228](file://docs/DEPLOYMENT.md#L182-L228)
 - [docs/ENVIRONMENT_SETUP.md:122-141](file://docs/ENVIRONMENT_SETUP.md#L122-L141)
 - [docs/SECURITY_CHECKLIST.md:112-135](file://docs/SECURITY_CHECKLIST.md#L112-L135)
 
@@ -457,7 +457,7 @@ CA["cAdvisor"] --> Host
 - CORS errors: Ensure ALLOWED_ORIGINS includes the requesting origin.
 
 **Section sources**
-- [README-DEPLOYMENT.md:182-228](file://README-DEPLOYMENT.md#L182-L228)
+- [docs/DEPLOYMENT.md:182-228](file://docs/DEPLOYMENT.md#L182-L228)
 - [docs/ENVIRONMENT_SETUP.md:122-141](file://docs/ENVIRONMENT_SETUP.md#L122-L141)
 
 ## Conclusion

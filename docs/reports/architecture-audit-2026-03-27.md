@@ -60,8 +60,7 @@
 - `deploy.sh` - локальный deploy script
 
 ## Docs
-- `README.md`, `README-DEPLOYMENT.md`, `TELEGRAM_SETUP.md`
-- `docs/*` - setup/deploy/security/checklists/audit
+- Entrypoint: `docs/README.md`
 - `.qoder/repowiki/*` - автогенерируемая wiki-документация
 
 ---
@@ -86,8 +85,8 @@
    - Риск: мертвый код, скрытый функционал, ложные ожидания по покрытию feature.
 
 3. **Дублирование deploy-документации с пересечением ответственности**
-   - Одновременно поддерживаются `README-DEPLOYMENT.md` и `docs/DEPLOYMENT.md`.
-   - `docs/DOCS_INDEX.md` описывает секции `README-DEPLOYMENT.md`, которых в текущей версии файла нет (признак устаревшего индекса).
+   - Одновременно поддерживались `docs/archive/readme-deployment-legacy.md` (legacy) и `docs/DEPLOYMENT.md` (канон).
+   - `docs/DOCS_INDEX.md` описывал секции legacy-файла, которых в текущей версии нет (признак устаревшего индекса).
    - Риск: операционные ошибки при релизе из-за разных/устаревших инструкций.
 
 ## P1 (высокий приоритет рефакторинга)

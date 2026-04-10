@@ -1,9 +1,12 @@
-# FitTracker Pro - Telegram Mini App через Ngrok
+# FitTracker Pro - Telegram Mini App через Ngrok (snapshot)
+
+> Snapshot-документ: содержит временный ngrok URL и состояние на момент создания.
+> Для канонической настройки Telegram Mini App используйте `docs/product/telegram-setup.md`.
 
 ## ✅ Статус системы
 
 - **Frontend**: ✅ Работает
-- **Backend API**: ✅ Работает  
+- **Backend API**: ✅ Работает
 - **Database (PostgreSQL)**: ✅ Работает
 - **Cache (Redis)**: ✅ Работает
 - **Ngrok Tunnel**: ✅ Работает
@@ -193,5 +196,6 @@ Frontend Nginx (fittracker-frontend:80)
 
 ---
 
-**Дата создания**: 2026-04-09
+**Дата создания**: 2026-04-09  
 **Версия**: 1.0.0
+

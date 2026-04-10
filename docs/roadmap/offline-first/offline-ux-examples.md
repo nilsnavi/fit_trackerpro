@@ -494,3 +494,4 @@ export function BulkExerciseUpdater({ workoutId }: { workoutId: number }) {
 ✅ Нет утечек памяти в hooks/listeners
 ✅ debounce 500ms работает эффективно
 ```
+

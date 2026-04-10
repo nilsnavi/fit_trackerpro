@@ -1,7 +1,7 @@
 # FitTracker Pro - Roadmap Issues Pack
 
 Date: 2026-04-06
-Source: FINAL_CHANGELOG_AND_ROADMAP_2026-04-06.md
+Source: docs/roadmap/final-changelog-and-roadmap-2026-04-06.md
 Format: Ready-to-create GitHub Issues
 
 ## Priority Legend

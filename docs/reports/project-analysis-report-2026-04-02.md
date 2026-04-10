@@ -95,7 +95,7 @@ ALLOWED_ORIGINS=https://fittrackpro.ru
 - При локальном запуске без Docker ожидается порт 5432
 - Новички могут запутаться
 
-**Решение**: Создан файл `LAUNCH_GUIDE.md` с подробными инструкциями для разных сценариев.
+**Решение**: создан файл `LAUNCH_GUIDE.md` с подробными инструкциями для разных сценариев.
 
 **Статус**: ✅ Задокументировано
 
@@ -110,7 +110,7 @@ ALLOWED_ORIGINS=https://fittrackpro.ru
 
 **Решение**:
 - ✅ Создан `QUICKSTART.md` для быстрого старта
-- ✅ Создан `CHECKLIST.md` для проверки готовности
+- ✅ Добавлен чеклист запуска: `docs/checklists/launch-readiness.md`
 - ✅ Создан `LAUNCH_GUIDE.md` с подробными инструкциями
 - ✅ Обновлён `README.md` со ссылками на новые файлы
 
@@ -124,7 +124,7 @@ ALLOWED_ORIGINS=https://fittrackpro.ru
 
 ✅ **Создана документация для быстрого старта:**
 - `QUICKSTART.md` - запуск за 3 команды
-- `CHECKLIST.md` - полная проверка готовности
+- `docs/checklists/launch-readiness.md` - полная проверка готовности
 - `LAUNCH_GUIDE.md` - развёрнутая инструкция
 - Обновлён `README.md`
 
@@ -224,7 +224,7 @@ docker exec fittracker-postgres psql -U fittracker -d fittracker -c "\dt"
 ### Documentation
 - ✅ README обновлён
 - ✅ QUICKSTART создан
-- ✅ CHECKLIST создан
+- ✅ Launch readiness checklist добавлен
 - ✅ LAUNCH_GUIDE создан
 - ✅ API документация (Swagger)
 
@@ -261,7 +261,7 @@ docker exec fittracker-postgres psql -U fittracker -d fittracker -c "\dt"
 - [ ] Final testing
 - [ ] Documentation update
 - [ ] Team training
-- [ ] Go-live! 🚀
+- [ ] Go-live!
 
 ---
 
@@ -284,10 +284,10 @@ docker compose logs -f frontend
 ```
 
 ### Где искать помощь
-- 📚 [QUICKSTART.md](./QUICKSTART.md) - быстрый старт
-- 📋 [CHECKLIST.md](./CHECKLIST.md) - проверка готовности
-- 📖 [LAUNCH_GUIDE.md](./LAUNCH_GUIDE.md) - подробная инструкция
-- 🗺️ [docs/DOCS_INDEX.md](./docs/DOCS_INDEX.md) - индекс документации
+- 📚 [QUICKSTART](../../QUICKSTART.md)
+- 📖 [LAUNCH_GUIDE](../../LAUNCH_GUIDE.md)
+- 🗺️ [Docs entrypoint](../README.md)
+- 📋 [Launch readiness checklist](../checklists/launch-readiness.md)
 
 ---
 
@@ -314,3 +314,4 @@ docker compose logs -f frontend
 **Аудит провёл**: Lingma AI Assistant  
 **Дата**: 2026-04-02 13:30 MSK  
 **Следующий аудит**: 2026-04-09 или после значительных изменений
+
