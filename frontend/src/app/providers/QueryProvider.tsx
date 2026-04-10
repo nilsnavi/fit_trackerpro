@@ -36,6 +36,12 @@ export function QueryProvider({ children }: PropsWithChildren) {
                     shouldDehydrateQuery: shouldDehydrateOfflineQuery,
                 },
             }}
+            onSuccess={() => {
+                // Avoid startup races: resume paused work only after cache restoration.
+                // (PersistQueryClientProvider delays rendering until restored, but this
+                // keeps mutations consistent if we add paused mutations later.)
+                queryClient.resumePausedMutations().catch(() => {})
+            }}
         >
             <SyncQueueRunner />
             <SyncStatusToastBridge />
