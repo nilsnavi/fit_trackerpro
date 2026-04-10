@@ -11,16 +11,11 @@ export function getRuntimeConfig(): AppRuntimeConfig {
         SENTRY_ENVIRONMENT: 'test',
         SENTRY_RELEASE: '',
         SENTRY_DIST: '',
-        USE_REAL_ANALYTICS: false,
     }
 }
 
 export function getPublicApiBaseUrl(): string {
     return getRuntimeConfig().API_URL
-}
-
-export function useRealAnalytics(): boolean {
-    return false
 }
 
 export function getTelegramBotUsername(): string {

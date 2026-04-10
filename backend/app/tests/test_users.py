@@ -50,9 +50,13 @@ async def test_profile_patch_persists_between_requests(authenticated_client: Asy
 
 @pytest.mark.unit
 async def test_get_user_stats(authenticated_client: AsyncClient):
-    """Stats under /users/me/stats are not implemented yet."""
+    """Stats endpoint returns analytics-backed shape."""
     response = await authenticated_client.get("/api/v1/users/me/stats")
-    assert response.status_code == 404
+    assert response.status_code == 200
+    data = response.json()
+    assert "total_workouts" in data
+    assert "total_duration" in data
+    assert "current_streak" in data
 
 
 @pytest.mark.unit
@@ -91,3 +95,83 @@ async def test_delete_user_account(authenticated_client: AsyncClient):
     """Delete current user returns 204."""
     response = await authenticated_client.delete("/api/v1/users/me")
     assert response.status_code == 204
+
+
+@pytest.mark.integration
+async def test_public_create_user_upsert_and_get_by_id(client: AsyncClient):
+    created = await client.post(
+        "/api/v1/users/",
+        json={
+            "telegram_id": 777001,
+            "username": "upsert_user",
+            "first_name": "First",
+            "last_name": "IgnoredByDomain",
+        },
+    )
+    assert created.status_code == 200, created.text
+    created_data = created.json()
+    assert created_data["telegram_id"] == 777001
+    assert created_data["username"] == "upsert_user"
+
+    updated = await client.post(
+        "/api/v1/users/",
+        json={
+            "telegram_id": 777001,
+            "username": "upsert_user_v2",
+            "first_name": "Second",
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    updated_data = updated.json()
+    assert updated_data["id"] == created_data["id"]
+    assert updated_data["username"] == "upsert_user_v2"
+    assert updated_data["first_name"] == "Second"
+
+    fetched = await client.get(f"/api/v1/users/{created_data['id']}")
+    assert fetched.status_code == 200, fetched.text
+    assert fetched.json()["username"] == "upsert_user_v2"
+
+
+@pytest.mark.integration
+async def test_get_user_by_id_returns_404_for_missing_user(client: AsyncClient):
+    response = await client.get("/api/v1/users/999999")
+    assert response.status_code == 404
+    assert response.json().get("error", {}).get("code") == "user_not_found"
+
+
+@pytest.mark.integration
+async def test_coach_access_generate_list_revoke(authenticated_client: AsyncClient):
+    generated = await authenticated_client.post("/api/v1/users/coach-access/generate")
+    assert generated.status_code == 200, generated.text
+    generated_data = generated.json()
+    assert "code" in generated_data
+    assert "expires_at" in generated_data
+
+    listed = await authenticated_client.get("/api/v1/users/coach-access")
+    assert listed.status_code == 200, listed.text
+    listed_data = listed.json()
+    assert isinstance(listed_data, list)
+    assert len(listed_data) >= 1
+    access_id = listed_data[0]["id"]
+
+    revoked = await authenticated_client.delete(f"/api/v1/users/coach-access/{access_id}")
+    assert revoked.status_code == 204, revoked.text
+
+    listed_after = await authenticated_client.get("/api/v1/users/coach-access")
+    assert listed_after.status_code == 200, listed_after.text
+    assert all(item["id"] != access_id for item in listed_after.json())
+
+
+@pytest.mark.integration
+async def test_export_contains_profile_and_basic_entities(authenticated_client: AsyncClient):
+    response = await authenticated_client.get("/api/v1/users/export")
+    assert response.status_code == 200, response.text
+    assert response.headers.get("content-type", "").startswith("application/json")
+
+    data = response.json()
+    assert "exported_at" in data
+    assert "user" in data
+    assert "summary" in data
+    assert "templates" in data
+    assert "recent_workouts" in data
+    assert data["user"]["telegram_id"] > 0

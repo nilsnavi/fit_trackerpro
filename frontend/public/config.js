@@ -6,5 +6,4 @@ window.__APP_CONFIG__ = {
   SENTRY_ENVIRONMENT: 'development',
   SENTRY_RELEASE: '',
   SENTRY_DIST: '',
-  USE_REAL_ANALYTICS: '',
 };

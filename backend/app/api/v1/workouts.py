@@ -7,6 +7,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
@@ -14,6 +15,7 @@ from app.api.deps.idempotency import optional_idempotency_key
 from app.application.workouts_service import WorkoutsService
 from app.core.audit import get_client_ip
 from app.domain.user import User
+from app.domain.workout_template import WorkoutTemplate
 from app.infrastructure.database import get_async_db
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
 from app.schemas.workouts import (
@@ -34,6 +36,36 @@ from app.schemas.workouts import (
 )
 
 router = APIRouter()
+
+
+VALID_WORKOUT_TYPES = {"cardio", "strength", "flexibility", "mixed"}
+
+
+def _infer_workout_type(
+    template_type: str | None,
+    tags: list[str] | None,
+    exercises: list[dict] | None,
+) -> str:
+    if template_type in VALID_WORKOUT_TYPES:
+        return template_type
+
+    tag_values = [str(tag).strip().lower() for tag in (tags or []) if isinstance(tag, str)]
+    for tag in tag_values:
+        if tag in VALID_WORKOUT_TYPES:
+            return tag
+
+    categories = {
+        str(ex.get("category")).strip().lower()
+        for ex in (exercises or [])
+        if isinstance(ex, dict) and ex.get("category")
+    }
+    categories = {c for c in categories if c in VALID_WORKOUT_TYPES}
+    if len(categories) == 1:
+        return next(iter(categories))
+    if len(categories) > 1:
+        return "mixed"
+
+    return "mixed"
 
 
 @router.get("/templates", response_model=WorkoutTemplateList)
@@ -308,16 +340,32 @@ async def get_workouts_calendar_month(
     last_day = date(year, month, calendar.monthrange(year, month)[1])
     repo = WorkoutsRepository(db)
     rows = await repo.list_workouts_in_range(user_id=current_user.id, date_from=first_day, date_to=last_day)
+    template_ids = {int(w.template_id) for w in rows if w.template_id is not None}
+
+    template_type_by_id: dict[int, str] = {}
+    if template_ids:
+        template_rows = await db.execute(
+            select(WorkoutTemplate.id, WorkoutTemplate.type).where(
+                WorkoutTemplate.user_id == current_user.id,
+                WorkoutTemplate.id.in_(template_ids),
+            )
+        )
+        template_type_by_id = {int(row[0]): str(row[1]) for row in template_rows.all()}
 
     items = []
     for w in rows:
         completed = w.duration is not None and int(w.duration) > 0
         title = (w.comments or "").strip() or f"Тренировка #{w.id}"
+        workout_type = _infer_workout_type(
+            template_type=template_type_by_id.get(int(w.template_id)) if w.template_id is not None else None,
+            tags=w.tags,
+            exercises=w.exercises,
+        )
         items.append(
             {
                 "id": int(w.id),
                 "title": title,
-                "type": "strength",  # TODO: derive from template/type metadata
+                "type": workout_type,
                 "status": "completed" if completed else "planned",
                 "duration_minutes": int(w.duration or 0),
                 "calories_burned": None,
