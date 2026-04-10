@@ -4,9 +4,40 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
+from app.api.v1.workouts import _infer_workout_type
 from app.domain.workout_log import WorkoutLog
 from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
+
+
+@pytest.mark.unit
+def test_infer_workout_type_prefers_template_type():
+    result = _infer_workout_type(
+        template_type="cardio",
+        tags=["strength"],
+        exercises=[{"category": "strength"}],
+    )
+    assert result == "cardio"
+
+
+@pytest.mark.unit
+def test_infer_workout_type_uses_tags_when_template_missing():
+    result = _infer_workout_type(
+        template_type=None,
+        tags=["warmup", "flexibility"],
+        exercises=[{"category": "strength"}],
+    )
+    assert result == "flexibility"
+
+
+@pytest.mark.unit
+def test_infer_workout_type_fallback_to_mixed():
+    result = _infer_workout_type(
+        template_type=None,
+        tags=["recovery-day"],
+        exercises=[{"name": "Unknown"}],
+    )
+    assert result == "mixed"
 
 
 async def _auth_headers_for_telegram_user(client: AsyncClient, telegram_id: int) -> dict[str, str]:

@@ -29,6 +29,7 @@
     "e2e:ci": "playwright test --reporter=line,html",
     "e2e:ci:regression": "playwright test --grep @regression --reporter=line,html",
     "e2e:ci:workout-flows": "playwright test --grep @workout-flows --reporter=line,html",
+    "e2e:smoke:real": "playwright test --grep @smoke-real --reporter=line,html",
     "e2e:mvp": "playwright test e2e/mvp-regression.spec.ts",
     "e2e:mvp:headed": "playwright test e2e/mvp-regression.spec.ts --headed"
   },

@@ -7,8 +7,7 @@ Protected: ``/me`` (profile read, patch, delete) — Bearer access token.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
-from uuid import uuid4
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import Response as FastApiResponse
@@ -81,6 +80,7 @@ async def delete_current_user(
 
 
 @protected_users_router.get("/stats")
+@protected_users_router.get("/me/stats")
 async def get_user_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
@@ -106,45 +106,51 @@ async def get_user_stats(
 
 
 @protected_users_router.get("/coach-access")
-async def list_coach_access(current_user: User = Depends(get_current_user)):
+async def list_coach_access(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
     """
     Coach access sharing is not implemented yet.
     Keep the endpoint to avoid breaking the profile UI.
     """
-    _ = current_user
-    return []
+    service = UsersService(db)
+    return await service.list_coach_access(current_user)
 
 
 @protected_users_router.post("/coach-access/generate")
-async def generate_coach_access(current_user: User = Depends(get_current_user)):
+async def generate_coach_access(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
     """
     Generate a short-lived share code (stub for MVP UI wiring).
     """
-    _ = current_user
-    code = uuid4().hex[:8].upper()
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-    return {"code": code, "expires_at": expires_at.isoformat()}
+    service = UsersService(db)
+    return await service.generate_coach_access(current_user)
 
 
 @protected_users_router.delete("/coach-access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def revoke_coach_access(access_id: str, current_user: User = Depends(get_current_user)):
-    _ = (access_id, current_user)
+async def revoke_coach_access(
+    access_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = UsersService(db)
+    await service.revoke_coach_access(current_user, access_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @protected_users_router.get("/export")
 async def export_user_data(
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """
     Simple JSON export for the current UI contract (`usersApi.exportData()` expects a Blob).
     """
-    payload = {
-        "exported_at": datetime.now(timezone.utc).isoformat(),
-        "user_id": current_user.id,
-        "telegram_id": current_user.telegram_id,
-        "note": "MVP export contains minimal identity only.",
-    }
+    service = UsersService(db)
+    payload = await service.build_export_payload(current_user)
     content = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
     filename = f"fittracker-export-{current_user.id}.json"
     return FastApiResponse(

@@ -20,8 +20,6 @@ export interface AppRuntimeConfig {
     SENTRY_RELEASE: string
     /** Sentry dist (optional, useful for SPA build artifacts) */
     SENTRY_DIST: string
-    /** Feature flag: use real analytics backend API instead of local mocks */
-    USE_REAL_ANALYTICS: boolean
 }
 
 declare global {
@@ -76,17 +74,11 @@ export function getRuntimeConfig(): AppRuntimeConfig {
             'development',
         SENTRY_RELEASE: firstNonEmpty(w?.SENTRY_RELEASE, import.meta.env.VITE_SENTRY_RELEASE) ?? '',
         SENTRY_DIST: firstNonEmpty(w?.SENTRY_DIST) ?? '',
-        USE_REAL_ANALYTICS:
-            parseBoolean(w?.USE_REAL_ANALYTICS ?? import.meta.env.VITE_USE_REAL_ANALYTICS) ?? false,
     }
 }
 
 export function getPublicApiBaseUrl(): string {
     return getRuntimeConfig().API_URL
-}
-
-export function useRealAnalytics(): boolean {
-    return getRuntimeConfig().USE_REAL_ANALYTICS
 }
 
 export function getTelegramBotUsername(): string {

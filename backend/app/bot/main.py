@@ -19,12 +19,56 @@ from telegram.ext import (
     ContextTypes,
 )
 
+from app.application.analytics_service import AnalyticsService
+from app.application.users_service import UsersService
+from app.infrastructure.database import AsyncSessionLocal
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
 # Global bot application instance
 _bot_application: Optional[Application] = None
+
+
+async def _collect_stats_for_telegram_user(telegram_id: int) -> dict | None:
+    async with AsyncSessionLocal() as db:
+        service = UsersService(db)
+        user = await service.get_user_model_by_telegram_id(telegram_id)
+        if user is None:
+            return None
+
+        analytics = AnalyticsService(db)
+        summary = await analytics.get_analytics_summary(user_id=user.id, period="30d")
+        return {
+            "total_workouts": int(summary.total_workouts or 0),
+            "total_duration": int(summary.total_duration or 0),
+        }
+
+
+def _format_stats_text(total_workouts: int, total_duration_minutes: int) -> str:
+    hours = total_duration_minutes // 60
+    minutes = total_duration_minutes % 60
+    duration_label = f"{hours} ч {minutes} мин" if minutes else f"{hours} ч"
+    return (
+        "📊 **Ваша статистика**\n\n"
+        f"🏋️ Всего тренировок: {total_workouts}\n"
+        f"⏱️ Время в зале: {duration_label}\n\n"
+        "_Откройте приложение для подробной статистики_"
+    )
+
+
+def _build_stats_text(stats: dict | None) -> str:
+    if stats is None:
+        return (
+            "📊 **Ваша статистика**\n\n"
+            "Пока недостаточно данных для расчета.\n"
+            "Завершите первую тренировку, и статистика появится здесь.\n\n"
+            "_Откройте приложение для подробной статистики_"
+        )
+    return _format_stats_text(
+        total_workouts=int(stats.get("total_workouts") or 0),
+        total_duration_minutes=int(stats.get("total_duration") or 0),
+    )
 
 
 async def set_webapp_menu_button(bot: Application) -> None:
@@ -151,15 +195,15 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """
     Handle /stats command
     """
-    # TODO: Get actual stats from database
-    stats_text = (
-        "📊 **Ваша статистика**\n\n"
-        "🏋️ Всего тренировок: 0\n"
-        "⏱️ Время в зале: 0 ч\n"
-        "🔥 Калорий сожжено: 0\n"
-        "🏆 Достижений: 0\n\n"
-        "_Откройте приложение для подробной статистики_"
-    )
+    telegram_id = getattr(update.effective_user, "id", None)
+    stats = None
+    if isinstance(telegram_id, int) and telegram_id > 0:
+        try:
+            stats = await _collect_stats_for_telegram_user(telegram_id)
+        except Exception as exc:
+            logger.warning("Failed to collect /stats data for telegram_id=%s: %s", telegram_id, exc)
+
+    stats_text = _build_stats_text(stats)
 
     keyboard = [
         [

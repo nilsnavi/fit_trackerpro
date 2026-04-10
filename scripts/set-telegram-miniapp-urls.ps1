@@ -29,8 +29,7 @@ window.__APP_CONFIG__ = {
   SENTRY_DSN: '',
   SENTRY_ENVIRONMENT: 'development',
   SENTRY_RELEASE: '',
-  SENTRY_DIST: '',
-  USE_REAL_ANALYTICS: '',
+    SENTRY_DIST: '',
 };
 "@
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)

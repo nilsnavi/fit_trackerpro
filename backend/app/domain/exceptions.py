@@ -117,6 +117,12 @@ class NotImplementedFeatureError(DomainError):
     default_message = "This feature is not implemented yet"
 
 
+class UserNotFoundError(DomainError):
+    code = "user_not_found"
+    http_status = 404
+    default_message = "User not found"
+
+
 class IdempotencyKeyInvalidError(DomainError):
     """Malformed or oversized ``Idempotency-Key`` header."""
 

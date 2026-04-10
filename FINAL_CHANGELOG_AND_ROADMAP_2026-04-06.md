@@ -6,6 +6,11 @@ Scope: Consolidated changelog (stability + product) and next-step feature roadma
 
 ## 1) Final changelog (high level)
 
+Status legend:
+- Done: present in code and exercised by current app/test flows.
+- In progress: partially wired or available only in one layer.
+- Remaining: stubbed, incomplete, or not yet hardened.
+
 ### 1.1 Platform and release hardening (latest)
 
 - Backend and CI/CD stabilization completed.
@@ -27,13 +32,22 @@ Primary change set:
 
 ### 1.3 Product feature track (recent baseline)
 
-Workout and UX track delivered in recent cycle:
+Done:
 - Workout mode and active workout flow refactors.
 - Workout editor and modal UX standardization.
 - Progress routes split into dedicated pages.
 - Toast/notification system unified.
 - E2E selectors/mocks standardized for regression tests.
-- Performance optimizations across workout UI and store usage.
+- Analytics frontend pages call live backend analytics endpoints.
+
+In progress:
+- Telegram auth and protected profile flows are implemented, but bot-side `/stats` still returns stub data.
+- Profile stats endpoint is wired to analytics summary, but coach-access and export remain minimal.
+
+Remaining:
+- Public `UsersService` (`POST /users`, `GET /users/{id}`) is still stubbed.
+- Calendar analytics derives workout types only from tags, not from full template/session semantics.
+- Dedicated non-mock smoke golden path for staging/nightly is not separated from current regression setup.
 
 ### 1.4 Production-readiness outcomes
 
@@ -41,11 +55,13 @@ Done:
 - Production validation and environment safeguards improved.
 - Deploy sequence and migration handling aligned with safer operational practice.
 - Security headers, CORS guardrails, and config validation tightened.
+- Fast mock-based Playwright regression coverage exists for core frontend flows.
 
 Still important (known risks):
 - Readiness health should include dependency checks (DB/Redis), not only liveness.
 - Rollback with schema changes requires strict documented operational playbook.
 - Production observability should be fully pinned and consistently deployed.
+- Telegram bot statistics, coach-access, export depth, and public users API are below product-complete level.
 
 ## 2) Current feature state (MVP perspective)
 
@@ -55,67 +71,47 @@ Still important (known risks):
 - Workout history and detail retrieval are functional.
 - Template CRUD baseline is available.
 - Exercise catalog browsing and reference data fetching are in place.
+- Analytics summary/progress/recovery/performance pages are wired to backend APIs.
+- Frontend profile page already consumes `/users/stats`, `/users/coach-access`, and `/users/export` contracts.
 
 ### Gaps that block "product-complete MVP"
 
-- Onboarding/auth UX is incomplete on frontend (login screen is placeholder-level).
-- Workout builder still relies on mock exercise source instead of full real catalog integration.
-- Active workout experience lacks complete session-grade rest and feedback UX.
-- Analytics page still relies on mock data instead of fully wired backend analytics endpoints.
-- Offline/recoverable queue outcomes are not always visible to users as explicit status.
+- Public user create/read service is not production-ready.
+- Coach access sharing is UI-wired but backend-stubbed.
+- User export is minimal identity-only JSON.
+- Telegram bot `/stats` does not use real aggregates.
+- Calendar workout type mapping is too coarse for mixed/template-driven sessions.
+- Separate non-mock smoke golden path for staging/nightly is still missing.
 
 ## 3) Next-step roadmap for feature development
 
-## Phase A (0-2 weeks): close MVP-critical UX gaps
+## Phase A (0-2 weeks): close product/backend correctness gaps
 
-1. Auth onboarding completion (P0)
-- Implement real Telegram auth entry flow in frontend.
-- Add token lifecycle handling and route guards for protected areas.
-- Add clear unauthorized and re-auth UX.
-
-Acceptance:
-- New user can authenticate from Mini App and reach protected routes without manual token setup.
-
-2. Workout builder -> real catalog integration (P0)
-- Replace mock exercise source with API-backed exercise picker.
-- Preserve existing draft autosave behavior.
-- Validate template payload integrity against real exercise IDs.
+1. Close public users/profile backend stubs (P0)
+- Implement real `UsersService` create/read semantics.
+- Replace stub coach-access handling with persisted or explicitly disabled behavior.
+- Expand `/users/export` with profile and basic related entities.
 
 Acceptance:
-- User can create template from real catalog entries and start workout from it without data mismatch.
+- Public user API no longer returns hardcoded values, and profile-adjacent endpoints have deterministic behavior.
 
-3. Active workout error/status UX (P0)
-- Add explicit user-facing status for retry/queued/offline-complete states.
-- Standardize completion error messaging and recovery actions.
-
-Acceptance:
-- User always sees whether action succeeded, queued, or failed with next action hint.
-
-## Phase B (2-4 weeks): analytics and training intelligence
-
-1. Wire analytics page to live backend endpoints (P1)
-- Switch from mock generator to analytics API.
-- Add loading/empty/error states per chart block.
-- Align filters/date ranges with backend contracts.
+2. Analytics and calendar correctness (P0)
+- Remove stale frontend analytics feature-flag debt.
+- Derive workout calendar types from template/session data with safe fallback rules.
+- Back bot `/stats` with real aggregates and empty-state handling.
 
 Acceptance:
-- Analytics screen reflects real user training data after workout completion.
+- User-facing analytics surfaces and Telegram stats reflect persisted data rather than placeholders.
 
-2. Session detail enrichment (P1)
-- Capture and persist session-level rest and optional intensity metadata where product requires.
-- Keep payload backward compatible.
-
-Acceptance:
-- Session detail supports richer post-workout analysis without breaking existing logs.
-
-3. Regression test expansion for MVP flows (P1)
-- Add E2E happy-path tests for auth -> template -> start -> complete -> analytics.
-- Keep local execution stable by avoiding flaky parallel suite contention.
+3. E2E release confidence split (P1)
+- Keep fast mock-based regressions for PRs.
+- Add separate no-mock smoke golden path for staging/nightly.
+- Always preserve artifacts/reports.
 
 Acceptance:
-- Core MVP flow is covered by deterministic CI regression checks.
+- PR pipeline stays fast, while release confidence improves via isolated smoke coverage.
 
-## Phase C (4-8 weeks): reliability and scale-up features
+## Phase B (2-6 weeks): reliability and scale-up features
 
 1. Readiness and operational reliability (P1)
 - Introduce dependency-aware readiness endpoint behavior.
@@ -136,28 +132,37 @@ Acceptance:
 ## 4) Prioritized backlog snapshot
 
 P0 (do now)
-- Real auth onboarding UX.
-- Builder integration with real exercise catalog.
-- Explicit active-workout offline/retry status UX.
+- Public users API implementation.
+- Coach access + export depth.
+- Telegram `/stats` + calendar type correctness.
 
 P1 (next)
-- Live analytics integration.
+- Separate staging/nightly smoke golden path.
 - Dependency-aware readiness and stronger rollback playbook.
-- Full MVP E2E regression path.
+- Full release artifact retention for E2E/reporting.
 
 P2 (after stabilization)
 - Advanced workout insights and progression UX.
 - Additional optimization for scale and observability depth.
 
-## 5) Suggested delivery cadence
+## 5) Known limitations
 
-- Sprint 1: Auth onboarding + builder/catalog integration.
-- Sprint 2: Active session UX hardening + analytics live wiring.
-- Sprint 3: Reliability stack (readiness/rollback/monitoring) + MVP full-regression gate.
+- `backend/app/application/users_service.py` still contains a hardcoded create response and missing read implementation.
+- `backend/app/api/v1/users.py` keeps `coach-access` and `/users/export` at MVP-safe placeholder depth.
+- `backend/app/bot/main.py` returns fixed numbers for `/stats`.
+- `backend/app/application/analytics_service.py` calendar output currently depends on coarse tag mapping.
+- CI has Playwright regression coverage, but no isolated no-mock smoke lane for staging/nightly yet.
+- Readiness and rollback guarantees still need additional operational hardening beyond current checks.
 
-## 6) Definition of done for this roadmap increment
+## 6) Suggested delivery cadence
+
+- Sprint 1: public users/profile stub removal + analytics/calendar/bot correctness.
+- Sprint 2: separate release smoke lane + CI/reporting hardening.
+- Sprint 3: readiness/rollback/monitoring depth and broader product refinements.
+
+## 7) Definition of done for this roadmap increment
 
 - MVP path is executable end-to-end on production-like environment.
-- No mock-only critical user screens remain in core flows.
+- No hardcoded/stubbed critical backend paths remain in core flows.
 - CI validates core feature path and blocks regressions.
 - Operational runbooks align with actual deploy/migration behavior.

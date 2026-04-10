@@ -139,7 +139,6 @@ export function buildUserProfile() {
             current_weight: 82,
             target_weight: 80,
             height: 180,
-            onboarding_completed: true,
         },
         settings: {
             theme: 'light',
@@ -214,7 +213,6 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
         })
     })
 
-    // Mock all API requests - use broad pattern to catch cross-origin requests
     await page.route('**/api/v1/**', async (route) => {
         const req = route.request()
         const url = new URL(req.url())
@@ -251,7 +249,7 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             })
         }
 
-        if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me') || normalizedPath.endsWith('/users/auth/me'))) {
+        if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me'))) {
             return respond(200, buildUserProfile())
         }
 
