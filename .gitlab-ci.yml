@@ -190,6 +190,29 @@ e2e_frontend_regression:
       - frontend/playwright-report/
       - frontend/test-results/
 
+# MVP Golden Path - Critical Quality Gate
+# This test MUST pass for any merge to main
+e2e_mvp_golden_path:
+  stage: test
+  image: node:20-bookworm
+  variables:
+    PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/ms-playwright"
+  cache:
+    key: "playwright-browsers"
+    paths:
+      - .cache/ms-playwright/
+  script:
+    - cd frontend
+    - npm ci --legacy-peer-deps
+    - npx playwright install --with-deps chromium
+    - npm run e2e:mvp
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - frontend/playwright-report/
+      - frontend/test-results/
+
 # ─────────────────────────────────────────────────────────────────────────────
 # DB MIGRATION SAFETY STAGE
 # Two independent jobs:
@@ -315,4 +338,3 @@ test_migration_rollback:
       print(f"Round-trip confirmed. Final revision: {row[0]}")
       conn.close()
       PYEOF
-

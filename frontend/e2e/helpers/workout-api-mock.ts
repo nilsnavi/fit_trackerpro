@@ -139,6 +139,7 @@ export function buildUserProfile() {
             current_weight: 82,
             target_weight: 80,
             height: 180,
+            onboarding_completed: true,
         },
         settings: {
             theme: 'light',
@@ -195,6 +196,25 @@ export async function seedDraft(page: Page, workoutId: number, title: string) {
 // ── Route mock ────────────────────────────────────────────────────────────────
 
 export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
+    // Health check endpoint mock (root level, not under /api/v1/)
+    await page.route('**/health/ready', async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            headers: {
+                'access-control-allow-origin': '*',
+            },
+            body: JSON.stringify({
+                status: 'ready',
+                timestamp: isoNow(),
+                dependencies: {
+                    database: { name: 'database', healthy: true },
+                },
+            }),
+        })
+    })
+
+    // Mock all API requests - use broad pattern to catch cross-origin requests
     await page.route('**/api/v1/**', async (route) => {
         const req = route.request()
         const url = new URL(req.url())
@@ -220,7 +240,18 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return route.fulfill({ status: 204, headers: corsHeaders, body: '' })
         }
 
-        if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me'))) {
+        // Health check endpoint - always return ready for E2E tests
+        if (method === 'GET' && (normalizedPath.endsWith('/health/ready') || normalizedPath === '/health/ready')) {
+            return respond(200, {
+                status: 'ready',
+                timestamp: isoNow(),
+                dependencies: {
+                    database: { name: 'database', healthy: true },
+                },
+            })
+        }
+
+        if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me') || normalizedPath.endsWith('/users/auth/me'))) {
             return respond(200, buildUserProfile())
         }
 

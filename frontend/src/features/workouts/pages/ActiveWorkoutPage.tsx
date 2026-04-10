@@ -1071,6 +1071,7 @@ export function ActiveWorkoutPage() {
                             isLoading={completeMutation.isPending}
                             fullWidth
                             className="mt-2 py-4 text-base font-semibold"
+                            data-testid="finish-workout-btn"
                         >
                             Завершить тренировку
                         </Button>
@@ -1254,6 +1255,7 @@ export function ActiveWorkoutPage() {
                                 disabled: completeMutation.isPending,
                                 isLoading: completeMutation.isPending,
                                 className: 'w-full',
+                                'data-testid': 'finish-workout-rail-btn',
                             },
                         ],
                     ]}

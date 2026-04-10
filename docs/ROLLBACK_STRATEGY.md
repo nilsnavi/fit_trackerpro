@@ -1,67 +1,157 @@
-# Rollback Strategy (P1)
+# Rollback Strategy (P1) — Schema-Evolving Releases
 
-Безопасный rollback после неудачного production-деплоя строится вокруг принципа:
-**сначала откатываем приложение на последний стабильный image tag, восстановление БД делаем только осознанно и выборочно**.
+Цель: дать on-call быстрый и безопасный выбор сценария отката после неудачного релиза, где могли измениться и приложение, и схема БД.
 
-## Цели
+Базовый принцип:
+- сначала выбираем минимально-разрушительный сценарий;
+- откат образов выполняем почти всегда;
+- rollback схемы/данных делаем только при явных сигналах несовместимости.
 
-- Минимизировать downtime при неудачном релизе.
-- Исключить автоматическое разрушительное восстановление данных.
-- Обеспечить воспроизводимый откат через фиксированный предыдущий tag.
-- Оставить прозрачный operational-процесс для on-call/DevOps.
+Быстрый one-page режим для дежурного: `docs/ROLLBACK_ONCALL_CHEATSHEET.md`.
 
-## Когда запускаем rollback
+## 1. Что делает текущий CI/CD (source of truth)
 
-- `deploy` job завершился с ошибкой.
-- `smoke` job завершился с ошибкой.
-- Ручное решение on-call по итогам post-deploy мониторинга.
+Актуальный production/staging pipeline:
+1. `resolve-tag` (проверка versioned `IMAGE_TAG`, не `latest`)
+2. `build` (для `release`) или `build-skipped` (для `workflow_dispatch`)
+3. `pre-deploy-validate` (secrets/compose/nginx)
+4. `migrate`:
+- сохраняет `PREVIOUS_IMAGE_TAG` (если был)
+- пишет `.rollback-meta.env`
+- делает pre-deploy backup БД (`DB_BACKUP_PATH`)
+- выполняет `alembic upgrade head`
+- выполняет idempotent seed
+5. `deploy` (`docker-compose up -d` + host checks)
+6. `verify` (smoke checks)
+7. `record-stable` (пишет `.last-stable-deploy.env` только после полного успеха)
+8. `rollback` (автозапуск при падении `migrate`/`deploy`/`verify`)
 
-## Безопасный автоматический сценарий (workflow)
+Реализация:
+- `.github/workflows/deploy.yml`
+- `.github/workflows/deploy-environment.yml`
+- `.github/workflows/rollback-production.yml` (ручной rollback workflow)
 
-1. **Перед деплоем** фиксируется `PREVIOUS_IMAGE_TAG` (читается из текущего `.env` на сервере, если там уже был `IMAGE_TAG`; при первом деплое значение пустое — автоматический откат образов в workflow недоступен, пока не будет успешного выката с сохранённым тегом).
-2. Выполняется backup БД и путь сохраняется в `.rollback-meta.env`.
-3. Выполняется деплой целевого `IMAGE_TAG`.
-4. При неуспехе срабатывает `rollback` job:
-   - восстанавливает `IMAGE_TAG` в `.env` до `PREVIOUS_IMAGE_TAG`,
-   - выполняет `docker-compose pull backend frontend`,
-   - поднимает стек `docker-compose up -d`,
-   - запускает health-проверки (`/system/health`, `/system/version`, `http://localhost/`).
+## 2. Типы rollback-сценариев
 
-### Политика восстановления БД
+### Сценарий A: rollback только image/app
 
-- По умолчанию восстановление БД **выключено** (`rollback_restore_db=false`).
-- Включать восстановление БД только если:
-  - релиз применил несовместимые миграции, и
-  - подтверждено, что возврат схемы/данных необходим и безопасен.
-- Для ручного запуска через `workflow_dispatch` доступен флаг `rollback_restore_db=true`.
+Применяем, если:
+- нет признаков поломки схемы БД;
+- миграции только backward-compatible (expand), или миграции вообще не затрагивали проблемную функциональность;
+- ошибка в коде/конфиге/интеграции приложения.
 
-## Файлы метаданных на сервере (`~/fittracker-pro`)
+Действия:
+1. Откатить `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG` (auto rollback или manual workflow).
+2. Не выполнять restore БД.
+3. Проверить `/api/v1/system/health`, `/api/v1/system/version`, `/health`, ключевые бизнес-эндпоинты.
 
-| Файл | Когда пишется | Содержимое |
-|------|----------------|------------|
-| `.rollback-meta.env` | В начале каждого деплоя из `deploy.yml` | `PREVIOUS_IMAGE_TAG`, `TARGET_IMAGE_TAG`, `DEPLOY_STARTED_AT`, `DB_BACKUP_PATH` |
-| `.last-stable-deploy.env` | После **успешного** deploy **и** smoke (`record-stable` job) | `LAST_STABLE_IMAGE_TAG`, `LAST_STABLE_PREVIOUS_TAG`, `LAST_STABLE_RECORDED_AT` |
+Риск: низкий, потому что данные не перезаписываются.
 
-`PREVIOUS_IMAGE_TAG` — это тег, который **уже крутился** до текущей попытки выката; его же использует авто-rollback при падении deploy или smoke.
+### Сценарий B: rollback image/app + migration downgrade
 
-## Автоматический rollback (`deploy.yml`)
+Применяем, если:
+- новый релиз требует схему, несовместимую со старым приложением;
+- есть корректный `downgrade()` для конкретной миграции;
+- откат можно сделать без потери критичных данных.
 
-Реализовано в `.github/workflows/deploy.yml`:
+Действия:
+1. Зафиксировать deploy freeze.
+2. Откатить image на предыдущий стабильный tag.
+3. Выполнить `alembic downgrade <target_revision>` до совместимой ревизии.
+4. Повторно проверить health/smoke.
 
-- input `rollback_restore_db` только для `workflow_dispatch` (при откате после сбоя; для события `release` восстановление БД из бэкапа не включается автоматически);
-- сохранение метаданных в `.rollback-meta.env`;
-- откат `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG`, `pull` backend/frontend, `up -d`, health checks на хосте;
-- после успешного smoke — запись снимка стабильных тегов в `.last-stable-deploy.env`.
+Когда предпочтительнее restore:
+- `downgrade()` неполный/небезопасный;
+- миграция включала необратимые data-transform операции;
+- downgrade не возвращает консистентное состояние данных.
 
-## Ручной rollback workflow (GitHub Actions)
+Риск: средний. Требует ручного подтверждения ревизии и валидации данных.
 
-Отдельный workflow: `.github/workflows/rollback-production.yml` (только **workflow_dispatch**).
+### Сценарий C: rollback image/app + database restore
 
-1. В поле **confirm** введите ровно `ROLLBACK` — иначе запуск будет отклонён отдельной job.
-2. **rollback_image_tag** — пусто: берётся `PREVIOUS_IMAGE_TAG` из `.rollback-meta.env`, иначе (если пусто) `LAST_STABLE_PREVIOUS_TAG` из `.last-stable-deploy.env`; либо укажите тег явно.
-3. **rollback_restore_db** — по умолчанию выключено; включайте только при осознанной необходимости восстановить дамп из `DB_BACKUP_PATH` в `.rollback-meta.env`.
+Применяем, если:
+- зафиксирована data corruption/невосстановимая несовместимость после миграции;
+- downgrade невозможен или уже провалился;
+- нужен полный возврат к pre-deploy snapshot.
 
-## Ручной runbook по SSH (если CI недоступен)
+Действия:
+1. Откатить image на предыдущий стабильный tag.
+2. Восстановить БД из `DB_BACKUP_PATH` (создан в `migrate` stage).
+3. Прогнать smoke + базовые доменные проверки целостности.
+
+Важно:
+- `rollback_restore_db=true` по умолчанию выключен и должен включаться осознанно.
+- Restore перезаписывает post-backup изменения данных.
+
+Риск: высокий (возможна потеря изменений после момента backup).
+
+## 3. Decision Tree для on-call
+
+1. Падение релиза затрагивает только app/runtime (5xx, broken UI/API), а схема выглядит совместимой?
+- Да -> Сценарий A (image/app rollback only).
+- Нет -> перейти к шагу 2.
+
+2. Проблема связана со схемой (ошибки SQL/ORM, missing column/table, migration mismatch)?
+- Нет -> Сценарий A.
+- Да -> перейти к шагу 3.
+
+3. Есть проверенный и безопасный `downgrade()` для нужной ревизии без риска неконсистентных данных?
+- Да -> Сценарий B (image rollback + migration downgrade).
+- Нет -> перейти к шагу 4.
+
+4. Есть валидный pre-deploy backup (`DB_BACKUP_PATH`) и допустима потеря post-backup записей?
+- Да -> Сценарий C (image rollback + DB restore).
+- Нет -> аварийный ручной режим: стабилизация сервиса (A), затем инцидентный план с DBA/Backend owner.
+
+## 4. Edge case: первый deploy
+
+Проблема:
+- на первом деплое `PREVIOUS_IMAGE_TAG` пустой;
+- автоматический rollback образов из `deploy-environment.yml` завершится ошибкой (это ожидаемо).
+
+Безопасный порядок:
+1. Запустить `.github/workflows/rollback-production.yml` вручную.
+2. Передать `rollback_image_tag` явно (последний известный рабочий тег).
+3. `rollback_restore_db=true` включать только при необходимости и только при наличии валидного `DB_BACKUP_PATH`.
+4. Если рабочего тега нет, rollback образа невозможен: фиксировать инцидент, выполнять hotfix/redeploy.
+
+## 5. Совместимость rollback с текущим CI/CD
+
+Проверка соответствия выполнена:
+- rollback hook срабатывает после `migrate`/`deploy`/`verify` fail (`always()` + failure condition).
+- pre-deploy backup создается до `alembic upgrade head` и путь сохраняется в `.rollback-meta.env`.
+- `record-stable` обновляет last-stable только после полного success (migrate+deploy+verify).
+- ручной rollback workflow умеет брать tag в приоритете:
+1) explicit `rollback_image_tag`
+2) `.rollback-meta.env: PREVIOUS_IMAGE_TAG`
+3) `.last-stable-deploy.env: LAST_STABLE_PREVIOUS_TAG`
+
+Ограничения, которые остаются системными:
+- автоматический rollback не делает `alembic downgrade`;
+- database restore автоматом не включается для release-события;
+- при первом деплое auto rollback image недоступен без явного тега.
+
+## 6. Operational Checklist (короткий)
+
+Перед откатом:
+- [ ] Определить тип инцидента: app-only / schema / data corruption.
+- [ ] Подтвердить текущий этап падения: `migrate`, `deploy` или `verify`.
+- [ ] Проверить наличие `.rollback-meta.env` и `DB_BACKUP_PATH`.
+- [ ] Зафиксировать deploy freeze и уведомить on-call канал.
+
+Во время отката:
+- [ ] Выполнить выбранный сценарий (A/B/C) без смешивания шагов.
+- [ ] Для downgrade: зафиксировать целевую ревизию и команду.
+- [ ] Для restore: подтвердить допуск к потере post-backup данных.
+
+После отката:
+- [ ] Проверить `/api/v1/system/health`, `/api/v1/system/version`, `/health`.
+- [ ] Проверить ключевые бизнес-потоки (логин/тренировки/шаблоны).
+- [ ] Создать incident note: причина, сценарий, итог, дальнейший fix-forward план.
+
+## 7. Быстрые команды (manual fallback по SSH)
+
+Откат только image/app:
 
 ```bash
 cd ~/fittracker-pro
@@ -71,17 +161,24 @@ docker-compose -f docker-compose.prod.yml pull backend frontend
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-Опционально восстановить БД из `DB_BACKUP_PATH` только после подтверждения:
+Migration downgrade (пример):
 
 ```bash
+cd ~/fittracker-pro
+docker-compose -f docker-compose.prod.yml exec -T backend alembic current
+docker-compose -f docker-compose.prod.yml exec -T backend alembic history --indicate-current
+docker-compose -f docker-compose.prod.yml exec -T backend alembic downgrade <target_revision>
+```
+
+DB restore из pre-deploy backup:
+
+```bash
+cd ~/fittracker-pro
+source .rollback-meta.env
 docker-compose -f docker-compose.prod.yml up -d postgres
 docker exec -i fittracker-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$DB_BACKUP_PATH"
 ```
 
-## Ограничения и дальнейшие шаги
+---
 
-- Откат образов **не** откатывает схему БД Alembic автоматически.
-- Для полного сценария стоит добавить:
-  - миграционную политику "expand/contract" для backward-compatible релизов;
-  - canary/blue-green (с переключением трафика);
-  - автоматический capture release note с привязкой к commit SHA и tag.
+Последнее обновление: 2026-04-10

@@ -159,16 +159,18 @@ def downgrade() -> None:
 
 ## 4. CI Pipeline
 
-Two jobs run in the `db_migrations` stage (`.gitlab-ci.yml`):
+Актуальный CI/CD для проекта работает на GitHub Actions.
 
-| Job | What it does |
+Ключевые workflow для миграций и rollback-совместимости:
+
+| Workflow | What it does |
 |---|---|
-| `test_migrations_fresh_db` | Validates chain integrity, then runs `alembic upgrade head` on a clean PostgreSQL 16 instance |
-| `test_migration_rollback` | Runs upgrade → head, downgrade → -1, downgrade → base, upgrade → head (full round-trip) |
+| `.github/workflows/deploy.yml` + `.github/workflows/deploy-environment.yml` | В `migrate` stage создают pre-deploy backup, выполняют `alembic upgrade head`, затем при fail запускают rollback stage |
+| `.github/workflows/migrate.yml` | Ручные операции `upgrade/downgrade/status` с backup перед `upgrade/downgrade` |
 
-Both jobs depend on `lint_backend` and `backend_dep_consistency` passing first.
-
-A PostgreSQL 16 Alpine service container is started automatically via GitLab CI `services:`.
+Требование к качеству миграций до merge остается прежним:
+- `python backend/tools/test_migrations.py --validate-chain`
+- локальный round-trip `upgrade -> downgrade -> upgrade` на тестовой БД для рискованных schema changes
 
 ### Running the same checks locally
 
@@ -219,4 +221,4 @@ for these patterns:
 
 ---
 
-*Last updated: 2026-04-08*
+*Last updated: 2026-04-10*

@@ -60,7 +60,12 @@ curl -fsS https://<domain>/health
 - миграция завершилась с ошибкой;
 - критичные 5xx на ключевых маршрутах после релиза.
 
-При срабатывании триггера выполняется rollback по `docs/ROLLBACK_STRATEGY.md`.
+При срабатывании триггера выполняется rollback по `docs/ROLLBACK_STRATEGY.md` с выбором сценария:
+- A: rollback только image/app;
+- B: rollback image/app + migration downgrade;
+- C: rollback image/app + database restore.
+
+Для выбора используйте decision tree из `docs/ROLLBACK_STRATEGY.md` (раздел 3).
 
 ## 6. Minimal operational commands
 

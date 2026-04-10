@@ -12,6 +12,29 @@ Playwright-based E2E tests for FitTracker Pro covering the complete user workflo
 6. Complete workout
 7. Verify in history
 
+## MVP Golden Path Regression
+
+The `mvp-regression.spec.ts` is the **critical quality gate** for the MVP. It tests the complete user flow:
+
+```
+auth → create template → start workout → log sets → complete workout → analytics visible
+```
+
+### Run MVP Golden Path Locally
+
+```bash
+# Run MVP regression test
+npm run e2e:mvp
+
+# Run with visible browser (debugging)
+npm run e2e:mvp:headed
+```
+
+### CI Quality Gate
+
+The `e2e_mvp_golden_path` job in GitLab CI runs on every push and merge request.
+**This test MUST pass for any merge to main.**
+
 ## Test Structure
 
 ```
