@@ -22,6 +22,7 @@
 | `docs/ENVIRONMENT_SETUP.md` | Полная настройка переменных окружения | Backend vars, Frontend vars, Production compose vars, validation checklist | DevOps |
 | `docs/DEPLOYMENT_LEGACY.md` | Legacy-redirect на новый гайд деплоя | Ссылка на `docs/DEPLOYMENT.md` | DevOps |
 | `docs/ROLLBACK_STRATEGY.md` | P1-стратегия безопасного отката | Trigger conditions, workflow rollback, DB restore policy, manual runbook | DevOps/SRE |
+| `docs/ROLLBACK_ONCALL_CHEATSHEET.md` | One-page шпаргалка для on-call по аварийному откату | 60-second triage, decision shortcuts A/B/C, monitoring signals, manual fallback | DevOps/SRE |
 | `docs/PRODUCTION_CHECKLIST.md` | Релизный чеклист перед/после выката | Before release, Environment and secrets, Smoke checks, Rollback readiness | Release Manager |
 | `docs/SECURITY_CHECKLIST.md` | Legacy-redirect на канонический security | Ссылка на `docs/security.md` | Security Owner |
 | `docs/security/checklist.md` | Расширенный практический чеклист (RU) | Детали по стеку и env | Security Owner |

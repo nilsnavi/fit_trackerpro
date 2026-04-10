@@ -14,6 +14,7 @@ interface WorkoutActionRailButton {
     isLoading?: boolean
     fullWidth?: boolean
     className?: string
+    'data-testid'?: string
 }
 
 interface WorkoutActionRailProps {
@@ -44,6 +45,7 @@ export function WorkoutActionRail({ sections, topSlot, className, collapsible }:
                             isLoading={item.isLoading}
                             className={item.className}
                             fullWidth={item.fullWidth ?? true}
+                            data-testid={item['data-testid']}
                         >
                             {item.label}
                         </Button>
@@ -68,6 +70,7 @@ export function WorkoutActionRail({ sections, topSlot, className, collapsible }:
                                 isLoading={item.isLoading}
                                 className={item.className}
                                 fullWidth={item.fullWidth ?? true}
+                                data-testid={item['data-testid']}
                             >
                                 {item.label}
                             </Button>
