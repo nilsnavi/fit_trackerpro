@@ -1038,7 +1038,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
             await self.db.execute(
                 text(
                     """
-                    SELECT id, date, duration
+                                        SELECT id, date, duration, exercises, session_metrics
                     FROM workout_logs
                     WHERE user_id = :user_id
                       AND id = :workout_id

@@ -46,6 +46,8 @@ class WorkoutSet(Base):
     weight: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
     rpe: Mapped[Optional[float]] = mapped_column(Numeric(3, 1), nullable=True)
     rir: Mapped[Optional[float]] = mapped_column(Numeric(3, 1), nullable=True)
+    planned_rest_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    actual_rest_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     duration: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -80,6 +82,14 @@ class WorkoutSet(Base):
         CheckConstraint("weight IS NULL OR weight >= 0", name="ck_workout_sets_weight_non_negative"),
         CheckConstraint("rpe IS NULL OR (rpe >= 0 AND rpe <= 10)", name="ck_workout_sets_rpe_range"),
         CheckConstraint("rir IS NULL OR (rir >= 0 AND rir <= 10)", name="ck_workout_sets_rir_range"),
+        CheckConstraint(
+            "planned_rest_seconds IS NULL OR planned_rest_seconds >= 0",
+            name="ck_workout_sets_planned_rest_non_negative",
+        ),
+        CheckConstraint(
+            "actual_rest_seconds IS NULL OR actual_rest_seconds >= 0",
+            name="ck_workout_sets_actual_rest_non_negative",
+        ),
         CheckConstraint("duration IS NULL OR duration >= 0", name="ck_workout_sets_duration_non_negative"),
         Index("ix_workout_sets_session_exercise_number", "workout_session_exercise_id", "set_number"),
         Index("ix_workout_sets_user_session", "user_id", "workout_session_id"),

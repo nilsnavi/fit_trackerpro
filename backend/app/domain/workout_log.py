@@ -74,6 +74,11 @@ class WorkoutLog(Base):
         default=list,
         comment="Completed exercises with actual sets, reps, weight"
     )
+    session_metrics: Mapped[Optional[dict]] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Optional derived session metrics for richer summaries and analytics",
+    )
 
     comments: Mapped[Optional[str]] = mapped_column(
         String(1000),

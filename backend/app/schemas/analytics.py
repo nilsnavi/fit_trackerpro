@@ -383,6 +383,13 @@ class AnalyticsPerformanceOverviewResponse(BaseModel):
     trend: List[AnalyticsPerformanceTrendPoint] = Field(default_factory=list)
 
 
+class WorkoutSessionInsightItem(BaseModel):
+    code: str
+    title: str
+    level: str
+    message: str
+
+
 class WorkoutPostSummaryResponse(BaseModel):
     """Post-workout snapshot focused on immediate user feedback."""
 
@@ -392,5 +399,7 @@ class WorkoutPostSummaryResponse(BaseModel):
     total_sets: int
     total_reps: int
     total_volume: float
+    session_metrics: Optional[dict[str, Any]] = None
+    insights: List[WorkoutSessionInsightItem] = Field(default_factory=list)
     best_sets: List[ProgressInsightsBestSetItem] = Field(default_factory=list)
     pr_events: List[ProgressInsightsPRItem] = Field(default_factory=list)

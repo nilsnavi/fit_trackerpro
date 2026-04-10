@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
+    Activity,
     ArrowLeft,
     CalendarDays,
     Clock3,
@@ -29,12 +30,37 @@ import {
     formatSetValue,
 } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHelpers'
-import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
+import type { WorkoutHistoryItem, WorkoutSessionMetrics } from '@features/workouts/types/workouts'
 
 const buildTemplateName = (workout: WorkoutHistoryItem): string => {
     const base = workout.comments?.trim()
     if (base && base.length > 0) return base
     return `Шаблон из тренировки #${workout.id}`
+}
+
+function formatRestSummary(metrics?: WorkoutSessionMetrics | null): string {
+    if (!metrics || typeof metrics.avg_rest_seconds !== 'number' || metrics.rest_tracked_sets <= 0) {
+        return 'Нет данных'
+    }
+    return `${Math.round(metrics.avg_rest_seconds)} сек`
+}
+
+function formatFatigueSummary(metrics?: WorkoutSessionMetrics | null): string {
+    const delta = metrics?.fatigue_trend?.delta
+    if (typeof delta !== 'number') return 'Нет данных'
+    if (delta >= 1) return 'К концу тяжелее'
+    if (delta <= -1) return 'К концу легче'
+    return 'Ровный темп'
+}
+
+function formatEffortSummary(metrics?: WorkoutSessionMetrics | null): string {
+    if (!metrics) return 'Нет данных'
+    if (typeof metrics.avg_rpe === 'number') {
+        return `RPE ${metrics.avg_rpe}`
+    }
+    const hardSets = metrics.effort_distribution.hard + metrics.effort_distribution.maximal
+    if (hardSets > 0) return `${hardSets} тяжёлых сетов`
+    return 'Нет данных'
 }
 
 export function WorkoutDetailPage() {
@@ -81,6 +107,10 @@ export function WorkoutDetailPage() {
         if (!workout) return 0
         return workout.exercises.reduce((acc, exercise) => acc + exercise.sets_completed.length, 0)
     }, [workout])
+
+    const summaryMetrics = workout?.session_metrics ?? null
+    const analyticsMetrics = workoutSummaryQuery.data?.session_metrics ?? summaryMetrics
+    const analyticsInsights = workoutSummaryQuery.data?.insights ?? []
 
     const handleRepeatWorkout = async () => {
         if (!workout || !isCompletedWorkout) return
@@ -206,6 +236,29 @@ export function WorkoutDetailPage() {
                             </div>
                         </div>
 
+                        {summaryMetrics && (
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                <div className="rounded-lg bg-telegram-bg/60 p-3">
+                                    <div className="text-xs text-telegram-hint">Среднее усилие</div>
+                                    <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                        {formatEffortSummary(summaryMetrics)}
+                                    </div>
+                                </div>
+                                <div className="rounded-lg bg-telegram-bg/60 p-3">
+                                    <div className="text-xs text-telegram-hint">Отдых</div>
+                                    <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                        {formatRestSummary(summaryMetrics)}
+                                    </div>
+                                </div>
+                                <div className="rounded-lg bg-telegram-bg/60 p-3">
+                                    <div className="text-xs text-telegram-hint">Тренд усталости</div>
+                                    <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                        {formatFatigueSummary(summaryMetrics)}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {workout.comments && (
                             <div className="flex items-start gap-2 rounded-lg bg-telegram-bg/50 p-3 text-sm text-telegram-text">
                                 <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-telegram-hint" />
@@ -261,6 +314,59 @@ export function WorkoutDetailPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {analyticsMetrics && (
+                                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                        <div className="rounded-lg bg-telegram-bg/60 p-3">
+                                            <div className="text-xs text-telegram-hint">Среднее RPE</div>
+                                            <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                                {analyticsMetrics.avg_rpe ?? 'Нет данных'}
+                                            </div>
+                                        </div>
+                                        <div className="rounded-lg bg-telegram-bg/60 p-3">
+                                            <div className="text-xs text-telegram-hint">Средний отдых</div>
+                                            <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                                {formatRestSummary(analyticsMetrics)}
+                                            </div>
+                                        </div>
+                                        <div className="rounded-lg bg-telegram-bg/60 p-3">
+                                            <div className="text-xs text-telegram-hint">Consistency отдыха</div>
+                                            <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                                {typeof analyticsMetrics.rest_consistency_score === 'number'
+                                                    ? `${Math.round(analyticsMetrics.rest_consistency_score)} / 100`
+                                                    : 'Нет данных'}
+                                            </div>
+                                        </div>
+                                        <div className="rounded-lg bg-telegram-bg/60 p-3">
+                                            <div className="text-xs text-telegram-hint">Load density</div>
+                                            <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                                {typeof analyticsMetrics.volume_per_minute === 'number'
+                                                    ? `${Math.round(analyticsMetrics.volume_per_minute)}/мин`
+                                                    : 'Нет данных'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {analyticsInsights.length > 0 && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <Activity className="h-4 w-4 text-primary" />
+                                            <h3 className="text-sm font-semibold text-telegram-text">Практические инсайты</h3>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {analyticsInsights.map((insight) => (
+                                                <article
+                                                    key={insight.code}
+                                                    className="rounded-lg bg-telegram-bg/60 p-3"
+                                                >
+                                                    <p className="text-sm font-medium text-telegram-text">{insight.title}</p>
+                                                    <p className="mt-1 text-xs text-telegram-hint">{insight.message}</p>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <h3 className="text-sm font-semibold text-telegram-text">Лучшие подходы</h3>

@@ -9,6 +9,7 @@ from pydantic import TypeAdapter
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.session_metrics import build_session_insights, compute_session_metrics
 from app.domain.exceptions import (
     AnalyticsNotFoundError,
     AnalyticsUnavailableError,
@@ -51,6 +52,7 @@ from app.schemas.analytics import (
     WorkoutCalendarResponse,
     WorkoutCalendarSummary,
     WorkoutPostSummaryResponse,
+    WorkoutSessionInsightItem,
 )
 from app.schemas.enums import DataExportStatus
 from app.settings import settings
@@ -627,6 +629,11 @@ class AnalyticsService:
         workout_data = raw.get("workout", {})
         totals = raw.get("totals", {})
         best_sets_rows = raw.get("best_sets", [])
+        workout_exercises = workout_data.get("exercises") if isinstance(workout_data.get("exercises"), list) else []
+        session_metrics = workout_data.get("session_metrics")
+        if not session_metrics:
+            session_metrics = compute_session_metrics(workout_exercises, int(workout_data.get("duration") or 0))
+        insights = build_session_insights(session_metrics, int(workout_data.get("duration") or 0))
         pr_rows = await self.repository.get_progress_pr_events(
             user_id=user_id,
             date_from=workout_data["date"],
@@ -641,6 +648,8 @@ class AnalyticsService:
             total_sets=int(totals.get("total_sets") or 0),
             total_reps=int(totals.get("total_reps") or 0),
             total_volume=round(float(totals.get("total_volume") or 0), 2),
+            session_metrics=session_metrics,
+            insights=[WorkoutSessionInsightItem.model_validate(item) for item in insights],
             best_sets=[
                 ProgressInsightsBestSetItem(
                     exercise_id=int(row["exercise_id"]),

@@ -2,7 +2,9 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 
+from app.domain.workout_log import WorkoutLog
 from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
 
@@ -987,4 +989,56 @@ class TestWorkoutValidationAuthorizationLifecycle:
             },
         )
         assert second.status_code == 409, second.text
+
+    async def test_history_detail_recomputes_session_metrics_for_legacy_rows(
+        self,
+        authenticated_client: AsyncClient,
+        db_session,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Legacy metrics fallback", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        workout_id = started.json()["id"]
+
+        completed = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json={
+                "duration": 42,
+                "exercises": [
+                    {
+                        "exercise_id": 1,
+                        "name": "Squat",
+                        "sets_completed": [
+                            {"set_number": 1, "completed": True, "reps": 6, "weight": 100, "rpe": 7.5},
+                            {
+                                "set_number": 2,
+                                "completed": True,
+                                "reps": 5,
+                                "weight": 100,
+                                "rpe": 8.5,
+                                "actual_rest_seconds": 90,
+                            },
+                        ],
+                    }
+                ],
+                "comments": "done",
+                "tags": ["strength"],
+            },
+        )
+        assert completed.status_code == 200, completed.text
+        assert completed.json()["session_metrics"]["avg_rpe"] == 8.0
+
+        row = (
+            await db_session.execute(select(WorkoutLog).where(WorkoutLog.id == workout_id))
+        ).scalar_one()
+        row.session_metrics = None
+        await db_session.commit()
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail.status_code == 200, detail.text
+        detail_json = detail.json()
+        assert detail_json["session_metrics"]["avg_rpe"] == 8.0
+        assert detail_json["session_metrics"]["rest_tracked_sets"] == 1
 

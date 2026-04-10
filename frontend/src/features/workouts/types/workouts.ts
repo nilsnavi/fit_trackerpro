@@ -68,6 +68,8 @@ export interface CompletedSet {
     weight?: number
     rpe?: number
     rir?: number
+    planned_rest_seconds?: number
+    actual_rest_seconds?: number
     duration?: number
     distance?: number
     completed: boolean
@@ -78,6 +80,33 @@ export interface CompletedExercise {
     name: string
     sets_completed: CompletedSet[]
     notes?: string
+}
+
+export interface SessionFatigueTrend {
+    opening_avg_rpe: number
+    closing_avg_rpe: number
+    delta: number
+}
+
+export interface SessionEffortDistribution {
+    easy: number
+    moderate: number
+    hard: number
+    maximal: number
+}
+
+export interface WorkoutSessionMetrics {
+    completed_sets: number
+    avg_rpe?: number | null
+    avg_rir?: number | null
+    total_rest_seconds: number
+    avg_rest_seconds?: number | null
+    rest_tracked_sets: number
+    rest_tracking_ratio: number
+    rest_consistency_score?: number | null
+    fatigue_trend?: SessionFatigueTrend | null
+    effort_distribution: SessionEffortDistribution
+    volume_per_minute?: number | null
 }
 
 export interface WorkoutStartRequest {
@@ -138,6 +167,8 @@ export interface WorkoutCompleteResponse {
     tags: string[]
     glucose_before?: number
     glucose_after?: number
+    session_metrics?: WorkoutSessionMetrics | null
+    version?: number
     completed_at: string
     message: string
 }
@@ -154,6 +185,8 @@ export interface WorkoutHistoryItem {
     tags: string[]
     glucose_before?: number
     glucose_after?: number
+    session_metrics?: WorkoutSessionMetrics | null
+    version?: number
     created_at: string
 }
 

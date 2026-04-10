@@ -7,6 +7,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.session_metrics import compute_session_metrics
 from app.core.audit import (
     WORKOUT_COMPLETE,
     WORKOUT_START,
@@ -49,6 +50,7 @@ from app.schemas.workouts import (
     WorkoutTemplateList,
     WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
+    WorkoutSessionMetrics,
 )
 from app.settings import settings
 
@@ -125,6 +127,12 @@ class WorkoutsService:
                     rpe_values.append(rpe)
         return total_volume, rpe_values
 
+    @staticmethod
+    def _session_metrics_model(metrics: Optional[dict]) -> Optional[WorkoutSessionMetrics]:
+        if not metrics:
+            return None
+        return WorkoutSessionMetrics.model_validate(metrics)
+
     def _extract_workout_muscle_load(
         self,
         exercises: Optional[list[dict]],
@@ -188,6 +196,7 @@ class WorkoutsService:
                     "set_type": WorkoutSetType.WORKING.value,
                     "reps": ex.get("reps"),
                     "weight": ex.get("weight"),
+                    "planned_rest_seconds": ex.get("rest_seconds"),
                     "duration": ex.get("duration"),
                     "completed": False,
                 }
@@ -257,6 +266,8 @@ class WorkoutsService:
                             weight=raw_set.get("weight"),
                             rpe=raw_set.get("rpe"),
                             rir=raw_set.get("rir"),
+                            planned_rest_seconds=raw_set.get("planned_rest_seconds"),
+                            actual_rest_seconds=raw_set.get("actual_rest_seconds"),
                             duration=raw_set.get("duration"),
                             completed=bool(raw_set.get("completed", True)),
                         )
@@ -671,6 +682,7 @@ class WorkoutsService:
             template_id=data.template_id,
             date=date.today(),
             exercises=initial_exercises,
+            session_metrics=compute_session_metrics(initial_exercises, None),
             comments=data.name or (template.name if template else None),
             tags=([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
         )
@@ -726,6 +738,7 @@ class WorkoutsService:
             template_id=template_id,
             date=date.today(),
             exercises=initial_exercises,
+            session_metrics=compute_session_metrics(initial_exercises, None),
             comments=data.name or override_comments or template.name,
             tags=override_tags or ([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
         )
@@ -898,6 +911,9 @@ class WorkoutsService:
             tags=list(workout.tags or []),
             glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
             glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            session_metrics=self._session_metrics_model(
+                workout.session_metrics or compute_session_metrics(workout.exercises or [], workout.duration)
+            ),
             version=workout.version,
             completed_at=workout.updated_at,
             message=message,
@@ -917,6 +933,9 @@ class WorkoutsService:
             tags=list(workout.tags or []),
             glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
             glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            session_metrics=self._session_metrics_model(
+                workout.session_metrics or compute_session_metrics(workout.exercises or [], workout.duration)
+            ),
             version=workout.version,
             created_at=workout.created_at,
         )
@@ -974,6 +993,7 @@ class WorkoutsService:
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
         workout.glucose_after = data.glucose_after
+        workout.session_metrics = compute_session_metrics(workout.exercises, workout.duration)
         workout.version += 1
 
         workout = await self.repository.commit_workout_update(workout)
@@ -1044,6 +1064,7 @@ class WorkoutsService:
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
         workout.glucose_after = data.glucose_after
+        workout.session_metrics = compute_session_metrics(workout.exercises, workout.duration)
         workout.version += 1
 
         await self._upsert_training_load_daily(user_id=user_id, target_date=workout.date)
@@ -1082,6 +1103,7 @@ class WorkoutsService:
             tags=workout.tags,
             glucose_before=workout.glucose_before,
             glucose_after=workout.glucose_after,
+            session_metrics=self._session_metrics_model(workout.session_metrics),
             version=workout.version,
             completed_at=workout.updated_at,
             message="Workout completed successfully",
