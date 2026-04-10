@@ -44,16 +44,6 @@ function firstNonEmpty(...values: (string | undefined)[]): string | undefined {
     return undefined
 }
 
-function parseBoolean(v: unknown): boolean | undefined {
-    if (typeof v === 'boolean') return v
-    if (typeof v !== 'string') return undefined
-    const t = trim(v)?.toLowerCase()
-    if (t === undefined) return undefined
-    if (t === 'true' || t === '1' || t === 'yes' || t === 'y' || t === 'on') return true
-    if (t === 'false' || t === '0' || t === 'no' || t === 'n' || t === 'off') return false
-    return undefined
-}
-
 export function getRuntimeConfig(): AppRuntimeConfig {
     const w = typeof window !== 'undefined' ? window.__APP_CONFIG__ : undefined
 
