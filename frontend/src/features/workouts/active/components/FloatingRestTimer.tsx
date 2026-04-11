@@ -1,3 +1,7 @@
+/**
+ * PR UX: плавающий таймер привязан к `var(--app-shell-nav-h)` + запас под нижний action rail,
+ * чтобы expanded/minimized не перекрывались кнопками «+ подход» / «Завершить».
+ */
 import { memo, useEffect, useState } from 'react'
 import { SkipForward, Timer } from 'lucide-react'
 import { useActiveWorkoutActions, useActiveWorkoutStore } from '@/state/local'
@@ -44,7 +48,7 @@ export const FloatingRestTimer = memo(function FloatingRestTimer({
     if (isMinimized) {
         return (
             <div
-                className={`fixed bottom-20 right-4 z-40 ${className}`}
+                className={`fixed bottom-[calc(var(--app-shell-nav-h)+10.5rem)] right-4 z-30 ${className}`}
                 onClick={() => setIsMinimized(false)}
             >
                 <div className="flex items-center gap-2 rounded-full bg-primary px-3 py-2 shadow-lg">
@@ -70,7 +74,7 @@ export const FloatingRestTimer = memo(function FloatingRestTimer({
 
     // Expanded view - full controls
     return (
-        <div className={`fixed bottom-20 left-4 right-4 z-40 ${className}`}>
+        <div className={`fixed bottom-[calc(var(--app-shell-nav-h)+11.5rem)] left-4 right-4 z-30 ${className}`}>
             <div className="rounded-2xl border border-border bg-telegram-secondary-bg p-4 shadow-lg">
                 <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">

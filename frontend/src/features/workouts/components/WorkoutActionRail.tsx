@@ -23,11 +23,13 @@ interface WorkoutActionRailProps {
     className?: string
     /** When true the bar collapses to a drag handle and expands on swipe-up */
     collapsible?: boolean
+    /** Initial collapsed state when `collapsible` is true. Active workout uses expanded so hot actions stay one tap. */
+    defaultCollapsed?: boolean
 }
 
-export function WorkoutActionRail({ sections, topSlot, className, collapsible }: WorkoutActionRailProps) {
+export function WorkoutActionRail({ sections, topSlot, className, collapsible, defaultCollapsed }: WorkoutActionRailProps) {
     return (
-        <StickyBottomBar className={className} collapsible={collapsible}>
+        <StickyBottomBar className={className} collapsible={collapsible} defaultCollapsed={defaultCollapsed}>
             {topSlot}
             {sections.map((section, sectionIndex) => {
                 if (section.length === 1) {

@@ -101,7 +101,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
 
         await expect.poll(() => state.startRequests.length).toBe(1)
         await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
-        await expect(page.getByText('Прогресс сессии').first()).toBeVisible()
+        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
     })
 
     test('compact set logging and rest timer interaction', async ({ page }) => {
@@ -142,6 +142,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`/workouts/active/${workoutId}`)
+        await expect(page.locator('[data-testid="set-row"]').first()).toBeVisible({ timeout: 30_000 })
         await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
 
         await expect(page.getByRole('button', { name: 'Показать' }).first()).toBeVisible()

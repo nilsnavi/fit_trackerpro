@@ -22,6 +22,7 @@ export interface ActiveWorkoutSummarySectionProps {
     updateSessionError: unknown
     syncState: ActiveWorkoutSyncState
     restDefaultSeconds: number
+    restPresetSeconds: number[]
     canComplete: boolean
     canSkip: boolean
     currentContextCard: {
@@ -39,8 +40,6 @@ export interface ActiveWorkoutSummarySectionProps {
     onOpenRestPresets: () => void
     onSelectRestPreset: (seconds: number) => void
     onAbandonDraft: () => void
-    onOpenFinishSheet: () => void
-    isFinishing: boolean
 }
 
 export function ActiveWorkoutSummarySection({
@@ -57,6 +56,7 @@ export function ActiveWorkoutSummarySection({
     updateSessionError,
     syncState,
     restDefaultSeconds,
+    restPresetSeconds,
     canComplete,
     canSkip,
     currentContextCard,
@@ -69,8 +69,6 @@ export function ActiveWorkoutSummarySection({
     onOpenRestPresets,
     onSelectRestPreset,
     onAbandonDraft,
-    onOpenFinishSheet,
-    isFinishing,
 }: ActiveWorkoutSummarySectionProps) {
     return (
         <>
@@ -123,6 +121,7 @@ export function ActiveWorkoutSummarySection({
                 completedSetCount={completedSetCount}
                 totalSetCount={totalSetCount}
                 restDefaultSeconds={restDefaultSeconds}
+                restPresetSeconds={restPresetSeconds}
                 canComplete={canComplete}
                 canSkip={canSkip}
                 onCompleteSet={onCompleteSet}
@@ -131,20 +130,10 @@ export function ActiveWorkoutSummarySection({
                 onOpenRestPresets={onOpenRestPresets}
                 onSelectRestPreset={onSelectRestPreset}
             />
-
-            {isActiveDraft && (
-                <Button
-                    type="button"
-                    onClick={onOpenFinishSheet}
-                    disabled={isFinishing}
-                    isLoading={isFinishing}
-                    fullWidth
-                    className="mt-2 py-4 text-base font-semibold"
-                    data-testid="finish-workout-btn"
-                >
-                    Завершить тренировку
-                </Button>
-            )}
+            {/*
+              PR UX: вторую полноширинную кнопку «Завершить» убрали — завершение только из нижнего rail
+              (один явный CTA, меньше дублирования при скролле).
+            */}
         </>
     )
 }

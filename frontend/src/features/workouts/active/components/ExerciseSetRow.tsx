@@ -270,7 +270,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
             data-testid="set-row"
             data-set-number={set.set_number}
             data-current={isCurrent ? 'true' : 'false'}
-            className={`rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text ${isCurrent ? 'border border-primary/35 bg-primary/5' : 'border border-transparent'}`}
+            className={`rounded-lg bg-telegram-bg/60 p-2 text-sm text-telegram-text ${isCurrent ? 'scroll-mt-24 scroll-mb-52 border border-primary/35 bg-primary/5' : 'border border-transparent'}`}
         >
             <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -286,7 +286,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                             type="button"
                             data-testid="set-row-expand-btn"
                             onClick={() => setIsExpanded((prev) => !prev)}
-                            className="flex min-h-[40px] touch-manipulation items-center gap-1 rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint"
+                            className="flex min-h-11 touch-manipulation items-center gap-1 rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint"
                         >
                             {isExpanded ? 'Свернуть' : 'Показать'}
                             {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -296,7 +296,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         type="button"
                         data-testid="set-skip-btn"
                         onClick={handleSkipSet}
-                        className="min-h-[40px] touch-manipulation rounded-xl bg-telegram-secondary-bg px-3 py-2 text-xs font-medium text-telegram-hint"
+                        className="min-h-11 touch-manipulation rounded-xl bg-telegram-secondary-bg px-3 py-2 text-xs font-medium text-telegram-hint"
                     >
                         Пропуск
                     </button>
@@ -304,7 +304,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         type="button"
                         data-testid="set-toggle-btn"
                         onClick={handleToggleCompleted}
-                        className={`min-h-[40px] touch-manipulation rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${set.completed
+                        className={`min-h-11 min-w-[5.5rem] touch-manipulation rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${set.completed
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
                             : 'bg-primary text-primary-foreground'
                             }`}
@@ -326,8 +326,23 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                 <span className="text-xs text-danger">Ошибка загрузки рекомендации</span>
                             ) : (
                                 <>
-                                    {weightRecommendation.suggested_weight && (
-                                        <span className="text-base font-bold text-primary">{weightRecommendation.suggested_weight} кг</span>
+                                    {weightRecommendation.suggested_weight != null && (
+                                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                                            <span className="text-base font-bold text-primary">{weightRecommendation.suggested_weight} кг</span>
+                                            <button
+                                                type="button"
+                                                data-testid="set-apply-suggested-weight-btn"
+                                                onClick={() => {
+                                                    onFocusSet(exerciseIndex, setIndex)
+                                                    onUpdateSet(exerciseIndex, set.set_number, {
+                                                        weight: weightRecommendation.suggested_weight,
+                                                    })
+                                                }}
+                                                className="min-h-10 touch-manipulation rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground active:opacity-90"
+                                            >
+                                                Подставить
+                                            </button>
+                                        </div>
                                     )}
                                     {weightRecommendation.message && (
                                         <span className="block text-xs text-telegram-hint mt-1">{weightRecommendation.message}</span>
@@ -338,15 +353,23 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                     )}
                     <p className="mt-1 text-[11px] text-telegram-hint">Предыдущий лучший: {previousBestLabel}</p>
                     {previousSetHint && isCurrent && (
-                        <p className="mt-0.5 text-[11px] font-medium text-primary">Прошлый подход: {previousSetHint}</p>
+                        <button
+                            type="button"
+                            data-testid="set-copy-previous-hint-btn"
+                            onClick={handleCopyPrevious}
+                            className="mt-1 w-full rounded-lg border border-primary/25 bg-primary/10 px-3 py-2.5 text-left text-xs font-semibold text-primary touch-manipulation active:bg-primary/15"
+                        >
+                            Прошлый подход: {previousSetHint}
+                            <span className="mt-0.5 block text-[10px] font-normal text-telegram-hint">Тап — скопировать в текущий</span>
+                        </button>
                     )}
 
                     {/* Consolidated Weight Adjustment Bar */}
                     {!isCardioSet && isCurrent && (
                         <div className="mt-2 space-y-1.5">
                             {/* Step selector */}
-                            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
-                                <span className="shrink-0 text-[10px] text-telegram-hint">Шаг:</span>
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                                <span className="shrink-0 text-[11px] text-telegram-hint">Шаг:</span>
                                 {WEIGHT_STEP_OPTIONS.map((step) => (
                                     <button
                                         key={`step-${step}`}
@@ -354,9 +377,9 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                         data-testid="set-weight-step-btn"
                                         data-step={step}
                                         onClick={() => setWeightStep(step)}
-                                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${weightStep === step
+                                        className={`min-h-10 min-w-10 shrink-0 touch-manipulation rounded-full px-2.5 text-xs font-semibold ${weightStep === step
                                                 ? 'bg-primary text-primary-foreground'
-                                                : 'bg-telegram-bg text-telegram-hint'
+                                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
                                             }`}
                                     >
                                         {step}
@@ -442,16 +465,16 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                     <button
                                         type="button"
                                         onClick={() => handleCardioDurationStep(-1)}
-                                        className="text-telegram-hint px-2"
+                                        className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-lg text-telegram-hint active:bg-telegram-secondary-bg"
                                         aria-label="Уменьшить время"
                                     >
-                                        -
+                                        −
                                     </button>
                                     <span className="font-semibold">{toMinutes(set.duration)}</span>
                                     <button
                                         type="button"
                                         onClick={() => handleCardioDurationStep(1)}
-                                        className="text-telegram-hint px-2"
+                                        className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-lg text-telegram-hint active:bg-telegram-secondary-bg"
                                         aria-label="Увеличить время"
                                     >
                                         +
@@ -461,16 +484,16 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                     <button
                                         type="button"
                                         onClick={() => handleCardioPaceStep(-1)}
-                                        className="text-telegram-hint px-2"
+                                        className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-lg text-telegram-hint active:bg-telegram-secondary-bg"
                                         aria-label="Уменьшить темп"
                                     >
-                                        -
+                                        −
                                     </button>
                                     <span className="font-semibold">{typeof set.distance === 'number' ? set.distance : 0}</span>
                                     <button
                                         type="button"
                                         onClick={() => handleCardioPaceStep(1)}
-                                        className="text-telegram-hint px-2"
+                                        className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-lg text-telegram-hint active:bg-telegram-secondary-bg"
                                         aria-label="Увеличить темп"
                                     >
                                         +
@@ -554,30 +577,39 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                         <div className="mt-2 space-y-2">
                             {/* Inline RPE for current set - always visible */}
                             {isCurrent ? (
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="text-[10px] text-telegram-hint">RPE</span>
-                                    {RPE_OPTIONS.map((value) => (
-                                        <button
-                                            key={`rpe-${value}`}
-                                            type="button"
-                                            onClick={() => handleRpeToggle(value)}
-                                            className={`min-h-[32px] min-w-[32px] touch-manipulation rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${set.rpe === value
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
-                                                }`}
-                                        >
-                                            {value}
-                                        </button>
-                                    ))}
-                                    {set.rpe != null && (
-                                        <button
-                                            type="button"
-                                            onClick={() => onUpdateSet(exerciseIndex, set.set_number, { rpe: undefined })}
-                                            className="min-h-[32px] rounded-lg px-2 py-1.5 text-xs text-telegram-hint"
-                                        >
-                                            Сбросить
-                                        </button>
-                                    )}
+                                <div className="space-y-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="shrink-0 text-[11px] text-telegram-hint">RPE</span>
+                                        {RPE_OPTIONS.map((value) => (
+                                            <button
+                                                key={`rpe-${value}`}
+                                                type="button"
+                                                onClick={() => handleRpeToggle(value)}
+                                                className={`min-h-11 min-w-11 touch-manipulation rounded-xl text-sm font-semibold transition-colors ${set.rpe === value
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
+                                                    }`}
+                                            >
+                                                {value}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="shrink-0 text-[11px] text-telegram-hint">RIR</span>
+                                        {RIR_OPTIONS.map((value) => (
+                                            <button
+                                                key={`rir-current-${value}`}
+                                                type="button"
+                                                onClick={() => handleRirToggle(value)}
+                                                className={`min-h-11 min-w-11 touch-manipulation rounded-xl text-sm font-semibold transition-colors ${set.rir === value
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
+                                                    }`}
+                                            >
+                                                {value}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             ) : (
                                 <>

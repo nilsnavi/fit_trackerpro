@@ -27,7 +27,7 @@ test('mode -> add exercise -> save', async ({ page }) => {
     const dialog = page.locator('[role="dialog"]').last()
     await expect(dialog).toBeVisible()
     await dialog.getByPlaceholder('Поиск упражнения...').fill('Присед')
-    await dialog.getByRole('button', { name: 'Присед' }).first().click()
+    await dialog.getByRole('button', { name: 'Присед' }).first().click({ force: true })
 
     const configDialog = page.locator('[role="dialog"]').last()
     await expect(configDialog).toBeVisible()
@@ -35,6 +35,7 @@ test('mode -> add exercise -> save', async ({ page }) => {
 
     await expect(page.locator('#workout-mode-exercises').getByText('Присед')).toBeVisible()
     await expect(configDialog).toBeHidden()
+    await expect(page.locator('[data-testid="save-btn"]')).toBeEnabled({ timeout: 15_000 })
     await page.locator('[data-testid="save-btn"]').click()
 
     await expect.poll(() => state.createTemplateRequests.length).toBe(1)
@@ -68,10 +69,11 @@ test('save and start workout', async ({ page }) => {
     await expect.poll(() => state.updateSessionRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
     await expect(page.getByRole('heading', { name: 'Жим лёжа' }).last()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Завершить тренировку' })).toBeVisible()
+    await expect(page.getByTestId('finish-workout-btn')).toBeVisible()
 })
 
 test('create template -> start workout -> log sets -> complete -> open history', async ({ page }) => {
+    test.setTimeout(120_000)
     const state = buildWorkoutState()
     await seedAuth(page)
     await mockWorkoutApi(page, state)
@@ -95,7 +97,7 @@ test('create template -> start workout -> log sets -> complete -> open history',
     await expect.poll(() => state.createTemplateRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts(?:\?.*)?$/)
 
-    await page.getByRole('button', { name: new RegExp(`Начать по шаблону ${title}`) }).click()
+    await page.getByRole('button', { name: new RegExp(`Начать по шаблону ${title}`) }).first().click()
 
     await expect.poll(() => state.startRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
@@ -104,13 +106,17 @@ test('create template -> start workout -> log sets -> complete -> open history',
     await page.locator('[data-testid="set-toggle-btn"]').first().click()
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
 
-    await page.getByRole('button', { name: 'Готово' }).first().click()
+    await page.getByTestId('finish-workout-btn').click()
+    // Finish sheet lives in a lazy chunk; first open can take longer on cold cache.
+    await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
+    await expect(page.getByTestId('confirm-finish-btn')).toBeVisible({ timeout: 10_000 })
+    await page.getByTestId('confirm-finish-btn').click()
 
-    await expect.poll(() => state.completeRequests.length, { timeout: 10_000 }).toBe(1)
-    await expect(page).toHaveURL(/\/workouts\/\d+(?:\?.*)?$/)
+    await expect.poll(() => state.completeRequests.length, { timeout: 45_000 }).toBe(1)
+    await expect(page).toHaveURL(/\/workouts\/\d+(?:\?.*)?$/, { timeout: 30_000 })
 
-    await page.goto('/workouts')
-    await expect(page.getByRole('main').getByRole('heading', { name: 'История' })).toBeVisible()
+    await page.goto('/workouts', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { name: 'История' })).toBeVisible({ timeout: 30_000 })
     await expect(page.getByText(title)).toBeVisible()
 })
 

@@ -194,8 +194,8 @@ test('critical path: login → open workout → complete → see in history', as
     await page.getByRole('button', { name: 'Отметить' }).first().click()
 
     // Complete workout (save).
-    await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-    await expect(page.getByRole('button', { name: 'Завершить тренировку' })).toBeHidden()
+    await page.getByTestId('finish-workout-btn').click()
+    await expect(page.getByTestId('finish-workout-btn')).toBeHidden()
 
     // Verify it appears in history.
     await page.goto('/workouts')

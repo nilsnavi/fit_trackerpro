@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -35,7 +35,7 @@ import {
 } from '@/state/local'
 import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
 
-import { buildSyncPayload, formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
+import { buildSyncPayload, FALLBACK_REST_PRESETS_SECONDS, formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
 import { useActiveWorkoutLifecycle } from '@features/workouts/active/hooks/useActiveWorkoutLifecycle'
 import { useActiveWorkoutCompletion } from '@features/workouts/active/hooks/useActiveWorkoutCompletion'
 import { useActiveWorkoutExerciseActions } from '@features/workouts/active/hooks/useActiveWorkoutExerciseActions'
@@ -230,6 +230,11 @@ export function ActiveWorkoutPage() {
 
     const elapsedLabel = useMemo(() => formatElapsedDuration(elapsedSeconds), [elapsedSeconds])
 
+    const restPresetChipSeconds = useMemo(
+        () => (restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS),
+        [restPresets],
+    )
+
     const completion = useActiveWorkoutCompletion({
         workoutId,
         workout,
@@ -313,6 +318,20 @@ export function ActiveWorkoutPage() {
         goToNextSet()
     }
 
+    /**
+     * PR UX note: before — «Готово» в строке подхода только ставил галочку; следующий подход выбирался отдельно.
+     * after — как в карточке «Сейчас»: отметка + переход к следующему подходу (снять галочку — без перехода).
+     */
+    const handleToggleSetCompletedWithAdvance = useCallback(
+        (exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
+            handleToggleSetCompleted(exerciseIndex, setNumber, nextCompleted)
+            if (nextCompleted) {
+                goToNextSet()
+            }
+        },
+        [goToNextSet, handleToggleSetCompleted],
+    )
+
     const handleSkipCurrentSetQuick = () => {
         if (!currentSet) return
         tg.hapticFeedback({ type: 'selection' })
@@ -346,8 +365,11 @@ export function ActiveWorkoutPage() {
         )
     }
 
+    // PR UX: `pb-[calc(15rem+safe-area)]` — запас под раскрытый нижний rail, контент не упирается в панель.
     return (
-        <div className={`p-4 space-y-4 ${isActiveDraft ? 'pb-52' : ''}`}>
+        <div
+            className={`p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
+        >
             {shouldLoadModals ? (
                 <Suspense fallback={null}>
                     <ActiveWorkoutModals
@@ -447,6 +469,7 @@ export function ActiveWorkoutPage() {
                         updateSessionError={updateSessionMutation.isError ? updateSessionMutation.error : null}
                         syncState={syncState}
                         restDefaultSeconds={restDefaultSeconds}
+                        restPresetSeconds={restPresetChipSeconds}
                         canComplete={Boolean(currentSet)}
                         canSkip={Boolean(currentSet && (hasNextSet || hasNextExercise))}
                         currentContextCard={currentContextCard}
@@ -463,8 +486,6 @@ export function ActiveWorkoutPage() {
                         onOpenRestPresets={openRestPresets}
                         onSelectRestPreset={handleSelectRestPreset}
                         onAbandonDraft={completion.openAbandonConfirm}
-                        onOpenFinishSheet={completion.handleOpenFinishSheet}
-                        isFinishing={completeMutation.isPending}
                     />
 
                     <ActiveWorkoutExerciseSection
@@ -479,7 +500,7 @@ export function ActiveWorkoutPage() {
                         onRemoveSet={exerciseActions.handleRemoveLastSetFromCurrentExercise}
                         onDeleteExercise={exerciseActions.handleDeleteExerciseRequest}
                         onSetCurrentPosition={setCurrentPosition}
-                        onToggleSetCompleted={handleToggleSetCompleted}
+                        onToggleSetCompleted={handleToggleSetCompletedWithAdvance}
                         onSkipSet={handleSkipCurrentSetQuick}
                         onCopyPreviousSet={exerciseActions.handleCopyPreviousSet}
                         onAdjustWeight={exerciseActions.handleAdjustWeight}

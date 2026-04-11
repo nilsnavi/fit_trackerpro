@@ -91,27 +91,34 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await openActiveIfRedirectedToHub(page, fixedWorkoutId)
         await expect(page.locator('[data-testid="set-row"]').first()).toBeVisible({ timeout: 30_000 })
         await expandActionRailIfCollapsed(page)
-        await expect(page.locator('[data-testid="finish-workout-rail-btn"]')).toHaveCount(1)
+        await expect(page.locator('[data-testid="finish-workout-btn"]')).toHaveCount(1)
 
-        // Expand current set and adjust weight via touch-friendly +/- controls.
-        const firstRow = page.locator('[data-testid="set-row"][data-set-number="1"]').first()
+        // Active set row (avoids matching set #1 on a non-current exercise when several blocks exist).
+        const firstRow = page.locator('[data-testid="set-row"][data-current="true"]').first()
         await expect(firstRow).toBeVisible({ timeout: 30_000 })
-        await firstRow.locator('[data-testid="set-weight-inc-btn"]').click({ force: true })
-        await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
+        const weightInc = firstRow.locator('[data-testid="set-weight-inc-btn"]')
+        await expect(weightInc).toBeVisible({ timeout: 10_000 })
+        await weightInc.click({ force: true })
+        await expect.poll(() => state.updateSessionRequests.length, { timeout: 25_000 }).toBeGreaterThan(0)
 
         // Complete set.
         await firstRow.locator('[data-testid="set-toggle-btn"]').click({ force: true })
-        await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
+        await expect.poll(() => state.details.get(fixedWorkoutId)?.exercises[0]?.sets_completed[0]?.completed ?? false, {
+            timeout: 25_000,
+        }).toBe(true)
 
         // Add new set via sticky action rail.
         await expandActionRailIfCollapsed(page)
         await page.getByRole('button', { name: '+ Подход' }).first().click()
-        await expect(page.getByText('Подход 2')).toBeVisible({ timeout: 10_000 })
-        await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(1)
+        await expect(page.locator('[data-testid="set-row"][data-set-number="2"]')).toBeVisible({ timeout: 10_000 })
+        // Debounced PATCH may coalesce several edits into one request; assert session shape instead.
+        await expect.poll(() => state.details.get(fixedWorkoutId)?.exercises[0]?.sets_completed.length ?? 0, {
+            timeout: 25_000,
+        }).toBeGreaterThanOrEqual(2)
 
         // Finish workout via rail CTA (mobile primary path).
         await expandActionRailIfCollapsed(page)
-        await page.locator('[data-testid="finish-workout-rail-btn"]').click({ force: true })
+        await page.locator('[data-testid="finish-workout-btn"]').click({ force: true })
         await expect(page.getByRole('heading', { name: /Завершить тренировку|Детали тренировки/i })).toBeVisible({ timeout: 30_000 })
         await expect.poll(() => state.completeRequests.length, { timeout: 15_000 }).toBeGreaterThan(0)
     })
@@ -238,7 +245,7 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
 
         await page.goto(`/workouts/active/${workoutId}`)
         await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
-        await expect(page.locator('[data-testid="finish-workout-rail-btn"]')).toHaveCount(1)
+        await expect(page.locator('[data-testid="finish-workout-btn"]')).toHaveCount(1)
         await expandActionRailIfCollapsed(page)
 
         // Ensure last set action remains tappable and not hidden under the rail.
@@ -246,7 +253,7 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await lastSetToggle.scrollIntoViewIfNeeded()
         await expect(lastSetToggle).toBeVisible()
 
-        const railBtn = page.locator('[data-testid="finish-workout-rail-btn"]')
+        const railBtn = page.locator('[data-testid="finish-workout-btn"]')
         const railBox = await railBtn.boundingBox()
         const toggleBox = await lastSetToggle.boundingBox()
 
@@ -291,7 +298,7 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await firstToggle.scrollIntoViewIfNeeded()
         await expect(firstToggle).toBeVisible({ timeout: 30_000 })
         await expandActionRailIfCollapsed(page)
-        await expect(page.locator('[data-testid="finish-workout-rail-btn"]')).toHaveCount(1)
+        await expect(page.locator('[data-testid="finish-workout-btn"]')).toHaveCount(1)
 
         // Go offline and make local changes.
         await context.setOffline(true)

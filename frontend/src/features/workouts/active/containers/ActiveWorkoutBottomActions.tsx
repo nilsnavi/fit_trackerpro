@@ -35,9 +35,12 @@ export function ActiveWorkoutBottomActions({
 }: ActiveWorkoutBottomActionsProps) {
     if (!isActiveDraft) return null
 
+    /* PR UX note: before — collapsible rail started hidden (~20px handle), so +set/finish needed swipe-up every time.
+       after — rail starts expanded; user can still collapse via handle / swipe-down for more list space. */
     return (
         <WorkoutActionRail
             collapsible
+            defaultCollapsed={false}
             className="space-y-2"
             topSlot={(
                 <>
@@ -47,14 +50,14 @@ export function ActiveWorkoutBottomActions({
                             {completedSetCount}/{totalSetCount} подходов
                         </p>
                     </div>
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                         <span className="shrink-0 text-[11px] text-telegram-hint">Отдых:</span>
                         {(restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS).map((seconds) => (
                             <button
                                 key={`sticky-rest-${seconds}`}
                                 type="button"
                                 onClick={() => onSelectRestPreset(seconds)}
-                                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${restDefaultSeconds === seconds
+                                className={`min-h-10 shrink-0 touch-manipulation rounded-full px-3 py-2 text-xs font-medium ${restDefaultSeconds === seconds
                                     ? 'bg-primary text-primary-foreground'
                                     : 'bg-telegram-secondary-bg text-telegram-text'
                                     }`}
@@ -106,7 +109,7 @@ export function ActiveWorkoutBottomActions({
                         disabled: isFinishing,
                         isLoading: isFinishing,
                         className: 'w-full',
-                        'data-testid': 'finish-workout-rail-btn',
+                        'data-testid': 'finish-workout-btn',
                     },
                 ],
             ]}
