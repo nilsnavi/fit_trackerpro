@@ -436,10 +436,64 @@ describe('ActiveWorkoutPage offline sync', () => {
 })
 ```
 
+## Диагностика sync / offline
+
+### События телеметрии
+
+Все события проходят через `emitWorkoutSyncTelemetry` / `notifyWorkoutSyncConflictDetected` в
+`frontend/src/shared/offline/observability/workoutSyncTelemetry.ts`.
+
+| Событие | Когда | Канал |
+|--------|--------|--------|
+| `draft_initialized` | Создан или подтянут черновик активной сессии (`setDraft` / `hydrateFromRemote`) | draft store |
+| `local_update_queued` | Попадание изменения в персистентную очередь **или** локальный debounce активной сессии | `sync_queue` / `active_session` |
+| `sync_started` | Начало отправки: элемент очереди, ручной retry элемента, PATCH активной сессии | `sync_queue` / `active_session` |
+| `sync_succeeded` | Успешная отправка | очередь / активная сессия |
+| `sync_failed` | Backoff (recoverable), терминальная ошибка очереди, ошибка мутации активной сессии | см. поле `outcome` |
+| `conflict_detected` | HTTP 409/412/428 при flush очереди или вызов `logConflict` | Sentry: `captureMessage` + breadcrumb |
+| `workout_completed_offline` | Завершение тренировки ушло в офлайн-очередь (recoverable сеть + `enqueueOfflineWorkoutComplete`) | мутации |
+| `retry_succeeded` | Успех после предыдущих неудачных попыток (attempts > 0 в очереди; или ретраи активной сессии) | очередь / активная сессия |
+
+В payload **нет** названий упражнений, весов, комментариев и тел запросов — только числовые id (`workout_id`, `template_id` при наличии), `kind`, короткие префиксы id элементов очереди, классы/коды ошибок.
+
+### Локальная отладка (DEV)
+
+- В консоли браузера при локальной разработке (`NODE_ENV === 'development'`): префикс `[workout-sync]` + структурированный объект.
+- `window.__FITTRACKER_SYNC_DEBUG__` (после загрузки приложения):
+  - `getQueueSummary()` — элементы очереди: kind, status, attempts, dedupe_key, усечённый `last_error_preview`, числовые id без payload.
+  - `isFlushActive()` — идёт ли сейчас `flush()` у `SyncQueueEngine`.
+
+### Sentry
+
+При настроенном `VITE_SENTRY_DSN` для каждого события добавляется breadcrumb с `category: 'workout.sync'`.
+Конфликты версий дополнительно шлют `captureMessage('workout.sync.conflict', { level: 'warning', … })`.
+
+### Подключение внешнего sink
+
+При старте приложения вызывается `installWorkoutSyncTelemetryInfrastructure()` из
+`frontend/src/app/workoutSyncTelemetryBootstrap.ts` (см. `main.tsx`):
+
+- **Всегда** пишет последние ~200 событий в `window.__WORKOUT_SYNC_TELEMETRY_BUFFER__` (копия для поддержки; те же данные через `window.__FITTRACKER_SYNC_DEBUG__?.getTelemetryBuffer()` в DEV).
+- **Опционально** (через Vite env):
+  - `VITE_WORKOUT_SYNC_TELEMETRY_URL` — абсолютный URL; тело `POST` / `sendBeacon`: `{ event, payload }` (без заголовка `Authorization`; только уже обезличенные поля).
+  - `VITE_WORKOUT_SYNC_TELEMETRY_API=1` — дублирование в `POST {API_URL}/client/workout-sync-events` через общий `api` (нужен реализованный бэкенд и сессия).
+
+Переопределить поведение целиком можно так:
+
+```ts
+import { setWorkoutSyncTelemetrySink } from '@shared/offline/observability/workoutSyncTelemetry'
+
+setWorkoutSyncTelemetrySink((event, payload) => {
+  // отправка в ваш сборщик / OpenTelemetry
+})
+```
+
+Очередь в raw-виде: ключ `fittracker_sync_queue_v1` в `localStorage` (см. `SYNC_QUEUE_STORAGE_KEY`).
+
 ## Performance Notes
 
 - **localStorage** используется для очереди (max 200 items)
-- **Debounce** 500ms для exercise action persistence
+- **Debounce** 2000ms для PATCH активной сессии (`useActiveWorkoutSync`)
 - **Auto-retry** начинается через 1 sec после network recovery
 - **Exponential backoff**: 1s → 2s → 4s → ... → 60s max
 
@@ -469,6 +523,9 @@ frontend/src/
 │   │   ├── useSyncQueueWithRetry.ts ✅ NEW
 │   │   └── useOfflineExerciseActionQueue.ts ✅ NEW
 │   └── offline/
+│       ├── observability/
+│       │   ├── workoutSyncTelemetry.ts ✅ NEW
+│       │   └── workoutSyncDebug.ts ✅ NEW
 │       └── syncQueue/
 │           ├── engine.ts (existing)
 │           ├── types.ts (existing)

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
+import { emitWorkoutSyncTelemetry } from '@shared/offline/observability/workoutSyncTelemetry'
 
 /** Черновик активной тренировки на клиенте; серверная история — `queryKeys.workouts.*` и мутации в `useWorkoutMutations`. */
 interface WorkoutSessionDraftState {
@@ -22,15 +23,27 @@ export const useWorkoutSessionDraftStore = create<WorkoutSessionDraftState>()(
             templateId: null,
             title: null,
             updatedAt: 0,
-            setDraft: (workoutId, title, templateId = null) =>
-                set({ workoutId, title, templateId, updatedAt: Date.now() }),
-            hydrateFromRemote: (draft) =>
+            setDraft: (workoutId, title, templateId = null) => {
+                set({ workoutId, title, templateId, updatedAt: Date.now() })
+                emitWorkoutSyncTelemetry('draft_initialized', {
+                    source: 'client_set',
+                    workout_id: workoutId,
+                    ...(templateId != null ? { template_id: templateId } : {}),
+                })
+            },
+            hydrateFromRemote: (draft) => {
                 set({
                     workoutId: draft.workoutId,
                     templateId: draft.templateId ?? null,
                     title: draft.title,
                     updatedAt: draft.updatedAt,
-                }),
+                })
+                emitWorkoutSyncTelemetry('draft_initialized', {
+                    source: 'remote',
+                    workout_id: draft.workoutId,
+                    ...(draft.templateId != null ? { template_id: draft.templateId } : {}),
+                })
+            },
             clearDraft: () => set({ workoutId: null, templateId: null, title: null, updatedAt: 0 }),
             abandonDraft: () => {
                 const id = useWorkoutSessionDraftStore.getState().workoutId
