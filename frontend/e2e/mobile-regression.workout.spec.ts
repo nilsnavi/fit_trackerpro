@@ -62,7 +62,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await page.locator('[data-testid="resume-draft-btn"]').click()
 
         await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
-        await expect(page.getByText('Прогресс сессии').first()).toBeVisible()
+        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible()
         await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
     })
 
@@ -142,11 +142,12 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`/workouts/active/${workoutId}`)
+        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
         await expect(page.locator('[data-testid="set-row"]').first()).toBeVisible({ timeout: 30_000 })
         await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
 
         await expect(page.getByRole('button', { name: 'Показать' }).first()).toBeVisible()
-        await page.getByRole('button', { name: /Отдых\s/ }).first().click()
+        await page.getByRole('button', { name: /Старт отдыха/ }).first().click()
 
         await expect(page.getByText('Отдых').first()).toBeVisible()
         await expect(page.getByRole('button', { name: 'Пропустить' }).last()).toBeVisible()

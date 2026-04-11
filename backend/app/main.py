@@ -2,14 +2,16 @@
 FitTracker Pro - FastAPI Backend Application
 """
 import asyncio
+import html
 import logging
 import os
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
 import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.api.exception_handlers import register_exception_handlers
 from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
@@ -41,6 +43,39 @@ init_sentry(settings)
 _bot_task = None
 
 _PYTEST = os.environ.get("PYTEST_RUNNING") == "1"
+
+
+def _root_should_offer_webapp(request: Request) -> bool:
+    """True for Telegram WebView / browser navigations; false for typical API clients (curl, httpx)."""
+    accept = (request.headers.get("accept") or "").lower()
+    ua = (request.headers.get("user-agent") or "").lower()
+    if "telegram" in ua:
+        return True
+    if "text/html" in accept:
+        return True
+    # Chromium top-level navigation (Telegram WebView is Chromium-based).
+    if (request.headers.get("sec-fetch-dest") or "").lower() == "document":
+        return True
+    return False
+
+
+def _same_origin_api_root_as_webapp(request: Request, webapp: str) -> bool:
+    """
+    Detect TELEGRAM_WEBAPP_URL pointing at this API host (e.g. ngrok tunnel to :8000 only).
+    Redirecting would loop; return an HTML hint instead.
+    """
+    try:
+        req = urlparse(str(request.url))
+        w = urlparse(webapp.strip())
+        if (req.scheme, req.netloc) != (w.scheme, w.netloc):
+            return False
+        web_path = (w.path or "/").rstrip("/") or "/"
+        if web_path != "/":
+            return False
+        req_path = req.path.rstrip("/") or "/"
+        return req_path == "/"
+    except Exception:
+        return False
 
 
 @asynccontextmanager
@@ -225,7 +260,29 @@ async def app_readiness():
 
 
 @app.get("/", tags=[TAG_SYSTEM])
-async def root():
+async def root(request: Request):
+    """
+    JSON for API clients. Telegram Mini App / browser document loads are redirected to
+    ``TELEGRAM_WEBAPP_URL`` so a misconfigured WebApp URL on the API host still opens the UI.
+    """
+    webapp = (settings.TELEGRAM_WEBAPP_URL or "").strip()
+    if webapp and _root_should_offer_webapp(request):
+        if _same_origin_api_root_as_webapp(request, webapp):
+            safe = html.escape(webapp, quote=True)
+            body = (
+                "<!DOCTYPE html><html lang=\"ru\"><meta charset=\"utf-8\"/>"
+                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>"
+                "<title>Mini App URL</title><body style=\"font-family:system-ui;padding:1.25rem;"
+                "background:#1e1e1e;color:#eee;line-height:1.5\">"
+                "<p><strong>Открыт адрес API, а не фронтенда.</strong></p>"
+                "<p>В <code>TELEGRAM_WEBAPP_URL</code> укажите URL веб-приложения "
+                "(Vite / reverse-proxy к фронту), а не только бэкенд на порту 8000.</p>"
+                "<p><strong>API URL is loaded as the Mini App.</strong> Set "
+                "<code>TELEGRAM_WEBAPP_URL</code> to the frontend base URL.</p>"
+                f"<p>Current value: <code>{safe}</code></p></body></html>"
+            )
+            return HTMLResponse(content=body, status_code=200)
+        return RedirectResponse(url=webapp, status_code=302)
     return {
         "message": f"{settings.APP_NAME} API",
         "version": settings.APP_VERSION,

@@ -23,7 +23,7 @@ export const HealthCheckGate: React.FC<HealthCheckGateProps> = ({
   showLoadingWhileChecking = true,
 }) => {
   const { isReady, isLoading } = useBackendHealth(
-    5000, // Check every 5 seconds
+    15_000, // Background checks — keep gentle for mobile / ngrok (no full-screen loading on tick)
     500, // Wait 500ms before first check
   );
 

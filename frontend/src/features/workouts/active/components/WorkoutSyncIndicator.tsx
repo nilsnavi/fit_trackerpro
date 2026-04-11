@@ -85,6 +85,7 @@ export const WorkoutSyncIndicator = memo(function WorkoutSyncIndicator({ state, 
     return (
         <div
             role="status"
+            data-testid="workout-sync-indicator"
             aria-live="polite"
             aria-atomic="true"
             className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium ${config.className}`}

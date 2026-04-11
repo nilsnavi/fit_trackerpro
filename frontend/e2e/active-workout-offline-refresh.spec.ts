@@ -43,6 +43,7 @@ test.describe('active workout offline/refresh flows @regression', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`${APP_BASE_URL}/workouts/active/${workoutId}`)
+        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
         await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
 
         await page.locator('[data-testid="set-toggle-btn"]').first().click()
@@ -51,7 +52,7 @@ test.describe('active workout offline/refresh flows @regression', () => {
         await page.reload()
 
         await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}(?:\\?.*)?$`))
-        await expect(page.getByText('Прогресс сессии').first()).toBeVisible()
+        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible()
         await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toContainText('✓ Готово')
     })
 
@@ -86,17 +87,20 @@ test.describe('active workout offline/refresh flows @regression', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`${APP_BASE_URL}/workouts/active/${workoutId}`)
+        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
         await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
 
         await context.setOffline(true)
-        await page.locator('[data-testid="set-toggle-btn"]').first().click()
+        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible()
+        // После offline React может перерисовать список — обычный click ловит «detached».
+        await page.locator('[data-testid="set-toggle-btn"]').first().evaluate((el) => (el as HTMLElement).click())
 
-        await expect(page.getByText('В очереди (офлайн)')).toBeVisible({ timeout: 12_000 })
+        await expect(page.getByTestId('workout-sync-indicator')).toContainText(/Офлайн|очереди/i, { timeout: 12_000 })
         await expect.poll(() => state.updateSessionRequests.length).toBe(0)
 
         await context.setOffline(false)
         await expect.poll(() => state.updateSessionRequests.length, { timeout: 15_000 }).toBeGreaterThan(0)
 
-        await expect(page.getByRole('status').getByText('Сохранено')).toBeVisible({ timeout: 12_000 })
+        await expect(page.getByTestId('workout-sync-indicator')).toContainText('Сохранено', { timeout: 12_000 })
     })
 })

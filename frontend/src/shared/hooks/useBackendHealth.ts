@@ -58,9 +58,16 @@ export function useBackendHealth(
     let timeoutId: NodeJS.Timeout | null = null;
     let intervalId: NodeJS.Timeout | null = null;
 
-    const checkBackendHealth = async () => {
+    /**
+     * Background polls must not set `isLoading`, otherwise HealthCheckGate unmounts
+     * the whole app every interval — feels like constant reconnect / flicker in Telegram.
+     */
+    const checkBackendHealth = async (options: { showLoading?: boolean } = {}) => {
+      const showLoading = options.showLoading ?? false;
       try {
-        setIsLoading(true);
+        if (showLoading) {
+          setIsLoading(true);
+        }
         const response = await fetch('/health/ready', {
           method: 'GET',
           headers: { 'Accept': 'application/json' },
@@ -93,11 +100,13 @@ export function useBackendHealth(
       }
     };
 
-    // Initial check after delay
+    // Initial check after delay (full-screen loading). Later polls are silent.
     timeoutId = setTimeout(() => {
-      checkBackendHealth();
-      // Then check periodically
-      intervalId = setInterval(checkBackendHealth, checkIntervalMs);
+      void checkBackendHealth({ showLoading: true });
+      intervalId = setInterval(
+        () => void checkBackendHealth({ showLoading: false }),
+        checkIntervalMs,
+      );
     }, initialCheckDelayMs);
 
     return () => {

@@ -68,6 +68,11 @@ export function useWorkoutNavigation({
         setCurrentPosition(currentExerciseIndex + 1, 0)
     }
 
+    const goToPreviousExercise = () => {
+        if (!hasPrevExercise) return
+        setCurrentPosition(currentExerciseIndex - 1, 0)
+    }
+
     const handleSkipCurrentSet = () => {
         if (!currentExercise || !currentSet) return
         updateSet(currentExerciseIndex, currentSet.set_number, { completed: false })
@@ -86,6 +91,7 @@ export function useWorkoutNavigation({
         goToPreviousPosition,
         goToNextSet,
         goToNextExercise,
+        goToPreviousExercise,
         handleSkipCurrentSet,
     }
 }

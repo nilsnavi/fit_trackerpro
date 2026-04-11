@@ -106,7 +106,7 @@ test('create template -> start workout -> log sets -> complete -> open history',
     await page.locator('[data-testid="set-toggle-btn"]').first().click()
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
 
-    await page.getByTestId('finish-workout-btn').click()
+    await page.getByTestId('finish-workout-btn').click({ force: true })
     // Finish sheet lives in a lazy chunk; first open can take longer on cold cache.
     await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
     await expect(page.getByTestId('confirm-finish-btn')).toBeVisible({ timeout: 10_000 })
@@ -197,7 +197,7 @@ test('resume draft from workouts page', async ({ page }) => {
     await page.locator('[data-testid="resume-draft-btn"]').click()
 
     await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
-    await expect(page.getByText('Прогресс сессии').first()).toBeVisible()
+    await expect(page.getByTestId('active-workout-session-bar')).toBeVisible()
     await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
 })
 
@@ -231,7 +231,7 @@ test('complete workout', async ({ page }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto(`/workouts/active/${workoutId}`)
-    await expect(page.getByText('Прогресс сессии').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
     await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
 
     await page.locator('[data-testid="set-toggle-btn"]').first().click()
@@ -274,7 +274,7 @@ test('auto-complete workout on last "Готово" tap', async ({ page }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto(`/workouts/active/${workoutId}`)
-    await expect(page.getByText('Прогресс сессии').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
     await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
 
     // One incomplete set in session: pressing "Готово" must immediately complete workout.

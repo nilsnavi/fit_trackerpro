@@ -35,14 +35,14 @@ import {
 } from '@/state/local'
 import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
 
-import { buildSyncPayload, FALLBACK_REST_PRESETS_SECONDS, formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
+import { buildSyncPayload, formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
 import { useActiveWorkoutLifecycle } from '@features/workouts/active/hooks/useActiveWorkoutLifecycle'
 import { useActiveWorkoutCompletion } from '@features/workouts/active/hooks/useActiveWorkoutCompletion'
 import { useActiveWorkoutExerciseActions } from '@features/workouts/active/hooks/useActiveWorkoutExerciseActions'
 import { useActiveWorkoutRestFlow } from '@features/workouts/active/hooks/useActiveWorkoutRestFlow'
 import { useActiveWorkoutStats } from '@features/workouts/active/hooks/useActiveWorkoutStats'
 import { useActiveWorkoutHistoryInsights } from '@features/workouts/active/hooks/useActiveWorkoutHistoryInsights'
-import { useActiveWorkoutContextCard } from '@features/workouts/active/hooks/useActiveWorkoutContextCard'
+import { FloatingRestTimer } from '@features/workouts/active/components/FloatingRestTimer'
 import { useActiveWorkoutCatalogSuggestions } from '@features/workouts/active/hooks/useActiveWorkoutCatalogSuggestions'
 
 import { ActiveWorkoutSummarySection } from '@features/workouts/active/containers/ActiveWorkoutSummarySection'
@@ -161,11 +161,11 @@ export function ActiveWorkoutPage() {
     const {
         currentExercise,
         currentSet,
-        normalizedCurrentSetIndex,
-        remainingSets,
-        hasNextSet,
         hasNextExercise,
+        hasPrevExercise,
         goToNextSet,
+        goToNextExercise,
+        goToPreviousExercise,
     } = useWorkoutNavigation({
         activeExercises,
         currentExerciseIndex,
@@ -215,25 +215,12 @@ export function ActiveWorkoutPage() {
         historyItems: historyData?.items,
     })
 
-    const currentContextCard = useActiveWorkoutContextCard({
-        currentExercise,
-        currentSet,
-        normalizedCurrentSetIndex,
-        remainingSets,
-        previousBestByExercise,
-    })
-
     const workoutTitle = useMemo(() => {
         const title = workout?.comments?.trim()
         return title && title.length > 0 ? title : `Сессия #${workout?.id ?? workoutId}`
     }, [workout?.comments, workout?.id, workoutId])
 
     const elapsedLabel = useMemo(() => formatElapsedDuration(elapsedSeconds), [elapsedSeconds])
-
-    const restPresetChipSeconds = useMemo(
-        () => (restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS),
-        [restPresets],
-    )
 
     const completion = useActiveWorkoutCompletion({
         workoutId,
@@ -312,12 +299,6 @@ export function ActiveWorkoutPage() {
         query: exerciseActions.exerciseSearchQuery,
     })
 
-    const handleCompleteCurrentSet = () => {
-        if (!currentSet) return
-        handleToggleSetCompleted(currentExerciseIndex, currentSet.set_number, true)
-        goToNextSet()
-    }
-
     /**
      * PR UX note: before — «Готово» в строке подхода только ставил галочку; следующий подход выбирался отдельно.
      * after — как в карточке «Сейчас»: отметка + переход к следующему подходу (снять галочку — без перехода).
@@ -330,6 +311,13 @@ export function ActiveWorkoutPage() {
             }
         },
         [goToNextSet, handleToggleSetCompleted],
+    )
+
+    const handleSelectExerciseIndex = useCallback(
+        (exerciseIndex: number) => {
+            setCurrentPosition(exerciseIndex, 0)
+        },
+        [setCurrentPosition],
     )
 
     const handleSkipCurrentSetQuick = () => {
@@ -468,11 +456,6 @@ export function ActiveWorkoutPage() {
                         completeError={completeMutation.isError ? completeMutation.error : null}
                         updateSessionError={updateSessionMutation.isError ? updateSessionMutation.error : null}
                         syncState={syncState}
-                        restDefaultSeconds={restDefaultSeconds}
-                        restPresetSeconds={restPresetChipSeconds}
-                        canComplete={Boolean(currentSet)}
-                        canSkip={Boolean(currentSet && (hasNextSet || hasNextExercise))}
-                        currentContextCard={currentContextCard}
                         repeatButton={repeatSource ? (
                             <Button type="button" variant="secondary" size="sm" onClick={exerciseActions.handleRepeatPrevious}>
                                 Повторить прошлую
@@ -480,12 +463,10 @@ export function ActiveWorkoutPage() {
                         ) : null}
                         onDurationChange={completion.setDurationMinutes}
                         onCommentsChange={(value) => updateSessionFields({ comments: value || undefined })}
-                        onCompleteSet={handleCompleteCurrentSet}
-                        onSkipSet={handleSkipCurrentSetQuick}
+                        onAbandonDraft={completion.openAbandonConfirm}
+                        restDefaultSeconds={restDefaultSeconds}
                         onStartRest={handleStartQuickRest}
                         onOpenRestPresets={openRestPresets}
-                        onSelectRestPreset={handleSelectRestPreset}
-                        onAbandonDraft={completion.openAbandonConfirm}
                     />
 
                     <ActiveWorkoutExerciseSection
@@ -509,26 +490,31 @@ export function ActiveWorkoutPage() {
                         weightRecommendation={weightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
-                        syncState={syncState}
+                        hasNextExercise={hasNextExercise}
+                        hasPrevExercise={hasPrevExercise}
+                        onGoToNextExercise={goToNextExercise}
+                        onGoToPreviousExercise={goToPreviousExercise}
+                        onSelectExerciseIndex={handleSelectExerciseIndex}
                     />
                 </>
             )}
 
             {isActiveDraft && !isLoading && !errorMessage && workout && (
-                <ActiveWorkoutBottomActions
-                    isActiveDraft={isActiveDraft}
-                    completedSetCount={completedSetCount}
-                    totalSetCount={totalSetCount}
-                    restPresets={restPresets}
-                    restDefaultSeconds={restDefaultSeconds}
-                    currentExercise={currentExercise}
-                    isFinishing={completeMutation.isPending}
-                    onSelectRestPreset={handleSelectRestPreset}
-                    onAddItem={exerciseActions.resetAddItemForm}
-                    onRemoveSet={exerciseActions.handleRemoveLastSetFromCurrentExercise}
-                    onAddSet={exerciseActions.handleAddSetToCurrentExercise}
-                    onFinishWorkout={completion.handleOpenFinishSheet}
-                />
+                <>
+                    <FloatingRestTimer />
+                    <ActiveWorkoutBottomActions
+                        isActiveDraft={isActiveDraft}
+                        restPresets={restPresets}
+                        restDefaultSeconds={restDefaultSeconds}
+                        currentExercise={currentExercise}
+                        isFinishing={completeMutation.isPending}
+                        onSelectRestPreset={handleSelectRestPreset}
+                        onAddItem={exerciseActions.resetAddItemForm}
+                        onRemoveSet={exerciseActions.handleRemoveLastSetFromCurrentExercise}
+                        onAddSet={exerciseActions.handleAddSetToCurrentExercise}
+                        onFinishWorkout={completion.handleOpenFinishSheet}
+                    />
+                </>
             )}
         </div>
     )
