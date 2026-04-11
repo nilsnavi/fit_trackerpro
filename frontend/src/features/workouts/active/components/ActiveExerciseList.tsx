@@ -1,4 +1,5 @@
 import { lazy, memo, Suspense, useEffect, useState } from 'react'
+import { useScrollCurrentSetIntoView } from '@features/workouts/active/hooks/useScrollCurrentSetIntoView'
 import { ChevronDown, ChevronUp, Minus, PencilRuler, Plus, Trash2 } from 'lucide-react'
 import {
     formatExerciseStructureSummary,
@@ -158,6 +159,7 @@ function ActiveExerciseListStatic({
     const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Record<string, true>>({})
     const getIncrementBase = useWorkoutQuickIncrementsStore((s) => s.getIncrementBase)
     const setIncrementBaseForScope = useWorkoutQuickIncrementsStore((s) => s.setIncrementBase)
+    const activeSetsScrollRef = useScrollCurrentSetIntoView(currentExerciseIndex, currentSetIndex)
 
     useEffect(() => {
         setCollapsedExerciseIds((prev) => {
@@ -210,7 +212,7 @@ function ActiveExerciseListStatic({
     }
 
     return (
-        <div className="space-y-3">
+        <div ref={activeSetsScrollRef} className="space-y-3">
             {exercises.map((exercise, exerciseIndex) => {
                 const itemId = `${exercise.exercise_id}-${exerciseIndex}`
                 const summaryMeta = getExerciseSummaryMeta(exercise)
@@ -226,9 +228,6 @@ function ActiveExerciseListStatic({
                     Number((incrementBase * 2).toFixed(2)),
                     Number((incrementBase * 4).toFixed(2)),
                 ]
-                const currentSetNumber = currentSetIndex + 1
-                const currentSetExists =
-                    currentSetNumber >= 1 && currentSetNumber <= exercise.sets_completed.length
 
                 return (
                     <div
@@ -296,50 +295,23 @@ function ActiveExerciseListStatic({
 
                         {!isCollapsed && (
                             <>
+                                {/*
+                                  PR UX: убрали дублирующий блок «Повторить прошлый / ±вес» над списком подходов —
+                                  те же действия остаются в строке текущего подхода (меньше скролла и лишних тапов).
+                                */}
                                 <div className="mt-2 space-y-2">
-                                    {isCurrentExercise ? (
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={!currentSetExists}
-                                                onClick={() => onCopyPreviousSet(exerciseIndex, currentSetNumber)}
-                                                className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
-                                            >
-                                                Повторить прошлый
-                                            </button>
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                <button
-                                                    type="button"
-                                                    disabled={!currentSetExists}
-                                                    onClick={() => onAdjustWeight(exerciseIndex, currentSetNumber, -incrementBase)}
-                                                    className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
-                                                >
-                                                    -{incrementBase}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    disabled={!currentSetExists}
-                                                    onClick={() => onAdjustWeight(exerciseIndex, currentSetNumber, incrementBase)}
-                                                    className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
-                                                >
-                                                    +{incrementBase}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : null}
-
                                     <div className="flex items-center justify-between gap-2">
                                         <p className="text-[11px] font-medium uppercase tracking-wide text-telegram-hint">Подходы</p>
                                         <p className="text-[11px] text-telegram-hint">{exercise.sets_completed.length} шт</p>
                                     </div>
-                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                                         <span className="shrink-0 text-[11px] text-telegram-hint">Шаг веса:</span>
                                         {QUICK_INCREMENT_BASE_OPTIONS.map((option) => (
                                             <button
                                                 key={`${itemId}-inc-${option}`}
                                                 type="button"
                                                 onClick={() => setIncrementBase(incrementScopeKey, option)}
-                                                className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${incrementBase === option ? 'bg-primary text-primary-foreground' : 'bg-telegram-bg text-telegram-hint'}`}
+                                                className={`min-h-10 min-w-10 shrink-0 touch-manipulation rounded-full px-2.5 text-xs font-semibold ${incrementBase === option ? 'bg-primary text-primary-foreground' : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'}`}
                                             >
                                                 {option}
                                             </button>

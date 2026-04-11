@@ -1,9 +1,8 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { CheckCircle2, Settings2, SkipForward, TimerReset } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import type { ActiveWorkoutSyncState } from '@/state/local'
-
-const QUICK_REST_PRESETS = [45, 60, 90, 120]
+import { FALLBACK_REST_PRESETS_SECONDS } from '@features/workouts/active/lib/activeWorkoutUtils'
 
 interface CurrentExerciseCardProps {
     exerciseName: string
@@ -14,6 +13,8 @@ interface CurrentExerciseCardProps {
     completedSetCount: number
     totalSetCount: number
     restDefaultSeconds: number
+    /** Секунды для чипов «Отдых» — совпадают с нижним rail и пресетами шаблона */
+    restPresetSeconds?: number[]
     canComplete: boolean
     canSkip: boolean
     onCompleteSet: () => void
@@ -64,6 +65,7 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
     completedSetCount,
     totalSetCount,
     restDefaultSeconds,
+    restPresetSeconds,
     canComplete,
     canSkip,
     onCompleteSet,
@@ -73,6 +75,11 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
     onSelectRestPreset,
 }: CurrentExerciseCardProps) {
     const progressPercent = totalSetCount > 0 ? Math.round((completedSetCount / totalSetCount) * 100) : 0
+    const restChips = useMemo(() => {
+        const raw =
+            restPresetSeconds != null && restPresetSeconds.length > 0 ? restPresetSeconds : FALLBACK_REST_PRESETS_SECONDS
+        return raw.slice(0, 6)
+    }, [restPresetSeconds])
 
     return (
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-4">
@@ -136,14 +143,14 @@ export const CurrentExerciseCard = memo(function CurrentExerciseCard({
 
             {/* Quick Rest Presets */}
             {onSelectRestPreset && (
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                     <span className="shrink-0 text-[11px] text-telegram-hint">Отдых:</span>
-                    {QUICK_REST_PRESETS.map((seconds) => (
+                    {restChips.map((seconds) => (
                         <button
                             key={`rest-preset-${seconds}`}
                             type="button"
                             onClick={() => onSelectRestPreset(seconds)}
-                            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${restDefaultSeconds === seconds
+                            className={`min-h-10 shrink-0 touch-manipulation rounded-full px-3 py-2 text-xs font-semibold transition-colors ${restDefaultSeconds === seconds
                                     ? 'bg-primary text-primary-foreground'
                                     : 'bg-telegram-bg text-telegram-text'
                                 }`}
