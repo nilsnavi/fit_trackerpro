@@ -13,6 +13,8 @@ interface SessionSummaryCardProps {
     completedSetCount: number
     onDurationChange: (minutes: number) => void
     onCommentsChange: (value: string) => void
+    /** Если false — скрыть заголовок и сетку статов (уже показаны в компактной строке сессии). */
+    showSessionOverview?: boolean
 }
 
 export function SessionSummaryCard({
@@ -25,6 +27,7 @@ export function SessionSummaryCard({
     completedSetCount,
     onDurationChange,
     onCommentsChange,
+    showSessionOverview = true,
 }: SessionSummaryCardProps) {
     const sessionPreviewLines = buildSessionPreviewLines(
         workout.session_metrics ?? computeSessionMetricsPreview(workout.exercises, durationMinutes),
@@ -32,39 +35,43 @@ export function SessionSummaryCard({
 
     return (
         <div className="rounded-xl bg-telegram-secondary-bg p-4 space-y-4">
-            <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-telegram-hint">Сессия</p>
-                <h2 className="line-clamp-2 text-base font-semibold text-telegram-text">{workoutTitle}</h2>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-telegram-hint">
-                <CalendarDays className="h-4 w-4" />
-                <span>{formatDate(workout.date)}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div className="rounded-lg bg-telegram-bg/60 p-2">
-                    <div className="text-xs text-telegram-hint">Прошло</div>
-                    <div className="mt-1 text-sm font-semibold text-telegram-text">{elapsedLabel}</div>
-                </div>
-                <div className="rounded-lg bg-telegram-bg/60 p-2">
-                    <div className="flex items-center gap-1 text-xs text-telegram-hint">
-                        <Clock3 className="h-3.5 w-3.5" />
-                        <span>Длительность</span>
+            {showSessionOverview ? (
+                <>
+                    <div className="space-y-1">
+                        <p className="text-xs uppercase tracking-wide text-telegram-hint">Сессия</p>
+                        <h2 className="line-clamp-2 text-base font-semibold text-telegram-text">{workoutTitle}</h2>
                     </div>
-                    <div className="mt-1 text-sm font-semibold text-telegram-text">
-                        {formatDurationMinutes(durationMinutes)}
+
+                    <div className="flex items-center gap-2 text-sm text-telegram-hint">
+                        <CalendarDays className="h-4 w-4" />
+                        <span>{formatDate(workout.date)}</span>
                     </div>
-                </div>
-                <div className="rounded-lg bg-telegram-bg/60 p-2">
-                    <div className="text-xs text-telegram-hint">Упражнения</div>
-                    <div className="mt-1 text-sm font-semibold text-telegram-text">{exerciseCount}</div>
-                </div>
-                <div className="rounded-lg bg-telegram-bg/60 p-2">
-                    <div className="text-xs text-telegram-hint">Подходы</div>
-                    <div className="mt-1 text-sm font-semibold text-telegram-text">{completedSetCount}</div>
-                </div>
-            </div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div className="rounded-lg bg-telegram-bg/60 p-2">
+                            <div className="text-xs text-telegram-hint">Прошло</div>
+                            <div className="mt-1 text-sm font-semibold text-telegram-text">{elapsedLabel}</div>
+                        </div>
+                        <div className="rounded-lg bg-telegram-bg/60 p-2">
+                            <div className="flex items-center gap-1 text-xs text-telegram-hint">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                <span>Длительность</span>
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-telegram-text">
+                                {formatDurationMinutes(durationMinutes)}
+                            </div>
+                        </div>
+                        <div className="rounded-lg bg-telegram-bg/60 p-2">
+                            <div className="text-xs text-telegram-hint">Упражнения</div>
+                            <div className="mt-1 text-sm font-semibold text-telegram-text">{exerciseCount}</div>
+                        </div>
+                        <div className="rounded-lg bg-telegram-bg/60 p-2">
+                            <div className="text-xs text-telegram-hint">Подходы</div>
+                            <div className="mt-1 text-sm font-semibold text-telegram-text">{completedSetCount}</div>
+                        </div>
+                    </div>
+                </>
+            ) : null}
 
             {sessionPreviewLines.length > 0 && (
                 <div className="space-y-2">

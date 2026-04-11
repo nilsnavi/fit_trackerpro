@@ -151,6 +151,39 @@ async def test_root_endpoint(client: AsyncClient):
 
 
 @pytest.mark.unit
+async def test_root_redirects_document_navigation_to_telegram_webapp(client: AsyncClient):
+    """Mini App / browser hits on ``/`` must go to the frontend URL, not raw API JSON."""
+    response = await client.get(
+        "/",
+        headers={
+            "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        },
+    )
+    assert response.status_code == 302
+    assert response.headers.get("location") == "https://example.com/webapp"
+
+
+@pytest.mark.unit
+async def test_root_redirects_telegram_user_agent_to_webapp(client: AsyncClient):
+    response = await client.get(
+        "/",
+        headers={"User-Agent": "Mozilla/5.0 Telegram-iOS"},
+    )
+    assert response.status_code == 302
+    assert response.headers.get("location") == "https://example.com/webapp"
+
+
+@pytest.mark.unit
+async def test_root_redirects_sec_fetch_dest_document(client: AsyncClient):
+    response = await client.get(
+        "/",
+        headers={"Sec-Fetch-Dest": "document"},
+    )
+    assert response.status_code == 302
+    assert response.headers.get("location") == "https://example.com/webapp"
+
+
+@pytest.mark.unit
 async def test_api_docs_disabled_in_production():
     """Test that API docs are disabled in production."""
     from app.settings import Settings

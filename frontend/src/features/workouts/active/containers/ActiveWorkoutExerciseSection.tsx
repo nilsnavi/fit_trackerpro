@@ -1,7 +1,6 @@
 import type { DragEndEvent } from '@dnd-kit/core'
 import { ActiveExerciseList } from '@features/workouts/active/components/ActiveExerciseList'
 import type { CompletedExercise, CompletedSet } from '@features/workouts/types/workouts'
-import type { ActiveWorkoutSyncState } from '@/state/local'
 
 export interface ActiveWorkoutExerciseSectionProps {
     incrementScopePrefix: string
@@ -24,7 +23,11 @@ export interface ActiveWorkoutExerciseSectionProps {
     onAdjustWeight: (exerciseIndex: number, setNumber: number, delta: number) => void
     onUpdateSet: (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
     onNotesChange: (exerciseIndex: number, notes: string | undefined) => void
-    syncState: ActiveWorkoutSyncState
+    hasNextExercise: boolean
+    hasPrevExercise: boolean
+    onGoToNextExercise: () => void
+    onGoToPreviousExercise: () => void
+    onSelectExerciseIndex: (exerciseIndex: number) => void
 }
 
 export function ActiveWorkoutExerciseSection({
@@ -48,6 +51,11 @@ export function ActiveWorkoutExerciseSection({
     onAdjustWeight,
     onUpdateSet,
     onNotesChange,
+    hasNextExercise,
+    hasPrevExercise,
+    onGoToNextExercise,
+    onGoToPreviousExercise,
+    onSelectExerciseIndex,
 }: ActiveWorkoutExerciseSectionProps) {
     return (
         <ActiveExerciseList
@@ -71,6 +79,11 @@ export function ActiveWorkoutExerciseSection({
             weightRecommendation={weightRecommendation}
             isWeightRecLoading={isWeightRecLoading}
             isWeightRecError={isWeightRecError}
+            hasNextExercise={hasNextExercise}
+            hasPrevExercise={hasPrevExercise}
+            onGoToNextExercise={onGoToNextExercise}
+            onGoToPreviousExercise={onGoToPreviousExercise}
+            onSelectExerciseIndex={onSelectExerciseIndex}
         />
     )
 }

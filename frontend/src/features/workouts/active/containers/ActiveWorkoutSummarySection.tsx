@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button } from '@shared/ui/Button'
-import { SessionSummaryCard } from '@features/workouts/active/components/SessionSummaryCard'
-import { RestTimerPanel } from '@features/workouts/active/components/RestTimerPanel'
-import { FloatingRestTimer } from '@features/workouts/active/components/FloatingRestTimer'
-import { CurrentExerciseCard } from '@features/workouts/components'
+import { ActiveWorkoutSessionBar } from '@features/workouts/active/components/ActiveWorkoutSessionBar'
+import { ActiveWorkoutSessionDetailsCollapsible } from '@features/workouts/active/components/ActiveWorkoutSessionDetailsCollapsible'
 import { getErrorMessage } from '@shared/errors'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 import type { ActiveWorkoutSyncState } from '@/state/local'
@@ -21,25 +19,13 @@ export interface ActiveWorkoutSummarySectionProps {
     completeError: unknown
     updateSessionError: unknown
     syncState: ActiveWorkoutSyncState
-    restDefaultSeconds: number
-    restPresetSeconds: number[]
-    canComplete: boolean
-    canSkip: boolean
-    currentContextCard: {
-        exerciseName: string
-        previousBest: string
-        currentSetLabel: string
-        remainingSets: number
-    }
     repeatButton?: ReactNode
     onDurationChange: (value: number) => void
     onCommentsChange: (value: string) => void
-    onCompleteSet: () => void
-    onSkipSet: () => void
+    onAbandonDraft: () => void
+    restDefaultSeconds: number
     onStartRest: () => void
     onOpenRestPresets: () => void
-    onSelectRestPreset: (seconds: number) => void
-    onAbandonDraft: () => void
 }
 
 export function ActiveWorkoutSummarySection({
@@ -55,32 +41,22 @@ export function ActiveWorkoutSummarySection({
     completeError,
     updateSessionError,
     syncState,
-    restDefaultSeconds,
-    restPresetSeconds,
-    canComplete,
-    canSkip,
-    currentContextCard,
     repeatButton,
     onDurationChange,
     onCommentsChange,
-    onCompleteSet,
-    onSkipSet,
+    onAbandonDraft,
+    restDefaultSeconds,
     onStartRest,
     onOpenRestPresets,
-    onSelectRestPreset,
-    onAbandonDraft,
 }: ActiveWorkoutSummarySectionProps) {
     return (
         <>
             {isActiveDraft && (
-                <div className="rounded-xl border border-warning/35 bg-warning/10 p-4 space-y-3">
+                <div className="rounded-xl border border-warning/35 bg-warning/10 p-3 space-y-2">
                     <p className="text-sm text-telegram-text">
-                        Тренировка ещё не завершена. Изменения в упражнениях сохраняются автоматически и
-                        отправляются в базу данных до завершения сессии.
+                        Черновик сохраняется автоматически до завершения сессии.
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                        {repeatButton}
-                    </div>
+                    <div className="flex flex-wrap gap-2">{repeatButton}</div>
                     <Button
                         type="button"
                         variant="secondary"
@@ -93,7 +69,22 @@ export function ActiveWorkoutSummarySection({
                 </div>
             )}
 
-            <SessionSummaryCard
+            <ActiveWorkoutSessionBar
+                workoutTitle={workoutTitle}
+                elapsedLabel={elapsedLabel}
+                completedSetCount={completedSetCount}
+                totalSetCount={totalSetCount}
+                syncState={syncState}
+                isActiveDraft={isActiveDraft}
+                restDefaultSeconds={restDefaultSeconds}
+                onStartRest={onStartRest}
+            />
+
+            {sessionError && <p className="text-sm text-danger">{sessionError}</p>}
+            {completeError != null && <p className="text-sm text-danger">{getErrorMessage(completeError)}</p>}
+            {updateSessionError != null && <p className="text-sm text-danger">{getErrorMessage(updateSessionError)}</p>}
+
+            <ActiveWorkoutSessionDetailsCollapsible
                 workout={workout}
                 workoutTitle={workoutTitle}
                 elapsedLabel={elapsedLabel}
@@ -102,39 +93,9 @@ export function ActiveWorkoutSummarySection({
                 exerciseCount={exerciseCount}
                 completedSetCount={completedSetCount}
                 onDurationChange={onDurationChange}
-                onCommentsChange={(value) => onCommentsChange(value)}
-            />
-
-            {sessionError && <p className="text-sm text-danger">{sessionError}</p>}
-            {completeError != null && <p className="text-sm text-danger">{getErrorMessage(completeError)}</p>}
-            {updateSessionError != null && <p className="text-sm text-danger">{getErrorMessage(updateSessionError)}</p>}
-
-            <RestTimerPanel />
-            <FloatingRestTimer />
-
-            <CurrentExerciseCard
-                exerciseName={currentContextCard.exerciseName}
-                previousBest={currentContextCard.previousBest}
-                currentSet={currentContextCard.currentSetLabel}
-                remainingSets={currentContextCard.remainingSets}
-                syncState={syncState}
-                completedSetCount={completedSetCount}
-                totalSetCount={totalSetCount}
-                restDefaultSeconds={restDefaultSeconds}
-                restPresetSeconds={restPresetSeconds}
-                canComplete={canComplete}
-                canSkip={canSkip}
-                onCompleteSet={onCompleteSet}
-                onSkipSet={onSkipSet}
-                onStartRest={onStartRest}
+                onCommentsChange={onCommentsChange}
                 onOpenRestPresets={onOpenRestPresets}
-                onSelectRestPreset={onSelectRestPreset}
             />
-            {/*
-              PR UX: вторую полноширинную кнопку «Завершить» убрали — завершение только из нижнего rail
-              (один явный CTA, меньше дублирования при скролле).
-            */}
         </>
     )
 }
-

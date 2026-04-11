@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useEffect, useState } from 'react'
+import { lazy, memo, Suspense, useMemo, useState } from 'react'
 import { useScrollCurrentSetIntoView } from '@features/workouts/active/hooks/useScrollCurrentSetIntoView'
 import { ChevronDown, ChevronUp, Minus, PencilRuler, Plus, Trash2 } from 'lucide-react'
 import {
@@ -7,6 +7,7 @@ import {
 } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedExercise, CompletedSet } from '@features/workouts/types/workouts'
 import { useWorkoutQuickIncrementsStore } from '@/state/local'
+import { ActiveExerciseNavigator } from './ActiveExerciseNavigator'
 import { ExerciseSetRow } from './ExerciseSetRow'
 import type { ActiveExerciseListProps } from './ActiveExerciseList.sortable'
 
@@ -51,6 +52,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
     weightRecommendation,
     isWeightRecLoading,
     isWeightRecError,
+    hasNextExercise,
+    hasPrevExercise,
+    onGoToNextExercise,
+    onGoToPreviousExercise,
+    onSelectExerciseIndex,
 }: ActiveExerciseListProps) {
     if (canReorder) {
         return (
@@ -78,6 +84,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                         weightRecommendation={weightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
+                        hasNextExercise={hasNextExercise}
+                        hasPrevExercise={hasPrevExercise}
+                        onGoToNextExercise={onGoToNextExercise}
+                        onGoToPreviousExercise={onGoToPreviousExercise}
+                        onSelectExerciseIndex={onSelectExerciseIndex}
                     />
                 )}
             >
@@ -103,6 +114,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                     weightRecommendation={weightRecommendation}
                     isWeightRecLoading={isWeightRecLoading}
                     isWeightRecError={isWeightRecError}
+                    hasNextExercise={hasNextExercise}
+                    hasPrevExercise={hasPrevExercise}
+                    onGoToNextExercise={onGoToNextExercise}
+                    onGoToPreviousExercise={onGoToPreviousExercise}
+                    onSelectExerciseIndex={onSelectExerciseIndex}
                 />
             </Suspense>
         )
@@ -131,6 +147,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
             weightRecommendation={weightRecommendation}
             isWeightRecLoading={isWeightRecLoading}
             isWeightRecError={isWeightRecError}
+            hasNextExercise={hasNextExercise}
+            hasPrevExercise={hasPrevExercise}
+            onGoToNextExercise={onGoToNextExercise}
+            onGoToPreviousExercise={onGoToPreviousExercise}
+            onSelectExerciseIndex={onSelectExerciseIndex}
         />
     )
 })
@@ -155,45 +176,24 @@ function ActiveExerciseListStatic({
     weightRecommendation,
     isWeightRecLoading,
     isWeightRecError,
+    hasNextExercise,
+    hasPrevExercise,
+    onGoToNextExercise,
+    onGoToPreviousExercise,
+    onSelectExerciseIndex,
 }: ActiveExerciseListProps) {
     const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Record<string, true>>({})
     const getIncrementBase = useWorkoutQuickIncrementsStore((s) => s.getIncrementBase)
     const setIncrementBaseForScope = useWorkoutQuickIncrementsStore((s) => s.setIncrementBase)
     const activeSetsScrollRef = useScrollCurrentSetIntoView(currentExerciseIndex, currentSetIndex)
 
-    useEffect(() => {
-        setCollapsedExerciseIds((prev) => {
-            const next: Record<string, true> = {}
-            const activeIds = new Set<string>()
-
-            exercises.forEach((exercise, index) => {
-                const itemId = `${exercise.exercise_id}-${index}`
-                activeIds.add(itemId)
-                const shouldCollapse = index !== currentExerciseIndex
-
-                if (!shouldCollapse) {
-                    return
-                }
-
-                if (prev[itemId]) {
-                    next[itemId] = true
-                    return
-                }
-
-                if (prev[itemId] === undefined) {
-                    next[itemId] = true
-                }
-            })
-
-            Object.keys(prev).forEach((itemId) => {
-                if (!activeIds.has(itemId)) {
-                    delete next[itemId]
-                }
-            })
-
-            return next
-        })
-    }, [currentExerciseIndex, exercises])
+    const exerciseNavigatorLabels = useMemo(
+        () => exercises.map((exercise, index) => ({
+            key: `${exercise.exercise_id}-${index}`,
+            name: exercise.name,
+        })),
+        [exercises],
+    )
 
     const toggleCollapsed = (id: string) => {
         setCollapsedExerciseIds((prev) => {
@@ -213,6 +213,11 @@ function ActiveExerciseListStatic({
 
     return (
         <div ref={activeSetsScrollRef} className="space-y-3">
+            <ActiveExerciseNavigator
+                exerciseLabels={exerciseNavigatorLabels}
+                currentExerciseIndex={currentExerciseIndex}
+                onSelectExercise={onSelectExerciseIndex}
+            />
             {exercises.map((exercise, exerciseIndex) => {
                 const itemId = `${exercise.exercise_id}-${exerciseIndex}`
                 const summaryMeta = getExerciseSummaryMeta(exercise)
@@ -344,25 +349,45 @@ function ActiveExerciseListStatic({
                                 </div>
 
                                 {isCurrentExercise && (
-                                    <div className="mt-2 grid grid-cols-2 gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={onRemoveSet}
-                                            disabled={exercise.sets_completed.length <= 1}
-                                            className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
-                                        >
-                                            <Minus className="h-3.5 w-3.5" />
-                                            Убрать подход
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={onAddSet}
-                                            className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
-                                        >
-                                            <Plus className="h-3.5 w-3.5" />
-                                            Добавить подход
-                                        </button>
-                                    </div>
+                                    <>
+                                        <div className="mt-2 grid grid-cols-2 gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={onRemoveSet}
+                                                disabled={exercise.sets_completed.length <= 1}
+                                                className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                            >
+                                                <Minus className="h-3.5 w-3.5" />
+                                                Убрать подход
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={onAddSet}
+                                                className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                                Добавить подход
+                                            </button>
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-2 gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={onGoToPreviousExercise}
+                                                disabled={!hasPrevExercise}
+                                                className="flex min-h-[48px] touch-manipulation items-center justify-center rounded-xl border border-border bg-telegram-bg px-3 py-2.5 text-sm font-semibold text-telegram-text disabled:opacity-40"
+                                            >
+                                                ← Пред. упр.
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={onGoToNextExercise}
+                                                disabled={!hasNextExercise}
+                                                className="flex min-h-[48px] touch-manipulation items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary disabled:opacity-40"
+                                            >
+                                                След. упр. →
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
 
                                 {isCurrentExercise || Boolean(exercise.notes?.trim()) ? (

@@ -6,8 +6,6 @@ import { FALLBACK_REST_PRESETS_SECONDS } from '../lib/activeWorkoutUtils'
 
 export interface ActiveWorkoutBottomActionsProps {
     isActiveDraft: boolean
-    completedSetCount: number
-    totalSetCount: number
     restPresets: number[]
     restDefaultSeconds: number
     currentExercise: CompletedExercise | null
@@ -21,8 +19,6 @@ export interface ActiveWorkoutBottomActionsProps {
 
 export function ActiveWorkoutBottomActions({
     isActiveDraft,
-    completedSetCount,
-    totalSetCount,
     restPresets,
     restDefaultSeconds,
     currentExercise,
@@ -44,12 +40,6 @@ export function ActiveWorkoutBottomActions({
             className="space-y-2"
             topSlot={(
                 <>
-                    <div className="flex items-center justify-between rounded-lg bg-telegram-secondary-bg px-3 py-2">
-                        <p className="text-xs text-telegram-hint">Прогресс сессии</p>
-                        <p className="text-sm font-semibold text-telegram-text">
-                            {completedSetCount}/{totalSetCount} подходов
-                        </p>
-                    </div>
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                         <span className="shrink-0 text-[11px] text-telegram-hint">Отдых:</span>
                         {(restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS).map((seconds) => (
