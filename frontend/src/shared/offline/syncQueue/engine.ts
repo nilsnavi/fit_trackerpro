@@ -1,6 +1,16 @@
+import { isAppHttpError } from '@shared/errors'
+import {
+    emitWorkoutSyncTelemetry,
+    isSyncConflictHttpError,
+    notifyWorkoutSyncConflictDetected,
+    resourceIdsFromSyncQueuePayload,
+    syncErrorTelemetryFields,
+} from '@shared/offline/observability/workoutSyncTelemetry'
+
 import type { EnqueueResult, EnqueueSyncMutationInput, SyncQueueItem } from './types'
 import { SYNC_QUEUE_MAX_ITEMS, SYNC_QUEUE_STORAGE_KEY } from './types'
 import { isRecoverableSyncError } from './recoverableError'
+import { WORKOUT_SYNC_KINDS } from './workoutKinds'
 
 export type SyncQueueExecuteFn = (kind: string, payload: unknown) => Promise<void>
 
@@ -26,6 +36,21 @@ function normalizeOnLoad(items: SyncQueueItem[]): SyncQueueItem[] {
     return items.map((i) =>
         i.status === 'processing' ? { ...i, status: 'pending' as const } : i,
     )
+}
+
+function conflictResourceForQueueItem(item: SyncQueueItem): {
+    resource: 'workout' | 'template' | 'unknown'
+    resource_id: number | null
+} {
+    const ids = resourceIdsFromSyncQueuePayload(item.payload)
+    const k = item.kind
+    if (k === WORKOUT_SYNC_KINDS.TEMPLATE_CREATE || k === WORKOUT_SYNC_KINDS.TEMPLATE_UPDATE) {
+        return { resource: 'template', resource_id: ids.template_id }
+    }
+    if (k === WORKOUT_SYNC_KINDS.START) {
+        return { resource: 'unknown', resource_id: ids.template_id }
+    }
+    return { resource: 'workout', resource_id: ids.workout_id }
 }
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
@@ -133,8 +158,8 @@ export class SyncQueueEngine {
             kind: input.kind,
             dedupeKey: input.dedupeKey,
             payload: input.payload,
-               idempotencyKey: input.idempotencyKey,
-               expectedVersion: input.expectedVersion,
+            idempotencyKey: input.idempotencyKey,
+            expectedVersion: input.expectedVersion,
             createdAt: now,
             attempts: 0,
             status: 'pending',
@@ -143,6 +168,17 @@ export class SyncQueueEngine {
         this.items.push(item)
         this.persist()
         this.notify()
+
+        const ids = resourceIdsFromSyncQueuePayload(input.payload)
+        emitWorkoutSyncTelemetry('local_update_queued', {
+            channel: 'sync_queue',
+            kind: input.kind,
+            replaced_duplicate: replacedDuplicate,
+            queue_depth: this.items.length,
+            ...(ids.workout_id != null ? { workout_id: ids.workout_id } : {}),
+            ...(ids.template_id != null ? { template_id: ids.template_id } : {}),
+        })
+
         return { item, replacedDuplicate }
     }
 
@@ -179,6 +215,13 @@ export class SyncQueueEngine {
         }
         this.persist()
         this.notify()
+
+        emitWorkoutSyncTelemetry('sync_started', {
+            channel: 'sync_queue',
+            trigger: 'manual_item_retry',
+            kind: item.kind,
+            item_id_short: item.id.slice(0, 8),
+        })
 
         // Запустить flush если онлайн
         try {
@@ -218,12 +261,37 @@ export class SyncQueueEngine {
                 }
                 this.persist()
 
+                const pendingAhead = this.items.filter(
+                    (i) => i.status === 'pending' && i.id !== next.id,
+                ).length
+
+                emitWorkoutSyncTelemetry('sync_started', {
+                    channel: 'sync_queue',
+                    kind: next.kind,
+                    item_id_short: next.id.slice(0, 8),
+                    pending_other: pendingAhead,
+                    prior_attempts: next.attempts,
+                })
+
                 try {
                     await this.executeOp(next.kind, next.payload)
                     this.items = this.items.filter((i) => i.id !== next.id)
                     this.persist()
                     this.notify()
                     completed += 1
+
+                    emitWorkoutSyncTelemetry('sync_succeeded', {
+                        channel: 'sync_queue',
+                        kind: next.kind,
+                        item_id_short: next.id.slice(0, 8),
+                    })
+                    if (next.attempts > 0) {
+                        emitWorkoutSyncTelemetry('retry_succeeded', {
+                            channel: 'sync_queue',
+                            kind: next.kind,
+                            prior_attempts: next.attempts,
+                        })
+                    }
                 } catch (error) {
                     const msg =
                         error instanceof Error ? error.message : String(error)
@@ -239,6 +307,16 @@ export class SyncQueueEngine {
                         }
                         this.persist()
                         this.notify()
+
+                        emitWorkoutSyncTelemetry('sync_failed', {
+                            channel: 'sync_queue',
+                            kind: next.kind,
+                            outcome: 'recoverable_backoff',
+                            item_id_short: next.id.slice(0, 8),
+                            attempts,
+                            next_retry_in_ms: delay,
+                            ...syncErrorTelemetryFields(error),
+                        })
                         break
                     }
                     // Нерекаверибл ошибка: не теряем операцию молча — помечаем failed.
@@ -251,6 +329,26 @@ export class SyncQueueEngine {
                     }
                     this.persist()
                     this.notify()
+
+                    if (isSyncConflictHttpError(error)) {
+                        const cr = conflictResourceForQueueItem(next)
+                        notifyWorkoutSyncConflictDetected({
+                            resource: cr.resource,
+                            resource_id: cr.resource_id,
+                            reason: isAppHttpError(error) ? error.code : msg,
+                            source: 'sync_queue',
+                            http_status: isAppHttpError(error) ? error.status : null,
+                            queue_kind: next.kind,
+                        })
+                    }
+
+                    emitWorkoutSyncTelemetry('sync_failed', {
+                        channel: 'sync_queue',
+                        kind: next.kind,
+                        outcome: 'terminal',
+                        item_id_short: next.id.slice(0, 8),
+                        ...syncErrorTelemetryFields(error),
+                    })
                 }
             }
         } finally {
