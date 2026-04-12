@@ -22,7 +22,7 @@ CHECK_TIMEOUT_S = 2.0
 
 def _error_message(exc: BaseException) -> str:
     if isinstance(exc, asyncio.TimeoutError):
-        return f"error: timed out after {CHECK_TIMEOUT_S}s"
+        return "error: timeout"
     msg = str(exc).strip() or exc.__class__.__name__
     return f"error: {msg}"
 
@@ -66,9 +66,9 @@ async def _check_redis() -> str:
 
 
 async def run_readiness_checks() -> ReadinessResponse:
-    database, redis = await asyncio.gather(_check_database(), _check_redis())
-    checks = ReadinessChecks(database=database, redis=redis)
+    postgres, redis = await asyncio.gather(_check_database(), _check_redis())
+    checks = ReadinessChecks(postgres=postgres, redis=redis)
     overall: str = (
-        "ready" if database == "ok" and redis == "ok" else "not_ready"
+        "ready" if postgres == "ok" and redis == "ok" else "degraded"
     )
     return ReadinessResponse(status=overall, checks=checks)

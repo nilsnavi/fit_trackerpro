@@ -47,25 +47,25 @@ async def test_system_live_endpoint(client: AsyncClient):
 
 
 @pytest.mark.unit
-async def test_readiness_returns_503_when_not_ready(client: AsyncClient, monkeypatch):
+async def test_readiness_returns_503_when_degraded(client: AsyncClient, monkeypatch):
     """Readiness returns HTTP 503 if at least one dependency is unhealthy."""
 
-    async def _not_ready() -> ReadinessResponse:
+    async def _degraded() -> ReadinessResponse:
         return ReadinessResponse(
-            status="not_ready",
+            status="degraded",
             checks=ReadinessChecks(
-                database="error: connection failed",
+                postgres="error: connection failed",
                 redis="ok",
             ),
         )
 
-    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_not_ready))
+    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_degraded))
 
     response = await client.get("/health/ready")
     assert response.status_code == 503
     data = response.json()
-    assert data["status"] == "not_ready"
-    assert data["checks"]["database"].startswith("error:")
+    assert data["status"] == "degraded"
+    assert data["checks"]["postgres"].startswith("error:")
 
 
 @pytest.mark.unit
@@ -76,7 +76,7 @@ async def test_readiness_returns_200_when_ready(client: AsyncClient, monkeypatch
         return ReadinessResponse(
             status="ready",
             checks=ReadinessChecks(
-                database="ok",
+                postgres="ok",
                 redis="ok",
             ),
         )
@@ -87,28 +87,28 @@ async def test_readiness_returns_200_when_ready(client: AsyncClient, monkeypatch
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ready"
-    assert data["checks"]["database"] == "ok"
+    assert data["checks"]["postgres"] == "ok"
     assert data["checks"]["redis"] == "ok"
 
 
 @pytest.mark.unit
-async def test_system_readiness_returns_503_when_not_ready(client: AsyncClient, monkeypatch):
+async def test_system_readiness_returns_503_when_degraded(client: AsyncClient, monkeypatch):
     """V1 readiness endpoint also returns HTTP 503 when unhealthy."""
 
-    async def _not_ready() -> ReadinessResponse:
+    async def _degraded() -> ReadinessResponse:
         return ReadinessResponse(
-            status="not_ready",
+            status="degraded",
             checks=ReadinessChecks(
-                database="error: unavailable",
+                postgres="error: unavailable",
                 redis="ok",
             ),
         )
 
-    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_not_ready))
+    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_degraded))
 
     response = await client.get("/api/v1/system/ready")
     assert response.status_code == 503
-    assert response.json()["status"] == "not_ready"
+    assert response.json()["status"] == "degraded"
 
 
 @pytest.mark.unit
@@ -229,9 +229,9 @@ async def test_readiness_db_unavailable_redis_healthy(client: AsyncClient, monke
 
     async def _partial_ready() -> ReadinessResponse:
         return ReadinessResponse(
-            status="not_ready",
+            status="degraded",
             checks=ReadinessChecks(
-                database="error: connection refused",
+                postgres="error: connection refused",
                 redis="ok",
             ),
         )
@@ -241,8 +241,8 @@ async def test_readiness_db_unavailable_redis_healthy(client: AsyncClient, monke
     response = await client.get("/health/ready")
     assert response.status_code == 503
     data = response.json()
-    assert data["status"] == "not_ready"
-    assert data["checks"]["database"].startswith("error:")
+    assert data["status"] == "degraded"
+    assert data["checks"]["postgres"].startswith("error:")
     assert data["checks"]["redis"] == "ok"
 
 
@@ -252,9 +252,9 @@ async def test_readiness_redis_unavailable_db_healthy(client: AsyncClient, monke
 
     async def _partial_ready() -> ReadinessResponse:
         return ReadinessResponse(
-            status="not_ready",
+            status="degraded",
             checks=ReadinessChecks(
-                database="ok",
+                postgres="ok",
                 redis="error: Connection refused",
             ),
         )
@@ -264,8 +264,8 @@ async def test_readiness_redis_unavailable_db_healthy(client: AsyncClient, monke
     response = await client.get("/health/ready")
     assert response.status_code == 503
     data = response.json()
-    assert data["status"] == "not_ready"
-    assert data["checks"]["database"] == "ok"
+    assert data["status"] == "degraded"
+    assert data["checks"]["postgres"] == "ok"
     assert data["checks"]["redis"] == "error: Connection refused"
 
 
@@ -277,7 +277,7 @@ async def test_readiness_all_deps_healthy(client: AsyncClient, monkeypatch):
         return ReadinessResponse(
             status="ready",
             checks=ReadinessChecks(
-                database="ok",
+                postgres="ok",
                 redis="ok",
             ),
         )
@@ -288,7 +288,7 @@ async def test_readiness_all_deps_healthy(client: AsyncClient, monkeypatch):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ready"
-    assert data["checks"]["database"] == "ok"
+    assert data["checks"]["postgres"] == "ok"
     assert data["checks"]["redis"] == "ok"
 
 
@@ -296,23 +296,82 @@ async def test_readiness_all_deps_healthy(client: AsyncClient, monkeypatch):
 async def test_liveness_independent_of_deps(client: AsyncClient, monkeypatch):
     """Liveness returns 200 even when readiness would return 503."""
 
-    async def _not_ready() -> ReadinessResponse:
+    async def _degraded() -> ReadinessResponse:
         return ReadinessResponse(
-            status="not_ready",
+            status="degraded",
             checks=ReadinessChecks(
-                database="error: down",
+                postgres="error: down",
                 redis="ok",
             ),
         )
 
-    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_not_ready))
+    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_degraded))
 
     readiness_response = await client.get("/health/ready")
     assert readiness_response.status_code == 503
-    assert readiness_response.json()["status"] == "not_ready"
+    assert readiness_response.json()["status"] == "degraded"
 
     liveness_response = await client.get("/health/live")
     assert liveness_response.status_code == 200
     data = liveness_response.json()
     assert data["status"] == "alive"
     assert "timestamp" in data
+
+
+@pytest.mark.unit
+async def test_v1_system_ready_mocks_postgres_redis_both_ok(client: AsyncClient, monkeypatch):
+    """``GET /api/v1/system/ready`` через реальный ``HealthCheckService`` с моками проверок."""
+
+    async def _pg_ok() -> str:
+        return "ok"
+
+    async def _redis_ok() -> str:
+        return "ok"
+
+    monkeypatch.setattr("app.core.health._check_database", _pg_ok)
+    monkeypatch.setattr("app.core.health._check_redis", _redis_ok)
+
+    response = await client.get("/api/v1/system/ready")
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ready",
+        "checks": {"postgres": "ok", "redis": "ok"},
+    }
+
+
+@pytest.mark.unit
+async def test_v1_system_ready_mocks_postgres_fail(client: AsyncClient, monkeypatch):
+    async def _pg_fail() -> str:
+        return "error: refused"
+
+    async def _redis_ok() -> str:
+        return "ok"
+
+    monkeypatch.setattr("app.core.health._check_database", _pg_fail)
+    monkeypatch.setattr("app.core.health._check_redis", _redis_ok)
+
+    response = await client.get("/api/v1/system/ready")
+    assert response.status_code == 503
+    body = response.json()
+    assert body["status"] == "degraded"
+    assert body["checks"]["postgres"] == "error: refused"
+    assert body["checks"]["redis"] == "ok"
+
+
+@pytest.mark.unit
+async def test_v1_system_ready_mocks_redis_fail(client: AsyncClient, monkeypatch):
+    async def _pg_ok() -> str:
+        return "ok"
+
+    async def _redis_fail() -> str:
+        return "error: timeout"
+
+    monkeypatch.setattr("app.core.health._check_database", _pg_ok)
+    monkeypatch.setattr("app.core.health._check_redis", _redis_fail)
+
+    response = await client.get("/api/v1/system/ready")
+    assert response.status_code == 503
+    body = response.json()
+    assert body["status"] == "degraded"
+    assert body["checks"]["postgres"] == "ok"
+    assert body["checks"]["redis"] == "error: timeout"

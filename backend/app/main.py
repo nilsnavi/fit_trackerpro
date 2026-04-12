@@ -255,7 +255,7 @@ async def app_liveness():
 async def app_readiness():
     """
     Readiness probe (алиас ``/health/ready``): PostgreSQL и Redis.
-    HTTP 200 только при ``status == "ready"``; иначе 503 с телом проверок.
+    HTTP 200 только при ``status == "ready"``; иначе 503 с ``status == "degraded"`` и телом проверок.
     """
     readiness = await HealthCheckService.readiness()
     if readiness.status != "ready":

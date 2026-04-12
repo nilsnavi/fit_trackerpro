@@ -335,8 +335,8 @@ jobs:
           READY_URL="${API_BASE_TRIMMED}/system/ready"
           smoke_check "backend readiness (GET /api/v1/system/ready)" "${READY_URL}" "200"
           curl -fsS "${READY_URL}" | jq -e '.status == "ready"' >/dev/null
-          curl -fsS "${READY_URL}" | jq -e '.checks.database.status == "ok"' >/dev/null
-          echo "Readiness JSON validated (status=ready, database=ok)"
+          curl -fsS "${READY_URL}" | jq -e '.checks.postgres == "ok" and .checks.redis == "ok"' >/dev/null
+          echo "Readiness JSON validated (status=ready, postgres=ok, redis=ok)"
 
           smoke_check "nginx→backend health (GET /health)" "${NGINX_HEALTH_URL}" "200"
           curl -fsS "${NGINX_HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null

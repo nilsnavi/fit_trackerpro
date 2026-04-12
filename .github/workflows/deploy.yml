@@ -36,9 +36,9 @@ concurrency:
 env:
   REGISTRY: ghcr.io
 
-# Ожидание готовности бэкенда после деплоя: reusable workflow
-# ``deploy-environment.yml`` (job ``deploy``) опрашивает ``GET /api/v1/system/ready``
-# каждые 5 с, до 120 с.
+# Готовность бэкенда после деплоя проверяется только через ``GET /api/v1/system/ready``
+# (readiness: Postgres + Redis). Reusable workflow ``deploy-environment.yml``:
+# job ``deploy`` — опрос каждые 5 с до 120 с; job ``verify`` — smoke на тот же URL.
 
 jobs:
   # ---------------------------------------------------------------------------
