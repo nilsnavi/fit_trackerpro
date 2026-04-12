@@ -1212,3 +1212,31 @@ class AnalyticsRepository(SQLAlchemyRepository):
             },
             "best_sets": [dict(row) for row in best_sets],
         }
+
+    async def list_workout_logs_exercises_for_intensity(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> List[tuple[int, date, List[Any]]]:
+        """Completed workouts (duration set) with exercises JSON for intensity analytics."""
+        result = await self.db.execute(
+            select(WorkoutLog.id, WorkoutLog.date, WorkoutLog.exercises)
+            .where(
+                and_(
+                    WorkoutLog.user_id == user_id,
+                    WorkoutLog.date >= date_from,
+                    WorkoutLog.date <= date_to,
+                    WorkoutLog.duration.isnot(None),
+                )
+            )
+            .order_by(WorkoutLog.date.asc(), WorkoutLog.id.asc())
+        )
+        out: List[tuple[int, date, List[Any]]] = []
+        for row in result.all():
+            wid = int(row[0])
+            wdate = row[1]
+            raw_ex = row[2]
+            exercises = raw_ex if isinstance(raw_ex, list) else []
+            out.append((wid, wdate, exercises))
+        return out

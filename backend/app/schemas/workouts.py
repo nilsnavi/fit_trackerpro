@@ -118,6 +118,14 @@ class CompletedSet(BaseModel):
         le=86400,
         description="Duration in seconds",
     )
+    started_at: Optional[datetime] = Field(
+        None,
+        description="Set start timestamp (client, for time-under-tension).",
+    )
+    completed_at: Optional[datetime] = Field(
+        None,
+        description="Set completion timestamp (client).",
+    )
     completed: bool = Field(default=True)
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -205,6 +205,20 @@ class WorkoutsService:
         }
 
     @staticmethod
+    def _parse_optional_datetime(value: object) -> Optional[datetime]:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            try:
+                normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+                return datetime.fromisoformat(normalized)
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
     def _normalize_set_type(value: object) -> str:
         allowed = {item.value for item in WorkoutSetType}
         candidate = str(value).strip().lower() if value is not None else WorkoutSetType.WORKING.value
@@ -269,6 +283,8 @@ class WorkoutsService:
                             planned_rest_seconds=raw_set.get("planned_rest_seconds"),
                             actual_rest_seconds=raw_set.get("actual_rest_seconds"),
                             duration=raw_set.get("duration"),
+                            started_at=WorkoutsService._parse_optional_datetime(raw_set.get("started_at")),
+                            completed_at=WorkoutsService._parse_optional_datetime(raw_set.get("completed_at")),
                             completed=bool(raw_set.get("completed", True)),
                         )
                     )

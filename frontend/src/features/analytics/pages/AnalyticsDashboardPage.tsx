@@ -8,6 +8,7 @@ import {
     Award,
     CalendarDays,
     Flame,
+    Gauge,
     HeartPulse,
     Sparkles,
     Target,
@@ -47,6 +48,21 @@ function formatMinutes(minutes: number): string {
     return rest > 0 ? `${hours}ч ${rest}м` : `${hours}ч`
 }
 
+function formatAvgRestSeconds(sec: number | null | undefined): string {
+    if (sec == null || !Number.isFinite(sec)) return '—'
+    const m = Math.floor(sec / 60)
+    const s = Math.max(0, Math.round(sec - m * 60))
+    if (m <= 0) return `${s} сек`
+    return `${m} мин ${s} сек`
+}
+
+function formatRpeTrendLabel(trend: string | null | undefined): string {
+    if (trend === 'up') return 'выше прошлого периода'
+    if (trend === 'down') return 'ниже прошлого периода'
+    if (trend === 'flat') return 'как в прошлом периоде'
+    return ''
+}
+
 export default function AnalyticsDashboardPage() {
     const navigate = useNavigate()
     const tg = useTelegramWebApp()
@@ -67,6 +83,20 @@ export default function AnalyticsDashboardPage() {
             value: row.count,
         }))
     }, [analyticsQuery.data?.weekly_chart])
+
+    const intensityChartItems = useMemo(() => {
+        const rows = analyticsQuery.data?.intensity_weekly_chart ?? []
+        return rows
+            .filter((row) => row.intensity_score != null && Number.isFinite(row.intensity_score))
+            .map((row) => ({
+                label: format(parseISO(row.date), 'd MMM', { locale: ru }),
+                value: row.intensity_score ?? 0,
+            }))
+    }, [analyticsQuery.data?.intensity_weekly_chart])
+
+    const rpeWorkoutsCount = analyticsQuery.data?.workouts_with_rpe_count ?? 0
+    const showIntensityRpeHint = rpeWorkoutsCount < 3
+    const showIntensityScoreChart = intensityChartItems.length >= 2
 
     const earnedAchievements = useMemo(() => {
         const data = achievementsQuery.data
@@ -193,6 +223,66 @@ export default function AnalyticsDashboardPage() {
                                 {analyticsQuery.data.favorite_exercise ?? '—'}
                             </p>
                         </article>
+                    </section>
+
+                    <section className="rounded-3xl bg-telegram-secondary-bg/65 p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                            <Gauge className="h-4 w-4 text-primary" />
+                            <h2 className="text-sm font-semibold text-telegram-text">Интенсивность</h2>
+                        </div>
+                        {showIntensityRpeHint ? (
+                            <p className="mb-3 rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
+                                Оценивайте усилие после подходов для точной аналитики
+                            </p>
+                        ) : null}
+                        <div className="grid grid-cols-2 gap-2">
+                            <article className="rounded-2xl bg-telegram-bg p-3">
+                                <p className="text-[11px] text-telegram-hint">Средний RPE</p>
+                                <p className="mt-1 text-lg font-semibold text-telegram-text">
+                                    {analyticsQuery.data.avg_rpe_per_workout != null
+                                        ? analyticsQuery.data.avg_rpe_per_workout.toFixed(1)
+                                        : '—'}
+                                </p>
+                                {analyticsQuery.data.avg_rpe_trend ? (
+                                    <p className="mt-1 text-[10px] text-telegram-hint">
+                                        {formatRpeTrendLabel(analyticsQuery.data.avg_rpe_trend)}
+                                    </p>
+                                ) : null}
+                            </article>
+                            <article className="rounded-2xl bg-telegram-bg p-3">
+                                <p className="text-[11px] text-telegram-hint">Средний отдых</p>
+                                <p className="mt-1 text-sm font-semibold leading-snug text-telegram-text">
+                                    {formatAvgRestSeconds(analyticsQuery.data.avg_rest_time_seconds ?? null)}
+                                </p>
+                            </article>
+                            <article className="rounded-2xl bg-telegram-bg p-3">
+                                <p className="text-[11px] text-telegram-hint">Время под нагрузкой</p>
+                                <p className="mt-1 text-sm font-semibold text-telegram-text">
+                                    {analyticsQuery.data.total_time_under_tension_seconds != null
+                                        ? `${Math.round(analyticsQuery.data.total_time_under_tension_seconds)} сек`
+                                        : '—'}
+                                </p>
+                            </article>
+                            <article className="rounded-2xl bg-telegram-bg p-3">
+                                <p className="text-[11px] text-telegram-hint">Индекс интенсивности</p>
+                                <p className="mt-1 text-lg font-semibold text-telegram-text">
+                                    {analyticsQuery.data.intensity_score != null
+                                        ? analyticsQuery.data.intensity_score.toFixed(2)
+                                        : '—'}
+                                </p>
+                            </article>
+                        </div>
+                        {showIntensityScoreChart ? (
+                            <div className="mt-4">
+                                <ProgressTrendBars
+                                    title="Индекс интенсивности по неделям"
+                                    subtitle="По неделям с понедельника; нужны данные хотя бы за две недели."
+                                    items={intensityChartItems}
+                                    valueFormatter={(v) => v.toFixed(2)}
+                                    emptyMessage="Недостаточно данных для графика."
+                                />
+                            </div>
+                        ) : null}
                     </section>
 
                     <ProgressTrendBars

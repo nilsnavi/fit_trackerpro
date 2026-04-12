@@ -9,6 +9,11 @@ export interface AnalyticsWeeklyChartPoint {
     count: number
 }
 
+export interface AnalyticsIntensityWeekPoint {
+    date: string
+    intensity_score: number | null
+}
+
 export interface AnalyticsDashboardData {
     period: AnalyticsDashboardPeriod
     total_workouts: number
@@ -19,6 +24,14 @@ export interface AnalyticsDashboardData {
     favorite_exercise: string | null
     streak_days: number
     weekly_chart: AnalyticsWeeklyChartPoint[]
+    avg_rpe_per_workout?: number | null
+    avg_rpe_previous_period?: number | null
+    avg_rpe_trend?: 'up' | 'down' | 'flat' | null
+    avg_rest_time_seconds?: number | null
+    total_time_under_tension_seconds?: number | null
+    intensity_score?: number | null
+    intensity_weekly_chart?: AnalyticsIntensityWeekPoint[]
+    workouts_with_rpe_count?: number
 }
 
 export function useAnalytics(period: AnalyticsDashboardPeriod): UseQueryResult<AnalyticsDashboardData, Error> {

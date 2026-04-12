@@ -21,6 +21,13 @@ function toSeconds(durationMinutes: number): number | undefined {
     return Math.round(durationMinutes * 60)
 }
 
+function formatIsoShort(iso?: string): string | null {
+    if (!iso) return null
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return null
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 function formatSetValues(set: CompletedSet): string {
     const parts = [
         typeof set.weight === 'number' ? `${set.weight} кг` : null,
@@ -69,6 +76,7 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
 }: ExerciseSetRowProps) {
     const setIndex = set.set_number - 1
     const [showEffort, setShowEffort] = useState(Boolean(set.rpe != null || set.rir != null))
+    const [postRpeDismissed, setPostRpeDismissed] = useState(false)
     const [isExpanded, setIsExpanded] = useState(isCurrent)
     const [weightStep, setWeightStep] = useState(1)
     const repsInputRef = useRef<HTMLInputElement | null>(null)
@@ -92,6 +100,10 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
             setShowEffort(true)
         }
     }, [set.rir, set.rpe])
+
+    useEffect(() => {
+        setPostRpeDismissed(false)
+    }, [set.completed, set.rpe, set.set_number, exerciseIndex])
 
     useEffect(() => {
         if (isCurrent) {
@@ -506,77 +518,115 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                             </div>
                         </div>
                     ) : (
-                        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            <label className="text-xs text-telegram-hint">
-                                Повторы
-                                <input
-                                    ref={repsInputRef}
-                                    type="number"
-                                    min={0}
-                                    inputMode="numeric"
-                                    enterKeyHint="next"
-                                    value={set.reps ?? ''}
-                                    onFocus={handleOnFocusSet}
-                                    onChange={handleRepsChange}
-                                    onKeyDown={(event) => handleNumericEnter(event, 'reps')}
-                                    className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
-                                />
-                            </label>
-                            <label className="text-xs text-telegram-hint">
-                                Вес (кг)
-                                <input
-                                    ref={weightInputRef}
-                                    data-testid="set-weight-input"
-                                    type="number"
-                                    min={0}
-                                    step="0.5"
-                                    inputMode="decimal"
-                                    enterKeyHint="next"
-                                    value={set.weight ?? ''}
-                                    onFocus={handleOnFocusSet}
-                                    onChange={handleWeightChange}
-                                    onKeyDown={(event) => handleNumericEnter(event, 'weight')}
-                                    className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
-                                />
-                            </label>
-                            <label className="text-xs text-telegram-hint">
-                                Длительность (сек)
-                                <input
-                                    ref={durationInputRef}
-                                    type="number"
-                                    min={0}
-                                    inputMode="numeric"
-                                    enterKeyHint="next"
-                                    value={set.duration ?? ''}
-                                    onFocus={handleOnFocusSet}
-                                    onChange={handleDurationChange}
-                                    onKeyDown={(event) => handleNumericEnter(event, 'duration')}
-                                    className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
-                                />
-                            </label>
-                            <label className="text-xs text-telegram-hint">
-                                Дистанция (км)
-                                <input
-                                    ref={distanceInputRef}
-                                    type="number"
-                                    min={0}
-                                    step="0.01"
-                                    inputMode="decimal"
-                                    enterKeyHint="done"
-                                    value={set.distance ?? ''}
-                                    onFocus={handleOnFocusSet}
-                                    onChange={handleDistanceChange}
-                                    onKeyDown={(event) => handleNumericEnter(event, 'distance')}
-                                    className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
-                                />
-                            </label>
-                        </div>
+                        <>
+                            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                <label className="text-xs text-telegram-hint">
+                                    Повторы
+                                    <input
+                                        ref={repsInputRef}
+                                        type="number"
+                                        min={0}
+                                        inputMode="numeric"
+                                        enterKeyHint="next"
+                                        value={set.reps ?? ''}
+                                        onFocus={handleOnFocusSet}
+                                        onChange={handleRepsChange}
+                                        onKeyDown={(event) => handleNumericEnter(event, 'reps')}
+                                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
+                                    />
+                                </label>
+                                <label className="text-xs text-telegram-hint">
+                                    Вес (кг)
+                                    <input
+                                        ref={weightInputRef}
+                                        data-testid="set-weight-input"
+                                        type="number"
+                                        min={0}
+                                        step="0.5"
+                                        inputMode="decimal"
+                                        enterKeyHint="next"
+                                        value={set.weight ?? ''}
+                                        onFocus={handleOnFocusSet}
+                                        onChange={handleWeightChange}
+                                        onKeyDown={(event) => handleNumericEnter(event, 'weight')}
+                                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
+                                    />
+                                </label>
+                                <label className="text-xs text-telegram-hint">
+                                    Длительность (сек)
+                                    <input
+                                        ref={durationInputRef}
+                                        type="number"
+                                        min={0}
+                                        inputMode="numeric"
+                                        enterKeyHint="next"
+                                        value={set.duration ?? ''}
+                                        onFocus={handleOnFocusSet}
+                                        onChange={handleDurationChange}
+                                        onKeyDown={(event) => handleNumericEnter(event, 'duration')}
+                                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
+                                    />
+                                </label>
+                                <label className="text-xs text-telegram-hint">
+                                    Дистанция (км)
+                                    <input
+                                        ref={distanceInputRef}
+                                        type="number"
+                                        min={0}
+                                        step="0.01"
+                                        inputMode="decimal"
+                                        enterKeyHint="done"
+                                        value={set.distance ?? ''}
+                                        onFocus={handleOnFocusSet}
+                                        onChange={handleDistanceChange}
+                                        onKeyDown={(event) => handleNumericEnter(event, 'distance')}
+                                        className="mt-0.5 w-full rounded-lg border border-border bg-telegram-bg px-3 py-2.5 text-sm text-telegram-text"
+                                    />
+                                </label>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-telegram-secondary-bg/60 px-3 py-2">
+                                <span className="shrink-0 text-[11px] text-telegram-hint">Подход</span>
+                                <button
+                                    type="button"
+                                    data-testid="set-start-btn"
+                                    disabled={set.completed}
+                                    onClick={() => {
+                                        onFocusSet(exerciseIndex, setIndex)
+                                        onUpdateSet(exerciseIndex, set.set_number, {
+                                            started_at: new Date().toISOString(),
+                                        })
+                                    }}
+                                    className="min-h-10 touch-manipulation rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+                                >
+                                    Старт
+                                </button>
+                                <button
+                                    type="button"
+                                    data-testid="set-stop-btn"
+                                    disabled={set.completed}
+                                    onClick={() => {
+                                        onFocusSet(exerciseIndex, setIndex)
+                                        onUpdateSet(exerciseIndex, set.set_number, {
+                                            completed_at: new Date().toISOString(),
+                                        })
+                                    }}
+                                    className="min-h-10 touch-manipulation rounded-lg bg-telegram-bg px-3 py-2 text-xs font-semibold text-telegram-text disabled:opacity-40"
+                                >
+                                    Стоп
+                                </button>
+                                <span className="text-[10px] text-telegram-hint">
+                                    {formatIsoShort(set.started_at) ? `Начало: ${formatIsoShort(set.started_at)}` : 'Начало: —'}
+                                    {' · '}
+                                    {formatIsoShort(set.completed_at) ? `Стоп: ${formatIsoShort(set.completed_at)}` : 'Стоп: —'}
+                                </span>
+                            </div>
+                        </>
                     )}
 
                     {!isCardioSet && (
                         <div className="mt-2 space-y-2">
-                            {/* Inline RPE for current set - always visible */}
-                            {isCurrent ? (
+                            {/* RPE/RIR во время подхода (до отметки «Готово») */}
+                            {isCurrent && !set.completed ? (
                                 <div className="space-y-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="shrink-0 text-[11px] text-telegram-hint">RPE</span>
@@ -660,6 +710,33 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                     )}
                                 </>
                             )}
+                            {set.completed && set.rpe == null && !postRpeDismissed ? (
+                                <div className="rounded-xl border border-primary/25 bg-primary/5 p-3">
+                                    <p className="text-xs font-medium text-telegram-text">Оцените усилие после подхода</p>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                        {RPE_OPTIONS.map((value) => (
+                                            <button
+                                                key={`rpe-post-${value}`}
+                                                type="button"
+                                                onClick={() => {
+                                                    onFocusSet(exerciseIndex, setIndex)
+                                                    onUpdateSet(exerciseIndex, set.set_number, { rpe: value })
+                                                }}
+                                                className="min-h-11 min-w-11 touch-manipulation rounded-xl bg-telegram-bg text-sm font-semibold text-telegram-text active:bg-telegram-secondary-bg"
+                                            >
+                                                {value}
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setPostRpeDismissed(true)}
+                                            className="min-h-11 touch-manipulation rounded-xl border border-border px-3 py-2 text-xs font-medium text-telegram-hint"
+                                        >
+                                            Пропустить
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                     )}
                 </>

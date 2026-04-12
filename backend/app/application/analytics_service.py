@@ -26,6 +26,7 @@ from app.infrastructure.repositories.analytics_repository import AnalyticsReposi
 from app.infrastructure.repositories.feature_flags_repository import FeatureFlagsRepository
 from app.schemas.analytics import (
     AnalyticsDashboardResponse,
+    AnalyticsIntensityWeekPoint,
     AnalyticsPerformanceOverviewResponse,
     AnalyticsPerformanceTrendPoint,
     AnalyticsSummaryResponse,
@@ -59,6 +60,121 @@ from app.schemas.analytics import (
 )
 from app.schemas.enums import DataExportStatus
 from app.settings import settings
+
+
+def _intensity_safe_float(value: object) -> Optional[float]:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _intensity_parse_datetime(value: object) -> Optional[datetime]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    return None
+
+
+def _iter_completed_sets_from_exercises(exercises: Any) -> List[dict]:
+    out: list[dict] = []
+    if not isinstance(exercises, list):
+        return out
+    for ex in exercises:
+        if not isinstance(ex, dict):
+            continue
+        sets = ex.get("sets_completed")
+        if not isinstance(sets, list):
+            continue
+        for raw in sets:
+            if isinstance(raw, dict) and bool(raw.get("completed", True)):
+                out.append(raw)
+    return out
+
+
+def _monday_week_start(day: date) -> date:
+    return day - timedelta(days=day.weekday())
+
+
+def compute_intensity_metrics_from_logs(
+    workout_rows: List[tuple[int, date, list[Any]]],
+) -> dict[str, Any]:
+    """Derive RPE/rest/TUT/intensity aggregates from workout_logs.exercises JSON."""
+    workout_rpe_lists: dict[int, list[float]] = defaultdict(list)
+    all_rpe: list[float] = []
+    rest_values: list[float] = []
+    tut_total = 0.0
+    completed_sets = 0
+
+    for wid, _wdate, exercises in workout_rows:
+        for s in _iter_completed_sets_from_exercises(exercises):
+            completed_sets += 1
+            rpe = _intensity_safe_float(s.get("rpe"))
+            if rpe is not None and 0.0 <= rpe <= 10.0:
+                all_rpe.append(rpe)
+                workout_rpe_lists[wid].append(rpe)
+            rest = _intensity_safe_float(s.get("actual_rest_seconds"))
+            if rest is not None and rest >= 0:
+                rest_values.append(rest)
+            st = _intensity_parse_datetime(s.get("started_at"))
+            en = _intensity_parse_datetime(s.get("completed_at"))
+            if st is not None and en is not None and en >= st:
+                tut_total += (en - st).total_seconds()
+
+    per_workout_avgs: list[float] = []
+    for _wid, rlist in workout_rpe_lists.items():
+        per_workout_avgs.append(sum(rlist) / len(rlist))
+    avg_rpe_per_workout = (
+        round(sum(per_workout_avgs) / len(per_workout_avgs), 2) if per_workout_avgs else None
+    )
+
+    avg_rest = round(sum(rest_values) / len(rest_values), 2) if rest_values else None
+    avg_rest_minutes = (avg_rest / 60.0) if avg_rest is not None and avg_rest > 0 else None
+
+    intensity_score = None
+    if avg_rpe_per_workout is not None and avg_rest_minutes is not None and completed_sets > 0:
+        intensity_score = round(float(avg_rpe_per_workout) * (completed_sets / avg_rest_minutes), 3)
+
+    return {
+        "avg_rpe_per_workout": avg_rpe_per_workout,
+        "avg_rest_time_seconds": avg_rest,
+        "total_time_under_tension_seconds": round(tut_total, 2) if tut_total > 0 else None,
+        "intensity_score": intensity_score,
+        "workouts_with_rpe_count": len(workout_rpe_lists),
+    }
+
+
+def compute_intensity_weekly_chart(
+    workout_rows: List[tuple[int, date, list[Any]]],
+    chart_start: date,
+    chart_end: date,
+) -> List[AnalyticsIntensityWeekPoint]:
+    """One intensity score per ISO week that intersects the chart window."""
+    by_week: dict[date, list[tuple[int, date, list[Any]]]] = defaultdict(list)
+    for row in workout_rows:
+        _wid, wdate, exercises = row
+        if chart_start <= wdate <= chart_end:
+            by_week[_monday_week_start(wdate)].append(row)
+
+    points: list[AnalyticsIntensityWeekPoint] = []
+    for week_start in sorted(by_week.keys()):
+        metrics = compute_intensity_metrics_from_logs(by_week[week_start])
+        points.append(
+            AnalyticsIntensityWeekPoint(
+                date=week_start,
+                intensity_score=metrics.get("intensity_score"),
+            )
+        )
+    return points
 
 
 class AnalyticsService:
@@ -997,6 +1113,42 @@ class AnalyticsService:
             period, daily_pairs, chart_start, chart_end
         )
 
+        intensity_rows = await self.repository.list_workout_logs_exercises_for_intensity(
+            user_id=user_id,
+            date_from=window_start,
+            date_to=window_end,
+        )
+        intensity_metrics = compute_intensity_metrics_from_logs(intensity_rows)
+
+        n_days = (window_end - window_start).days + 1
+        prev_end = window_start - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=n_days - 1)
+        prev_intensity: dict[str, Any] = {}
+        if prev_start <= prev_end:
+            prev_rows = await self.repository.list_workout_logs_exercises_for_intensity(
+                user_id=user_id,
+                date_from=prev_start,
+                date_to=prev_end,
+            )
+            prev_intensity = compute_intensity_metrics_from_logs(prev_rows)
+
+        cur_rpe = intensity_metrics.get("avg_rpe_per_workout")
+        prev_rpe = prev_intensity.get("avg_rpe_per_workout")
+        avg_rpe_trend: Optional[str] = None
+        if isinstance(cur_rpe, (int, float)) and isinstance(prev_rpe, (int, float)):
+            delta = float(cur_rpe) - float(prev_rpe)
+            if delta > 0.05:
+                avg_rpe_trend = "up"
+            elif delta < -0.05:
+                avg_rpe_trend = "down"
+            else:
+                avg_rpe_trend = "flat"
+
+        chart_intensity_rows = [r for r in intensity_rows if chart_start <= r[1] <= chart_end]
+        intensity_weekly_chart = compute_intensity_weekly_chart(
+            chart_intensity_rows, chart_start, chart_end
+        )
+
         return AnalyticsDashboardResponse(
             period=period,
             total_workouts=total_workouts,
@@ -1007,6 +1159,14 @@ class AnalyticsService:
             favorite_exercise=favorite_exercise,
             streak_days=streak_days,
             weekly_chart=weekly_chart,
+            avg_rpe_per_workout=intensity_metrics.get("avg_rpe_per_workout"),
+            avg_rpe_previous_period=prev_intensity.get("avg_rpe_per_workout"),
+            avg_rpe_trend=avg_rpe_trend,
+            avg_rest_time_seconds=intensity_metrics.get("avg_rest_time_seconds"),
+            total_time_under_tension_seconds=intensity_metrics.get("total_time_under_tension_seconds"),
+            intensity_score=intensity_metrics.get("intensity_score"),
+            intensity_weekly_chart=intensity_weekly_chart,
+            workouts_with_rpe_count=int(intensity_metrics.get("workouts_with_rpe_count") or 0),
         )
 
     async def get_analytics_summary(self, user_id: int, period: str) -> AnalyticsSummaryResponse:
