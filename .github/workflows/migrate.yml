@@ -37,6 +37,84 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate migration downgrade methods
+        run: |
+          python3 <<'PY'
+          import ast
+          import sys
+          from pathlib import Path
+
+          def strip_docstrings_from_function_body(body: list[ast.stmt]) -> list[ast.stmt]:
+              out = list(body)
+              while out and isinstance(out[0], ast.Expr) and isinstance(
+                  out[0].value, ast.Constant
+              ) and isinstance(out[0].value.value, str):
+                  out = out[1:]
+              return out
+
+          def downgrade_is_only_pass_or_ellipsis(body: list[ast.stmt]) -> bool:
+              if not body:
+                  return True
+              for stmt in body:
+                  if isinstance(stmt, ast.Pass):
+                      continue
+                  if (
+                      isinstance(stmt, ast.Expr)
+                      and isinstance(stmt.value, ast.Constant)
+                      and stmt.value.value is Ellipsis
+                  ):
+                      continue
+                  return False
+              return True
+
+          def find_downgrade(tree: ast.Module) -> ast.AsyncFunctionDef | ast.FunctionDef | None:
+              for node in tree.body:
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                      if node.name == "downgrade":
+                          return node
+              return None
+
+          versions_dir = Path("database/migrations/versions")
+          if not versions_dir.is_dir():
+              print(f"::warning title=Migrations::Missing directory {versions_dir}")
+              sys.exit(0)
+
+          flagged: list[tuple[Path, str]] = []
+          for path in sorted(versions_dir.glob("*.py")):
+              if path.name.startswith("__"):
+                  continue
+              src = path.read_text(encoding="utf-8")
+              try:
+                  tree = ast.parse(src, filename=str(path))
+              except SyntaxError as exc:
+                  print(f"::warning title=Migrations::SyntaxError in {path}: {exc}")
+                  continue
+
+              # Skip empty __init__-style modules without downgrade
+              fn = find_downgrade(tree)
+              if fn is None:
+                  flagged.append((path, "no downgrade() function found"))
+                  continue
+
+              eff = strip_docstrings_from_function_body(fn.body)
+              if downgrade_is_only_pass_or_ellipsis(eff):
+                  flagged.append((path, "downgrade() is empty or contains only pass / ..."))
+
+          if flagged:
+              banner = "=" * 72
+              print(banner)
+              print("WARNING: migration downgrade() is trivial or missing in some files.")
+              print("Rollback via alembic downgrade may be impossible for these revisions.")
+              print(banner)
+              for p, reason in flagged:
+                  line = f"{p}: {reason}"
+                  print(line)
+                  print(f"::warning title=Migrations::{line}")
+              print(banner)
+          else:
+              print("OK: every version file defines a non-trivial downgrade().")
+          PY
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
