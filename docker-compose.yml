@@ -94,7 +94,7 @@ services:
       - /app/__pycache__
     ports:
       - "18000:8000"
-    # Readiness probe: checks DB, Redis, and external service connectivity.
+    # Readiness probe: GET /api/v1/system/ready (PostgreSQL + Redis).
     # Container receives traffic only when all dependencies are healthy.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/system/ready"]

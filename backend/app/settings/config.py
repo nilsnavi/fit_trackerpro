@@ -85,7 +85,7 @@ class Settings(BaseSettings):
         Field(
             default=None,
             description=(
-                "Path to alembic.ini for readiness migration checks. "
+                "Path to alembic.ini for CLI migrations. "
                 "When unset, uses embedded migrations in the image (if present) or "
                 "``<repo>/database/migrations/alembic.ini`` in a monorepo checkout."
             ),

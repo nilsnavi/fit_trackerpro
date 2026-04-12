@@ -50,16 +50,16 @@ async def liveness_probe():
 @router.get(
     "/ready",
     response_model=ReadinessResponse,
-    summary="Readiness probe (PostgreSQL, Redis, Alembic)",
+    summary="Readiness probe (PostgreSQL, Redis)",
     operation_id="readiness_probe",
     tags=["System"],
 )
 async def readiness_probe():
     """
     Readiness probe for load balancers and orchestrators.
-    Проверяет PostgreSQL (SELECT 1), Redis (PING) и соответствие ревизии Alembic в БД head-ревизии.
+    Проверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).
 
-    HTTP 200 только при ``status == "ready"``; ``degraded`` / ``not_ready`` → 503.
+    HTTP 200 только при ``status == "ready"``; иначе 503 с телом проверок.
     """
     readiness = await HealthCheckService.readiness()
     if readiness.status != "ready":

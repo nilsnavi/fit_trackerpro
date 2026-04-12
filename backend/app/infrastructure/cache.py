@@ -15,6 +15,22 @@ _redis_client: Optional[Redis] = None
 _memory_cache: dict[str, tuple[float, str]] = {}
 
 
+def _ensure_redis_singleton() -> Redis:
+    """Lazily create the shared async ``Redis`` client (same instance as cache / readiness)."""
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = Redis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+        )
+    return _redis_client
+
+
+async def ensure_async_redis_client() -> Redis:
+    """Return shared async Redis (``REDIS_URL``); used by readiness PING and cache layer."""
+    return _ensure_redis_singleton()
+
+
 def _memory_get(key: str) -> Optional[Any]:
     now = time.time()
     entry = _memory_cache.get(key)
@@ -47,18 +63,9 @@ async def get_redis_cache_client() -> Optional[Redis]:
 
 
 async def _get_redis_client() -> Optional[Redis]:
-    global _redis_client
-
     if not settings.ANALYTICS_CACHE_ENABLED:
         return None
-
-    if _redis_client is None:
-        _redis_client = Redis.from_url(
-            settings.REDIS_URL,
-            decode_responses=True,
-        )
-
-    return _redis_client
+    return _ensure_redis_singleton()
 
 
 async def close_cache() -> None:
