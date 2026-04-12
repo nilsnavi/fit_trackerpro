@@ -50,23 +50,19 @@ async def liveness_probe():
 @router.get(
     "/ready",
     response_model=ReadinessResponse,
-    summary="Readiness probe (dependencies are healthy)",
+    summary="Readiness probe (PostgreSQL, Redis, Alembic)",
     operation_id="readiness_probe",
     tags=["System"],
 )
 async def readiness_probe():
     """
     Readiness probe for load balancers and orchestrators.
-    Checks all critical dependencies:
-    - Database connectivity
-    - Redis availability (if configured)
-    - External services (if configured)
+    Проверяет PostgreSQL (SELECT 1), Redis (PING) и соответствие ревизии Alembic в БД head-ревизии.
 
-    Returns 200 only if the application is ready to serve traffic.
-    Used by load balancers to route traffic only to ready instances.
+    HTTP 200 только при ``status == "ready"``; ``degraded`` / ``not_ready`` → 503.
     """
     readiness = await HealthCheckService.readiness()
-    if readiness.status != 'ready':
+    if readiness.status != "ready":
         return JSONResponse(status_code=503, content=readiness.model_dump())
     return readiness
 

@@ -36,6 +36,10 @@ concurrency:
 env:
   REGISTRY: ghcr.io
 
+# Ожидание готовности бэкенда после деплоя: reusable workflow
+# ``deploy-environment.yml`` (job ``deploy``) опрашивает ``GET /api/v1/system/ready``
+# каждые 5 с, до 120 с.
+
 jobs:
   # ---------------------------------------------------------------------------
   # Stage: resolve tag (always) — single source of truth for IMAGE_TAG downstream

@@ -26,7 +26,9 @@ async def test_backend_smoke():
 
     paths = _registered_paths(app)
     assert "/health" in paths
+    assert "/health/ready" in paths
     assert "/api/v1/system/health" in paths
+    assert "/api/v1/system/ready" in paths
     assert "/api/v1/system/version" in paths
     # Регрессия: отключение include_router сильно уменьшит число маршрутов
     assert len(paths) >= 40

@@ -232,7 +232,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
             "/health",
+            "/health/live",
+            "/health/ready",
             f"{API_V1_PREFIX}/system/health",
+            f"{API_V1_PREFIX}/system/live",
+            f"{API_V1_PREFIX}/system/ready",
             f"{API_V1_PREFIX}/system/version",
         }:
             return await call_next(request)

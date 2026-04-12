@@ -24,7 +24,7 @@ TAG_EMERGENCY = "Emergency"
 OPENAPI_TAGS: list[dict[str, Any]] = [
     {
         "name": TAG_SYSTEM,
-        "description": "Service health, version, and public API metadata.",
+        "description": "Liveness/readiness probes, service version, and public API metadata.",
     },
     {
         "name": TAG_INTEGRATIONS,

@@ -52,7 +52,12 @@ def _before_send_transaction(event: dict[str, Any], _hint: dict[str, Any]) -> di
     rely on the transaction name which Sentry derives from the framework/router.
     """
     tx = str(event.get("transaction") or "")
-    if tx.endswith(("/health", "/metrics")) or "/api/v1/system/health" in tx:
+    if (
+        tx.endswith(("/health", "/metrics"))
+        or "/api/v1/system/health" in tx
+        or "/api/v1/system/ready" in tx
+        or tx.endswith("/health/ready")
+    ):
         return None
     return event
 
@@ -105,7 +110,11 @@ def setup_prometheus_metrics(app: "FastAPI", settings: Settings) -> None:
         excluded_handlers=[
             "^/metrics$",
             "^/health$",
+            "^/health/live$",
+            "^/health/ready$",
             "^/api/v1/system/health$",
+            "^/api/v1/system/live$",
+            "^/api/v1/system/ready$",
             "^/api/v1/system/version$",
             "^/docs$",
             "^/redoc$",

@@ -1,4 +1,5 @@
 # Python Backend Dockerfile for FastAPI
+# Build from repository root: docker build -f backend/Dockerfile .
 FROM python:3.11-alpine3.22
 
 # Proxy arguments
@@ -41,13 +42,14 @@ RUN export http_proxy=$HTTP_PROXY && \
 RUN addgroup -S appuser && adduser -S appuser -G appuser
 
 # Copy requirements first for better caching
-COPY requirements ./requirements
+COPY backend/requirements ./requirements
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --proxy=$HTTPS_PROXY -r requirements/prod.txt
 
-# Copy application code (includes reference_data/)
-COPY . .
+# Application code and Alembic scripts (readiness migration check)
+COPY backend/ .
+COPY database/migrations /app/embedded_migrations
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/logs && \
