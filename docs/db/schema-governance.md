@@ -40,6 +40,13 @@
 
 Production-практика:
 
-- резервная копия перед миграцией (см. `.github/workflows/migrate.yml` и `docs/DEPLOYMENT.md`)
+- резервная копия перед миграцией (см. job `migrate` в `.github/workflows/deploy-environment.yml`, скрипт `scripts/backup_before_migrate.sh`, playbook `docs/db/rollback-playbook.md`)
 - post-migration health checks: `GET /api/v1/system/health`, `GET /api/v1/system/version`
+
+## Необратимые операции (DROP COLUMN, DROP TABLE)
+
+- Требуют **явного ручного одобрения** в PR (как минимум один reviewer, знакомый с доменом данных).
+- Должны выноситься в **отдельную миграцию** и мержиться **после** того, как прод-код (и при необходимости фоновые джобы) **больше не читают и не пишут** удаляемое поле/таблицу; при классическом multi-step подходе сначала деплой «код без использования», затем миграция с DROP.
+- В PR обязателен **label** `database-breaking` (или эквивалентный процесс в вашем трекере), чтобы релиз-менеджер и дежурный видели повышенный риск.
+- Перед такими миграциями в проде — **полный логический бэкап** (`pg_dump` / инфраструктурный snapshot); откат только через `alembic downgrade` часто **недостаточен** (данные уже уничтожены).
 
