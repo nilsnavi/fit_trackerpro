@@ -4,6 +4,10 @@ export const analyticsApi = {
     getDashboard(params?: { period?: string }) {
         return api.get('/analytics/', params)
     },
+    /** GET /api/v1/analytics/workouts — сводка тренировок по периоду (см. AnalyticsDashboardResponse). */
+    getWorkoutStats(params?: { period?: string }) {
+        return api.get('/analytics/workouts', params)
+    },
     getSummary(params?: Record<string, unknown>) {
         return api.get('/analytics/summary', params)
     },

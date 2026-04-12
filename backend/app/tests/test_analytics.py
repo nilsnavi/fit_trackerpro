@@ -32,6 +32,10 @@ class TestAnalyticsAuthBoundary:
         r = await client.get("/api/v1/analytics/performance-overview")
         assert r.status_code == 401
 
+    async def test_workouts_stats_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/analytics/workouts")
+        assert r.status_code == 401
+
 
 @pytest.mark.integration
 class TestAnalyticsEmptyStateContracts:

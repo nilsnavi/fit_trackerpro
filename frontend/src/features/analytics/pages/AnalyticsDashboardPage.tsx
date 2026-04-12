@@ -16,12 +16,12 @@ import {
     Trophy,
 } from 'lucide-react'
 import {
-    ANALYTICS_DASHBOARD_STALE_MS,
-    useAnalyticsDashboardChallengesQuery,
-    useAnalyticsDashboardSummaryQuery,
-    useAnalyticsDashboardUserAchievementsQuery,
-    type AnalyticsDashboardPeriod,
-} from '@features/analytics/hooks/useAnalyticsDashboardData'
+    ANALYTICS_STALE_MS,
+    useAchievements,
+    useChallenges,
+    useWorkoutStats,
+    type AnalyticsPagePeriod,
+} from '@/hooks/analytics'
 import { healthApi } from '@shared/api/domains/healthApi'
 import { getErrorMessage } from '@shared/errors'
 import { cn } from '@shared/lib/cn'
@@ -32,13 +32,13 @@ import { ProgressScreenTabs } from '@features/analytics/components/ProgressScree
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 
-const PERIOD_OPTIONS: { id: AnalyticsDashboardPeriod; label: string }[] = [
+const PERIOD_OPTIONS: { id: AnalyticsPagePeriod; label: string }[] = [
     { id: 'week', label: 'Неделя' },
     { id: 'month', label: 'Месяц' },
-    { id: 'all', label: 'Всё время' },
+    { id: 'year', label: 'Год' },
 ]
 
-function healthStatsPeriod(period: AnalyticsDashboardPeriod): string {
+function healthStatsPeriod(period: AnalyticsPagePeriod): string {
     if (period === 'week') return '7d'
     if (period === 'month') return '30d'
     return '1y'
@@ -70,35 +70,62 @@ function formatRpeTrendLabel(trend: string | null | undefined): string {
 export default function AnalyticsDashboardPage() {
     const navigate = useNavigate()
     const tg = useTelegramWebApp()
-    const [period, setPeriod] = useState<AnalyticsDashboardPeriod>('week')
-    const summaryQuery = useAnalyticsDashboardSummaryQuery(period)
-    const achievementsQuery = useAnalyticsDashboardUserAchievementsQuery()
-    const challengesQuery = useAnalyticsDashboardChallengesQuery()
+    const [period, setPeriod] = useState<AnalyticsPagePeriod>('week')
+    const workoutStatsQuery = useWorkoutStats(period)
+    const achievementsQuery = useAchievements()
+    const challengesQuery = useChallenges()
     const healthQuery = useQuery({
         queryKey: ['health', 'dashboardStats', healthStatsPeriod(period), period],
         queryFn: () => healthApi.getDashboardStats(healthStatsPeriod(period)),
-        staleTime: ANALYTICS_DASHBOARD_STALE_MS,
+        staleTime: ANALYTICS_STALE_MS,
     })
 
+    const periodSelector = (
+        <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar" aria-label="Период аналитики">
+            {PERIOD_OPTIONS.map((opt) => {
+                const active = opt.id === period
+                return (
+                    <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                            tg.hapticFeedback({ type: 'selection' })
+                            setPeriod(opt.id)
+                        }}
+                        className={cn(
+                            'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                            active
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-transparent bg-telegram-bg text-telegram-hint',
+                        )}
+                        aria-pressed={active}
+                    >
+                        {opt.label}
+                    </button>
+                )
+            })}
+        </div>
+    )
+
     const chartItems = useMemo(() => {
-        const rows = summaryQuery.data?.weekly_chart ?? []
+        const rows = workoutStatsQuery.data?.weekly_chart ?? []
         return rows.map((row) => ({
             label: format(parseISO(row.date), 'd MMM', { locale: ru }),
             value: row.count,
         }))
-    }, [summaryQuery.data?.weekly_chart])
+    }, [workoutStatsQuery.data?.weekly_chart])
 
     const intensityChartItems = useMemo(() => {
-        const rows = summaryQuery.data?.intensity_weekly_chart ?? []
+        const rows = workoutStatsQuery.data?.intensity_weekly_chart ?? []
         return rows
             .filter((row) => row.intensity_score != null && Number.isFinite(row.intensity_score))
             .map((row) => ({
                 label: format(parseISO(row.date), 'd MMM', { locale: ru }),
                 value: row.intensity_score ?? 0,
             }))
-    }, [summaryQuery.data?.intensity_weekly_chart])
+    }, [workoutStatsQuery.data?.intensity_weekly_chart])
 
-    const rpeWorkoutsCount = summaryQuery.data?.workouts_with_rpe_count ?? 0
+    const rpeWorkoutsCount = workoutStatsQuery.data?.workouts_with_rpe_count ?? 0
     const showIntensityRpeHint = rpeWorkoutsCount < 3
     const showIntensityScoreChart = intensityChartItems.length >= 2
 
@@ -113,63 +140,43 @@ export default function AnalyticsDashboardPage() {
         return [...recent].sort((a, b) => b.earned_at.localeCompare(a.earned_at))
     }, [achievementsQuery.data])
 
-    const isSummaryLoading = summaryQuery.isPending
-    const summaryError = summaryQuery.error
+    const isWorkoutStatsLoading = workoutStatsQuery.isPending
+    const workoutStatsError = workoutStatsQuery.error
 
     return (
         <div className="space-y-4 p-4 pb-28">
             <section className="space-y-3 rounded-3xl bg-telegram-secondary-bg/65 p-4">
-                <SectionHeader title="Аналитика" description="Сводка тренировок, достижения и здоровье." />
+                <SectionHeader
+                    title="Аналитика"
+                    description="Сводка тренировок, достижения и здоровье."
+                    action={periodSelector}
+                />
                 <ProgressScreenTabs />
-                <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar" aria-label="Период аналитики">
-                    {PERIOD_OPTIONS.map((opt) => {
-                        const active = opt.id === period
-                        return (
-                            <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => {
-                                    tg.hapticFeedback({ type: 'selection' })
-                                    setPeriod(opt.id)
-                                }}
-                                className={cn(
-                                    'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                                    active
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'border-transparent bg-telegram-bg text-telegram-hint',
-                                )}
-                                aria-pressed={active}
-                            >
-                                {opt.label}
-                            </button>
-                        )
-                    })}
-                </div>
             </section>
 
-            {summaryError ? (
+            {workoutStatsError ? (
                 <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm">
-                    <p className="text-danger">{getErrorMessage(summaryError)}</p>
+                    <p className="text-danger">{getErrorMessage(workoutStatsError)}</p>
                     <Button
                         type="button"
                         variant="secondary"
                         size="sm"
                         className="mt-3"
-                        onClick={() => void summaryQuery.refetch()}
+                        onClick={() => void workoutStatsQuery.refetch()}
                     >
-                        Обновить
+                        Повторить
                     </Button>
                 </div>
             ) : null}
 
-            {isSummaryLoading ? (
+            {isWorkoutStatsLoading ? (
                 <div className="space-y-2">
                     <div className="h-28 animate-pulse rounded-2xl bg-telegram-secondary-bg" />
                     <div className="h-40 animate-pulse rounded-2xl bg-telegram-secondary-bg" />
                 </div>
             ) : null}
 
-            {!isSummaryLoading && summaryQuery.data && summaryQuery.data.total_workouts === 0 ? (
+            {!isWorkoutStatsLoading && workoutStatsQuery.data && workoutStatsQuery.data.total_workouts === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-gradient-to-br from-primary/10 via-telegram-secondary-bg/80 to-transparent p-6 text-center">
                     <Sparkles className="mx-auto h-10 w-10 text-primary" aria-hidden />
                     <h2 className="mt-3 text-lg font-semibold text-telegram-text">Первый шаг — в зале</h2>
@@ -182,25 +189,25 @@ export default function AnalyticsDashboardPage() {
                 </div>
             ) : null}
 
-            {!isSummaryLoading && summaryQuery.data && summaryQuery.data.total_workouts > 0 ? (
+            {!isWorkoutStatsLoading && workoutStatsQuery.data && workoutStatsQuery.data.total_workouts > 0 ? (
                 <>
                     <section className="rounded-3xl bg-gradient-to-br from-primary/15 via-primary/10 to-transparent p-4">
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Ваш ритм</p>
                                 <h2 className="mt-2 text-xl font-semibold text-telegram-text">
-                                    {summaryQuery.data.total_workouts}{' '}
-                                    {summaryQuery.data.total_workouts === 1 ? 'тренировка' : 'тренировок'}
+                                    {workoutStatsQuery.data.total_workouts}{' '}
+                                    {workoutStatsQuery.data.total_workouts === 1 ? 'тренировка' : 'тренировок'}
                                 </h2>
                                 <p className="mt-1 text-sm text-telegram-hint">
-                                    За выбранный период · серия {summaryQuery.data.streak_days}{' '}
-                                    {summaryQuery.data.streak_days === 1 ? 'день' : 'дн.'}
+                                    За выбранный период · серия {workoutStatsQuery.data.streak_days}{' '}
+                                    {workoutStatsQuery.data.streak_days === 1 ? 'день' : 'дн.'}
                                 </p>
                             </div>
                             <div className="rounded-2xl bg-telegram-secondary-bg px-3 py-2 text-right">
                                 <p className="text-[11px] uppercase tracking-wide text-telegram-hint">На этой неделе</p>
                                 <p className="mt-1 text-2xl font-semibold leading-none text-telegram-text">
-                                    {summaryQuery.data.workouts_this_week}
+                                    {workoutStatsQuery.data.workouts_this_week}
                                 </p>
                                 <p className="mt-1 text-xs text-telegram-hint">тренировок</p>
                             </div>
@@ -212,15 +219,15 @@ export default function AnalyticsDashboardPage() {
                             <Timer className="h-4 w-4 text-primary" />
                             <p className="mt-2 text-xs text-telegram-hint">Время за период</p>
                             <p className="mt-1 text-lg font-semibold text-telegram-text">
-                                {formatMinutes(summaryQuery.data.total_duration_minutes)}
+                                {formatMinutes(workoutStatsQuery.data.total_duration_minutes)}
                             </p>
                         </article>
                         <article className="rounded-2xl bg-telegram-secondary-bg p-3">
                             <Activity className="h-4 w-4 text-primary" />
                             <p className="mt-2 text-xs text-telegram-hint">Средняя длительность</p>
                             <p className="mt-1 text-lg font-semibold text-telegram-text">
-                                {summaryQuery.data.avg_duration > 0
-                                    ? `${summaryQuery.data.avg_duration} мин`
+                                {workoutStatsQuery.data.avg_duration > 0
+                                    ? `${workoutStatsQuery.data.avg_duration} мин`
                                     : '—'}
                             </p>
                         </article>
@@ -228,14 +235,14 @@ export default function AnalyticsDashboardPage() {
                             <CalendarDays className="h-4 w-4 text-primary" />
                             <p className="mt-2 text-xs text-telegram-hint">В этом месяце</p>
                             <p className="mt-1 text-lg font-semibold text-telegram-text">
-                                {summaryQuery.data.workouts_this_month}
+                                {workoutStatsQuery.data.workouts_this_month}
                             </p>
                         </article>
                         <article className="rounded-2xl bg-telegram-secondary-bg p-3">
                             <Flame className="h-4 w-4 text-amber-500" />
                             <p className="mt-2 text-xs text-telegram-hint">Любимое упражнение</p>
                             <p className="mt-1 line-clamp-2 text-sm font-semibold text-telegram-text">
-                                {summaryQuery.data.favorite_exercise ?? '—'}
+                                {workoutStatsQuery.data.favorite_exercise ?? '—'}
                             </p>
                         </article>
                     </section>
@@ -254,35 +261,35 @@ export default function AnalyticsDashboardPage() {
                             <article className="rounded-2xl bg-telegram-bg p-3">
                                 <p className="text-[11px] text-telegram-hint">Средний RPE</p>
                                 <p className="mt-1 text-lg font-semibold text-telegram-text">
-                                    {summaryQuery.data.avg_rpe_per_workout != null
-                                        ? summaryQuery.data.avg_rpe_per_workout.toFixed(1)
+                                    {workoutStatsQuery.data.avg_rpe_per_workout != null
+                                        ? workoutStatsQuery.data.avg_rpe_per_workout.toFixed(1)
                                         : '—'}
                                 </p>
-                                {summaryQuery.data.avg_rpe_trend ? (
+                                {workoutStatsQuery.data.avg_rpe_trend ? (
                                     <p className="mt-1 text-[10px] text-telegram-hint">
-                                        {formatRpeTrendLabel(summaryQuery.data.avg_rpe_trend)}
+                                        {formatRpeTrendLabel(workoutStatsQuery.data.avg_rpe_trend)}
                                     </p>
                                 ) : null}
                             </article>
                             <article className="rounded-2xl bg-telegram-bg p-3">
                                 <p className="text-[11px] text-telegram-hint">Средний отдых</p>
                                 <p className="mt-1 text-sm font-semibold leading-snug text-telegram-text">
-                                    {formatAvgRestSeconds(summaryQuery.data.avg_rest_time_seconds ?? null)}
+                                    {formatAvgRestSeconds(workoutStatsQuery.data.avg_rest_time_seconds ?? null)}
                                 </p>
                             </article>
                             <article className="rounded-2xl bg-telegram-bg p-3">
                                 <p className="text-[11px] text-telegram-hint">Время под нагрузкой</p>
                                 <p className="mt-1 text-sm font-semibold text-telegram-text">
-                                    {summaryQuery.data.total_time_under_tension_seconds != null
-                                        ? `${Math.round(summaryQuery.data.total_time_under_tension_seconds)} сек`
+                                    {workoutStatsQuery.data.total_time_under_tension_seconds != null
+                                        ? `${Math.round(workoutStatsQuery.data.total_time_under_tension_seconds)} сек`
                                         : '—'}
                                 </p>
                             </article>
                             <article className="rounded-2xl bg-telegram-bg p-3">
                                 <p className="text-[11px] text-telegram-hint">Индекс интенсивности</p>
                                 <p className="mt-1 text-lg font-semibold text-telegram-text">
-                                    {summaryQuery.data.intensity_score != null
-                                        ? summaryQuery.data.intensity_score.toFixed(2)
+                                    {workoutStatsQuery.data.intensity_score != null
+                                        ? workoutStatsQuery.data.intensity_score.toFixed(2)
                                         : '—'}
                                 </p>
                             </article>
@@ -320,7 +327,10 @@ export default function AnalyticsDashboardPage() {
                     <h2 className="text-sm font-semibold text-telegram-text">Достижения</h2>
                 </div>
                 {achievementsQuery.isPending ? (
-                    <div className="h-16 animate-pulse rounded-xl bg-telegram-bg" />
+                    <div className="space-y-2">
+                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
+                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
+                    </div>
                 ) : achievementsQuery.error ? (
                     <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm">
                         <p className="text-danger">{getErrorMessage(achievementsQuery.error)}</p>
@@ -331,7 +341,7 @@ export default function AnalyticsDashboardPage() {
                             className="mt-3"
                             onClick={() => void achievementsQuery.refetch()}
                         >
-                            Обновить
+                            Повторить
                         </Button>
                     </div>
                 ) : earnedAchievements.length === 0 ? (
@@ -363,7 +373,10 @@ export default function AnalyticsDashboardPage() {
                     <h2 className="text-sm font-semibold text-telegram-text">Челленджи</h2>
                 </div>
                 {challengesQuery.isPending ? (
-                    <div className="h-16 animate-pulse rounded-xl bg-telegram-bg" />
+                    <div className="space-y-2">
+                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
+                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
+                    </div>
                 ) : challengesQuery.error ? (
                     <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm">
                         <p className="text-danger">{getErrorMessage(challengesQuery.error)}</p>
@@ -374,9 +387,16 @@ export default function AnalyticsDashboardPage() {
                             className="mt-3"
                             onClick={() => void challengesQuery.refetch()}
                         >
-                            Обновить
+                            Повторить
                         </Button>
                     </div>
+                ) : (challengesQuery.data?.active.length ?? 0) === 0 &&
+                  (challengesQuery.data?.completed.length ?? 0) === 0 ? (
+                    <SectionEmptyState
+                        icon={Target}
+                        title="Челленджей пока нет"
+                        description="Присоединяйтесь к челленджам — здесь появятся активные и завершённые."
+                    />
                 ) : (
                     <div className="space-y-4">
                         <div>
@@ -420,7 +440,10 @@ export default function AnalyticsDashboardPage() {
                     <h2 className="text-sm font-semibold text-telegram-text">Метрики здоровья</h2>
                 </div>
                 {healthQuery.isPending ? (
-                    <div className="h-16 animate-pulse rounded-xl bg-telegram-bg" />
+                    <div className="space-y-2">
+                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
+                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
+                    </div>
                 ) : healthQuery.error ? (
                     <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm">
                         <p className="text-danger">{getErrorMessage(healthQuery.error)}</p>
@@ -431,9 +454,16 @@ export default function AnalyticsDashboardPage() {
                             className="mt-3"
                             onClick={() => void healthQuery.refetch()}
                         >
-                            Обновить
+                            Повторить
                         </Button>
                     </div>
+                ) : healthQuery.data?.wellness?.avg_sleep_score_30d == null &&
+                  healthQuery.data?.wellness?.avg_energy_score_30d == null ? (
+                    <SectionEmptyState
+                        icon={HeartPulse}
+                        title="Нет данных о самочувствии"
+                        description="Отметьте сон и энергию в дневнике — здесь появятся средние значения."
+                    />
                 ) : (
                     <div className="grid grid-cols-2 gap-2">
                         <article className="rounded-xl bg-telegram-bg p-3">
