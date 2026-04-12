@@ -173,5 +173,3 @@ blob-report/
 *.pid
 *.seed
 *.pid.lock
-
-VITE_DEV_INIT_DATA=<подписанный initData>
