@@ -1,7 +1,8 @@
 """
 Telegram WebApp authentication: public login/refresh vs JWT-protected session routes.
 
-Public: ``POST /telegram``, ``POST /refresh`` (no Bearer required).
+Public: ``POST /telegram``, ``POST /register`` (same handler as telegram), ``POST /lookup``
+(initData validation + existence check), ``POST /refresh`` (no Bearer required).
 Protected: profile under ``/me``, ``POST /logout`` (Bearer access token).
 """
 from fastapi import APIRouter, Depends, Request
@@ -21,6 +22,7 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
+    TelegramLookupResponse,
     UserProfileResponse,
     UserProfileUpdate,
 )
@@ -39,6 +41,32 @@ async def authenticate_telegram(
     auth_request: TelegramAuthRequest,
     db: AsyncSession = Depends(get_async_db),
 ):
+    service = AuthService(db)
+    return await service.authenticate_telegram(
+        auth_request=auth_request,
+        client_ip=get_client_ip(request),
+    )
+
+
+@public_auth_router.post("/lookup", response_model=TelegramLookupResponse)
+@limiter.limit("30/minute")
+async def lookup_telegram_registration(
+    request: Request,
+    auth_request: TelegramAuthRequest,
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = AuthService(db)
+    return await service.lookup_telegram_registration(auth_request=auth_request)
+
+
+@public_auth_router.post("/register", response_model=AuthResponse)
+@limiter.limit("10/minute")
+async def register_via_telegram(
+    request: Request,
+    auth_request: TelegramAuthRequest,
+    db: AsyncSession = Depends(get_async_db),
+):
+    """First-time registration: validates initData and returns JWT (same as POST /telegram)."""
     service = AuthService(db)
     return await service.authenticate_telegram(
         auth_request=auth_request,

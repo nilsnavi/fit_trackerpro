@@ -27,6 +27,7 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
+    TelegramLookupResponse,
     TelegramUserData,
     UserProfileData,
     UserProfileResponse,
@@ -83,6 +84,23 @@ class AuthService:
             user.profile = profile_data
         await self.repository.commit_user_fields()
         return user, False
+
+    async def lookup_telegram_registration(
+        self,
+        auth_request: TelegramAuthRequest,
+    ) -> TelegramLookupResponse:
+        """Validate initData and report whether a user already exists (does not create a row)."""
+        is_valid, user_data, error = validate_and_get_user(
+            init_data=auth_request.init_data,
+            bot_token=settings.TELEGRAM_BOT_TOKEN,
+            max_age_seconds=INIT_DATA_MAX_AGE_SECONDS,
+        )
+        if not is_valid:
+            raise AuthenticationError(error or "Не удалось подтвердить вход через Telegram.")
+
+        telegram_id = user_data["id"]
+        user = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
+        return TelegramLookupResponse(registered=user is not None)
 
     async def authenticate_telegram(
         self,

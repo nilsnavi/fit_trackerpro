@@ -35,6 +35,68 @@ async function telegramLoginFetchRaw(initData: string): Promise<TelegramAuthResp
     return (await response.json()) as TelegramAuthResponse
 }
 
+async function telegramRegisterFetchRaw(initData: string): Promise<TelegramAuthResponse> {
+    const base = getPublicApiBaseUrl().replace(/\/$/, '')
+    const response = await fetch(`${base}/users/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData }),
+    })
+    if (!response.ok) {
+        const clientError = await clientErrorFromFetchResponse(response)
+        throw new AppHttpError(clientError)
+    }
+    return (await response.json()) as TelegramAuthResponse
+}
+
+async function telegramLookupFetchRaw(initData: string): Promise<{ registered: boolean }> {
+    const base = getPublicApiBaseUrl().replace(/\/$/, '')
+    const response = await fetch(`${base}/users/auth/lookup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData }),
+    })
+    if (!response.ok) {
+        const clientError = await clientErrorFromFetchResponse(response)
+        throw new AppHttpError(clientError)
+    }
+    return (await response.json()) as { registered: boolean }
+}
+
+/**
+ * Validates initData and returns whether a user row already exists (no account creation).
+ */
+export async function lookupTelegramRegistration(initData: string): Promise<{ registered: boolean }> {
+    const lookupFn = (authApi as { telegramLookup?: (v: string) => Promise<{ registered: boolean }> })
+        .telegramLookup
+    if (typeof lookupFn !== 'function') {
+        return telegramLookupFetchRaw(initData)
+    }
+    return lookupFn(initData)
+}
+
+/**
+ * First-time registration: POST /users/auth/register with initData (same JWT payload as /telegram).
+ */
+export async function registerTelegramInitData(initData: string): Promise<TelegramExchangeResult> {
+    const map = (data: TelegramAuthResponse, via: 'authApi' | 'fetch'): TelegramExchangeResult => ({
+        accessToken: pickAccessTokenFromAuthResponse(data),
+        refreshToken: data.refresh_token,
+        isNewUser: data.is_new_user,
+        onboardingRequired: data.onboarding_required,
+        via,
+    })
+
+    const registerFn = (authApi as { telegramRegister?: (v: string) => Promise<TelegramAuthResponse> })
+        .telegramRegister
+    if (typeof registerFn !== 'function') {
+        const data = await telegramRegisterFetchRaw(initData)
+        return map(data, 'fetch')
+    }
+    const data = await registerFn(initData)
+    return map(data, 'authApi')
+}
+
 /**
  * Validates initData on the backend and returns JWT + onboarding flags.
  * Uses HTTP fetch only when `authApi.telegramLogin` is unavailable (e.g. some test mocks).

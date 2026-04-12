@@ -38,6 +38,44 @@ async def test_telegram_auth_invalid_hash(client: AsyncClient, mock_telegram_use
 
 @pytest.mark.unit
 @pytest.mark.auth
+async def test_telegram_lookup_unregistered(client: AsyncClient, mock_telegram_user: dict):
+    """Lookup does not create a user and reports registered=false."""
+    fresh_user = {**mock_telegram_user, "id": 910_010_030}
+    init_data = build_init_data(bot_token=settings.TELEGRAM_BOT_TOKEN, user=fresh_user)
+    response = await client.post("/api/v1/users/auth/lookup", json={"init_data": init_data})
+    assert response.status_code == 200
+    assert response.json()["registered"] is False
+
+
+@pytest.mark.integration
+@pytest.mark.auth
+async def test_telegram_lookup_registered_after_login(client: AsyncClient, mock_telegram_user: dict):
+    """After telegram auth, lookup reports registered=true."""
+    fresh_user = {**mock_telegram_user, "id": 910_010_031}
+    init_data = build_init_data(bot_token=settings.TELEGRAM_BOT_TOKEN, user=fresh_user)
+    login = await client.post("/api/v1/users/auth/telegram", json={"init_data": init_data})
+    assert login.status_code == 200
+
+    lookup = await client.post("/api/v1/users/auth/lookup", json={"initData": init_data})
+    assert lookup.status_code == 200
+    assert lookup.json()["registered"] is True
+
+
+@pytest.mark.integration
+@pytest.mark.auth
+async def test_register_endpoint_returns_tokens(client: AsyncClient, mock_telegram_user: dict):
+    """POST /register behaves like POST /telegram for Mini App registration."""
+    fresh_user = {**mock_telegram_user, "id": 910_010_032}
+    init_data = build_init_data(bot_token=settings.TELEGRAM_BOT_TOKEN, user=fresh_user)
+    response = await client.post("/api/v1/users/auth/register", json={"initData": init_data})
+    assert response.status_code == 200
+    data = response.json()
+    assert data.get("access_token") or data.get("token")
+    assert data.get("is_new_user") is True
+
+
+@pytest.mark.unit
+@pytest.mark.auth
 async def test_telegram_auth_accepts_init_data_camel_case(client: AsyncClient, mock_telegram_user: dict):
     """POST body may use camelCase initData (Mini App contract)."""
     init = build_init_data(bot_token=settings.TELEGRAM_BOT_TOKEN, user=mock_telegram_user)

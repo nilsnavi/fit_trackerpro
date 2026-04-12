@@ -24,6 +24,12 @@ export const authApi = {
     telegramLogin(initData: string): Promise<TelegramAuthResponse> {
         return api.post<TelegramAuthResponse>('/users/auth/telegram', { initData })
     },
+    telegramLookup(initData: string): Promise<{ registered: boolean }> {
+        return api.post<{ registered: boolean }>('/users/auth/lookup', { initData })
+    },
+    telegramRegister(initData: string): Promise<TelegramAuthResponse> {
+        return api.post<TelegramAuthResponse>('/users/auth/register', { initData })
+    },
     getCurrentUser(): Promise<UserProfile> {
         return api.get<UserProfile>('/users/auth/me')
     },

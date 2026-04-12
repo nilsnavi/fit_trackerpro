@@ -203,7 +203,7 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
         // Verify fallback screen when Telegram context is missing
         await page.goto('/')
 
-        const fallbackMsg = page.getByRole('heading', { name: /Откройте Mini App в Telegram/i })
+        const fallbackMsg = page.getByRole('heading', { name: /Откройте приложение в Telegram/i })
         const isFallbackVisible = (await fallbackMsg.count()) > 0
 
         if (isFallbackVisible) {
