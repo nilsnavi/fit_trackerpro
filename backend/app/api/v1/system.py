@@ -59,7 +59,7 @@ async def readiness_probe():
     Readiness probe for load balancers and orchestrators.
     Проверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).
 
-    HTTP 200 только при ``status == "ready"``; иначе 503 с телом проверок.
+    HTTP 200 только при ``status == "ready"``; иначе 503 с ``status == "degraded"`` и телом проверок.
     """
     readiness = await HealthCheckService.readiness()
     if readiness.status != "ready":

@@ -480,6 +480,26 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/workouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Analytics Workouts
+         * @description Сводка тренировок для аналитики (тот же payload, что и GET /analytics/).
+         */
+        get: operations["get_analytics_workouts_api_v1_analytics_workouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exercises/": {
         parameters: {
             query?: never;
@@ -920,11 +940,11 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * Readiness probe (PostgreSQL, Redis, Alembic)
+         * Readiness probe (PostgreSQL, Redis)
          * @description Readiness probe for load balancers and orchestrators.
-         *     Проверяет PostgreSQL (SELECT 1), Redis (PING) и соответствие ревизии Alembic в БД head-ревизии.
+         *     Проверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).
          *
-         *     HTTP 200 только при ``status == "ready"``; ``degraded`` / ``not_ready`` → 503.
+         *     HTTP 200 только при ``status == "ready"``; иначе 503 с ``status == "degraded"`` и телом проверок.
          */
         get: operations["readiness_probe"];
         put?: never;
@@ -989,6 +1009,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/auth/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lookup Telegram Registration */
+        post: operations["lookup_telegram_registration_api_v1_users_auth_lookup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/auth/me": {
         parameters: {
             query?: never;
@@ -1035,6 +1072,26 @@ export type paths = {
         put?: never;
         /** Refresh Token */
         post: operations["refresh_token_api_v1_users_auth_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Via Telegram
+         * @description First-time registration: validates initData and returns JWT (same as POST /telegram).
+         */
+        post: operations["register_via_telegram_api_v1_users_auth_register_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1498,9 +1555,9 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * Readiness probe (PostgreSQL, Redis, Alembic)
-         * @description Readiness probe (алиас ``/health/ready``): PostgreSQL, Redis, миграции Alembic.
-         *     HTTP 200 только при ``status == "ready"``; иначе 503 с телом проверок.
+         * Readiness probe (PostgreSQL, Redis)
+         * @description Readiness probe (алиас ``/health/ready``): PostgreSQL и Redis.
+         *     HTTP 200 только при ``status == "ready"``; иначе 503 с ``status == "degraded"`` и телом проверок.
          */
         get: operations["app_readiness_health_ready_get"];
         put?: never;
@@ -3713,73 +3770,34 @@ export type components = {
             /** Workout Count */
             workout_count: number;
         };
-        /** ReadinessCheckDatabase */
-        ReadinessCheckDatabase: {
-            /**
-             * Latency Ms
-             * @description Round-trip time in milliseconds (best-effort on errors).
-             */
-            latency_ms?: number | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "error";
-        };
-        /** ReadinessCheckRedis */
-        ReadinessCheckRedis: {
-            /**
-             * Latency Ms
-             * @description Round-trip time in milliseconds (best-effort on errors).
-             */
-            latency_ms?: number | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "error";
-        };
-        /** ReadinessChecks */
+        /**
+         * ReadinessChecks
+         * @description Per-dependency result: ``"ok"`` or ``"error: …"`` (human-readable failure).
+         */
         ReadinessChecks: {
-            database: components["schemas"]["ReadinessCheckDatabase"];
-            migrations: components["schemas"]["ReadinessMigrationsCheck"];
-            redis: components["schemas"]["ReadinessCheckRedis"];
-        };
-        /** ReadinessMigrationsCheck */
-        ReadinessMigrationsCheck: {
             /**
-             * Current
-             * @description Revision in alembic_version
+             * Postgres
+             * @description ``"ok"`` or ``"error: …"`` from PostgreSQL ``SELECT 1``.
              */
-            current?: string | null;
+            postgres: string;
             /**
-             * Head
-             * @description Alembic head revision from scripts
+             * Redis
+             * @description ``"ok"`` or ``"error: …"`` from Redis ``PING``.
              */
-            head?: string | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "pending" | "error";
+            redis: string;
         };
         /**
          * ReadinessResponse
-         * @description Readiness probe: PostgreSQL, Redis, and Alembic migration alignment.
+         * @description Readiness probe: PostgreSQL (async session) and Redis (shared async client).
          */
         ReadinessResponse: {
             checks: components["schemas"]["ReadinessChecks"];
             /**
              * Status
-             * @description 'ready' if DB/Redis OK and migrations match head; 'degraded' if DB/Redis OK but migrations pending; 'not_ready' on dependency failures.
+             * @description 'ready' only if both checks are ok; otherwise 'degraded'.
              * @enum {string}
              */
-            status: "ready" | "degraded" | "not_ready";
-            /**
-             * Timestamp
-             * @description UTC ISO8601 timestamp with Z suffix
-             */
-            timestamp: string;
+            status: "ready" | "degraded";
         };
         /**
          * RecoveryStateRecalculateResponse
@@ -3955,6 +3973,17 @@ export type components = {
              * @example query_id=...&user={...}&auth_date=...&hash=...
              */
             initData: string;
+        };
+        /**
+         * TelegramLookupResponse
+         * @description Whether a database user already exists for validated initData (no user creation).
+         */
+        TelegramLookupResponse: {
+            /**
+             * Registered
+             * @description True when a user row exists for this Telegram account.
+             */
+            registered: boolean;
         };
         /**
          * TelegramUserData
@@ -5751,6 +5780,37 @@ export interface operations {
             };
         };
     };
+    get_analytics_workouts_api_v1_analytics_workouts_get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsDashboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_exercises_api_v1_exercises__get: {
         parameters: {
             query?: {
@@ -6832,6 +6892,39 @@ export interface operations {
             };
         };
     };
+    lookup_telegram_registration_api_v1_users_auth_lookup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelegramAuthRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramLookupResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_current_user_info_api_v1_users_auth_me_get: {
         parameters: {
             query?: never;
@@ -6938,6 +7031,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefreshTokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_via_telegram_api_v1_users_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelegramAuthRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResponse"];
                 };
             };
             /** @description Validation Error */

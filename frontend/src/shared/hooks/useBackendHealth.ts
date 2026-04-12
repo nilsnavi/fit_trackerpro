@@ -7,33 +7,9 @@
 
 import { useEffect, useState } from 'react';
 
-interface ReadinessCheckDatabase {
-  status: 'ok' | 'error';
-  latency_ms?: number | null;
-}
+import type { components } from '@shared/api/generated/openapi';
 
-interface ReadinessCheckRedis {
-  status: 'ok' | 'error';
-  latency_ms?: number | null;
-}
-
-interface ReadinessMigrationsCheck {
-  status: 'ok' | 'pending' | 'error';
-  current?: string | null;
-  head?: string | null;
-}
-
-interface ReadinessChecks {
-  database: ReadinessCheckDatabase;
-  redis: ReadinessCheckRedis;
-  migrations: ReadinessMigrationsCheck;
-}
-
-interface ReadinessResponse {
-  status: 'ready' | 'degraded' | 'not_ready';
-  timestamp: string;
-  checks: ReadinessChecks;
-}
+type ReadinessResponse = components['schemas']['ReadinessResponse'];
 
 interface BackendHealth {
   /** Is backend ready to serve traffic */

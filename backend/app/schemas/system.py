@@ -36,7 +36,7 @@ class LivenessResponse(BaseModel):
 class ReadinessChecks(BaseModel):
     """Per-dependency result: ``\"ok\"`` or ``\"error: …\"`` (human-readable failure)."""
 
-    database: str = Field(
+    postgres: str = Field(
         ...,
         description='``"ok"`` or ``"error: …"`` from PostgreSQL ``SELECT 1``.',
     )
@@ -49,9 +49,9 @@ class ReadinessChecks(BaseModel):
 class ReadinessResponse(BaseModel):
     """Readiness probe: PostgreSQL (async session) and Redis (shared async client)."""
 
-    status: Literal["ready", "not_ready"] = Field(
+    status: Literal["ready", "degraded"] = Field(
         ...,
-        description="'ready' only if both checks are ok; otherwise 'not_ready'.",
+        description="'ready' only if both checks are ok; otherwise 'degraded'.",
     )
     checks: ReadinessChecks = Field(...)
 

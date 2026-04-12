@@ -5261,152 +5261,46 @@
         "title": "ProgressInsightsVolumePoint",
         "type": "object"
       },
-      "ReadinessCheckDatabase": {
-        "properties": {
-          "latency_ms": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Round-trip time in milliseconds (best-effort on errors).",
-            "title": "Latency Ms"
-          },
-          "status": {
-            "enum": [
-              "ok",
-              "error"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "title": "ReadinessCheckDatabase",
-        "type": "object"
-      },
-      "ReadinessCheckRedis": {
-        "properties": {
-          "latency_ms": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Round-trip time in milliseconds (best-effort on errors).",
-            "title": "Latency Ms"
-          },
-          "status": {
-            "enum": [
-              "ok",
-              "error"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "title": "ReadinessCheckRedis",
-        "type": "object"
-      },
       "ReadinessChecks": {
+        "description": "Per-dependency result: ``\"ok\"`` or ``\"error: …\"`` (human-readable failure).",
         "properties": {
-          "database": {
-            "$ref": "#/components/schemas/ReadinessCheckDatabase"
-          },
-          "migrations": {
-            "$ref": "#/components/schemas/ReadinessMigrationsCheck"
+          "postgres": {
+            "description": "``\"ok\"`` or ``\"error: …\"`` from PostgreSQL ``SELECT 1``.",
+            "title": "Postgres",
+            "type": "string"
           },
           "redis": {
-            "$ref": "#/components/schemas/ReadinessCheckRedis"
+            "description": "``\"ok\"`` or ``\"error: …\"`` from Redis ``PING``.",
+            "title": "Redis",
+            "type": "string"
           }
         },
         "required": [
-          "database",
-          "redis",
-          "migrations"
+          "postgres",
+          "redis"
         ],
         "title": "ReadinessChecks",
         "type": "object"
       },
-      "ReadinessMigrationsCheck": {
-        "properties": {
-          "current": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Revision in alembic_version",
-            "title": "Current"
-          },
-          "head": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Alembic head revision from scripts",
-            "title": "Head"
-          },
-          "status": {
-            "enum": [
-              "ok",
-              "pending",
-              "error"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "title": "ReadinessMigrationsCheck",
-        "type": "object"
-      },
       "ReadinessResponse": {
-        "description": "Readiness probe: PostgreSQL, Redis, and Alembic migration alignment.",
+        "description": "Readiness probe: PostgreSQL (async session) and Redis (shared async client).",
         "properties": {
           "checks": {
             "$ref": "#/components/schemas/ReadinessChecks"
           },
           "status": {
-            "description": "'ready' if DB/Redis OK and migrations match head; 'degraded' if DB/Redis OK but migrations pending; 'not_ready' on dependency failures.",
+            "description": "'ready' only if both checks are ok; otherwise 'degraded'.",
             "enum": [
               "ready",
-              "degraded",
-              "not_ready"
+              "degraded"
             ],
             "title": "Status",
-            "type": "string"
-          },
-          "timestamp": {
-            "description": "UTC ISO8601 timestamp with Z suffix",
-            "title": "Timestamp",
             "type": "string"
           }
         },
         "required": [
           "status",
-          "checks",
-          "timestamp"
+          "checks"
         ],
         "title": "ReadinessResponse",
         "type": "object"
@@ -5724,6 +5618,21 @@
           "initData"
         ],
         "title": "TelegramAuthRequest",
+        "type": "object"
+      },
+      "TelegramLookupResponse": {
+        "description": "Whether a database user already exists for validated initData (no user creation).",
+        "properties": {
+          "registered": {
+            "description": "True when a user row exists for this Telegram account.",
+            "title": "Registered",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "registered"
+        ],
+        "title": "TelegramLookupResponse",
         "type": "object"
       },
       "TelegramUserData": {
@@ -9842,6 +9751,56 @@
         ]
       }
     },
+    "/api/v1/analytics/workouts": {
+      "get": {
+        "description": "Сводка тренировок для аналитики (тот же payload, что и GET /analytics/).",
+        "operationId": "get_analytics_workouts_api_v1_analytics_workouts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "week",
+              "pattern": "^(week|month|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsDashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Analytics Workouts",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
     "/api/v1/exercises/": {
       "get": {
         "operationId": "get_exercises_api_v1_exercises__get",
@@ -11518,7 +11477,7 @@
     },
     "/api/v1/system/ready": {
       "get": {
-        "description": "Readiness probe for load balancers and orchestrators.\nПроверяет PostgreSQL (SELECT 1), Redis (PING) и соответствие ревизии Alembic в БД head-ревизии.\n\nHTTP 200 только при ``status == \"ready\"``; ``degraded`` / ``not_ready`` → 503.",
+        "description": "Readiness probe for load balancers and orchestrators.\nПроверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).\n\nHTTP 200 только при ``status == \"ready\"``; иначе 503 с ``status == \"degraded\"`` и телом проверок.",
         "operationId": "readiness_probe",
         "responses": {
           "200": {
@@ -11532,7 +11491,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Readiness probe (PostgreSQL, Redis, Alembic)",
+        "summary": "Readiness probe (PostgreSQL, Redis)",
         "tags": [
           "System",
           "System"
@@ -11623,6 +11582,47 @@
           }
         ],
         "summary": "Logout",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/auth/lookup": {
+      "post": {
+        "operationId": "lookup_telegram_registration_api_v1_users_auth_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramAuthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramLookupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lookup Telegram Registration",
         "tags": [
           "Authentication"
         ]
@@ -11780,6 +11780,48 @@
           }
         },
         "summary": "Refresh Token",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/auth/register": {
+      "post": {
+        "description": "First-time registration: validates initData and returns JWT (same as POST /telegram).",
+        "operationId": "register_via_telegram_api_v1_users_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramAuthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Via Telegram",
         "tags": [
           "Authentication"
         ]
@@ -13181,7 +13223,7 @@
     },
     "/health/ready": {
       "get": {
-        "description": "Readiness probe (алиас ``/health/ready``): PostgreSQL, Redis, миграции Alembic.\nHTTP 200 только при ``status == \"ready\"``; иначе 503 с телом проверок.",
+        "description": "Readiness probe (алиас ``/health/ready``): PostgreSQL и Redis.\nHTTP 200 только при ``status == \"ready\"``; иначе 503 с ``status == \"degraded\"`` и телом проверок.",
         "operationId": "app_readiness_health_ready_get",
         "responses": {
           "200": {
@@ -13195,7 +13237,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Readiness probe (PostgreSQL, Redis, Alembic)",
+        "summary": "Readiness probe (PostgreSQL, Redis)",
         "tags": [
           "System"
         ]
