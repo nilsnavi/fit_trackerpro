@@ -1,15 +1,14 @@
 import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { useCreateCustomExerciseMutation } from '../useExerciseMutations'
 import { exercisesApi } from '@shared/api/domains/exercisesApi'
-import { queryKeys } from '@shared/api/queryKeys'
-import { EXERCISES_CATALOG_LIST_PARAMS } from '@features/exercises/constants/catalogQueryParams'
 
-jest.mock('@shared/api/domains/exercisesApi', () => ({
+vi.mock('@shared/api/domains/exercisesApi', () => ({
     exercisesApi: {
-        createCustom: jest.fn(),
+        createCustom: vi.fn(),
     },
 }))
 
@@ -20,6 +19,10 @@ describe('useCreateCustomExerciseMutation', () => {
         }
     }
 
+    beforeEach(() => {
+        vi.mocked(exercisesApi.createCustom).mockReset()
+    })
+
     it('calls exercisesApi.createCustom and invalidates exercises list query on success', async () => {
         const qc = new QueryClient({
             defaultOptions: {
@@ -28,8 +31,8 @@ describe('useCreateCustomExerciseMutation', () => {
             },
         })
 
-        const invalidateSpy = jest.spyOn(qc, 'invalidateQueries')
-        ;(exercisesApi.createCustom as jest.Mock).mockResolvedValue({
+        const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+        vi.mocked(exercisesApi.createCustom).mockResolvedValue({
             id: 1,
             name: 'My custom exercise',
             description: 'Some description',
@@ -72,9 +75,8 @@ describe('useCreateCustomExerciseMutation', () => {
 
         await waitFor(() => {
             expect(invalidateSpy).toHaveBeenCalledWith({
-                queryKey: queryKeys.exercises.list(EXERCISES_CATALOG_LIST_PARAMS),
+                queryKey: ['exercises', 'list'],
             })
         })
     })
 })
-

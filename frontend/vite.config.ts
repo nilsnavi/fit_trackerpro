@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -67,6 +68,14 @@ function bundleStatsPlugin(): Plugin {
 }
 
 export default defineConfig({
+    test: {
+        environment: 'jsdom',
+        globals: false,
+        setupFiles: [path.join(srcDir, 'vitest.setup.ts')],
+        /** Только `*.vitest.*`; остальные юнит-тесты пока в Jest (`npm test`). */
+        include: ['src/**/*.vitest.{ts,tsx}'],
+        passWithNoTests: true,
+    },
     plugins: [
         react(),
         ...(process.env.BUNDLE_STATS ? [bundleStatsPlugin()] : []),
