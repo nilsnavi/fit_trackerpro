@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { WorkoutSessionUpdateRequest } from '@features/workouts/types/workouts'
+import { getQueueSize, saveToQueue } from '@shared/offline/offlineQueue'
 
 export interface UseWorkoutSyncParams {
     enabled: boolean
     isOnline: boolean
+    workoutId: number
+    /** Текущий payload сессии для записи в offline-очередь при завершении подхода без сети */
+    getSessionPayload: () => WorkoutSessionUpdateRequest | null
     /** Периодический и ручной сброс дебаунса синхронизации сессии */
     flushWorkoutSync: () => Promise<void>
     /** Отправка одного элемента из очереди (последовательно при восстановлении сети) */
@@ -13,6 +17,10 @@ export interface UseWorkoutSyncParams {
 export interface UseWorkoutSyncResult {
     /** Очередь неотправленных патчей сессии (в памяти) */
     pendingSync: WorkoutSessionUpdateRequest[]
+    /** Количество записей в `offline_workout_queue` для этой тренировки */
+    offlineSetQueueSize: number
+    /** Перечитать размер из localStorage (после flush снаружи) */
+    refreshOfflineSetQueueSize: () => void
     pushPendingSync: (payload: WorkoutSessionUpdateRequest) => void
     clearPendingSync: () => void
     /** После завершённого подхода */
@@ -27,11 +35,14 @@ const PERIODIC_FLUSH_MS = 30_000
 export function useWorkoutSync({
     enabled,
     isOnline,
+    workoutId,
+    getSessionPayload,
     flushWorkoutSync,
     sendSessionPatch,
 }: UseWorkoutSyncParams): UseWorkoutSyncResult {
     const queueRef = useRef<WorkoutSessionUpdateRequest[]>([])
     const [pendingSync, setPendingSync] = useState<WorkoutSessionUpdateRequest[]>([])
+    const [offlineSetQueueSize, setOfflineSetQueueSize] = useState(() => getQueueSize(workoutId))
     const drainingRef = useRef(false)
     const wasOnlineRef = useRef(isOnline)
 
@@ -52,10 +63,26 @@ export function useWorkoutSync({
         syncQueueState()
     }, [syncQueueState])
 
+    useEffect(() => {
+        setOfflineSetQueueSize(getQueueSize(workoutId))
+    }, [enabled, isOnline, workoutId])
+
+    const refreshOfflineSetQueueSize = useCallback(() => {
+        setOfflineSetQueueSize(getQueueSize(workoutId))
+    }, [workoutId])
+
     const notifySetCompleted = useCallback(() => {
         if (!enabled) return
+        if (!isOnline) {
+            const payload = getSessionPayload()
+            if (payload) {
+                saveToQueue({ workoutId, body: payload })
+                refreshOfflineSetQueueSize()
+            }
+            return
+        }
         void flushWorkoutSync()
-    }, [enabled, flushWorkoutSync])
+    }, [enabled, flushWorkoutSync, getSessionPayload, isOnline, refreshOfflineSetQueueSize, workoutId])
 
     useEffect(() => {
         if (!enabled) return
@@ -97,6 +124,8 @@ export function useWorkoutSync({
 
     return {
         pendingSync,
+        offlineSetQueueSize,
+        refreshOfflineSetQueueSize,
         pushPendingSync,
         clearPendingSync,
         notifySetCompleted,

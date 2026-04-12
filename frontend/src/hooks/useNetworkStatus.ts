@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 
 export interface UseNetworkStatusResult {
     isOnline: boolean
+    /** Становится true после первого перехода в офлайн (в т. ч. при старте офлайн) и остаётся true до размонтирования. */
+    wasOffline: boolean
 }
 
 function readOnLine(): boolean {
@@ -14,16 +16,21 @@ function readOnLine(): boolean {
  */
 export function useNetworkStatus(): UseNetworkStatusResult {
     const [isOnline, setIsOnline] = useState(readOnLine)
+    const [wasOffline, setWasOffline] = useState(() => !readOnLine())
 
     useEffect(() => {
         const onOnline = () => {
             setIsOnline(true)
         }
         const onOffline = () => {
+            setWasOffline(true)
             setIsOnline(false)
         }
 
         setIsOnline(readOnLine())
+        if (!readOnLine()) {
+            setWasOffline(true)
+        }
         window.addEventListener('online', onOnline)
         window.addEventListener('offline', onOffline)
         return () => {
@@ -32,5 +39,5 @@ export function useNetworkStatus(): UseNetworkStatusResult {
         }
     }, [])
 
-    return { isOnline }
+    return { isOnline, wasOffline }
 }
