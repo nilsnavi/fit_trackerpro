@@ -18,8 +18,8 @@ export const exercisesApi = {
     createCustom(formData: FormData): Promise<ExerciseApiItem> {
         return api.post<ExerciseApiItem>('/exercises/custom', formData)
     },
-    getById(exerciseId: number) {
-        return api.get(`/exercises/${exerciseId}`)
+    getById(exerciseId: number): Promise<ExerciseApiItem> {
+        return api.get<ExerciseApiItem>(`/exercises/${exerciseId}`)
     },
     create(payload: unknown) {
         return api.post('/exercises', payload)

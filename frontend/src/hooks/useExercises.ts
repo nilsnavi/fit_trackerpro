@@ -8,21 +8,21 @@ import type { WorkoutBuilderExercise } from '@features/workouts/types/workoutBui
 
 const DEFAULT_PAGE_SIZE = 20
 
-interface WorkoutBuilderExercisesQueryParams {
+export interface UseExercisesParams {
     search?: string
     muscleGroup?: string
     category?: string
     pageSize?: number
 }
 
-interface WorkoutBuilderExercisesPage {
+interface ExercisesInfinitePage {
     items: WorkoutBuilderExercise[]
     total: number
     page: number
     pageSize: number
 }
 
-function mapExerciseToBuilderItem(item: ExerciseApiItem): WorkoutBuilderExercise {
+function mapApiToBuilderItem(item: ExerciseApiItem): WorkoutBuilderExercise {
     const muscleGroups = item.muscle_groups ?? []
     return {
         id: String(item.id),
@@ -35,12 +35,16 @@ function mapExerciseToBuilderItem(item: ExerciseApiItem): WorkoutBuilderExercise
     }
 }
 
-export function useWorkoutBuilderExercisesQuery({
+/**
+ * Loads the exercise catalog for builders (infinite scroll + filters).
+ * Uses React Query for caching; query key includes filter params.
+ */
+export function useExercises({
     search,
     muscleGroup,
     category,
     pageSize = DEFAULT_PAGE_SIZE,
-}: WorkoutBuilderExercisesQueryParams) {
+}: UseExercisesParams) {
     const normalizedParams = {
         status: 'active' as const,
         page_size: pageSize,
@@ -52,14 +56,14 @@ export function useWorkoutBuilderExercisesQuery({
     const query = useInfiniteQuery({
         queryKey: queryKeys.exercises.list(normalizedParams),
         initialPageParam: 1,
-        queryFn: async ({ pageParam }): Promise<WorkoutBuilderExercisesPage> => {
+        queryFn: async ({ pageParam }): Promise<ExercisesInfinitePage> => {
             const response = await exercisesApi.list({
                 ...normalizedParams,
                 page: pageParam,
             })
 
             return {
-                items: response.items.map(mapExerciseToBuilderItem),
+                items: response.items.map(mapApiToBuilderItem),
                 total: response.total,
                 page: response.page,
                 pageSize: response.page_size,

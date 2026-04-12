@@ -51,7 +51,7 @@ import {
 import type { WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
 import { useCreateCustomExerciseMutation } from '@features/exercises/hooks/useExerciseMutations';
 import { useExerciseMuscleGroupsQuery } from '@features/exercises/hooks/useExerciseReferenceData';
-import { useWorkoutBuilderExercisesQuery } from '@features/workouts/hooks/useWorkoutBuilderExercisesQuery';
+import { useExercises } from '@/hooks/useExercises';
 import {
     clearTemplateEditorDraft,
     loadTemplateEditorDraft,
@@ -643,7 +643,8 @@ export const WorkoutBuilder: React.FC = () => {
         isFetchingNextPage,
         hasNextPage,
         fetchNextPage,
-    } = useWorkoutBuilderExercisesQuery({
+        refetch: refetchExercises,
+    } = useExercises({
         search: debouncedSearchQuery,
         muscleGroup: selectedMuscleGroup === 'all' ? undefined : selectedMuscleGroup,
         category: selectedCategory === 'all' ? undefined : selectedCategory,
@@ -953,8 +954,18 @@ export const WorkoutBuilder: React.FC = () => {
                                 ))}
                             </div>
                         ) : isExercisesError ? (
-                            <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-6 text-center text-sm text-danger">
-                                Не удалось загрузить упражнения. Попробуйте изменить фильтры или повторить позже.
+                            <div className="space-y-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-6 text-center text-sm text-danger">
+                                <p>Не удалось загрузить упражнения.</p>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    fullWidth
+                                    onClick={() => {
+                                        void refetchExercises()
+                                    }}
+                                >
+                                    Повторить
+                                </Button>
                             </div>
                         ) : filteredExercises.length === 0 ? (
                             <div className="text-center py-8 text-telegram-hint">
