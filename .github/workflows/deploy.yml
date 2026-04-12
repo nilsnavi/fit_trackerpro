@@ -102,6 +102,9 @@ jobs:
   # ---------------------------------------------------------------------------
   # Stages: migrate → deploy → verify → record-stable | rollback → notify (shared)
   # ---------------------------------------------------------------------------
+  # Резервная копия БД перед ``alembic upgrade head`` выполняется в reusable workflow
+  # ``deploy-environment.yml`` (job ``migrate``): шаг ``Backup database before migration``
+  # и скрипт ``scripts/backup_before_migrate.sh``.
   deploy-pipeline:
     name: "Deploy pipeline (${{ needs.resolve-tag.outputs.deploy_environment }})"
     needs: [resolve-tag, build, build-skipped]

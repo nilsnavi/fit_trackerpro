@@ -124,11 +124,13 @@ jobs:
       - name: Sync infra files to server
         run: |
           set -Eeuo pipefail
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/nginx"
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/nginx ${{ env.DEPLOY_DIR }}/scripts"
           scp docker-compose.prod.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/docker-compose.prod.yml
           scp nginx/nginx.conf ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/nginx/nginx.conf
+          scp scripts/backup_before_migrate.sh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/scripts/backup_before_migrate.sh
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "chmod +x ${{ env.DEPLOY_DIR }}/scripts/backup_before_migrate.sh"
 
-      - name: Migrate database (backup, pull, alembic upgrade)
+      - name: Prepare server .env before backup
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
             set -Eeuo pipefail
@@ -163,12 +165,37 @@ jobs:
           TARGET_IMAGE_TAG=${{ env.DEPLOY_IMAGE_TAG }}
           DEPLOY_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           EOL
+          EOF
 
-            mkdir -p backups
-            echo "Creating database backup..."
-            DB_BACKUP_PATH="backups/backup_$(date +%Y%m%d_%H%M%S).sql"
-            docker exec fittracker-postgres pg_dump -U ${{ secrets.POSTGRES_USER }} ${{ secrets.POSTGRES_DB }} > "${DB_BACKUP_PATH}"
-            echo "DB_BACKUP_PATH=${DB_BACKUP_PATH}" >> .rollback-meta.env
+      - name: Backup database before migration
+        id: db_backup
+        continue-on-error: true
+        run: |
+          set -Eeuo pipefail
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "cd ${{ env.DEPLOY_DIR }} && COMPOSE_FILE=docker-compose.prod.yml ./scripts/backup_before_migrate.sh"
+
+      - name: Fail deploy if database backup failed
+        run: |
+          set -Eeuo pipefail
+          if [ "${{ steps.db_backup.outcome }}" != "success" ]; then
+            echo "::error::Резервное копирование БД завершилось с ошибкой (см. лог шага «Backup database before migration»). Миграция не запускается."
+            exit 1
+          fi
+          echo "Резервная копия перед миграцией выполнена успешно."
+
+      - name: Migrate database (pull, alembic upgrade)
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -Eeuo pipefail
+
+            cd ~/fittracker-pro || exit 1
+
+            if [ -f backups/.last_pre_migrate_backup_path ]; then
+              DB_BACKUP_PATH="$(tr -d '\r\n' < backups/.last_pre_migrate_backup_path)"
+              echo "DB_BACKUP_PATH=${DB_BACKUP_PATH}" >> .rollback-meta.env
+            else
+              echo "::warning::Файл backups/.last_pre_migrate_backup_path не найден — в .rollback-meta.env не записан DB_BACKUP_PATH"
+            fi
 
             echo "Pulling container images..."
             docker-compose -f docker-compose.prod.yml pull
