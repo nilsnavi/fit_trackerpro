@@ -262,7 +262,7 @@ describe('useActiveWorkoutSync', () => {
         expect(toast.retry).toHaveBeenCalledTimes(1)
 
         act(() => {
-            jest.advanceTimersByTime(3_000)
+            jest.advanceTimersByTime(2_000)
         })
 
         await waitFor(() => {

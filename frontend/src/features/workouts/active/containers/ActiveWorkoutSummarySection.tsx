@@ -19,6 +19,9 @@ export interface ActiveWorkoutSummarySectionProps {
     completeError: unknown
     updateSessionError: unknown
     syncState: ActiveWorkoutSyncState
+    syncRetryExhausted?: boolean
+    onRetrySessionSync?: () => void
+    onSaveSessionLocalFinish?: () => void
     repeatButton?: ReactNode
     onDurationChange: (value: number) => void
     onCommentsChange: (value: string) => void
@@ -41,6 +44,9 @@ export function ActiveWorkoutSummarySection({
     completeError,
     updateSessionError,
     syncState,
+    syncRetryExhausted = false,
+    onRetrySessionSync,
+    onSaveSessionLocalFinish,
     repeatButton,
     onDurationChange,
     onCommentsChange,
@@ -83,6 +89,19 @@ export function ActiveWorkoutSummarySection({
             {sessionError && <p className="text-sm text-danger">{sessionError}</p>}
             {completeError != null && <p className="text-sm text-danger">{getErrorMessage(completeError)}</p>}
             {updateSessionError != null && <p className="text-sm text-danger">{getErrorMessage(updateSessionError)}</p>}
+
+            {isActiveDraft && (syncState === 'error' || syncRetryExhausted) && onRetrySessionSync ? (
+                <div className="flex flex-col gap-2 rounded-lg border border-danger/25 bg-danger/5 p-3 sm:flex-row sm:flex-wrap">
+                    <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onRetrySessionSync}>
+                        Повторить
+                    </Button>
+                    {syncRetryExhausted && onSaveSessionLocalFinish ? (
+                        <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onSaveSessionLocalFinish}>
+                            Сохранить локально и завершить
+                        </Button>
+                    ) : null}
+                </div>
+            ) : null}
 
             <ActiveWorkoutSessionDetailsCollapsible
                 workout={workout}

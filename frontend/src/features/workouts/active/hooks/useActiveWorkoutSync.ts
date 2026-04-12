@@ -14,8 +14,9 @@ import {
 
 // Aggressive debounce causes redundant requests; use a wider window instead.
 const DEBOUNCE_MS = 2000
-const RETRY_BASE_DELAY_MS = 3000
-const RETRY_MAX_DELAY_MS = 15000
+/** Паузы между повторами: 2 с, 4 с, 8 с (не больше 8 с). */
+const RETRY_BASE_DELAY_MS = 2000
+const RETRY_MAX_DELAY_MS = 8000
 const MAX_RETRY_ATTEMPTS = 3
 
 type UpdateSessionMutation = {
@@ -60,6 +61,12 @@ interface UseActiveWorkoutSyncResult {
     pendingPayload: WorkoutSessionUpdateRequest | null
     isOffline: boolean
     hasPendingChanges: boolean
+    /** Исчерпаны автоматические повторы синхронизации сессии */
+    syncRetryExhausted: boolean
+    /** Сбросить счётчик повторов и отправить снова (кнопка «Повторить») */
+    retrySessionSyncNow: () => void
+    /** Принять локальное состояние без блокировки UI (данные останутся в кэше / очереди) */
+    dismissSessionSyncFailure: () => void
 }
 
 export function useActiveWorkoutSync({
@@ -86,6 +93,7 @@ export function useActiveWorkoutSync({
     const [lastSyncedPayload, setLastSyncedPayload] = useState<WorkoutSessionUpdateRequest | null>(null)
     const [pendingPayload, setPendingPayload] = useState<WorkoutSessionUpdateRequest | null>(null)
     const [isOffline, setIsOffline] = useState<boolean>(() => !getIsOnline())
+    const [syncRetryExhausted, setSyncRetryExhausted] = useState(false)
 
     // ── Snapshot tracking ──────────────────────────────────────────────────
     const lastPersistedSnapshotRef = useRef<string | null>(null)
@@ -220,6 +228,7 @@ export function useActiveWorkoutSync({
                     const succeededAfterRetries = retryAttemptRef.current > 0
                     inFlightRef.current = false
                     setIsOffline(false)
+                    setSyncRetryExhausted(false)
                     lastPersistedSnapshotRef.current = snapshot
                     retryAttemptRef.current = 0
                     setLastSyncedPayload(payload)
@@ -271,9 +280,14 @@ export function useActiveWorkoutSync({
                             window.clearTimeout(retryTimerRef.current)
                             retryTimerRef.current = null
                         }
+                        setSyncRetryExhausted(false)
+                        retryAttemptRef.current = 0
                         executeSyncRef.current()
                     })
                     scheduleRetry()
+                    if (retryAttemptRef.current >= MAX_RETRY_ATTEMPTS && retryTimerRef.current === null) {
+                        setSyncRetryExhausted(true)
+                    }
                     resolveFlushWaiters()
                 },
             },
@@ -293,6 +307,7 @@ export function useActiveWorkoutSync({
             retryTimerRef.current = null
         }
         retryAttemptRef.current = 0
+        setSyncRetryExhausted(false)
         debounceTimerRef.current = window.setTimeout(() => {
             debounceTimerRef.current = null
             executeSyncRef.current()
@@ -315,6 +330,7 @@ export function useActiveWorkoutSync({
                 retryTimerRef.current = null
             }
             retryAttemptRef.current = 0
+            setSyncRetryExhausted(false)
 
             const currentWorkout = workoutRef.current
             const hasUnsyncedChanges =
@@ -362,10 +378,31 @@ export function useActiveWorkoutSync({
         lastPersistedSnapshotRef.current = null
         inFlightRef.current = false
         retryAttemptRef.current = 0
+        setSyncRetryExhausted(false)
         setLastSyncedPayload(null)
         setPendingPayload(null)
         updateSyncStateRef.current('idle')
     }, [workoutId])
+
+    const retrySessionSyncNow = useCallback(() => {
+        setSyncRetryExhausted(false)
+        if (retryTimerRef.current !== null) {
+            window.clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = null
+        }
+        retryAttemptRef.current = 0
+        executeSyncRef.current()
+    }, [])
+
+    const dismissSessionSyncFailure = useCallback(() => {
+        setSyncRetryExhausted(false)
+        if (retryTimerRef.current !== null) {
+            window.clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = null
+        }
+        retryAttemptRef.current = 0
+        updateSyncStateRef.current('saved-locally')
+    }, [])
 
     // ── Session housekeeping (unchanged from original) ────────────────────
 
@@ -546,5 +583,8 @@ export function useActiveWorkoutSync({
         pendingPayload,
         isOffline,
         hasPendingChanges,
+        syncRetryExhausted,
+        retrySessionSyncNow,
+        dismissSessionSyncFailure,
     }
 }
