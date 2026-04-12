@@ -13,6 +13,8 @@ export interface UseExercisesParams {
     muscleGroup?: string
     category?: string
     pageSize?: number
+    /** When false, no network request is made (e.g. modal closed). Defaults to true. */
+    enabled?: boolean
 }
 
 interface ExercisesInfinitePage {
@@ -44,6 +46,7 @@ export function useExercises({
     muscleGroup,
     category,
     pageSize = DEFAULT_PAGE_SIZE,
+    enabled = true,
 }: UseExercisesParams) {
     const normalizedParams = {
         status: 'active' as const,
@@ -55,6 +58,7 @@ export function useExercises({
 
     const query = useInfiniteQuery({
         queryKey: queryKeys.exercises.list(normalizedParams),
+        enabled,
         initialPageParam: 1,
         queryFn: async ({ pageParam }): Promise<ExercisesInfinitePage> => {
             const response = await exercisesApi.list({

@@ -649,6 +649,7 @@ export const WorkoutBuilder: React.FC = () => {
         muscleGroup: selectedMuscleGroup === 'all' ? undefined : selectedMuscleGroup,
         category: selectedCategory === 'all' ? undefined : selectedCategory,
         pageSize: 20,
+        enabled: isSelectorOpen,
     });
 
     const previewTypeLabel = useMemo(() => {
