@@ -80,6 +80,17 @@ class Settings(BaseSettings):
         str | None,
         Field(description="Optional sync driver URL (e.g. Alembic); derived if unset."),
     ] = None
+    ALEMBIC_INI_PATH: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Path to alembic.ini for readiness migration checks. "
+                "When unset, uses embedded migrations in the image (if present) or "
+                "``<repo>/database/migrations/alembic.ini`` in a monorepo checkout."
+            ),
+        ),
+    ] = None
 
     # --- Optional: Redis & analytics caching ---
     REDIS_URL: Annotated[str, Field(description="Redis for rate limiting and optional cache.")] = (

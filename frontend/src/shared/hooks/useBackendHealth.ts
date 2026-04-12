@@ -1,23 +1,38 @@
 /**
  * useBackendHealth: Hook to check backend readiness
- * 
+ *
  * Periodically checks if the backend is ready to serve traffic.
  * Used to display a maintenance screen if backend dependencies are unhealthy.
  */
 
 import { useEffect, useState } from 'react';
 
-interface DependencyStatus {
-  name: string;
-  healthy: boolean;
-  response_time_ms?: number | null;
-  message?: string | null;
+interface ReadinessCheckDatabase {
+  status: 'ok' | 'error';
+  latency_ms?: number | null;
+}
+
+interface ReadinessCheckRedis {
+  status: 'ok' | 'error';
+  latency_ms?: number | null;
+}
+
+interface ReadinessMigrationsCheck {
+  status: 'ok' | 'pending' | 'error';
+  current?: string | null;
+  head?: string | null;
+}
+
+interface ReadinessChecks {
+  database: ReadinessCheckDatabase;
+  redis: ReadinessCheckRedis;
+  migrations: ReadinessMigrationsCheck;
 }
 
 interface ReadinessResponse {
-  status: 'ready' | 'not_ready';
+  status: 'ready' | 'degraded' | 'not_ready';
   timestamp: string;
-  dependencies: Record<string, DependencyStatus>;
+  checks: ReadinessChecks;
 }
 
 interface BackendHealth {
@@ -33,11 +48,11 @@ interface BackendHealth {
 
 /**
  * Hook to check backend readiness status
- * 
+ *
  * @param checkIntervalMs - How often to check (default: 5000ms)
  * @param initialCheckDelayMs - Delay before first check (default: 1000ms)
  * @returns Backend health status
- * 
+ *
  * @example
  * const { isReady, isLoading, error } = useBackendHealth();
  * if (!isReady && !isLoading) {
@@ -70,7 +85,7 @@ export function useBackendHealth(
         }
         const response = await fetch('/health/ready', {
           method: 'GET',
-          headers: { 'Accept': 'application/json' },
+          headers: { Accept: 'application/json' },
           // Don't add auth headers for health checks
         });
 
@@ -79,9 +94,9 @@ export function useBackendHealth(
         }
 
         const data = (await response.json()) as ReadinessResponse;
-        
+
         if (!mounted) return;
-        
+
         setReadinessData(data);
         setIsReady(data.status === 'ready');
         setError(undefined);
@@ -93,7 +108,7 @@ export function useBackendHealth(
         setError(
           err instanceof Error
             ? err.message
-            : 'Backend is not responding. Please try again shortly.'
+            : 'Backend is not responding. Please try again shortly.',
         );
         setReadinessData(undefined);
         setIsLoading(false);

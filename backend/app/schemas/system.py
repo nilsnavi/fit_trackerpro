@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,21 +23,6 @@ class HealthCheckResponse(BaseModel):
     )
 
 
-class DependencyStatus(BaseModel):
-    """Status of a single dependency (database, Redis, etc)."""
-
-    name: str = Field(..., description="Dependency name")
-    healthy: bool = Field(..., description="Is dependency healthy")
-    response_time_ms: Optional[float] = Field(
-        default=None,
-        description="Response time in milliseconds",
-    )
-    message: Optional[str] = Field(
-        default=None,
-        description="Additional status message or error",
-    )
-
-
 class LivenessResponse(BaseModel):
     """Liveness probe response: container is running."""
 
@@ -48,18 +33,45 @@ class LivenessResponse(BaseModel):
     timestamp: str = Field(..., description="UTC ISO8601 timestamp")
 
 
-class ReadinessResponse(BaseModel):
-    """Readiness probe response: dependencies are healthy."""
+class ReadinessCheckDatabase(BaseModel):
+    status: Literal["ok", "error"] = Field(...)
+    latency_ms: Optional[float] = Field(
+        default=None,
+        description="Round-trip time in milliseconds (best-effort on errors).",
+    )
 
-    status: str = Field(
-        ...,
-        description="'ready' if all dependencies are healthy, 'not_ready' otherwise",
+
+class ReadinessCheckRedis(BaseModel):
+    status: Literal["ok", "error"] = Field(...)
+    latency_ms: Optional[float] = Field(
+        default=None,
+        description="Round-trip time in milliseconds (best-effort on errors).",
     )
-    timestamp: str = Field(..., description="UTC ISO8601 timestamp")
-    dependencies: dict[str, DependencyStatus] = Field(
+
+
+class ReadinessMigrationsCheck(BaseModel):
+    status: Literal["ok", "pending", "error"] = Field(...)
+    current: Optional[str] = Field(default=None, description="Revision in alembic_version")
+    head: Optional[str] = Field(default=None, description="Alembic head revision from scripts")
+
+
+class ReadinessChecks(BaseModel):
+    database: ReadinessCheckDatabase
+    redis: ReadinessCheckRedis
+    migrations: ReadinessMigrationsCheck
+
+
+class ReadinessResponse(BaseModel):
+    """Readiness probe: PostgreSQL, Redis, and Alembic migration alignment."""
+
+    status: Literal["ready", "degraded", "not_ready"] = Field(
         ...,
-        description="Status of each checked dependency",
+        description="'ready' if DB/Redis OK and migrations match head; "
+        "'degraded' if DB/Redis OK but migrations pending; "
+        "'not_ready' on dependency failures.",
     )
+    checks: ReadinessChecks = Field(...)
+    timestamp: str = Field(..., description="UTC ISO8601 timestamp with Z suffix")
 
 
 class ServiceVersionResponse(BaseModel):

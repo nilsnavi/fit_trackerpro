@@ -207,8 +207,10 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             body: JSON.stringify({
                 status: 'ready',
                 timestamp: isoNow(),
-                dependencies: {
-                    database: { name: 'database', healthy: true },
+                checks: {
+                    database: { status: 'ok', latency_ms: 1 },
+                    redis: { status: 'ok', latency_ms: 1 },
+                    migrations: { status: 'ok', current: 'test', head: 'test' },
                 },
             }),
         })
@@ -244,8 +246,10 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, {
                 status: 'ready',
                 timestamp: isoNow(),
-                dependencies: {
-                    database: { name: 'database', healthy: true },
+                checks: {
+                    database: { status: 'ok', latency_ms: 1 },
+                    redis: { status: 'ok', latency_ms: 1 },
+                    migrations: { status: 'ok', current: 'test', head: 'test' },
                 },
             })
         }

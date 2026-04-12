@@ -275,7 +275,7 @@ jobs:
           docker build \
             --file backend/Dockerfile \
             --tag fittracker-backend:smoke \
-            ./backend
+            .
 
       - name: Build frontend image
         run: |

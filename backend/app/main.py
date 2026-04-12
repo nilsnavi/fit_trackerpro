@@ -239,22 +239,16 @@ async def app_liveness():
 @app.get(
     "/health/ready",
     tags=[TAG_SYSTEM],
-    summary="Readiness probe (dependencies are healthy)",
+    summary="Readiness probe (PostgreSQL, Redis, Alembic)",
     response_model=ReadinessResponse,
 )
 async def app_readiness():
     """
-    Readiness probe for load balancers and orchestrators.
-    Checks all critical dependencies:
-    - Database connectivity
-    - Redis availability (if configured)
-    - External services (if configured)
-
-    Returns 200 only if the application is ready to serve traffic.
-    Used by load balancers to route traffic only to ready instances.
+    Readiness probe (алиас ``/health/ready``): PostgreSQL, Redis, миграции Alembic.
+    HTTP 200 только при ``status == "ready"``; иначе 503 с телом проверок.
     """
     readiness = await HealthCheckService.readiness()
-    if readiness.status != 'ready':
+    if readiness.status != "ready":
         return JSONResponse(status_code=503, content=readiness.model_dump())
     return readiness
 

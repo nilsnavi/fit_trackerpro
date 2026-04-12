@@ -41,8 +41,8 @@ services:
   # Backend API
   migrator:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: fittracker-migrator
     restart: "no"
     environment:
@@ -69,14 +69,15 @@ services:
   # Backend API
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: fittracker-backend
     restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-fittracker}:${POSTGRES_PASSWORD:-fittracker_password}@postgres:5432/${POSTGRES_DB:-fittracker}
       - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER:-fittracker}:${POSTGRES_PASSWORD:-fittracker_password}@postgres:5432/${POSTGRES_DB:-fittracker}
       - REDIS_URL=redis://redis:6379/0
+      - ALEMBIC_INI_PATH=/migrations/alembic.ini
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       # Keep empty here so backend/.env can control it (env_ignore_empty=true)
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:-}
@@ -88,17 +89,18 @@ services:
       - SENTRY_DSN=${SENTRY_DSN}
     volumes:
       - ./backend:/app
+      - ./database/migrations:/migrations:ro
       - /app/__pycache__
     ports:
       - "18000:8000"
     # Readiness probe: checks DB, Redis, and external service connectivity.
     # Container receives traffic only when all dependencies are healthy.
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health/ready"]
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/system/ready"]
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 30s
     depends_on:
       migrator:
         condition: service_completed_successfully
