@@ -34,6 +34,7 @@ lerna-debug.log*
 
 # --- Environment & secrets ---
 .env
+.env.ngrok
 .env.local
 .env.*.local
 .env.development.local
@@ -172,3 +173,5 @@ blob-report/
 *.pid
 *.seed
 *.pid.lock
+
+VITE_DEV_INIT_DATA=<подписанный initData>

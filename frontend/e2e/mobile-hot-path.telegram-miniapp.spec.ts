@@ -31,15 +31,6 @@ async function expandActionRailIfCollapsed(page: import('@playwright/test').Page
     }
 }
 
-async function seedActiveWorkoutDraft(page: import('@playwright/test').Page, workoutId: number, title: string) {
-    await page.evaluate(({ workoutId, title }) => {
-        localStorage.setItem('workout-session-draft', JSON.stringify({
-            state: { workoutId, title, updatedAt: Date.now() },
-            version: 0,
-        }))
-    }, { workoutId, title })
-}
-
 test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
     test.describe.configure({ timeout: 60_000, mode: 'serial' })
 

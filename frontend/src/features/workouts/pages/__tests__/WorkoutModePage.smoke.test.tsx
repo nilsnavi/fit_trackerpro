@@ -31,6 +31,10 @@ jest.mock('@features/exercises/hooks/useExercisesCatalogQuery', () => ({
     useExercisesCatalogQuery: () => ({ data: [], isLoading: false, isError: false }),
 }))
 
+jest.mock('@features/workouts/config/usePersonalizedConfig', () => ({
+    usePersonalizedConfig: (config: unknown) => config,
+}))
+
 // Zustand store — real implementation, reset between tests
 import { useWorkoutModeEditorStore } from '@features/workouts/stores/useWorkoutModeEditorStore'
 jest.mock('@/state/local', () => ({

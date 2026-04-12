@@ -1,0 +1,72 @@
+# FitTracker monitoring — шаблон для docker-compose.monitoring.yml.
+# Плейсхолдеры подставляет prometheus-entrypoint.sh из переменных окружения:
+#   FITTRACKER_BACKEND_SCRAPE_TARGET   (по умолчанию backend:8000)
+#   FITTRACKER_BACKEND_READINESS_URL   (по умолчанию http://backend:8000/api/v1/system/ready)
+#
+# Prometheus и blackbox должны видеть тот же Docker-network, что и API (часто fittracker-network).
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "fittracker-monitor"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Хост: CPU, память, диск, сеть — база для «почему тормозит»
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # Контейнеры: CPU/RSS по сервисам compose (тяжёлый таргет — реже скрейпим)
+  - job_name: "cadvisor"
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # API: /metrics (полный instrumentator или минимальный http_requests_total)
+  - job_name: "fittracker-backend"
+    metrics_path: /metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["__BACKEND_SCRAPE__"]
+
+  # Readiness: только HTTP 200 (503 при degraded / not_ready).
+  - job_name: "blackbox-http-ready"
+    metrics_path: /probe
+    scrape_interval: 15s
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - __BLACKBOX_READY_URL__
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+# Пример: раскомментируйте после добавления postgres-exporter и redis-exporter в compose.
+#  - job_name: "postgres"
+#    scrape_interval: 30s
+#    static_configs:
+#      - targets: ["postgres-exporter:9187"]
+#
+#  - job_name: "redis"
+#    scrape_interval: 30s
+#    static_configs:
+#      - targets: ["redis-exporter:9121"]

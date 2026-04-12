@@ -89,13 +89,6 @@ export function useAchievements(): UseAchievementsReturn {
         },
     })
 
-    const checkProgressMutation = useMutation({
-        mutationFn: () => achievementsApi.checkProgress(),
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
-        },
-    })
-
     const achievements = useMemo(() => achievementsQuery.data?.items ?? [], [achievementsQuery.data?.items])
     const userStats = userStatsQuery.data ?? null
 
@@ -121,11 +114,11 @@ export function useAchievements(): UseAchievementsReturn {
 
     const checkProgress = useCallback(async () => {
         try {
-            await checkProgressMutation.mutateAsync()
+            await userStatsQuery.refetch()
         } catch (err) {
             console.error('Failed to check progress:', err)
         }
-    }, [checkProgressMutation])
+    }, [userStatsQuery])
 
     const getAchievementById = useCallback(
         (id: number): Achievement | undefined => achievements.find((a) => a.id === id),

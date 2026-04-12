@@ -31,12 +31,12 @@ export interface EmergencyNotifyPayload {
 
 export const emergencyApi = {
     getContacts(): Promise<EmergencyContactsResponse> {
-        return api.get<EmergencyContactsResponse>('/emergency/contact')
+        return api.get<EmergencyContactsResponse>('/system/emergency/contact')
     },
     postLog(payload: EmergencyLogPayload): Promise<void> {
-        return api.post('/emergency/log', payload)
+        return api.post('/system/emergency/log', payload)
     },
     postNotify(payload: EmergencyNotifyPayload): Promise<void> {
-        return api.post('/emergency/notify', payload)
+        return api.post('/system/emergency/notify', payload)
     },
 }

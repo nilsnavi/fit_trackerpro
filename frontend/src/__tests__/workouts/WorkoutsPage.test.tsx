@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
 import { WorkoutsPage } from '@features/workouts/pages/WorkoutsPage'
@@ -33,6 +34,25 @@ jest.mock('@/state/local', () => ({
         mockUseWorkoutTemplatePinsStore(selector),
 }))
 
+jest.mock('@features/profile/hooks/useProfile', () => ({
+    useProfile: () => ({
+        profile: null,
+        stats: null,
+        coachAccesses: [],
+        isLoading: false,
+        isGeneratingCoachCode: false,
+        error: null,
+        updateProfile: jest.fn(),
+        updateSettings: jest.fn(),
+        updateWeight: jest.fn(),
+        getWeightProgress: () => null,
+        generateCoachCode: jest.fn(),
+        revokeCoachAccess: jest.fn(),
+        exportData: jest.fn(),
+        refresh: jest.fn(),
+    }),
+}))
+
 function makePageState(overrides: Record<string, unknown> = {}) {
     return {
         selectedType: 'all',
@@ -65,10 +85,18 @@ function makePageState(overrides: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: { retry: false },
+            mutations: { retry: false },
+        },
+    })
     return render(
-        <MemoryRouter>
-            <WorkoutsPage />
-        </MemoryRouter>,
+        <QueryClientProvider client={queryClient}>
+            <MemoryRouter>
+                <WorkoutsPage />
+            </MemoryRouter>
+        </QueryClientProvider>,
     )
 }
 

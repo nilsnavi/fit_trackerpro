@@ -1,6 +1,8 @@
-# FitTracker monitoring — только то, что реально поднимается в docker-compose.monitoring.yml
-# + backend на сети fittracker-network. Экспортёры Postgres/Redis подключайте отдельным
-# файлом или добавьте job ниже, когда сервисы появятся в compose.
+# Удобная копия конфигурации для локального Prometheus **без** entrypoint:
+# подставьте вместо плейсхолдеров реальные значения или скопируйте из .template после sed.
+#
+# В Docker используйте ``prometheus.yml.template`` + ``prometheus-entrypoint.sh``
+# (см. ``docker-compose.monitoring.yml``).
 
 global:
   scrape_interval: 15s
@@ -11,41 +13,44 @@ global:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []
+        - targets: ["alertmanager:9093"]
 
-rule_files: []
+rule_files:
+  - /etc/prometheus/alerts.yml
 
 scrape_configs:
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]
 
-  # Хост: CPU, память, диск, сеть — база для «почему тормозит»
   - job_name: "node-exporter"
     static_configs:
       - targets: ["node-exporter:9100"]
 
-  # Контейнеры: CPU/RSS по сервисам compose (тяжёлый таргет — реже скрейпим)
   - job_name: "cadvisor"
     scrape_interval: 30s
     scrape_timeout: 10s
     static_configs:
       - targets: ["cadvisor:8080"]
 
-  # API: HTTP RPS, латентность, коды ответа (эндпоинт /metrics в приложении)
   - job_name: "fittracker-backend"
     metrics_path: /metrics
     scrape_interval: 15s
     static_configs:
       - targets: ["backend:8000"]
 
-# Пример: раскомментируйте после добавления postgres-exporter и redis-exporter в compose.
-#  - job_name: "postgres"
-#    scrape_interval: 30s
-#    static_configs:
-#      - targets: ["postgres-exporter:9187"]
-#
-#  - job_name: "redis"
-#    scrape_interval: 30s
-#    static_configs:
-#      - targets: ["redis-exporter:9121"]
+  - job_name: "blackbox-http-ready"
+    metrics_path: /probe
+    scrape_interval: 15s
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://backend:8000/api/v1/system/ready
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

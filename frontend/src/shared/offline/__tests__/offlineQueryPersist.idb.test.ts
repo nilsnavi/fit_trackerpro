@@ -1,8 +1,10 @@
+import type { DehydratedState } from '@tanstack/query-core'
 import { QueryClient, dehydrate, hydrate } from '@tanstack/react-query'
+import type { PersistedClient } from '@tanstack/query-persist-client-core'
 import { createOfflineQueryPersister, shouldDehydrateOfflineQuery } from '../offlineQueryPersist'
 import { createIndexedDbKV } from '../storage/indexedDbKV'
 
-function makeClientState(qc: QueryClient) {
+function makeClientState(qc: QueryClient): PersistedClient {
   return {
     buster: 'test',
     timestamp: Date.now(),
@@ -14,7 +16,7 @@ function makeClientState(qc: QueryClient) {
 
 describe('offline query persistence (IndexedDB)', () => {
   test('dehydrate/hydrate keeps only allowed success queries', async () => {
-    expect(typeof (globalThis as any).indexedDB).not.toBe('undefined')
+    expect(globalThis.indexedDB).toBeDefined()
 
     // Sanity check: IndexedDB KV works in the test environment.
     const kv = createIndexedDbKV()
@@ -36,13 +38,13 @@ describe('offline query persistence (IndexedDB)', () => {
 
     const persister = createOfflineQueryPersister()
     await persister.removeClient()
-    await persister.persistClient(makeClientState(qc1) as unknown as any)
+    await persister.persistClient(makeClientState(qc1))
 
     const restored = await persister.restoreClient()
     expect(restored).toBeTruthy()
 
     const qc2 = new QueryClient()
-    hydrate(qc2, (restored as any).clientState)
+    hydrate(qc2, (restored as PersistedClient).clientState)
 
     expect(qc2.getQueryData(['exercises', 'list'])).toEqual({ ok: 1 })
     expect(qc2.getQueryData(['reference', 'muscles'])).toEqual([{ id: 1 }])
@@ -56,15 +58,19 @@ describe('offline query persistence (IndexedDB)', () => {
   })
 
   test('graceful fallback when IndexedDB is unavailable', async () => {
-    const original = (globalThis as any).indexedDB
-    ;(globalThis as any).indexedDB = undefined
+    const g = globalThis as typeof globalThis & { indexedDB?: IDBFactory }
+    const original = g.indexedDB
+    g.indexedDB = undefined
 
     const persister = createOfflineQueryPersister()
-    await expect(persister.persistClient({} as any)).resolves.toBeUndefined()
+    const emptyState: DehydratedState = { queries: [], mutations: [] }
+    await expect(
+      persister.persistClient({ buster: '', timestamp: 0, clientState: emptyState }),
+    ).resolves.toBeUndefined()
     await expect(persister.restoreClient()).resolves.toBeUndefined()
     await expect(persister.removeClient()).resolves.toBeUndefined()
 
-    ;(globalThis as any).indexedDB = original
+    g.indexedDB = original
   })
 
   test('version bump / cache invalidation via buster', async () => {
@@ -78,7 +84,7 @@ describe('offline query persistence (IndexedDB)', () => {
       buster: 'old',
       timestamp: Date.now(),
       clientState: dehydrate(qc1, { shouldDehydrateQuery: shouldDehydrateOfflineQuery }),
-    } as any)
+    })
 
     const qc2 = new QueryClient()
     await persistQueryClientRestore({
@@ -86,9 +92,8 @@ describe('offline query persistence (IndexedDB)', () => {
       persister,
       buster: 'new',
       maxAge: 1000 * 60 * 60,
-    } as any)
+    })
 
     expect(qc2.getQueryData(['exercises', 'list'])).toBeUndefined()
   })
 })
-

@@ -6,18 +6,68 @@ services:
     image: prom/prometheus:latest
     container_name: fittracker-prometheus
     restart: unless-stopped
+    environment:
+      FITTRACKER_BACKEND_SCRAPE_TARGET: ${FITTRACKER_BACKEND_SCRAPE_TARGET:-backend:8000}
+      FITTRACKER_BACKEND_READINESS_URL: ${FITTRACKER_BACKEND_READINESS_URL:-http://backend:8000/api/v1/system/ready}
+    entrypoint: ["/bin/sh", "/etc/prometheus/prometheus-entrypoint.sh"]
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=15d'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.yml.template:/etc/prometheus/prometheus.yml.template:ro
+      - ./prometheus-entrypoint.sh:/etc/prometheus/prometheus-entrypoint.sh:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
+    networks:
+      - monitoring
+      - fittracker-network
+    depends_on:
+      - alertmanager
+      - blackbox-exporter
+
+  # Alertmanager — маршрутизация алертов (Telegram)
+  alertmanager:
+    image: prom/alertmanager:v0.27.1
+    container_name: fittracker-alertmanager
+    restart: unless-stopped
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        if [ -z "$$TELEGRAM_CHAT_ID" ]; then
+          echo "alertmanager: set TELEGRAM_CHAT_ID in the environment (e.g. .env next to compose)." >&2
+          exit 1
+        fi
+        mkdir -p /secrets
+        umask 077
+        printf '%s' "$$TELEGRAM_BOT_TOKEN" > /secrets/bot_token
+        sed "s/CHAT_ID_PLACEHOLDER/$$TELEGRAM_CHAT_ID/" /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.effective.yml
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.effective.yml --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    networks:
+      - monitoring
+
+  # Blackbox exporter — HTTP probes (readiness)
+  blackbox-exporter:
+    image: quay.io/prometheus/blackbox-exporter:v0.25.0
+    container_name: fittracker-blackbox-exporter
+    restart: unless-stopped
+    command:
+      - "--config.file=/config/blackbox.yml"
+    volumes:
+      - ./blackbox.yml:/config/blackbox.yml:ro
     networks:
       - monitoring
       - fittracker-network
@@ -112,6 +162,7 @@ services:
 
 volumes:
   prometheus_data:
+  alertmanager_data:
   grafana_data:
   loki_data:
 

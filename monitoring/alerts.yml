@@ -1,0 +1,47 @@
+# Prometheus alerting rules (FitTracker Pro).
+# HTTP: ``http_requests_total`` — полный instrumentator при ENABLE_PROMETHEUS_METRICS=true
+# или минимальный счётчик в бэкенде при false (те же лейблы, status «5xx»).
+
+groups:
+  - name: fittracker
+    interval: 30s
+    rules:
+      - alert: InstanceDown
+        expr: up{job="fittracker-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend scrape target is down"
+          description: >-
+            Prometheus не получает метрики с {{ $labels.instance }} (job {{ $labels.job }}) дольше 1 минуты.
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            (
+              sum(rate(http_requests_total{job="fittracker-backend",status="5xx"}[5m]))
+              /
+              clamp_min(sum(rate(http_requests_total{job="fittracker-backend"}[5m])), 1e-9)
+            ) > 0.05
+          )
+          unless sum(rate(http_requests_total{job="fittracker-backend"}[5m])) < 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx rate on backend"
+          description: >-
+            Более 5% ответов API — 5xx за 5 минут (job fittracker-backend). Проверьте логи и нагрузку.
+
+      - alert: DatabaseConnectionFailed
+        expr: |
+          probe_success{job="blackbox-http-ready"} == 0
+          or probe_http_status_code{job="blackbox-http-ready"} != 200
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Readiness /api/v1/system/ready is not OK"
+          description: >-
+            Blackbox probe к {{ $labels.instance }}: не HTTP 200 (degraded БД/Redis/migrations или сервис недоступен).

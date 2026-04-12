@@ -9,7 +9,6 @@ import logging
 from starlette.requests import Request
 
 from app.core.security import verify_token
-from app.infrastructure.telegram_auth import validate_and_get_user
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +30,13 @@ def path_needs_body_for_rate_limit_identity(path: str, method: str) -> bool:
         return False
     if path.endswith("/auth/refresh"):
         return True
-    if path.endswith("/telegram") and "/auth/" in path:
-        return True
+    # POST /auth/telegram is rate-limited by SlowAPI per client IP (not initData user id).
     return False
 
 
 def telegram_user_id_from_body_for_rate_limit(path: str, method: str, body: bytes) -> int | None:
     """
-    Telegram user id for rate limiting from JSON body (refresh JWT or validated WebApp initData).
+    Telegram user id for rate limiting from JSON body (refresh JWT on ``/auth/refresh``).
 
     Invalid or unsigned payloads return None so the caller falls back to IP-based limiting.
     """
@@ -56,24 +54,5 @@ def telegram_user_id_from_body_for_rate_limit(path: str, method: str, body: byte
         if not token or not isinstance(token, str):
             return None
         return verify_token(token, token_type="refresh")
-
-    if path.endswith("/telegram") and "/auth/" in path:
-        init_data = data.get("init_data")
-        if not init_data or not isinstance(init_data, str):
-            return None
-        try:
-            is_valid, user_data, _ = validate_and_get_user(init_data)
-        except Exception as e:
-            logger.debug("initData validation for rate limit: %s", e)
-            return None
-        if not is_valid or not user_data:
-            return None
-        uid = user_data.get("id")
-        if uid is None:
-            return None
-        try:
-            return int(uid)
-        except (TypeError, ValueError):
-            return None
 
     return None

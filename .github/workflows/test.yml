@@ -65,6 +65,9 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:ci
 
+      - name: Enforce frontend coverage baseline (no regressions)
+        run: npm run coverage:baseline:check
+
       - name: Build (emit bundle stats)
         run: BUNDLE_STATS=1 npm run build
 
@@ -204,6 +207,308 @@ jobs:
             ./frontend/playwright-report
             ./frontend/test-results
 
+  e2e-playwright-default:
+    name: E2E Playwright (default suite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run default Playwright CI suite
+        run: npm run e2e:ci
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-default-suite-report
+          path: |
+            ./frontend/playwright-report
+            ./frontend/test-results
+
+  e2e-playwright-mobile:
+    name: E2E Playwright (mobile projects)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run mobile-tagged Playwright suite
+        run: npm run e2e:ci:mobile
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-mobile-report
+          path: |
+            ./frontend/playwright-report
+            ./frontend/test-results
+
+  e2e-mvp-golden-path:
+    name: E2E MVP golden path (mvp-regression spec)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run MVP regression spec (GitLab parity gate)
+        run: npm run e2e:mvp
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-mvp-golden-path-report
+          path: |
+            ./frontend/playwright-report
+            ./frontend/test-results
+
+  db-migrations-fresh:
+    name: DB migrations (fresh database)
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+asyncpg://fittracker:fittracker_ci_password@127.0.0.1:5432/fittracker_test
+      DATABASE_URL_SYNC: postgresql+psycopg2://fittracker:fittracker_ci_password@127.0.0.1:5432/fittracker_test
+      SECRET_KEY: ci-test-secret-key-not-used-in-production-32chars
+      TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      TELEGRAM_WEBAPP_URL: https://test.example.com
+      DEBUG: "true"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fittracker_test
+          POSTGRES_USER: fittracker
+          POSTGRES_PASSWORD: fittracker_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fittracker -d fittracker_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: ./backend/requirements/dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements/dev.txt
+
+      - name: Validate migration chain integrity
+        run: python backend/tools/test_migrations.py --validate-chain
+
+      - name: Wait for Postgres
+        run: |
+          python - <<'PYEOF'
+          import time
+          import sys
+
+          import psycopg2
+
+          for i in range(30):
+              try:
+                  psycopg2.connect(
+                      dbname="fittracker_test",
+                      user="fittracker",
+                      password="fittracker_ci_password",
+                      host="127.0.0.1",
+                      port=5432,
+                  ).close()
+                  print("Postgres ready")
+                  sys.exit(0)
+              except Exception:
+                  time.sleep(1)
+          print("Postgres not ready after 30s", file=sys.stderr)
+          sys.exit(1)
+          PYEOF
+
+      - name: Apply all migrations (clean DB)
+        working-directory: database/migrations
+        run: alembic upgrade head
+
+      - name: Confirm alembic_version at HEAD
+        run: |
+          python - <<'PYEOF'
+          import psycopg2
+
+          conn = psycopg2.connect(
+              dbname="fittracker_test",
+              user="fittracker",
+              password="fittracker_ci_password",
+              host="127.0.0.1",
+              port=5432,
+          )
+          cur = conn.cursor()
+          cur.execute("SELECT version_num FROM alembic_version")
+          row = cur.fetchone()
+          assert row is not None, "alembic_version table is empty after upgrade head"
+          print(f"HEAD revision confirmed: {row[0]}")
+          conn.close()
+          PYEOF
+
+  db-migrations-rollback:
+    name: DB migrations (rollback round-trip)
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+asyncpg://fittracker:fittracker_ci_password@127.0.0.1:5432/fittracker_test
+      DATABASE_URL_SYNC: postgresql+psycopg2://fittracker:fittracker_ci_password@127.0.0.1:5432/fittracker_test
+      SECRET_KEY: ci-test-secret-key-not-used-in-production-32chars
+      TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      TELEGRAM_WEBAPP_URL: https://test.example.com
+      DEBUG: "true"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fittracker_test
+          POSTGRES_USER: fittracker
+          POSTGRES_PASSWORD: fittracker_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fittracker -d fittracker_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: ./backend/requirements/dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements/dev.txt
+
+      - name: Wait for Postgres
+        run: |
+          python - <<'PYEOF'
+          import time
+          import sys
+
+          import psycopg2
+
+          for i in range(30):
+              try:
+                  psycopg2.connect(
+                      dbname="fittracker_test",
+                      user="fittracker",
+                      password="fittracker_ci_password",
+                      host="127.0.0.1",
+                      port=5432,
+                  ).close()
+                  print("Postgres ready")
+                  sys.exit(0)
+              except Exception:
+                  time.sleep(1)
+          print("Postgres not ready after 30s", file=sys.stderr)
+          sys.exit(1)
+          PYEOF
+
+      - name: Upgrade, downgrade, and round-trip
+        working-directory: database/migrations
+        run: |
+          set -euo pipefail
+          alembic upgrade head
+          echo "Phase 1 PASSED: upgrade head OK"
+          alembic downgrade -1
+          echo "Phase 2 PASSED: downgrade -1 OK"
+          alembic downgrade base
+          echo "Phase 3 PASSED: downgrade base OK"
+          alembic upgrade head
+          echo "Phase 4 PASSED: upgrade head after full rollback OK"
+
+      - name: Confirm alembic_version after round-trip
+        run: |
+          python - <<'PYEOF'
+          import psycopg2
+
+          conn = psycopg2.connect(
+              dbname="fittracker_test",
+              user="fittracker",
+              password="fittracker_ci_password",
+              host="127.0.0.1",
+              port=5432,
+          )
+          cur = conn.cursor()
+          cur.execute("SELECT version_num FROM alembic_version")
+          row = cur.fetchone()
+          assert row is not None, "alembic_version empty after round-trip"
+          print(f"Round-trip confirmed. Final revision: {row[0]}")
+          conn.close()
+          PYEOF
+
   api-contract:
     name: API Contract (OpenAPI drift)
     runs-on: ubuntu-latest
@@ -298,11 +603,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/dev.txt
 
+      - name: Verify Python dependency graph (pip check)
+        run: python -m pip check
+
       - name: Backend lint (ruff)
         run: ruff check app
 
+      - name: Compile Python sources (syntax / import graph sanity)
+        run: python -m compileall -q app
+
       - name: Run tests with coverage
         run: pytest
+
+      - name: Enforce critical package coverage thresholds (coverage.xml)
+        run: python tools/check_coverage_thresholds.py coverage.xml
+
+      - name: Enforce backend coverage baseline (no regressions)
+        run: python tools/coverage_baseline.py check coverage.xml
 
       - name: Enforce critical module coverage (settings + telegram env)
         run: |
