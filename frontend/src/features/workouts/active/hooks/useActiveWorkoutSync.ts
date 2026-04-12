@@ -11,12 +11,17 @@ import {
     emitWorkoutSyncTelemetry,
     syncErrorTelemetryFields,
 } from '@shared/offline/observability/workoutSyncTelemetry'
+import { isRecoverableSyncError } from '@shared/offline/syncQueue'
+import {
+    clearWorkoutDraftFromLocalStorage,
+    writeWorkoutDraftToLocalStorage,
+} from '@features/workouts/active/lib/workoutDraftLocalStorage'
 
 // Aggressive debounce causes redundant requests; use a wider window instead.
 const DEBOUNCE_MS = 2000
-/** Паузы между повторами: 2 с, 4 с, 8 с (не больше 8 с). */
-const RETRY_BASE_DELAY_MS = 2000
-const RETRY_MAX_DELAY_MS = 8000
+/** Паузы между повторами: 1 с, 2 с, 4 с. */
+const RETRY_BASE_DELAY_MS = 1000
+const RETRY_MAX_DELAY_MS = 4000
 const MAX_RETRY_ATTEMPTS = 3
 
 type UpdateSessionMutation = {
@@ -33,6 +38,8 @@ type BuildSyncPayload = (workout: WorkoutHistoryItem) => WorkoutSessionUpdateReq
 
 interface UseActiveWorkoutSyncParams {
     workoutId: number
+    /** Ключ localStorage `workout_draft_${userId}_${workoutId}` */
+    draftStorageUserId: string | number
     workout: WorkoutHistoryItem | undefined
     draftWorkoutId: number | null
     isActiveDraft: boolean
@@ -71,6 +78,7 @@ interface UseActiveWorkoutSyncResult {
 
 export function useActiveWorkoutSync({
     workoutId,
+    draftStorageUserId,
     workout,
     draftWorkoutId,
     isActiveDraft,
@@ -128,6 +136,8 @@ export function useActiveWorkoutSync({
     workoutIdRef.current = workoutId
     const detailQueryKeyRef = useRef(detailQueryKey)
     detailQueryKeyRef.current = detailQueryKey
+    const draftStorageUserIdRef = useRef(draftStorageUserId)
+    draftStorageUserIdRef.current = draftStorageUserId
 
     // Indirection refs so executeSync / scheduleDebounced can reference each
     // other without circular useCallback dependencies.
@@ -199,6 +209,7 @@ export function useActiveWorkoutSync({
         // Offline: mark as queued; the 'online' listener will retry.
         if (!getIsOnline()) {
             setIsOffline(true)
+            writeWorkoutDraftToLocalStorage(draftStorageUserIdRef.current, workoutIdRef.current, payload)
             updateSyncStateRef.current('offline-queued')
             emitWorkoutSyncTelemetry('local_update_queued', {
                 channel: 'active_session',
@@ -232,6 +243,7 @@ export function useActiveWorkoutSync({
                     lastPersistedSnapshotRef.current = snapshot
                     retryAttemptRef.current = 0
                     setLastSyncedPayload(payload)
+                    clearWorkoutDraftFromLocalStorage(draftStorageUserIdRef.current, workoutIdRef.current)
                     queryClientRef.current.setQueryData(detailQueryKeyRef.current, data)
                     updateSyncStateRef.current('synced')
                     emitWorkoutSyncTelemetry('sync_succeeded', {
@@ -267,6 +279,13 @@ export function useActiveWorkoutSync({
                 },
                 onError: (error: unknown) => {
                     inFlightRef.current = false
+                    if (isRecoverableSyncError(error)) {
+                        writeWorkoutDraftToLocalStorage(
+                            draftStorageUserIdRef.current,
+                            workoutIdRef.current,
+                            payload,
+                        )
+                    }
                     updateSyncStateRef.current('error')
                     hadSyncIssueRef.current = true
                     emitWorkoutSyncTelemetry('sync_failed', {

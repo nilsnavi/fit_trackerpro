@@ -1,4 +1,4 @@
-export type OfflineBannerVariant = 'offline' | 'reconnecting'
+export type OfflineBannerVariant = 'offline' | 'online-syncing' | 'online-saved'
 
 export interface OfflineBannerProps {
     variant: OfflineBannerVariant
@@ -21,7 +21,21 @@ export function OfflineBanner({ variant, className = '' }: OfflineBannerProps) {
                 className={`${base} ${className}`.trim()}
             >
                 <div className="rounded-lg border border-warning/40 bg-warning/15 px-3 py-2 text-center text-sm font-medium text-telegram-text shadow-sm">
-                    Нет соединения — данные сохранены локально
+                    Нет соединения — данные сохраняются локально
+                </div>
+            </div>
+        )
+    }
+
+    if (variant === 'online-syncing') {
+        return (
+            <div
+                role="status"
+                aria-live="polite"
+                className={`${base} ${className}`.trim()}
+            >
+                <div className="rounded-lg border border-border bg-telegram-secondary-bg px-3 py-2 text-center text-sm font-medium text-telegram-text shadow-sm">
+                    Синхронизация...
                 </div>
             </div>
         )
@@ -33,8 +47,8 @@ export function OfflineBanner({ variant, className = '' }: OfflineBannerProps) {
             aria-live="polite"
             className={`${base} ${className}`.trim()}
         >
-            <div className="rounded-lg border border-border bg-telegram-secondary-bg px-3 py-2 text-center text-sm font-medium text-telegram-text shadow-sm">
-                Соединение восстановлено — синхронизация…
+            <div className="rounded-lg border border-warning/35 bg-warning/10 px-3 py-2 text-center text-sm font-medium text-telegram-text shadow-sm">
+                Данные сохранены ✓
             </div>
         </div>
     )

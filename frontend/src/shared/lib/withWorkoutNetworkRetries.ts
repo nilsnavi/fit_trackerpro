@@ -1,4 +1,4 @@
-const WORKOUT_API_RETRY_DELAYS_MS = [2000, 4000, 8000] as const
+const WORKOUT_API_RETRY_DELAYS_MS = [1000, 2000, 4000] as const
 
 function delay(ms: number): Promise<void> {
     return new Promise((resolve) => {
@@ -7,7 +7,7 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * До 4 попыток (первая + 3 повтора) с паузами 2 с, 4 с, 8 с — для запросов активной тренировки.
+ * До 4 попыток (первая + 3 повтора) с паузами 1 с, 2 с, 4 с — для запросов активной тренировки.
  */
 export async function withWorkoutNetworkRetries<T>(fn: () => Promise<T>): Promise<T> {
     let lastError: unknown

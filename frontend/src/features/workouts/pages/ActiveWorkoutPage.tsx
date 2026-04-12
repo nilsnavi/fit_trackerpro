@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -9,6 +9,7 @@ import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useSyncQueueWithRetry } from '@shared/hooks/useSyncQueueWithRetry'
 import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { queryKeys } from '@shared/api/queryKeys'
+import { isRecoverableSyncError } from '@shared/offline/syncQueue'
 
 import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery'
 import { useExercisesCatalogQuery } from '@features/exercises/hooks/useExercisesCatalogQuery'
@@ -36,6 +37,10 @@ import {
 import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
 
 import { buildSyncPayload, formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
+import {
+    clearWorkoutDraftFromLocalStorage,
+    writeWorkoutDraftToLocalStorage,
+} from '@features/workouts/active/lib/workoutDraftLocalStorage'
 import { useActiveWorkoutLifecycle } from '@features/workouts/active/hooks/useActiveWorkoutLifecycle'
 import { useActiveWorkoutCompletion } from '@features/workouts/active/hooks/useActiveWorkoutCompletion'
 import { useActiveWorkoutExerciseActions } from '@features/workouts/active/hooks/useActiveWorkoutExerciseActions'
@@ -61,7 +66,9 @@ export function ActiveWorkoutPage() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const tg = useTelegramWebApp()
-    const { isOnline, wasOffline } = useNetworkStatus()
+    const { isOnline } = useNetworkStatus()
+    const [reconnectBanner, setReconnectBanner] = useState<'hidden' | 'syncing' | 'saved'>('hidden')
+    const prevOnlineRef = useRef(isOnline)
 
     const workoutId: number = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId: boolean = Number.isFinite(workoutId)
@@ -119,6 +126,7 @@ export function ActiveWorkoutPage() {
     const updateSessionMutation = useUpdateWorkoutSessionMutation()
 
     const { data: profile } = useCurrentUserQuery()
+    const draftStorageUserId = profile?.id ?? 'anon'
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
@@ -145,6 +153,7 @@ export function ActiveWorkoutPage() {
         dismissSessionSyncFailure,
     } = useActiveWorkoutSync({
         workoutId,
+        draftStorageUserId,
         workout,
         draftWorkoutId,
         isActiveDraft,
@@ -161,11 +170,50 @@ export function ActiveWorkoutPage() {
         buildSyncPayload,
     })
 
+    useEffect(() => {
+        if (!isActiveDraft) {
+            setReconnectBanner('hidden')
+            prevOnlineRef.current = isOnline
+            return undefined
+        }
+
+        const wasOnline = prevOnlineRef.current
+        prevOnlineRef.current = isOnline
+
+        if (wasOnline && !isOnline) {
+            setReconnectBanner('hidden')
+        }
+
+        if (!wasOnline && isOnline) {
+            setReconnectBanner('syncing')
+            const toSaved = window.setTimeout(() => {
+                setReconnectBanner('saved')
+            }, 2000)
+            const toHidden = window.setTimeout(() => {
+                setReconnectBanner('hidden')
+            }, 4000)
+            return () => {
+                window.clearTimeout(toSaved)
+                window.clearTimeout(toHidden)
+            }
+        }
+
+        return undefined
+    }, [isOnline, isActiveDraft])
+
     const sendSessionPatch = useCallback(
         async (payload: WorkoutSessionUpdateRequest) => {
-            await updateSessionMutation.mutateAsync({ workoutId, payload })
+            try {
+                await updateSessionMutation.mutateAsync({ workoutId, payload })
+                clearWorkoutDraftFromLocalStorage(draftStorageUserId, workoutId)
+            } catch (e) {
+                if (isRecoverableSyncError(e)) {
+                    writeWorkoutDraftToLocalStorage(draftStorageUserId, workoutId, payload)
+                }
+                throw e
+            }
         },
-        [updateSessionMutation, workoutId],
+        [draftStorageUserId, updateSessionMutation, workoutId],
     )
 
     const { pushPendingSync, clearPendingSync, notifySetCompleted } = useWorkoutSync({
@@ -411,7 +459,12 @@ export function ActiveWorkoutPage() {
             className={`p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
         >
             {isActiveDraft && !isOnline ? <OfflineBanner variant="offline" /> : null}
-            {isActiveDraft && isOnline && wasOffline ? <OfflineBanner variant="reconnecting" /> : null}
+            {isActiveDraft && isOnline && reconnectBanner === 'syncing' ? (
+                <OfflineBanner variant="online-syncing" />
+            ) : null}
+            {isActiveDraft && isOnline && reconnectBanner === 'saved' ? (
+                <OfflineBanner variant="online-saved" />
+            ) : null}
 
             {shouldLoadModals ? (
                 <Suspense fallback={null}>
