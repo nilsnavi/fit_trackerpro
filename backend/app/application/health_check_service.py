@@ -2,7 +2,7 @@
 Health check service for dependency-aware readiness checks.
 Implements:
 - /health/live → liveness (app is running)
-- /health/ready → readiness (PostgreSQL, Redis, Alembic head)
+- /health/ready → readiness (PostgreSQL SELECT 1, Redis PING)
 """
 
 from __future__ import annotations
@@ -29,7 +29,5 @@ class HealthCheckService:
 
     @staticmethod
     async def readiness() -> ReadinessResponse:
-        """
-        Readiness probe: checks database, Redis, and Alembic migration state.
-        """
+        """Readiness probe: PostgreSQL and Redis (each probe wrapped in ``wait_for(..., 2s)``)."""
         return await run_readiness_checks()

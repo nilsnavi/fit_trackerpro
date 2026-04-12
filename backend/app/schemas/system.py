@@ -33,45 +33,27 @@ class LivenessResponse(BaseModel):
     timestamp: str = Field(..., description="UTC ISO8601 timestamp")
 
 
-class ReadinessCheckDatabase(BaseModel):
-    status: Literal["ok", "error"] = Field(...)
-    latency_ms: Optional[float] = Field(
-        default=None,
-        description="Round-trip time in milliseconds (best-effort on errors).",
-    )
-
-
-class ReadinessCheckRedis(BaseModel):
-    status: Literal["ok", "error"] = Field(...)
-    latency_ms: Optional[float] = Field(
-        default=None,
-        description="Round-trip time in milliseconds (best-effort on errors).",
-    )
-
-
-class ReadinessMigrationsCheck(BaseModel):
-    status: Literal["ok", "pending", "error"] = Field(...)
-    current: Optional[str] = Field(default=None, description="Revision in alembic_version")
-    head: Optional[str] = Field(default=None, description="Alembic head revision from scripts")
-
-
 class ReadinessChecks(BaseModel):
-    database: ReadinessCheckDatabase
-    redis: ReadinessCheckRedis
-    migrations: ReadinessMigrationsCheck
+    """Per-dependency result: ``\"ok\"`` or ``\"error: …\"`` (human-readable failure)."""
+
+    database: str = Field(
+        ...,
+        description='``"ok"`` or ``"error: …"`` from PostgreSQL ``SELECT 1``.',
+    )
+    redis: str = Field(
+        ...,
+        description='``"ok"`` or ``"error: …"`` from Redis ``PING``.',
+    )
 
 
 class ReadinessResponse(BaseModel):
-    """Readiness probe: PostgreSQL, Redis, and Alembic migration alignment."""
+    """Readiness probe: PostgreSQL (async session) and Redis (shared async client)."""
 
-    status: Literal["ready", "degraded", "not_ready"] = Field(
+    status: Literal["ready", "not_ready"] = Field(
         ...,
-        description="'ready' if DB/Redis OK and migrations match head; "
-        "'degraded' if DB/Redis OK but migrations pending; "
-        "'not_ready' on dependency failures.",
+        description="'ready' only if both checks are ok; otherwise 'not_ready'.",
     )
     checks: ReadinessChecks = Field(...)
-    timestamp: str = Field(..., description="UTC ISO8601 timestamp with Z suffix")
 
 
 class ServiceVersionResponse(BaseModel):

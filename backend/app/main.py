@@ -249,12 +249,12 @@ async def app_liveness():
 @app.get(
     "/health/ready",
     tags=[TAG_SYSTEM],
-    summary="Readiness probe (PostgreSQL, Redis, Alembic)",
+    summary="Readiness probe (PostgreSQL, Redis)",
     response_model=ReadinessResponse,
 )
 async def app_readiness():
     """
-    Readiness probe (алиас ``/health/ready``): PostgreSQL, Redis, миграции Alembic.
+    Readiness probe (алиас ``/health/ready``): PostgreSQL и Redis.
     HTTP 200 только при ``status == "ready"``; иначе 503 с телом проверок.
     """
     readiness = await HealthCheckService.readiness()

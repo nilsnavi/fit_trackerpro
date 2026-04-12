@@ -3,13 +3,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.application.health_check_service import HealthCheckService
 from app.main import app
-from app.schemas.system import (
-    ReadinessCheckDatabase,
-    ReadinessChecks,
-    ReadinessCheckRedis,
-    ReadinessMigrationsCheck,
-    ReadinessResponse,
-)
+from app.schemas.system import ReadinessChecks, ReadinessResponse
 
 
 @pytest.mark.unit
@@ -59,11 +53,9 @@ async def test_readiness_returns_503_when_not_ready(client: AsyncClient, monkeyp
     async def _not_ready() -> ReadinessResponse:
         return ReadinessResponse(
             status="not_ready",
-            timestamp="2026-04-08T00:00:00Z",
             checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="error", latency_ms=2.0),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=1.0),
-                migrations=ReadinessMigrationsCheck(status="ok", current="abc", head="abc"),
+                database="error: connection failed",
+                redis="ok",
             ),
         )
 
@@ -73,7 +65,7 @@ async def test_readiness_returns_503_when_not_ready(client: AsyncClient, monkeyp
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "not_ready"
-    assert data["checks"]["database"]["status"] == "error"
+    assert data["checks"]["database"].startswith("error:")
 
 
 @pytest.mark.unit
@@ -83,11 +75,9 @@ async def test_readiness_returns_200_when_ready(client: AsyncClient, monkeypatch
     async def _ready() -> ReadinessResponse:
         return ReadinessResponse(
             status="ready",
-            timestamp="2026-04-08T00:00:00Z",
             checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="ok", latency_ms=1.2),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=0.8),
-                migrations=ReadinessMigrationsCheck(status="ok", current="rev1", head="rev1"),
+                database="ok",
+                redis="ok",
             ),
         )
 
@@ -97,30 +87,8 @@ async def test_readiness_returns_200_when_ready(client: AsyncClient, monkeypatch
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ready"
-    assert data["checks"]["database"]["status"] == "ok"
-
-
-@pytest.mark.unit
-async def test_readiness_degraded_returns_503(client: AsyncClient, monkeypatch):
-    """Migrations pending → status degraded → HTTP 503 for orchestrators."""
-
-    async def _degraded() -> ReadinessResponse:
-        return ReadinessResponse(
-            status="degraded",
-            timestamp="2026-04-08T00:00:00Z",
-            checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="ok", latency_ms=1.0),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=1.0),
-                migrations=ReadinessMigrationsCheck(
-                    status="pending", current="oldrev", head="newrev"
-                ),
-            ),
-        )
-
-    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_degraded))
-    response = await client.get("/api/v1/system/ready")
-    assert response.status_code == 503
-    assert response.json()["status"] == "degraded"
+    assert data["checks"]["database"] == "ok"
+    assert data["checks"]["redis"] == "ok"
 
 
 @pytest.mark.unit
@@ -130,11 +98,9 @@ async def test_system_readiness_returns_503_when_not_ready(client: AsyncClient, 
     async def _not_ready() -> ReadinessResponse:
         return ReadinessResponse(
             status="not_ready",
-            timestamp="2026-04-08T00:00:00Z",
             checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="error", latency_ms=None),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=1.0),
-                migrations=ReadinessMigrationsCheck(status="ok", current="a", head="a"),
+                database="error: unavailable",
+                redis="ok",
             ),
         )
 
@@ -264,11 +230,9 @@ async def test_readiness_db_unavailable_redis_healthy(client: AsyncClient, monke
     async def _partial_ready() -> ReadinessResponse:
         return ReadinessResponse(
             status="not_ready",
-            timestamp="2026-04-08T00:00:00Z",
             checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="error", latency_ms=1.5),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=3.2),
-                migrations=ReadinessMigrationsCheck(status="ok", current="a", head="a"),
+                database="error: connection refused",
+                redis="ok",
             ),
         )
 
@@ -278,8 +242,8 @@ async def test_readiness_db_unavailable_redis_healthy(client: AsyncClient, monke
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "not_ready"
-    assert data["checks"]["database"]["status"] == "error"
-    assert data["checks"]["redis"]["status"] == "ok"
+    assert data["checks"]["database"].startswith("error:")
+    assert data["checks"]["redis"] == "ok"
 
 
 @pytest.mark.unit
@@ -289,11 +253,9 @@ async def test_readiness_redis_unavailable_db_healthy(client: AsyncClient, monke
     async def _partial_ready() -> ReadinessResponse:
         return ReadinessResponse(
             status="not_ready",
-            timestamp="2026-04-08T00:00:00Z",
             checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="ok", latency_ms=2.1),
-                redis=ReadinessCheckRedis(status="error", latency_ms=5.0),
-                migrations=ReadinessMigrationsCheck(status="ok", current="a", head="a"),
+                database="ok",
+                redis="error: Connection refused",
             ),
         )
 
@@ -303,8 +265,8 @@ async def test_readiness_redis_unavailable_db_healthy(client: AsyncClient, monke
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "not_ready"
-    assert data["checks"]["database"]["status"] == "ok"
-    assert data["checks"]["redis"]["status"] == "error"
+    assert data["checks"]["database"] == "ok"
+    assert data["checks"]["redis"] == "error: Connection refused"
 
 
 @pytest.mark.unit
@@ -314,11 +276,9 @@ async def test_readiness_all_deps_healthy(client: AsyncClient, monkeypatch):
     async def _all_ready() -> ReadinessResponse:
         return ReadinessResponse(
             status="ready",
-            timestamp="2026-04-08T00:00:00Z",
             checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="ok", latency_ms=1.2),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=0.8),
-                migrations=ReadinessMigrationsCheck(status="ok", current="head1", head="head1"),
+                database="ok",
+                redis="ok",
             ),
         )
 
@@ -328,34 +288,8 @@ async def test_readiness_all_deps_healthy(client: AsyncClient, monkeypatch):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ready"
-    assert data["checks"]["database"]["status"] == "ok"
-    assert data["checks"]["redis"]["status"] == "ok"
-
-
-@pytest.mark.unit
-async def test_readiness_response_time_populated(client: AsyncClient, monkeypatch):
-    """Readiness response includes latency_ms for database and redis."""
-
-    async def _ready_with_times() -> ReadinessResponse:
-        return ReadinessResponse(
-            status="ready",
-            timestamp="2026-04-08T00:00:00Z",
-            checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="ok", latency_ms=1.5),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=3.2),
-                migrations=ReadinessMigrationsCheck(status="ok", current="x", head="x"),
-            ),
-        )
-
-    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_ready_with_times))
-
-    response = await client.get("/health/ready")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["checks"]["database"]["latency_ms"] is not None
-    assert data["checks"]["redis"]["latency_ms"] is not None
-    assert isinstance(data["checks"]["database"]["latency_ms"], (int, float))
-    assert isinstance(data["checks"]["redis"]["latency_ms"], (int, float))
+    assert data["checks"]["database"] == "ok"
+    assert data["checks"]["redis"] == "ok"
 
 
 @pytest.mark.unit
@@ -365,11 +299,9 @@ async def test_liveness_independent_of_deps(client: AsyncClient, monkeypatch):
     async def _not_ready() -> ReadinessResponse:
         return ReadinessResponse(
             status="not_ready",
-            timestamp="2026-04-08T00:00:00Z",
             checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="error", latency_ms=None),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=1.0),
-                migrations=ReadinessMigrationsCheck(status="ok", current="a", head="a"),
+                database="error: down",
+                redis="ok",
             ),
         )
 
@@ -384,29 +316,3 @@ async def test_liveness_independent_of_deps(client: AsyncClient, monkeypatch):
     data = liveness_response.json()
     assert data["status"] == "alive"
     assert "timestamp" in data
-
-
-@pytest.mark.unit
-async def test_readiness_timeout_handling(client: AsyncClient, monkeypatch):
-    """Readiness reflects latency_ms for slow database."""
-
-    async def _slow_ready() -> ReadinessResponse:
-        return ReadinessResponse(
-            status="ready",
-            timestamp="2026-04-08T00:00:00Z",
-            checks=ReadinessChecks(
-                database=ReadinessCheckDatabase(status="ok", latency_ms=150.5),
-                redis=ReadinessCheckRedis(status="ok", latency_ms=1.0),
-                migrations=ReadinessMigrationsCheck(status="ok", current="a", head="a"),
-            ),
-        )
-
-    monkeypatch.setattr(HealthCheckService, "readiness", staticmethod(_slow_ready))
-
-    response = await client.get("/health/ready")
-    assert response.status_code == 200
-    data = response.json()
-    db_latency = data["checks"]["database"]["latency_ms"]
-    assert db_latency is not None
-    assert isinstance(db_latency, (int, float))
-    assert db_latency > 100
