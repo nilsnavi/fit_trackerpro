@@ -1,0 +1,2 @@
+# Shell-скрипты: всегда LF (иначе bash на Linux в CI/на сервере ломается при core.autocrlf на Windows)
+*.sh text eol=lf
