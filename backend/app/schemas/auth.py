@@ -187,6 +187,15 @@ class TelegramAuthRequest(BaseModel):
     )
 
 
+class TelegramLookupResponse(BaseModel):
+    """Whether a database user already exists for validated initData (no user creation)."""
+
+    registered: bool = Field(
+        ...,
+        description="True when a user row exists for this Telegram account.",
+    )
+
+
 class TelegramUserData(BaseModel):
     """Telegram user data model"""
 

@@ -3,18 +3,27 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { useTelegramContext } from '@app/providers/TelegramProvider'
 import { OnboardingScreen } from '@/components/Onboarding'
-import { exchangeTelegramInitData } from '@/hooks/useTelegramAuth'
+import {
+    exchangeTelegramInitData,
+    lookupTelegramRegistration,
+    type TelegramExchangeResult,
+} from '@/hooks/useTelegramAuth'
 import { authApi } from '@features/profile/api/authApi'
+import { getTelegramBotUsername } from '@shared/config/runtime'
 import { getErrorMessage } from '@shared/errors'
+import { cn } from '@shared/lib/cn'
 import { Button } from '@shared/ui/Button'
 import { Card } from '@shared/ui/Card'
 import { useAuthStore } from '@/stores/authStore'
+
+import { NewUserWelcomeScreen } from './NewUserWelcomeScreen'
 
 type BootstrapStatus =
     | 'loading'
     | 'ready'
     | 'error'
-    | 'no_telegram'
+    | 'unauthorized'
+    | 'new_user'
     | 'expired'
     | 'dev_local'
 
@@ -34,6 +43,19 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
 
     const [devPastedInit, setDevPastedInit] = useState('')
     const [devAuthError, setDevAuthError] = useState<string | null>(null)
+
+    const rawInitData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData ?? '' : ''
+
+    const applyAuthResult = useCallback(
+        (result: TelegramExchangeResult) => {
+            setUsedFallback(result.via === 'fetch')
+            setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken })
+            setNeedsOnboarding(result.onboardingRequired)
+            setStatus('ready')
+            hapticFeedback({ type: 'notification', notificationType: 'success' })
+        },
+        [hapticFeedback, setTokens],
+    )
 
     const runBootstrap = useCallback(async () => {
         setError(null)
@@ -58,11 +80,7 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
         if (import.meta.env.DEV && !initData && devInitFromEnv) {
             try {
                 const result = await exchangeTelegramInitData(devInitFromEnv)
-                setUsedFallback(result.via === 'fetch')
-                setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken })
-                setNeedsOnboarding(result.onboardingRequired)
-                setStatus('ready')
-                hapticFeedback({ type: 'notification', notificationType: 'success' })
+                applyAuthResult(result)
             } catch (e) {
                 setDevAuthError(getErrorMessage(e))
                 setStatus('dev_local')
@@ -75,23 +93,25 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
                 setStatus('dev_local')
                 return
             }
-            setStatus('no_telegram')
+            setStatus('unauthorized')
             return
         }
 
         try {
+            const { registered } = await lookupTelegramRegistration(initData)
+            if (!registered) {
+                setStatus('new_user')
+                return
+            }
+
             const result = await exchangeTelegramInitData(initData)
-            setUsedFallback(result.via === 'fetch')
-            setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken })
-            setNeedsOnboarding(result.onboardingRequired)
-            setStatus('ready')
-            hapticFeedback({ type: 'notification', notificationType: 'success' })
+            applyAuthResult(result)
         } catch (e) {
             setError(getErrorMessage(e))
             setStatus('error')
             hapticFeedback({ type: 'notification', notificationType: 'error' })
         }
-    }, [clearAuth, hapticFeedback, initData, isAuthenticated, isTelegram, setTokens])
+    }, [applyAuthResult, clearAuth, hapticFeedback, initData, isAuthenticated, isTelegram])
 
     useEffect(() => {
         void runBootstrap()
@@ -121,23 +141,25 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
         setDevAuthError(null)
         try {
             const result = await exchangeTelegramInitData(raw)
-            setUsedFallback(result.via === 'fetch')
-            setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken })
-            setNeedsOnboarding(result.onboardingRequired)
-            setStatus('ready')
+            applyAuthResult(result)
         } catch (e) {
             setDevAuthError(getErrorMessage(e))
         }
-    }, [devPastedInit, setTokens])
+    }, [applyAuthResult, devPastedInit])
+
+    const handleNewUserRegistered = useCallback(
+        (result: TelegramExchangeResult) => {
+            applyAuthResult(result)
+        },
+        [applyAuthResult],
+    )
 
     if (status === 'loading') {
         return (
             <div className="flex min-h-dvh items-center justify-center p-4">
                 <Card variant="info" className="w-full max-w-md">
                     <h1 className="text-lg font-semibold text-telegram-text">Подключение к Telegram</h1>
-                    <p className="mt-2 text-sm text-telegram-hint">
-                        Проверяем сессию и подготавливаем ваш профиль.
-                    </p>
+                    <p className="mt-2 text-sm text-telegram-hint">Проверяем initData и готовим сессию.</p>
                 </Card>
             </div>
         )
@@ -221,19 +243,46 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
         )
     }
 
-    if (status === 'no_telegram' && !isAuthenticated) {
+    if (status === 'unauthorized' && !isAuthenticated) {
+        const bot = getTelegramBotUsername().replace(/^@/, '').trim()
         return (
             <div className="flex min-h-dvh items-center justify-center p-4">
                 <Card variant="info" className="w-full max-w-md">
-                    <h1 className="text-lg font-semibold text-telegram-text">Откройте Mini App в Telegram</h1>
+                    <h1 className="text-lg font-semibold text-telegram-text">Откройте приложение в Telegram</h1>
                     <p className="mt-2 text-sm text-telegram-hint">
-                        Контекст Telegram недоступен. Запустите приложение через Telegram и попробуйте снова.
+                        {bot
+                            ? `Откройте приложение через Telegram бота @${bot}.`
+                            : 'Откройте приложение через Telegram-бота.'}
                     </p>
-                    <Button type="button" variant="secondary" className="mt-4 w-full" onClick={retry}>
+                    {bot ? (
+                        <a
+                            href={`https://t.me/${bot}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className={cn(
+                                'mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl font-medium transition-all',
+                                'bg-primary text-primary-foreground shadow-primary hover:bg-primary-600',
+                                'focus:outline-none focus:ring-2 focus:ring-primary/30',
+                            )}
+                        >
+                            Открыть бота
+                        </a>
+                    ) : null}
+                    <Button type="button" variant="secondary" className="mt-2 w-full" onClick={retry}>
                         Проверить снова
                     </Button>
                 </Card>
             </div>
+        )
+    }
+
+    if (status === 'new_user' && !isAuthenticated) {
+        return (
+            <NewUserWelcomeScreen
+                initData={rawInitData}
+                firstName={user?.first_name}
+                onRegistered={handleNewUserRegistered}
+            />
         )
     }
 

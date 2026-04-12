@@ -4,7 +4,7 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
     test('shows fallback screen when Telegram context is missing', async ({ page }) => {
         await page.goto('/')
 
-        await expect(page.getByRole('heading', { name: 'Откройте Mini App в Telegram' })).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'Откройте приложение в Telegram' })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Проверить снова' })).toBeVisible()
     })
 
