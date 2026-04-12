@@ -51,7 +51,7 @@ import {
 import type { WorkoutTemplateCreateRequest } from '@features/workouts/types/workouts';
 import { useCreateCustomExerciseMutation } from '@features/exercises/hooks/useExerciseMutations';
 import { useExerciseMuscleGroupsQuery } from '@features/exercises/hooks/useExerciseReferenceData';
-import { useExercises } from '@/hooks/useExercises';
+import { useExerciseCatalog } from '@/hooks/useExerciseCatalog';
 import {
     clearTemplateEditorDraft,
     loadTemplateEditorDraft,
@@ -637,18 +637,18 @@ export const WorkoutBuilder: React.FC = () => {
     const muscleGroupOptions = muscleGroupData?.muscle_groups ?? [];
 
     const {
-        items: filteredExercises,
+        exercises: filteredExercises,
         isLoading: isExercisesLoading,
-        isError: isExercisesError,
+        error: exercisesCatalogError,
         isFetchingNextPage,
         hasNextPage,
-        fetchNextPage,
+        fetchMore: fetchMoreExercises,
         refetch: refetchExercises,
-    } = useExercises({
+    } = useExerciseCatalog({
         search: debouncedSearchQuery,
-        muscleGroup: selectedMuscleGroup === 'all' ? undefined : selectedMuscleGroup,
-        category: selectedCategory === 'all' ? undefined : selectedCategory,
-        pageSize: 20,
+        muscleGroup: selectedMuscleGroup,
+        category: selectedCategory,
+        limit: 20,
         enabled: isSelectorOpen,
     });
 
@@ -954,7 +954,7 @@ export const WorkoutBuilder: React.FC = () => {
                                     <Skeleton key={`builder-exercise-skeleton-${index}`} className="h-[72px] w-full rounded-xl" />
                                 ))}
                             </div>
-                        ) : isExercisesError ? (
+                        ) : exercisesCatalogError != null ? (
                             <div className="space-y-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-6 text-center text-sm text-danger">
                                 <p>Не удалось загрузить упражнения.</p>
                                 <Button
@@ -970,7 +970,7 @@ export const WorkoutBuilder: React.FC = () => {
                             </div>
                         ) : filteredExercises.length === 0 ? (
                             <div className="text-center py-8 text-telegram-hint">
-                                <p>Ничего не найдено</p>
+                                <p>Упражнения не найдены</p>
                                 <p className="mt-1 text-sm">
                                     Попробуйте другой запрос или смените группу мышц.
                                 </p>
@@ -1003,7 +1003,7 @@ export const WorkoutBuilder: React.FC = () => {
                                         fullWidth
                                         isLoading={isFetchingNextPage}
                                         onClick={() => {
-                                            void fetchNextPage()
+                                            fetchMoreExercises()
                                         }}
                                     >
                                         Показать ещё

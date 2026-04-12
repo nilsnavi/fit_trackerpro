@@ -17,6 +17,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:vitest": "vitest run",
+    "test:vitest:watch": "vitest",
     "coverage:baseline:check": "node scripts/coverage-baseline.mjs check",
     "coverage:baseline:update": "node scripts/coverage-baseline.mjs update",
     "api:types:generate": "node scripts/generate-openapi-types.mjs",
@@ -86,6 +88,7 @@
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
     "vite-plugin-mkcert": "^1.17.3",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^2.1.9"
   }
 }
