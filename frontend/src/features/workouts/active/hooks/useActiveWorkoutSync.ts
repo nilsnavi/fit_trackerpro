@@ -58,6 +58,8 @@ interface UseActiveWorkoutSyncParams {
     clearWorkoutSessionDraft: () => void
     updateSessionMutation: UpdateSessionMutation
     buildSyncPayload: BuildSyncPayload
+    /** Перед повторной отправкой сессии после события `online` (например, сброс localStorage-очереди подходов). */
+    onBeforeOnlineSync?: () => Promise<void>
 }
 
 interface UseActiveWorkoutSyncResult {
@@ -93,6 +95,7 @@ export function useActiveWorkoutSync({
     clearWorkoutSessionDraft,
     updateSessionMutation,
     buildSyncPayload,
+    onBeforeOnlineSync,
 }: UseActiveWorkoutSyncParams): UseActiveWorkoutSyncResult {
     const detailQueryKey = queryKeys.workouts.historyItem(workoutId)
     const getIsOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine)
@@ -138,6 +141,8 @@ export function useActiveWorkoutSync({
     detailQueryKeyRef.current = detailQueryKey
     const draftStorageUserIdRef = useRef(draftStorageUserId)
     draftStorageUserIdRef.current = draftStorageUserId
+    const onBeforeOnlineSyncRef = useRef(onBeforeOnlineSync)
+    onBeforeOnlineSyncRef.current = onBeforeOnlineSync
 
     // Indirection refs so executeSync / scheduleDebounced can reference each
     // other without circular useCallback dependencies.
@@ -564,13 +569,20 @@ export function useActiveWorkoutSync({
                 window.clearTimeout(debounceTimerRef.current)
                 debounceTimerRef.current = null
             }
-            // Always attempt a flush — executeSync guards via inFlightRef and
-            // snapshot comparison, so calling it unconditionally is safe.
-            // This also handles Bug 5: when lastPersistedSnapshotRef is still null
-            // (app opened offline before first baseline was established).
-            if (isActiveDraftRef.current) {
-                executeSyncRef.current()
-            }
+            void (async () => {
+                try {
+                    await onBeforeOnlineSyncRef.current?.()
+                } catch {
+                    // Не блокируем основной sync — локальное состояние и так в кэше.
+                }
+                // Always attempt a flush — executeSync guards via inFlightRef and
+                // snapshot comparison, so calling it unconditionally is safe.
+                // This also handles Bug 5: when lastPersistedSnapshotRef is still null
+                // (app opened offline before first baseline was established).
+                if (isActiveDraftRef.current) {
+                    executeSyncRef.current()
+                }
+            })()
         }
 
         const handleOffline = () => {

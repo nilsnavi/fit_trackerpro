@@ -9,6 +9,8 @@ import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useSyncQueueWithRetry } from '@shared/hooks/useSyncQueueWithRetry'
 import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { queryKeys } from '@shared/api/queryKeys'
+import { workoutsApi } from '@shared/api/domains/workoutsApi'
+import { flushQueue, getQueueSize } from '@shared/offline/offlineQueue'
 import { isRecoverableSyncError } from '@shared/offline/syncQueue'
 
 import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery'
@@ -73,6 +75,14 @@ export function ActiveWorkoutPage() {
     const workoutId: number = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId: boolean = Number.isFinite(workoutId)
     const detailQueryKey = queryKeys.workouts.historyItem(workoutId)
+
+    const getSessionPayload = useCallback((): WorkoutSessionUpdateRequest | null => {
+        const w = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey)
+        if (!w) return null
+        return buildSyncPayload(w)
+    }, [queryClient, detailQueryKey])
+
+    const refreshOfflineQueueRef = useRef<() => void>(() => {})
 
     const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
     const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
@@ -168,6 +178,25 @@ export function ActiveWorkoutPage() {
         clearWorkoutSessionDraft,
         updateSessionMutation,
         buildSyncPayload,
+        onBeforeOnlineSync: async () => {
+            const pending = getQueueSize(workoutId)
+            if (pending === 0) {
+                refreshOfflineQueueRef.current()
+                return
+            }
+            try {
+                const { last, flushed } = await flushQueue(workoutsApi, { workoutId })
+                if (last) {
+                    queryClient.setQueryData(detailQueryKey, last)
+                }
+                if (flushed > 0) {
+                    toast.success('Данные синхронизированы')
+                    clearWorkoutDraftFromLocalStorage(draftStorageUserId, workoutId)
+                }
+            } finally {
+                refreshOfflineQueueRef.current()
+            }
+        },
     })
 
     useEffect(() => {
@@ -216,12 +245,22 @@ export function ActiveWorkoutPage() {
         [draftStorageUserId, updateSessionMutation, workoutId],
     )
 
-    const { pushPendingSync, clearPendingSync, notifySetCompleted } = useWorkoutSync({
+    const {
+        pushPendingSync,
+        clearPendingSync,
+        notifySetCompleted,
+        offlineSetQueueSize,
+        refreshOfflineSetQueueSize,
+    } = useWorkoutSync({
         enabled: Boolean(isActiveDraft && isValidWorkoutId),
         isOnline,
+        workoutId,
+        getSessionPayload,
         flushWorkoutSync,
         sendSessionPatch,
     })
+
+    refreshOfflineQueueRef.current = refreshOfflineSetQueueSize
 
     const exhaustedPushRef = useRef<string | null>(null)
     useEffect(() => {
@@ -458,7 +497,9 @@ export function ActiveWorkoutPage() {
         <div
             className={`p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
         >
-            {isActiveDraft && !isOnline ? <OfflineBanner variant="offline" /> : null}
+            {isActiveDraft && !isOnline ? (
+                <OfflineBanner variant="offline" offlineSetCount={offlineSetQueueSize} />
+            ) : null}
             {isActiveDraft && isOnline && reconnectBanner === 'syncing' ? (
                 <OfflineBanner variant="online-syncing" />
             ) : null}
