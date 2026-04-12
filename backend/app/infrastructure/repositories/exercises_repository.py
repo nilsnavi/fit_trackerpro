@@ -37,6 +37,7 @@ class ExercisesRepository(SQLAlchemyRepository):
                     Exercise.description.ilike(f"%{search}%"),
                     Exercise.muscle_group.ilike(f"%{search}%"),
                     cast(Exercise.aliases, String).ilike(f"%{search}%"),
+                    cast(Exercise.muscle_groups, String).ilike(f"%{search}%"),
                 )
             )
         return query

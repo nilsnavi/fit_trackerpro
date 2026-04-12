@@ -1,5 +1,7 @@
 /** Ответы GET /exercises (согласно backend ExerciseResponse / ExerciseListResponse). */
 
+import type { Exercise, ExercisesResponse } from '@/types/exercise'
+
 export type ExerciseListStatus = 'active' | 'pending' | 'archived' | 'all'
 
 export interface ExerciseListApiParams {
@@ -20,14 +22,8 @@ export interface ExerciseRiskFlagsApi {
     heart_conditions: boolean
 }
 
-export interface ExerciseApiItem {
-    id: number
-    name: string
-    description: string | null
-    category: string
-    equipment: string[]
+export interface ExerciseApiItem extends Exercise {
     muscle_groups: string[]
-    muscle_group: string | null
     aliases: string[]
     risk_flags: ExerciseRiskFlagsApi
     media_url: string | null
@@ -37,9 +33,8 @@ export interface ExerciseApiItem {
     updated_at: string
 }
 
-export interface ExerciseListApiResponse {
+export interface ExerciseListApiResponse extends ExercisesResponse {
     items: ExerciseApiItem[]
-    total: number
     page: number
     page_size: number
     filters: Record<string, unknown>

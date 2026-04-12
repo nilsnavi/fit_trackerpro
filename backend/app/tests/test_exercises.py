@@ -211,3 +211,42 @@ async def test_get_exercises_searches_aliases(authenticated_client, monkeypatch)
     assert list_payload["total"] >= 1
     assert any(item["name"] == "Builder Alias Search Exercise" for item in list_payload["items"])
 
+
+async def test_get_exercise_by_id(authenticated_client, monkeypatch):
+    monkeypatch.setattr(settings, "ADMIN_USER_IDS", [123456789], raising=False)
+
+    payload = {
+        "name": "Detail Fetch Exercise",
+        "category": "strength",
+        "description": "Used to test GET /exercises/{id}.",
+        "equipment": ["dumbbells"],
+        "muscle_groups": ["chest"],
+        "risk_flags": {
+            "high_blood_pressure": False,
+            "diabetes": False,
+            "joint_problems": False,
+            "back_problems": False,
+            "heart_conditions": False,
+        },
+        "media_url": None,
+    }
+
+    create_response = await authenticated_client.post("/api/v1/exercises/", json=payload)
+    assert create_response.status_code == 201, create_response.text
+    exercise_id = create_response.json()["id"]
+
+    detail_response = await authenticated_client.get(f"/api/v1/exercises/{exercise_id}")
+    assert detail_response.status_code == 200, detail_response.text
+    body = detail_response.json()
+    assert body["id"] == exercise_id
+    assert body["name"] == "Detail Fetch Exercise"
+    assert body["category"] == "strength"
+    assert body["muscle_group"] == "chest"
+    assert body["equipment"] == ["dumbbells"]
+    assert body["description"] == "Used to test GET /exercises/{id}."
+
+
+async def test_get_exercise_by_id_not_found(authenticated_client):
+    response = await authenticated_client.get("/api/v1/exercises/999999999")
+    assert response.status_code == 404
+
