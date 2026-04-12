@@ -14,6 +14,7 @@ class ChallengesRepository(SQLAlchemyRepository):
         status: str | None,
         challenge_type: str | None,
         is_public: bool | None,
+        creator_id: int | None = None,
     ) -> int:
         query = select(func.count(Challenge.id))
         if status:
@@ -22,6 +23,8 @@ class ChallengesRepository(SQLAlchemyRepository):
             query = query.where(Challenge.type == challenge_type)
         if is_public is not None:
             query = query.where(Challenge.is_public == is_public)
+        if creator_id is not None:
+            query = query.where(Challenge.creator_id == creator_id)
         result = await self.db.execute(query)
         return int(result.scalar() or 0)
 
@@ -32,6 +35,7 @@ class ChallengesRepository(SQLAlchemyRepository):
         is_public: bool | None,
         page: int,
         page_size: int,
+        creator_id: int | None = None,
     ):
         query = select(Challenge)
         if status:
@@ -40,6 +44,8 @@ class ChallengesRepository(SQLAlchemyRepository):
             query = query.where(Challenge.type == challenge_type)
         if is_public is not None:
             query = query.where(Challenge.is_public == is_public)
+        if creator_id is not None:
+            query = query.where(Challenge.creator_id == creator_id)
         query = query.order_by(desc(Challenge.start_date)).offset((page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
         return result.scalars().all()

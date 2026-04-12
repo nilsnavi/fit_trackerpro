@@ -210,6 +210,45 @@ class AnalyticsSummaryResponse(BaseModel):
     muscle_imbalance_signals: Optional[MuscleImbalanceSignalsDetail] = None
 
 
+class AnalyticsWeeklyChartPoint(BaseModel):
+    """Single point for workout frequency chart (day or week bucket)."""
+
+    date: date
+    count: int
+
+
+class AnalyticsDashboardResponse(BaseModel):
+    """Aggregated analytics for the main dashboard (period filter)."""
+
+    period: str = Field(..., description="Echo of requested window: week | month | all.")
+    total_workouts: int
+    total_duration_minutes: int
+    avg_duration: float = Field(
+        ...,
+        description="Mean workout duration in minutes within the selected period.",
+    )
+    workouts_this_week: int = Field(
+        ...,
+        description="Workouts logged in the current calendar week (Mon–Sun).",
+    )
+    workouts_this_month: int = Field(
+        ...,
+        description="Workouts logged in the current calendar month.",
+    )
+    favorite_exercise: Optional[str] = Field(
+        None,
+        description="Most frequent exercise name in the selected period.",
+    )
+    streak_days: int = Field(
+        ...,
+        description="Current consecutive-day workout streak (today or yesterday counts as active).",
+    )
+    weekly_chart: List[AnalyticsWeeklyChartPoint] = Field(
+        default_factory=list,
+        description="Workout counts by day or by ISO week start within the chart window.",
+    )
+
+
 class TrainingLoadDailyEntry(BaseModel):
     """Daily training load aggregate entry"""
     model_config = ConfigDict(populate_by_name=True)

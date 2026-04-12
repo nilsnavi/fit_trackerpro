@@ -1,9 +1,10 @@
-import { BarChart3, Dumbbell, HeartPulse } from 'lucide-react'
+import { BarChart3, Dumbbell, HeartPulse, LayoutDashboard } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@shared/lib/cn'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 
 const tabs = [
+    { to: '/analytics', label: 'Обзор', icon: LayoutDashboard },
     { to: '/progress', label: 'Сводка', icon: BarChart3 },
     { to: '/progress/exercises', label: 'Упражнения', icon: Dumbbell },
     { to: '/progress/recovery', label: 'Восстановление', icon: HeartPulse },

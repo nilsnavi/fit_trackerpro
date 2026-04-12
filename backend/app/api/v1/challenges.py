@@ -31,18 +31,24 @@ async def get_challenges(
     status: Optional[str] = Query(None, pattern="^(upcoming|active|completed|cancelled)$"),
     challenge_type: Optional[str] = Query(None, pattern="^(workout_count|duration|calories|distance|custom)$"),
     is_public: Optional[bool] = Query(None),
+    mine: bool = Query(
+        False,
+        description="If true, return only challenges created by the authenticated user.",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ChallengesService(db)
+    creator_id = current_user.id if mine else None
     return await service.get_challenges(
         status=status,
         challenge_type=challenge_type,
         is_public=is_public,
         page=page,
         page_size=page_size,
+        creator_id=creator_id,
     )
 
 

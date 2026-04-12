@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import calendar
 import uuid
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any, List, Optional
 
@@ -24,9 +25,11 @@ from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.analytics_repository import AnalyticsRepository
 from app.infrastructure.repositories.feature_flags_repository import FeatureFlagsRepository
 from app.schemas.analytics import (
+    AnalyticsDashboardResponse,
     AnalyticsPerformanceOverviewResponse,
     AnalyticsPerformanceTrendPoint,
     AnalyticsSummaryResponse,
+    AnalyticsWeeklyChartPoint,
     CalendarDayEntry,
     DataExportRequest,
     DataExportResponse,
@@ -886,6 +889,125 @@ class AnalyticsService:
     async def get_export_status(self, user_id: int, export_id: str) -> DataExportResponse:
         _ = user_id
         raise AnalyticsNotFoundError("Export not found or expired")
+
+    @staticmethod
+    def _monday_of_week(day: date) -> date:
+        return day - timedelta(days=day.weekday())
+
+    @staticmethod
+    def _current_streak_days(sorted_workout_dates: List[date]) -> int:
+        if not sorted_workout_dates:
+            return 0
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        if sorted_workout_dates[-1] not in (today, yesterday):
+            return 0
+        current_streak = 0
+        for i in range(len(sorted_workout_dates) - 1, -1, -1):
+            if i == len(sorted_workout_dates) - 1:
+                current_streak = 1
+            elif (sorted_workout_dates[i + 1] - sorted_workout_dates[i]).days == 1:
+                current_streak += 1
+            else:
+                break
+        return current_streak
+
+    @staticmethod
+    def _build_dashboard_weekly_chart(
+        period: str,
+        daily_pairs: List[tuple[date, int]],
+        chart_start: date,
+        chart_end: date,
+    ) -> List[AnalyticsWeeklyChartPoint]:
+        day_map = {d: c for d, c in daily_pairs}
+        if period == "week":
+            out: List[AnalyticsWeeklyChartPoint] = []
+            d = chart_start
+            while d <= chart_end:
+                out.append(AnalyticsWeeklyChartPoint(date=d, count=day_map.get(d, 0)))
+                d += timedelta(days=1)
+            return out
+
+        weekly: dict[date, int] = defaultdict(int)
+        for d, c in daily_pairs:
+            if chart_start <= d <= chart_end:
+                weekly[AnalyticsService._monday_of_week(d)] += c
+        return [
+            AnalyticsWeeklyChartPoint(date=w, count=weekly[w])
+            for w in sorted(weekly.keys())
+        ]
+
+    async def get_analytics_dashboard(self, user_id: int, period: str) -> AnalyticsDashboardResponse:
+        today = date.today()
+        if period == "week":
+            window_start = today - timedelta(days=6)
+        elif period == "month":
+            window_start = today - timedelta(days=29)
+        else:
+            earliest = await self.repository.get_earliest_workout_date(user_id)
+            window_start = earliest or today
+
+        window_end = today
+
+        total_workouts = await self.repository.count_workouts_between(
+            user_id, window_start, window_end
+        )
+        total_duration = await self.repository.sum_duration_minutes_between(
+            user_id, window_start, window_end
+        )
+        avg_duration = round(total_duration / total_workouts, 1) if total_workouts else 0.0
+
+        favorite_raw = await self.repository.get_favorite_exercises(
+            user_id=user_id,
+            date_from=window_start,
+            limit=1,
+            date_to=window_end,
+        )
+        favorite_exercise = favorite_raw[0]["name"] if favorite_raw else None
+
+        week_monday = self._monday_of_week(today)
+        workouts_this_week = await self.repository.count_workouts_between(
+            user_id, week_monday, today
+        )
+
+        month_first = today.replace(day=1)
+        _, last_dom = calendar.monthrange(today.year, today.month)
+        month_last = today.replace(day=last_dom)
+        workouts_this_month = await self.repository.count_workouts_between(
+            user_id, month_first, min(month_last, today)
+        )
+
+        all_dates = await self.repository.get_workout_dates(
+            user_id=user_id,
+            date_from=date(1970, 1, 1),
+            date_to=today,
+        )
+        streak_days = self._current_streak_days(all_dates)
+
+        if period == "all":
+            chart_end = today
+            chart_start = today - timedelta(days=83)
+        else:
+            chart_start, chart_end = window_start, window_end
+
+        daily_pairs = await self.repository.get_workout_counts_by_day(
+            user_id, chart_start, chart_end
+        )
+        weekly_chart = self._build_dashboard_weekly_chart(
+            period, daily_pairs, chart_start, chart_end
+        )
+
+        return AnalyticsDashboardResponse(
+            period=period,
+            total_workouts=total_workouts,
+            total_duration_minutes=total_duration,
+            avg_duration=avg_duration,
+            workouts_this_week=workouts_this_week,
+            workouts_this_month=workouts_this_month,
+            favorite_exercise=favorite_exercise,
+            streak_days=streak_days,
+            weekly_chart=weekly_chart,
+        )
 
     async def get_analytics_summary(self, user_id: int, period: str) -> AnalyticsSummaryResponse:
         days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 36500}

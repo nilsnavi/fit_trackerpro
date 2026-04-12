@@ -1,1 +1,1 @@
-export { default } from './ProgressOverviewPage'
+export { default } from './AnalyticsDashboardPage'
