@@ -37,7 +37,8 @@
     "e2e:mvp": "playwright test e2e/mvp-regression.spec.ts",
     "e2e:mvp:headed": "playwright test e2e/mvp-regression.spec.ts --headed",
     "e2e:mvp:stack": "playwright test --project=chromium-mvp-e2e",
-    "e2e:golden-path": "playwright test tests/e2e/golden-path.spec.ts --project=chromium-mvp-e2e"
+    "e2e:golden-path": "playwright test tests/e2e/golden-path.spec.ts --project=chromium-mvp-e2e",
+    "e2e:mvp-golden-path:spec": "playwright test e2e/mvp-golden-path.spec.ts --project=chromium"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

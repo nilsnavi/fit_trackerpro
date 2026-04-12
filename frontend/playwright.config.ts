@@ -25,17 +25,17 @@ if (existsSync(envTestPath)) {
 }
 
 /**
- * DEV edge (Caddy) по умолчанию из гайда репозитория; в CI обычно переопределяют E2E_BASE_URL на Vite (например http://127.0.0.1:3000).
- * @see README.md — Edge proxy : http://localhost:19000
+ * В CI задают E2E_BASE_URL (например http://127.0.0.1:3000). Локально по умолчанию — http://localhost (Vite :3000).
  */
-const defaultBaseURL = 'http://127.0.0.1:19000'
-const baseURL = process.env.E2E_BASE_URL ?? defaultBaseURL
+const baseURL = process.env.E2E_BASE_URL || 'http://localhost'
 
 function devServerPortFromBaseURL(url: string): string {
     try {
         const u = new URL(url)
         if (u.port) return u.port
-        return u.protocol === 'https:' ? '443' : '80'
+        if (u.protocol === 'https:') return '443'
+        if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return '3000'
+        return '80'
     } catch {
         return '3000'
     }
