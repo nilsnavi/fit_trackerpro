@@ -3,20 +3,31 @@ import { create } from 'zustand'
 const ACCESS_TOKEN_KEY = 'auth_token'
 const REFRESH_TOKEN_KEY = 'refresh_token'
 
-function safeGet(key: string): string | null {
+/**
+ * One-time read: e2e / legacy browser sessions may have seeded localStorage before
+ * the app switched to in-memory tokens. We never write tokens back to localStorage.
+ */
+function readLegacyTokensOnce(): { accessToken: string | null; refreshToken: string | null } {
+    if (typeof window === 'undefined') {
+        return { accessToken: null, refreshToken: null }
+    }
     try {
-        return localStorage.getItem(key)
+        return {
+            accessToken: localStorage.getItem(ACCESS_TOKEN_KEY),
+            refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY),
+        }
     } catch {
-        return null
+        return { accessToken: null, refreshToken: null }
     }
 }
 
-function safeSet(key: string, value: string | null): void {
+function clearLegacyStorage(): void {
+    if (typeof window === 'undefined') return
     try {
-        if (!value) localStorage.removeItem(key)
-        else localStorage.setItem(key, value)
+        localStorage.removeItem(ACCESS_TOKEN_KEY)
+        localStorage.removeItem(REFRESH_TOKEN_KEY)
     } catch {
-        // ignore storage failures (private mode, blocked storage)
+        // ignore
     }
 }
 
@@ -29,16 +40,17 @@ export interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
-    const accessToken = safeGet(ACCESS_TOKEN_KEY)
-    const refreshToken = safeGet(REFRESH_TOKEN_KEY)
+    const { accessToken: legacyAccess, refreshToken: legacyRefresh } = readLegacyTokensOnce()
+    if (legacyAccess || legacyRefresh) {
+        clearLegacyStorage()
+    }
 
     return {
-        accessToken,
-        refreshToken,
-        isAuthenticated: Boolean(accessToken),
+        accessToken: legacyAccess,
+        refreshToken: legacyRefresh,
+        isAuthenticated: Boolean(legacyAccess),
         setTokens: ({ accessToken, refreshToken }) => {
-            safeSet(ACCESS_TOKEN_KEY, accessToken)
-            if (refreshToken !== undefined) safeSet(REFRESH_TOKEN_KEY, refreshToken)
+            clearLegacyStorage()
             set({
                 accessToken,
                 refreshToken: refreshToken === undefined ? get().refreshToken : refreshToken,
@@ -46,8 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
             })
         },
         clear: () => {
-            safeSet(ACCESS_TOKEN_KEY, null)
-            safeSet(REFRESH_TOKEN_KEY, null)
+            clearLegacyStorage()
             set({ accessToken: null, refreshToken: null, isAuthenticated: false })
         },
     }

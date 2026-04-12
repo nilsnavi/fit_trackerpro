@@ -31,6 +31,23 @@ async def test_telegram_auth_invalid_hash(client: AsyncClient, mock_telegram_use
         json={"init_data": bad_init},
     )
     assert response.status_code == 401
+    body = response.json()
+    assert "error" in body
+    assert "Подпись" in body["error"]["message"] or "недействительна" in body["error"]["message"]
+
+
+@pytest.mark.unit
+@pytest.mark.auth
+async def test_telegram_auth_accepts_init_data_camel_case(client: AsyncClient, mock_telegram_user: dict):
+    """POST body may use camelCase initData (Mini App contract)."""
+    init = build_init_data(bot_token=settings.TELEGRAM_BOT_TOKEN, user=mock_telegram_user)
+    response = await client.post(
+        "/api/v1/users/auth/telegram",
+        json={"initData": init},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data.get("access_token") or data.get("token")
 
 
 @pytest.mark.unit

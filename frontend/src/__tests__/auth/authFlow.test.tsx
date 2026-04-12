@@ -32,6 +32,8 @@ describe('Telegram onboarding/auth flow', () => {
         ;(authApi.telegramLogin as jest.Mock).mockResolvedValue({
             access_token: 'access-1',
             refresh_token: 'refresh-1',
+            is_new_user: false,
+            onboarding_required: false,
         })
 
         render(

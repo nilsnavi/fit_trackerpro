@@ -2,6 +2,11 @@
 /// <reference types="vite-plugin-pwa/client" />
 
 interface ImportMetaEnv {
+    /**
+     * Optional signed Telegram WebApp `initData` for automatic dev login when the
+     * app runs outside Telegram (`npm run dev`).
+     */
+    readonly VITE_DEV_INIT_DATA?: string
     readonly VITE_API_URL: string
     readonly VITE_TELEGRAM_BOT_USERNAME: string
     readonly VITE_ADMIN_USER_IDS?: string

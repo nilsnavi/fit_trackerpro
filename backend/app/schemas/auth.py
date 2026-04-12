@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.schemas.enums import ExperienceLevel, FitnessGoal, TokenKind, UserTheme, UserUnits
 
@@ -175,10 +175,13 @@ class UserSettingsPatch(BaseModel):
 class TelegramAuthRequest(BaseModel):
     """Request model for Telegram authentication"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     init_data: str = Field(
         ...,
         min_length=1,
         max_length=16384,
+        validation_alias=AliasChoices("initData", "init_data"),
         description="Raw initData string from Telegram WebApp",
         examples=["query_id=...&user={...}&auth_date=...&hash=..."],
     )
@@ -226,6 +229,11 @@ class AuthResponse(BaseModel):
     success: bool
     message: str = Field(..., max_length=2000)
     user: Optional[TelegramUserData] = None
+    token: Optional[str] = Field(
+        None,
+        max_length=16384,
+        description="JWT access token (Mini App / camelCase alias of access_token).",
+    )
     access_token: Optional[str] = Field(None, max_length=16384)
     refresh_token: Optional[str] = Field(
         None,

@@ -5,6 +5,12 @@ import { installWorkoutSyncTelemetryInfrastructure } from './app/workoutSyncTele
 import App from './App'
 import './styles/globals.css'
 
+try {
+    window.Telegram?.WebApp?.ready()
+} catch {
+    // non-Telegram environments
+}
+
 initSentry()
 installWorkoutSyncTelemetryInfrastructure()
 

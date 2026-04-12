@@ -10,6 +10,9 @@ from typing import Any, Dict, Optional
 
 from app.settings import settings
 
+# Telegram WebApp initData must be re-validated periodically; stale data is rejected.
+INIT_DATA_MAX_AGE_SECONDS = 86400
+
 
 def parse_init_data(init_data: str) -> Dict[str, Any]:
     """
@@ -108,7 +111,7 @@ def validate_init_data(init_data: str, bot_token: str) -> bool:
 def validate_init_data_with_timestamp(
     init_data: str,
     bot_token: str,
-    max_age_seconds: int = 300  # 5 minutes default
+    max_age_seconds: int = INIT_DATA_MAX_AGE_SECONDS,
 ) -> tuple[bool, Optional[str]]:
     """
     Validate initData with timestamp check
@@ -116,7 +119,7 @@ def validate_init_data_with_timestamp(
     Args:
         init_data: Raw initData string from Telegram WebApp
         bot_token: Bot token from @BotFather
-        max_age_seconds: Maximum age of initData in seconds (default: 5 minutes)
+        max_age_seconds: Maximum age of initData in seconds (default: 24 hours)
 
     Returns:
         Tuple of (is_valid, error_message)
@@ -128,31 +131,35 @@ def validate_init_data_with_timestamp(
         # Check auth_date
         auth_date_str = parsed.get('auth_date')
         if not auth_date_str:
-            return False, "Missing auth_date"
+            return False, "В initData отсутствует поле auth_date."
 
         try:
             auth_date = int(auth_date_str)
         except ValueError:
-            return False, "Invalid auth_date format"
+            return False, "Некорректный формат auth_date в initData."
 
         # Check timestamp
         current_time = int(datetime.now(timezone.utc).timestamp())
         age = current_time - auth_date
 
         if age > max_age_seconds:
-            return False, f"initData expired (age: {age}s, max: {max_age_seconds}s)"
+            return (
+                False,
+                "Данные Telegram устарели (более 24 часов). "
+                "Закройте Mini App и откройте её снова из чата с ботом.",
+            )
 
         if age < -60:  # Allow 1 minute clock skew
-            return False, "auth_date is in the future"
+            return False, "auth_date в initData указывает на будущее время."
 
         # Validate hash
         if not validate_init_data(init_data, bot_token):
-            return False, "Invalid hash signature"
+            return False, "Подпись Telegram initData недействительна."
 
         return True, None
 
     except Exception as e:
-        return False, f"Validation error: {str(e)}"
+        return False, f"Ошибка проверки initData: {str(e)}"
 
 
 def get_user_from_init_data(init_data: str) -> Optional[Dict[str, Any]]:
@@ -172,7 +179,7 @@ def get_user_from_init_data(init_data: str) -> Optional[Dict[str, Any]]:
 def validate_and_get_user(
     init_data: str,
     bot_token: Optional[str] = None,
-    max_age_seconds: int = 300
+    max_age_seconds: int = INIT_DATA_MAX_AGE_SECONDS,
 ) -> tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
     """
     Validate initData and extract user information
@@ -199,7 +206,7 @@ def validate_and_get_user(
     user = get_user_from_init_data(init_data)
 
     if not user:
-        return False, None, "No user data found in initData"
+        return False, None, "В initData нет данных пользователя (поле user)."
 
     return True, user, None
 

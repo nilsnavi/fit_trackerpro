@@ -18,7 +18,7 @@ from app.core.security import create_access_token, create_refresh_token, verify_
 from app.domain.exceptions import AuthenticationError
 from app.domain.user import User
 from app.infrastructure.repositories.auth_repository import AuthRepository
-from app.infrastructure.telegram_auth import validate_and_get_user
+from app.infrastructure.telegram_auth import INIT_DATA_MAX_AGE_SECONDS, validate_and_get_user
 from app.schemas.auth import (
     AuthResponse,
     LogoutResponse,
@@ -92,10 +92,10 @@ class AuthService:
         is_valid, user_data, error = validate_and_get_user(
             init_data=auth_request.init_data,
             bot_token=settings.TELEGRAM_BOT_TOKEN,
-            max_age_seconds=300,
+            max_age_seconds=INIT_DATA_MAX_AGE_SECONDS,
         )
         if not is_valid:
-            raise AuthenticationError(f"Authentication failed: {error}")
+            raise AuthenticationError(error or "Не удалось подтвердить вход через Telegram.")
 
         user, created = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
@@ -124,6 +124,7 @@ class AuthService:
             success=True,
             message="Authentication successful",
             user=user_response,
+            token=access_token,
             access_token=access_token,
             refresh_token=refresh_token,
             is_new_user=created,
