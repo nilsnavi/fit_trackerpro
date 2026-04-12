@@ -5,7 +5,17 @@ import type { UseTelegramWebAppReturn } from '@shared/hooks/useTelegramWebApp'
 import { toast } from '@shared/stores/toastStore'
 import { getErrorMessage } from '@shared/errors'
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue'
+import { enqueueOfflineWorkoutComplete } from '@shared/offline/workoutOfflineEnqueue'
+import { emitWorkoutSyncTelemetry } from '@shared/offline/observability/workoutSyncTelemetry'
 import { queryKeys } from '@shared/api/queryKeys'
+import {
+    optimisticPatchHistoryItemComplete,
+    patchCalendarWorkoutComplete,
+    patchHistoryListItemComplete,
+    restoreSnapshotEntries,
+    takeWorkoutsCalendarSnapshot,
+    takeWorkoutsHistoryListsSnapshot,
+} from '@features/workouts/lib/workoutQueryOptimistic'
 import type {
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
@@ -55,6 +65,8 @@ export interface UseActiveWorkoutCompletionResult {
     handleOpenFinishSheet: () => Promise<void>
     handleConfirmFinishFromSheet: () => void
     handleCompleteSession: (tagsOverride?: string[]) => void
+    /** Принудительно в очередь офлайн и выход (после сетевых ошибок завершения) */
+    saveCompleteLocallyAndExit: () => void
 }
 
 export function useActiveWorkoutCompletion({
@@ -141,7 +153,7 @@ export function useActiveWorkoutCompletion({
                     if (isOfflineMutationQueuedError(error)) {
                         setIsFinishSheetOpen(false)
                         clearActiveWorkoutDraft()
-                        toast.info('Тренировка завершена — результат отправится при восстановлении сети')
+                        toast.info('Тренировка будет синхронизирована при восстановлении сети')
                         navigate('/workouts', { replace: true })
                         return
                     }
@@ -171,6 +183,112 @@ export function useActiveWorkoutCompletion({
         updateSessionFields({ tags: parsedTags })
         handleCompleteSession(parsedTags)
     }, [finishTagsDraft, handleCompleteSession, updateSessionFields])
+
+    const saveCompleteLocallyAndExit = useCallback(() => {
+        if (completeMutation.isPending || isCompletingRef.current) {
+            return
+        }
+
+        setSessionError(null)
+        const current = queryClient.getQueryData<WorkoutHistoryItem>(queryKeys.workouts.historyItem(workoutId))
+        if (!current) {
+            setSessionError('Нет данных тренировки')
+            return
+        }
+
+        if (durationMinutes < 1 || durationMinutes > 1440) {
+            setSessionError('Укажите длительность от 1 до 1440 минут')
+            return
+        }
+
+        if (current.exercises.length === 0) {
+            setSessionError('Добавьте упражнения (например, начните тренировку с сохранённого шаблона)')
+            return
+        }
+
+        const hasCompletedSet = current.exercises.some((ex) => ex.sets_completed.some((set) => set.completed))
+        if (!hasCompletedSet) {
+            setSessionError('Отметьте хотя бы один выполненный подход')
+            return
+        }
+
+        const parsedTags = parseTagsInput(finishTagsDraft)
+        const payload: WorkoutCompleteRequest = {
+            duration: durationMinutes,
+            exercises: current.exercises,
+            comments: current.comments,
+            tags: parsedTags.length > 0 ? parsedTags : current.tags ?? [],
+            glucose_before: current.glucose_before,
+            glucose_after: current.glucose_after,
+        }
+
+        const detailKey = queryKeys.workouts.historyItem(workoutId)
+        const previousDetail = queryClient.getQueryData<WorkoutHistoryItem>(detailKey)
+
+        void (async () => {
+            await queryClient.cancelQueries({ queryKey: ['workouts'] })
+            const calendarSnap = takeWorkoutsCalendarSnapshot(queryClient)
+            const historyListsSnap = takeWorkoutsHistoryListsSnapshot(queryClient)
+            try {
+                if (previousDetail) {
+                    queryClient.setQueryData(
+                        detailKey,
+                        optimisticPatchHistoryItemComplete(previousDetail, payload),
+                    )
+                    patchCalendarWorkoutComplete(
+                        queryClient,
+                        workoutId,
+                        payload,
+                        new Date().toISOString(),
+                        previousDetail.date,
+                    )
+                }
+                patchHistoryListItemComplete(queryClient, workoutId, payload)
+                try {
+                    emitWorkoutSyncTelemetry('workout_completed_offline', {
+                        workout_id: workoutId,
+                        channel: 'sync_queue',
+                    })
+                    enqueueOfflineWorkoutComplete(workoutId, payload)
+                } catch (e) {
+                    if (!isOfflineMutationQueuedError(e)) {
+                        throw e
+                    }
+                }
+
+                setIsFinishSheetOpen(false)
+                clearActiveWorkoutDraft()
+                skipRestTimer()
+                resetActiveWorkoutState()
+                abandonWorkoutSessionDraft()
+                tg.hapticFeedback({ type: 'impact', style: 'medium' })
+                toast.info('Тренировка будет синхронизирована при восстановлении сети')
+                navigate('/workouts', { replace: true })
+                void queryClient.invalidateQueries({ queryKey: ['workouts'] })
+                void queryClient.invalidateQueries({ queryKey: ['analytics'] })
+            } catch (e) {
+                restoreSnapshotEntries(queryClient, calendarSnap)
+                restoreSnapshotEntries(queryClient, historyListsSnap)
+                if (previousDetail) {
+                    queryClient.setQueryData(detailKey, previousDetail)
+                }
+                setSessionError(getErrorMessage(e))
+                toast.error(getErrorMessage(e))
+            }
+        })()
+    }, [
+        abandonWorkoutSessionDraft,
+        clearActiveWorkoutDraft,
+        durationMinutes,
+        finishTagsDraft,
+        navigate,
+        queryClient,
+        resetActiveWorkoutState,
+        skipRestTimer,
+        tg,
+        workoutId,
+        completeMutation.isPending,
+    ])
 
     const openAbandonConfirm = useCallback(() => {
         setSessionError(null)
@@ -216,6 +334,7 @@ export function useActiveWorkoutCompletion({
         handleOpenFinishSheet,
         handleConfirmFinishFromSheet,
         handleCompleteSession,
+        saveCompleteLocallyAndExit,
     }
 }
 

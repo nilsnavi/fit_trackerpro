@@ -25,6 +25,7 @@ import {
     enqueueOfflineWorkoutStart,
 } from '@shared/offline/workoutOfflineEnqueue'
 import { emitWorkoutSyncTelemetry } from '@shared/offline/observability/workoutSyncTelemetry'
+import { withWorkoutNetworkRetries } from '@shared/lib/withWorkoutNetworkRetries'
 import {
     appendCalendarWorkoutForMatchingMonth,
     buildCalendarEntryFromStartPayload,
@@ -338,7 +339,7 @@ export function useUpdateWorkoutSessionMutation() {
     return useMutation({
         mutationFn: async ({ workoutId, payload }: UpdateWorkoutSessionVariables) => {
             try {
-                return await workoutsApi.updateWorkoutSession(workoutId, payload)
+                return await withWorkoutNetworkRetries(() => workoutsApi.updateWorkoutSession(workoutId, payload))
             } catch (e) {
                 if (isRecoverableSyncError(e)) {
                     enqueueOfflineWorkoutSessionUpdate(workoutId, payload)
@@ -435,7 +436,7 @@ export function useCompleteWorkoutMutation() {
     return useMutation({
         mutationFn: async ({ workoutId, payload }: CompleteWorkoutVariables) => {
             try {
-                return await workoutsApi.completeWorkout(workoutId, payload)
+                return await withWorkoutNetworkRetries(() => workoutsApi.completeWorkout(workoutId, payload))
             } catch (e) {
                 if (isRecoverableSyncError(e)) {
                     emitWorkoutSyncTelemetry('workout_completed_offline', {

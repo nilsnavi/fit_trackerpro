@@ -25,6 +25,9 @@ export interface ActiveWorkoutModalsProps {
     isFinishPending: boolean
     finishErrorMessage: string | null
     syncState: ActiveWorkoutSyncState
+    isOnline: boolean
+    onRetryFinish: () => void
+    onSaveLocalFinish: () => void
     onCloseFinish: () => void
     onConfirmFinish: () => void
     onChangeTagsDraft: (value: string) => void
@@ -95,6 +98,9 @@ export function ActiveWorkoutModals(props: ActiveWorkoutModalsProps) {
                     isPending={props.isFinishPending}
                     errorMessage={props.finishErrorMessage}
                     syncState={props.syncState}
+                    isOnline={props.isOnline}
+                    onRetryFinish={props.onRetryFinish}
+                    onSaveLocalFinish={props.onSaveLocalFinish}
                     onClose={props.onCloseFinish}
                     onConfirm={props.onConfirmFinish}
                     onChangeTagsDraft={props.onChangeTagsDraft}

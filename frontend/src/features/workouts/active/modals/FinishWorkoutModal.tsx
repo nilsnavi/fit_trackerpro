@@ -12,6 +12,9 @@ interface FinishWorkoutModalProps {
     isPending: boolean
     errorMessage: string | null
     syncState?: ActiveWorkoutSyncState
+    isOnline?: boolean
+    onRetryFinish?: () => void
+    onSaveLocalFinish?: () => void
     onClose: () => void
     onConfirm: () => void
     onChangeTagsDraft: (value: string) => void
@@ -26,6 +29,9 @@ export function FinishWorkoutModal({
     isPending,
     errorMessage,
     syncState,
+    isOnline,
+    onRetryFinish,
+    onSaveLocalFinish,
     onClose,
     onConfirm,
     onChangeTagsDraft,
@@ -43,6 +49,9 @@ export function FinishWorkoutModal({
             isPending={isPending}
             errorMessage={errorMessage}
             syncState={syncState}
+            isOnline={isOnline}
+            onRetryFinish={onRetryFinish}
+            onSaveLocalFinish={onSaveLocalFinish}
         />
     )
 }

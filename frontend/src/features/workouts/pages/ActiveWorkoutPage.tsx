@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -17,7 +17,7 @@ import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutH
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
 import { useOptimisticWorkoutSession } from '@features/workouts/hooks/useOptimisticWorkoutSession'
 import { useCompleteWorkoutMutation, useUpdateWorkoutSessionMutation } from '@features/workouts/hooks/useWorkoutMutations'
-import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
+import type { WorkoutHistoryItem, WorkoutSessionUpdateRequest } from '@features/workouts/types/workouts'
 
 import { useConflictResolution } from '@features/workouts/components/ConflictResolutionUI'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
@@ -45,6 +45,10 @@ import { useActiveWorkoutHistoryInsights } from '@features/workouts/active/hooks
 import { FloatingRestTimer } from '@features/workouts/active/components/FloatingRestTimer'
 import { useActiveWorkoutCatalogSuggestions } from '@features/workouts/active/hooks/useActiveWorkoutCatalogSuggestions'
 
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { useWorkoutSync } from '@/hooks/useWorkoutSync'
+import { OfflineBanner } from '@/components/ui/OfflineBanner'
+
 import { ActiveWorkoutSummarySection } from '@features/workouts/active/containers/ActiveWorkoutSummarySection'
 import { ActiveWorkoutExerciseSection } from '@features/workouts/active/containers/ActiveWorkoutExerciseSection'
 import { ActiveWorkoutBottomActions } from '@features/workouts/active/containers/ActiveWorkoutBottomActions'
@@ -57,6 +61,7 @@ export function ActiveWorkoutPage() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const tg = useTelegramWebApp()
+    const { isOnline, wasOffline } = useNetworkStatus()
 
     const workoutId: number = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId: boolean = Number.isFinite(workoutId)
@@ -131,7 +136,14 @@ export function ActiveWorkoutPage() {
     const setPresetsForScope = useWorkoutRestPresetsStore((s) => s.setPresetsForScope)
     const setDefaultRestForScope = useWorkoutRestPresetsStore((s) => s.setDefaultRestForScope)
 
-    const { flushNow: flushWorkoutSync, syncState } = useActiveWorkoutSync({
+    const {
+        flushNow: flushWorkoutSync,
+        syncState,
+        pendingPayload,
+        syncRetryExhausted,
+        retrySessionSyncNow,
+        dismissSessionSyncFailure,
+    } = useActiveWorkoutSync({
         workoutId,
         workout,
         draftWorkoutId,
@@ -148,6 +160,45 @@ export function ActiveWorkoutPage() {
         updateSessionMutation,
         buildSyncPayload,
     })
+
+    const sendSessionPatch = useCallback(
+        async (payload: WorkoutSessionUpdateRequest) => {
+            await updateSessionMutation.mutateAsync({ workoutId, payload })
+        },
+        [updateSessionMutation, workoutId],
+    )
+
+    const { pushPendingSync, clearPendingSync, notifySetCompleted } = useWorkoutSync({
+        enabled: Boolean(isActiveDraft && isValidWorkoutId),
+        isOnline,
+        flushWorkoutSync,
+        sendSessionPatch,
+    })
+
+    const exhaustedPushRef = useRef<string | null>(null)
+    useEffect(() => {
+        if (!syncRetryExhausted || !pendingPayload) {
+            return
+        }
+        const key = JSON.stringify(pendingPayload)
+        if (exhaustedPushRef.current === key) {
+            return
+        }
+        exhaustedPushRef.current = key
+        pushPendingSync(pendingPayload)
+    }, [syncRetryExhausted, pendingPayload, pushPendingSync])
+
+    useEffect(() => {
+        if (!syncRetryExhausted) {
+            exhaustedPushRef.current = null
+        }
+    }, [syncRetryExhausted])
+
+    const handleSaveSessionLocalFinish = useCallback(() => {
+        dismissSessionSyncFailure()
+        clearPendingSync()
+        toast.info('Изменения сохранены локально')
+    }, [clearPendingSync, dismissSessionSyncFailure])
 
     useActiveWorkoutDraftPersist(
         workout,
@@ -307,10 +358,11 @@ export function ActiveWorkoutPage() {
         (exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
             handleToggleSetCompleted(exerciseIndex, setNumber, nextCompleted)
             if (nextCompleted) {
+                notifySetCompleted()
                 goToNextSet()
             }
         },
-        [goToNextSet, handleToggleSetCompleted],
+        [goToNextSet, handleToggleSetCompleted, notifySetCompleted],
     )
 
     const handleSelectExerciseIndex = useCallback(
@@ -358,6 +410,9 @@ export function ActiveWorkoutPage() {
         <div
             className={`p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
         >
+            {isActiveDraft && !isOnline ? <OfflineBanner variant="offline" /> : null}
+            {isActiveDraft && isOnline && wasOffline ? <OfflineBanner variant="reconnecting" /> : null}
+
             {shouldLoadModals ? (
                 <Suspense fallback={null}>
                     <ActiveWorkoutModals
@@ -372,6 +427,15 @@ export function ActiveWorkoutPage() {
                         isFinishPending={completeMutation.isPending}
                         finishErrorMessage={completion.sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
                         syncState={syncState}
+                        isOnline={isOnline}
+                        onRetryFinish={() => {
+                            completeMutation.reset()
+                            completion.handleConfirmFinishFromSheet()
+                        }}
+                        onSaveLocalFinish={() => {
+                            completeMutation.reset()
+                            completion.saveCompleteLocallyAndExit()
+                        }}
                         onCloseFinish={completion.closeFinishSheet}
                         onConfirmFinish={completion.handleConfirmFinishFromSheet}
                         onChangeTagsDraft={completion.setFinishTagsDraft}
@@ -456,6 +520,9 @@ export function ActiveWorkoutPage() {
                         completeError={completeMutation.isError ? completeMutation.error : null}
                         updateSessionError={updateSessionMutation.isError ? updateSessionMutation.error : null}
                         syncState={syncState}
+                        syncRetryExhausted={syncRetryExhausted}
+                        onRetrySessionSync={retrySessionSyncNow}
+                        onSaveSessionLocalFinish={handleSaveSessionLocalFinish}
                         repeatButton={repeatSource ? (
                             <Button type="button" variant="secondary" size="sm" onClick={exerciseActions.handleRepeatPrevious}>
                                 Повторить прошлую
