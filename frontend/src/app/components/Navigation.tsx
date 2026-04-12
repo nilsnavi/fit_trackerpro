@@ -8,9 +8,17 @@ const navItems = [
     { path: '/', icon: Home, label: 'Главная' },
     { path: '/exercises', icon: Library, label: 'Каталог' },
     { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
-    { path: '/progress', icon: BarChart3, label: 'Прогресс' },
+    { path: '/analytics', icon: BarChart3, label: 'Прогресс' },
     { path: '/profile', icon: User, label: 'Профиль' },
 ]
+
+function isNavRouteActive(path: string, pathname: string): boolean {
+    if (path === '/analytics') {
+        return pathname === '/analytics' || pathname.startsWith('/progress')
+    }
+    if (path === '/') return pathname === '/'
+    return pathname === path || pathname.startsWith(`${path}/`)
+}
 
 export function Navigation() {
     const tg = useTelegramWebApp()
@@ -33,45 +41,38 @@ export function Navigation() {
             aria-label="Основная навигация"
         >
             <div className="flex h-[var(--app-shell-nav-h)] items-center justify-around">
-                {navItems.map(({ path, icon: Icon, label }) => (
-                    <NavLink
-                        key={path}
-                        to={path}
-                        onClick={handleNavClick}
-                        className={({ isActive }) =>
-                            cn(
+                {navItems.map(({ path, icon: Icon, label }) => {
+                    const isActive = isNavRouteActive(path, pathname)
+                    return (
+                        <NavLink
+                            key={path}
+                            to={path}
+                            onClick={handleNavClick}
+                            className={cn(
                                 'flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 touch-manipulation transition-colors',
                                 isActive
                                     ? 'text-primary'
-                                    : 'text-telegram-hint hover:text-telegram-text active:text-telegram-text'
-                            )
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <span
-                                    className={cn(
-                                        'relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl px-2 transition-colors',
-                                        isActive
-                                            ? 'bg-primary/15 text-primary'
-                                            : 'text-telegram-hint',
-                                    )}
-                                >
-                                    <Icon className="h-5 w-5" aria-hidden />
-                                    {path === '/workouts' && hasActiveWorkout ? (
-                                        <span
-                                            className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-telegram-bg"
-                                            aria-label="Есть активная тренировка"
-                                        />
-                                    ) : null}
-                                </span>
-                                <span className={cn('text-[11px] leading-none', isActive && 'font-semibold')}>
-                                    {label}
-                                </span>
-                            </>
-                        )}
-                    </NavLink>
-                ))}
+                                    : 'text-telegram-hint hover:text-telegram-text active:text-telegram-text',
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    'relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl px-2 transition-colors',
+                                    isActive ? 'bg-primary/15 text-primary' : 'text-telegram-hint',
+                                )}
+                            >
+                                <Icon className="h-5 w-5" aria-hidden />
+                                {path === '/workouts' && hasActiveWorkout ? (
+                                    <span
+                                        className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-telegram-bg"
+                                        aria-label="Есть активная тренировка"
+                                    />
+                                ) : null}
+                            </span>
+                            <span className={cn('text-[11px] leading-none', isActive && 'font-semibold')}>{label}</span>
+                        </NavLink>
+                    )
+                })}
             </div>
         </nav>
     )

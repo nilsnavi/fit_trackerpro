@@ -45,7 +45,7 @@ export const queryKeys = {
             ['exercises', 'list', params] as const,
     },
     analytics: {
-        dashboard: ['analytics', 'dashboard'] as const,
+        dashboard: (period: string) => ['analytics', 'dashboard', period] as const,
         summary: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'summary', period, dateFrom, dateTo] as const,
         performanceOverview: (period: string, dateFrom: string | null, dateTo: string | null) =>
@@ -65,5 +65,8 @@ export const queryKeys = {
         progressInsights: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'progressInsights', period, dateFrom, dateTo] as const,
         workoutSummary: (workoutId: number) => ['analytics', 'workoutSummary', workoutId] as const,
+    },
+    challenges: {
+        dashboard: ['challenges', 'dashboard'] as const,
     },
 } as const

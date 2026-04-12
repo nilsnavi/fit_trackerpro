@@ -1,6 +1,9 @@
 import { api } from '@shared/api/client'
 
 export const analyticsApi = {
+    getDashboard(params?: { period?: string }) {
+        return api.get('/analytics/', params)
+    },
     getSummary(params?: Record<string, unknown>) {
         return api.get('/analytics/summary', params)
     },

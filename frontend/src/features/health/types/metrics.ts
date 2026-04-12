@@ -107,3 +107,14 @@ export interface WellnessStats {
     avg_sleep_hours_7d?: number
     avg_sleep_hours_30d?: number
 }
+
+/** Ответ GET /health-metrics/stats (фрагмент для дашборда аналитики). */
+export interface HealthDashboardStats {
+    period: string
+    generated_at: string
+    wellness: WellnessStats
+    workouts?: {
+        total_workouts_30d?: number
+        avg_duration?: number | null
+    }
+}

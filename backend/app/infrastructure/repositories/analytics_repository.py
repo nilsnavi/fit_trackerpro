@@ -547,25 +547,93 @@ class AnalyticsRepository(SQLAlchemyRepository):
         )
         return int(result.scalar() or 0)
 
-    async def get_workout_dates(self, user_id: int, date_from: date) -> List[date]:
+    async def get_workout_dates(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: Optional[date] = None,
+    ) -> List[date]:
+        filters = [
+            WorkoutLog.user_id == user_id,
+            WorkoutLog.date >= date_from,
+        ]
+        if date_to is not None:
+            filters.append(WorkoutLog.date <= date_to)
         result = await self.db.execute(
             select(WorkoutLog.date)
+            .where(and_(*filters))
+            .group_by(WorkoutLog.date)
+            .order_by(WorkoutLog.date)
+        )
+        return [row[0] for row in result.all()]
+
+    async def get_earliest_workout_date(self, user_id: int) -> Optional[date]:
+        result = await self.db.execute(
+            select(func.min(WorkoutLog.date)).where(WorkoutLog.user_id == user_id)
+        )
+        row = result.scalar()
+        return row if row is not None else None
+
+    async def count_workouts_between(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> int:
+        result = await self.db.execute(
+            select(func.count(WorkoutLog.id)).where(
+                and_(
+                    WorkoutLog.user_id == user_id,
+                    WorkoutLog.date >= date_from,
+                    WorkoutLog.date <= date_to,
+                )
+            )
+        )
+        return int(result.scalar() or 0)
+
+    async def sum_duration_minutes_between(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> int:
+        result = await self.db.execute(
+            select(func.coalesce(func.sum(WorkoutLog.duration), 0)).where(
+                and_(
+                    WorkoutLog.user_id == user_id,
+                    WorkoutLog.date >= date_from,
+                    WorkoutLog.date <= date_to,
+                )
+            )
+        )
+        return int(result.scalar() or 0)
+
+    async def get_workout_counts_by_day(
+        self,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> List[tuple[date, int]]:
+        result = await self.db.execute(
+            select(WorkoutLog.date, func.count(WorkoutLog.id))
             .where(
                 and_(
                     WorkoutLog.user_id == user_id,
                     WorkoutLog.date >= date_from,
+                    WorkoutLog.date <= date_to,
                 )
             )
             .group_by(WorkoutLog.date)
             .order_by(WorkoutLog.date)
         )
-        return [row[0] for row in result.all()]
+        return [(row[0], int(row[1])) for row in result.all()]
 
     async def get_favorite_exercises(
         self,
         user_id: int,
         date_from: date,
         limit: int = 5,
+        date_to: Optional[date] = None,
     ) -> List[Dict[str, Any]]:
         exercise_elements = func.jsonb_array_elements(WorkoutLog.exercises).table_valued("item").alias("exercise_elements")
         exercise_id_expr = cast(
@@ -589,6 +657,11 @@ class AnalyticsRepository(SQLAlchemyRepository):
                 and_(
                     WorkoutLog.user_id == user_id,
                     WorkoutLog.date >= date_from,
+                    *(
+                        [WorkoutLog.date <= date_to]
+                        if date_to is not None
+                        else []
+                    ),
                 )
             )
             .where(exercise_elements.c.item.op("?")("exercise_id"))

@@ -328,7 +328,7 @@ export function Home() {
                         <button
                             type="button"
                             className="rounded-full bg-telegram-bg px-3 py-1.5 text-xs font-medium text-primary"
-                            onClick={() => navigate('/progress')}
+                            onClick={() => navigate('/analytics')}
                         >
                             Прогресс
                         </button>

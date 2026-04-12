@@ -70,7 +70,7 @@ export function useWorkoutsPageState() {
 
     const handleOpenProgress = useCallback(() => {
         tg.hapticFeedback({ type: 'selection' })
-        navigate('/progress')
+        navigate('/analytics')
     }, [tg, navigate])
 
     const handleOpenMode = useCallback(

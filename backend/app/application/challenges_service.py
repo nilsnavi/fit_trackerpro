@@ -41,9 +41,14 @@ class ChallengesService:
         is_public: bool | None,
         page: int,
         page_size: int,
+        creator_id: int | None = None,
     ) -> ChallengeListResponse:
-        total = await self.repository.count_challenges(status, challenge_type, is_public)
-        challenges = await self.repository.list_challenges(status, challenge_type, is_public, page, page_size)
+        total = await self.repository.count_challenges(
+            status, challenge_type, is_public, creator_id=creator_id
+        )
+        challenges = await self.repository.list_challenges(
+            status, challenge_type, is_public, page, page_size, creator_id=creator_id
+        )
 
         items = []
         for challenge in challenges:
@@ -79,6 +84,7 @@ class ChallengesService:
                 status=status,
                 type=challenge_type,
                 is_public=is_public,
+                mine=creator_id is not None,
             ),
         )
 

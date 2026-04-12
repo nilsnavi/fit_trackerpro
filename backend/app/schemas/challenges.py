@@ -18,6 +18,10 @@ class ChallengeListFilters(BaseModel):
     status: Optional[str] = None
     type: Optional[str] = None
     is_public: Optional[bool] = None
+    mine: Optional[bool] = Field(
+        None,
+        description="When true, only challenges created by the current user are listed.",
+    )
 
 
 class ChallengeGoal(BaseModel):

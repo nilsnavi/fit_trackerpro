@@ -2,6 +2,7 @@ import { api } from '@shared/api/client'
 import type {
     GlucoseReading,
     GlucoseStats,
+    HealthDashboardStats,
     WaterEntry,
     WaterGoal,
     WaterReminder,
@@ -50,6 +51,9 @@ export const healthApi = {
     },
     getWellnessStats(): Promise<WellnessStats> {
         return api.get<WellnessStats>('/health-metrics/wellness/stats')
+    },
+    getDashboardStats(period: string): Promise<HealthDashboardStats> {
+        return api.get<HealthDashboardStats>('/health-metrics/stats', { period })
     },
     createWellnessEntry(payload: unknown): Promise<WellnessEntry> {
         return api.post<WellnessEntry>('/health-metrics/wellness', payload)
