@@ -6,6 +6,7 @@ import { memo, useEffect, useState } from 'react'
 import { Pause, Play, RotateCcw, SkipForward, Timer } from 'lucide-react'
 import { useActiveWorkoutActions, useActiveWorkoutStore } from '@/state/local'
 import { useRestTimer } from '@features/workouts/active/hooks/useRestTimer'
+import { formatDurationParts, useRestElapsedSeconds } from '@features/workouts/active/hooks/useWorkoutTimer'
 
 interface FloatingRestTimerProps {
     className?: string
@@ -31,6 +32,8 @@ export const FloatingRestTimer = memo(function FloatingRestTimer({
         durationSeconds: restTimer.durationSeconds,
         tick: tickRestTimer,
     })
+    const elapsedSeconds = useRestElapsedSeconds(restTimer.durationSeconds, restTimer.remainingSeconds)
+    const elapsedParts = formatDurationParts(elapsedSeconds)
 
     // Auto-minimize after 5 seconds
     useEffect(() => {
@@ -59,6 +62,9 @@ export const FloatingRestTimer = memo(function FloatingRestTimer({
                     <span className="text-sm font-semibold text-primary-foreground">
                         {formatRestTime(restTimer.remainingSeconds)}
                     </span>
+                    <span className="text-[10px] text-primary-foreground/80">
+                        ↓{elapsedParts.minutes}:{String(elapsedParts.seconds).padStart(2, '0')}
+                    </span>
                     <button
                         type="button"
                         onClick={(e) => {
@@ -86,7 +92,8 @@ export const FloatingRestTimer = memo(function FloatingRestTimer({
                             {formatRestTime(restTimer.remainingSeconds)}
                         </p>
                         <p className="mt-0.5 text-[11px] text-telegram-hint">
-                            {restTimer.isPaused ? 'Пауза' : 'Идёт'}
+                            Прошло: {elapsedParts.minutes} мин {elapsedParts.seconds} сек ·{' '}
+                            {restTimer.isPaused ? 'пауза' : 'идёт'}
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">

@@ -72,6 +72,10 @@ export interface CompletedSet {
     actual_rest_seconds?: number
     duration?: number
     distance?: number
+    /** ISO-8601, время начала подхода (клиент) */
+    started_at?: string
+    /** ISO-8601, время завершения движения (клиент) */
+    completed_at?: string
     completed: boolean
 }
 

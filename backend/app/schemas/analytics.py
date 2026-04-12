@@ -217,6 +217,16 @@ class AnalyticsWeeklyChartPoint(BaseModel):
     count: int
 
 
+class AnalyticsIntensityWeekPoint(BaseModel):
+    """Weekly aggregate for custom intensity score chart."""
+
+    date: date
+    intensity_score: Optional[float] = Field(
+        None,
+        description="avg_rpe × (completed_sets / avg_rest_minutes) for sets in the ISO week starting at date.",
+    )
+
+
 class AnalyticsDashboardResponse(BaseModel):
     """Aggregated analytics for the main dashboard (period filter)."""
 
@@ -246,6 +256,38 @@ class AnalyticsDashboardResponse(BaseModel):
     weekly_chart: List[AnalyticsWeeklyChartPoint] = Field(
         default_factory=list,
         description="Workout counts by day or by ISO week start within the chart window.",
+    )
+    avg_rpe_per_workout: Optional[float] = Field(
+        None,
+        description="Mean of per-workout average RPE (only sets with RPE logged).",
+    )
+    avg_rpe_previous_period: Optional[float] = Field(
+        None,
+        description="Same metric for the immediately preceding period of equal length.",
+    )
+    avg_rpe_trend: Optional[str] = Field(
+        None,
+        description="up | down | flat when both current and previous period have RPE data.",
+    )
+    avg_rest_time_seconds: Optional[float] = Field(
+        None,
+        description="Mean actual_rest_seconds across sets where rest was tracked.",
+    )
+    total_time_under_tension_seconds: Optional[float] = Field(
+        None,
+        description="Sum of (completed_at - started_at) in seconds where both timestamps exist.",
+    )
+    intensity_score: Optional[float] = Field(
+        None,
+        description="avg_rpe × (sets_count / avg_rest_minutes); None if rest or RPE insufficient.",
+    )
+    intensity_weekly_chart: List[AnalyticsIntensityWeekPoint] = Field(
+        default_factory=list,
+        description="Intensity score by ISO week (for longer windows).",
+    )
+    workouts_with_rpe_count: int = Field(
+        0,
+        description="Number of completed workouts in the window that logged at least one RPE value.",
     )
 
 

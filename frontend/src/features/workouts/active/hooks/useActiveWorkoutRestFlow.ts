@@ -138,7 +138,15 @@ export function useActiveWorkoutRestFlow({
         setCurrentPosition(exerciseIndex, setNumber - 1)
         updateSet(exerciseIndex, setNumber, {
             completed: nextCompleted,
-            ...(nextCompleted ? getTrackedRestPatch(exerciseIndex, setNumber) : {}),
+            ...(nextCompleted
+                ? {
+                      ...getTrackedRestPatch(exerciseIndex, setNumber),
+                      completed_at: new Date().toISOString(),
+                  }
+                : {
+                      completed_at: undefined,
+                      started_at: undefined,
+                  }),
         })
         if (nextCompleted) {
             startRestTimer(restDefaultSeconds)
