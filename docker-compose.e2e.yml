@@ -1,0 +1,99 @@
+# Изолированный стек для Playwright E2E против реального API (postgres + redis + миграции + backend).
+# Запуск: scripts/e2e-setup.sh
+
+name: fittracker-e2e
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: e2e
+      POSTGRES_PASSWORD: e2e
+      POSTGRES_DB: fittracker_e2e
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2e -d fittracker_e2e"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - e2e
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 8
+    networks:
+      - e2e
+
+  migrator:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://e2e:e2e@postgres:5432/fittracker_e2e
+      DATABASE_URL_SYNC: postgresql://e2e:e2e@postgres:5432/fittracker_e2e
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: test
+      DEBUG: "true"
+    volumes:
+      - ./backend:/backend
+      - ./database/migrations:/migrations
+    command:
+      [
+        "sh",
+        "-c",
+        "python /backend/tools/bootstrap_alembic_version.py /migrations/alembic.ini && python -m alembic -c /migrations/alembic.ini upgrade head",
+      ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - e2e
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "28000:8000"
+    env_file:
+      - backend/.env.test
+    environment:
+      DATABASE_URL: postgresql+asyncpg://e2e:e2e@postgres:5432/fittracker_e2e
+      DATABASE_URL_SYNC: postgresql://e2e:e2e@postgres:5432/fittracker_e2e
+      REDIS_URL: redis://redis:6379/0
+      ALEMBIC_INI_PATH: /migrations/alembic.ini
+      ENVIRONMENT: test
+      DEBUG: "true"
+    volumes:
+      - ./backend:/app
+      - ./database/migrations:/migrations:ro
+    command:
+      ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/system/ready"]
+      interval: 8s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - e2e
+
+networks:
+  e2e:
+    driver: bridge
