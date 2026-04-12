@@ -11,6 +11,30 @@ env:
   PYTHON_VERSION: "3.12"
 
 jobs:
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
   test-frontend:
     name: Test Frontend
     runs-on: ubuntu-latest
@@ -63,6 +87,50 @@ jobs:
           files: ./frontend/coverage/lcov.info
           flags: frontend
           name: frontend-coverage
+
+  e2e:
+    name: E2E MVP (Playwright + API)
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup test stack (Docker)
+        run: bash scripts/e2e-setup.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run MVP E2E (real API)
+        working-directory: ./frontend
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3000
+          VITE_API_URL: http://127.0.0.1:28000/api/v1
+          E2E_TELEGRAM_BOT_TOKEN: test_token_for_e2e
+        run: npm run e2e:mvp:stack
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-mvp-playwright-report
+          path: |
+            ./frontend/playwright-report
+            ./frontend/test-results
 
   e2e-workout-flows:
     name: E2E Workout Flows
