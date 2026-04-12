@@ -13,9 +13,14 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
 from app.api.exception_handlers import register_exception_handlers
 from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
 from app.api.v1.registration import register_v1_routes
+from app.core.limiter import limiter
+from app.core.rate_limit_handlers import slowapi_rate_limit_exceeded_handler
 from app.api.v1.system import health_check_response
 from app.application.health_check_service import HealthCheckService
 from app.bot import process_webhook_update, setup_bot, start_bot, start_bot_webhook, stop_bot
@@ -165,12 +170,13 @@ app = FastAPI(
     ```
     
     ## Rate Limiting
-    API has rate limiting enabled. Tiers: default (read), auth, system, write, plus
-    stricter policies for Telegram login, analytics export, and emergency notify.
-    Limits apply per Telegram user when a valid access token, refresh token (on ``/auth/refresh``),
-    or validated WebApp initData (on Telegram login) is present; otherwise per client IP.
-    Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``, ``X-RateLimit-Reset``,
-    ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and matching ``RateLimit-*`` headers.
+    Tiered limits via ``RateLimitMiddleware`` (Redis or in-memory): default reads, auth,
+    ``/workouts`` (60/min per Bearer user), ``/analytics`` (30/min per user), system, writes,
+    export, emergency notify. ``POST .../users/auth/telegram`` (and legacy ``/auth/telegram``)
+    uses **SlowAPI**: 10 requests/minute **per client IP** (429 with ``Retry-After``).
+    Other routes: per Telegram user id when a valid access token or refresh body is present;
+    otherwise per client IP. Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``,
+    ``X-RateLimit-Reset``, ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and ``RateLimit-*``.
     """,
     version=settings.APP_VERSION,
     lifespan=lifespan,
@@ -181,7 +187,11 @@ app = FastAPI(
 
 register_exception_handlers(app)
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, slowapi_rate_limit_exceeded_handler)
+
 # Middleware order: first registered = innermost (closest to routes).
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(SentryUserContextMiddleware)
 
 # CORS Middleware

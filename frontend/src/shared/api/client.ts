@@ -5,14 +5,14 @@ import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, normalizeError } from '@shared/errors'
 import { getAuthTokens, useAuthStore } from '@/stores/authStore'
 
+// TODO: Устаревшие алиасы бэкенда удаляются в v1.2.0 (2026-06-30)
+
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean }
 
 function isPublicAuthRequest(config: RetryableRequestConfig | undefined): boolean {
     const requestUrl = config?.url ?? ''
     return (
-        requestUrl.includes('/auth/telegram') ||
         requestUrl.includes('/users/auth/telegram') ||
-        requestUrl.includes('/auth/refresh') ||
         requestUrl.includes('/users/auth/refresh')
     )
 }

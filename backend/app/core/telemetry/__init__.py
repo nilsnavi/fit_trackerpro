@@ -97,8 +97,16 @@ def init_sentry(settings: Settings) -> None:
 
 
 def setup_prometheus_metrics(app: "FastAPI", settings: Settings) -> None:
-    """Expose Prometheus metrics for scraping (HTTP latency, in-progress, request totals)."""
+    """
+    Экспорт метрик для Prometheus.
+
+    При ``ENABLE_PROMETHEUS_METRICS=false`` поднимается только минимальный счётчик
+    ``http_requests_total`` (совместимый с правилами алертинга), без histogram/latency.
+    """
     if not settings.ENABLE_PROMETHEUS_METRICS:
+        from app.core.telemetry.minimal_prometheus import install_minimal_prometheus_metrics
+
+        install_minimal_prometheus_metrics(app)
         return
 
     from prometheus_fastapi_instrumentator import Instrumentator

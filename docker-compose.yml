@@ -87,6 +87,7 @@ services:
       # Keep empty here so backend/.env can control it (env_ignore_empty=true)
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
       - SENTRY_DSN=${SENTRY_DSN}
+      - ENABLE_PROMETHEUS_METRICS=${ENABLE_PROMETHEUS_METRICS:-true}
     volumes:
       - ./backend:/app
       - ./database/migrations:/migrations:ro

@@ -31,7 +31,8 @@ export function trackBusinessMetric(
     event: BusinessMetricEvent,
     properties: BusinessMetricProperties = {},
 ): void {
-    if (import.meta.env.DEV) {
+    // Avoid `import.meta` here: Jest/ts-jest loads this file as CJS and cannot parse it.
+    if (process.env.NODE_ENV === 'development') {
         console.debug('[business-metric]', event, properties)
     }
     sink?.(event, properties)

@@ -166,7 +166,15 @@ class Settings(BaseSettings):
         float | None,
         Field(description="Sampling for profiles (0..1). If unset, uses traces sample rate.", ge=0.0, le=1.0),
     ] = None
-    ENABLE_PROMETHEUS_METRICS: bool = True
+    ENABLE_PROMETHEUS_METRICS: Annotated[
+        bool,
+        Field(
+            description=(
+                "Full Prometheus instrumentation (histograms, latency). If false, a minimal "
+                "``http_requests_total`` counter is still exposed at ``/metrics`` for alerting."
+            ),
+        ),
+    ] = True
 
     # --- Dev UX: create DB schema automatically (no Alembic in repo) ---
     AUTO_CREATE_DB_SCHEMA: Annotated[
@@ -252,6 +260,26 @@ class Settings(BaseSettings):
     RATE_LIMIT_EMERGENCY_NOTIFY_REQUESTS: Annotated[
         int, Field(description="Max emergency notify requests per window.", ge=1)
     ] = 20
+
+    RATE_LIMIT_WORKOUTS_WINDOW_SECONDS: Annotated[
+        int, Field(description="Window for /api/v1/workouts/* (per Bearer user).", ge=1)
+    ] = 60
+    RATE_LIMIT_WORKOUTS_REQUESTS: Annotated[
+        int, Field(description="Max requests per window for /api/v1/workouts/*.", ge=1)
+    ] = 60
+
+    RATE_LIMIT_ANALYTICS_WINDOW_SECONDS: Annotated[
+        int,
+        Field(
+            description=(
+                "Window for /api/v1/analytics/* (includes achievements/challenges under the same prefix)."
+            ),
+            ge=1,
+        ),
+    ] = 60
+    RATE_LIMIT_ANALYTICS_REQUESTS: Annotated[
+        int, Field(description="Max requests per window for /api/v1/analytics/*.", ge=1)
+    ] = 30
 
     # --- Optional: logging ---
     LOG_LEVEL: str = "INFO"

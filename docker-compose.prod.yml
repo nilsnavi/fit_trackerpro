@@ -96,6 +96,7 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
       - SENTRY_DSN=${SENTRY_DSN}
       - TELEGRAM_BOT_ENABLED=false
+      - ENABLE_PROMETHEUS_METRICS=true
     # Readiness probe: checks DB, Redis, and external service connectivity.
     # Container receives traffic only when all dependencies are healthy.
     healthcheck:

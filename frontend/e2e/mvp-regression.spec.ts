@@ -132,7 +132,7 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         // Add first exercise
         await page.locator('[data-testid="add-exercise-btn"]').click()
 
-        let dialog = page.locator('[role="dialog"]').last()
+        const dialog = page.locator('[role="dialog"]').last()
         await expect(dialog).toBeVisible({ timeout: 10_000 })
 
         // Search and select exercise

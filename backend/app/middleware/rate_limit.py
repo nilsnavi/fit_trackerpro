@@ -28,11 +28,21 @@ WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # Policy tokens exposed in X-RateLimit-Policy (stable for clients)
 POLICY_DEFAULT = "default"
 POLICY_AUTH = "auth"
-POLICY_AUTH_STRICT = "auth-strict"
 POLICY_SYSTEM = "system"
 POLICY_WRITE = "write"
 POLICY_EXPORT = "export"
 POLICY_EMERGENCY_NOTIFY = "emergency-notify"
+POLICY_WORKOUTS = "workouts"
+POLICY_ANALYTICS = "analytics"
+
+
+def _is_telegram_login_slowapi_path(path: str, method: str) -> bool:
+    """WebApp login POST is limited by SlowAPI (10/min per IP); skip tiered middleware."""
+    if method != "POST":
+        return False
+    if not path.endswith("/telegram"):
+        return False
+    return "/auth/" in path
 
 
 def create_rate_limit_redis_client() -> Optional[redis.Redis]:
@@ -179,7 +189,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             f"{API_V1_PREFIX}/auth",
         )
         system_prefix = f"{API_V1_PREFIX}/system"
-        strict_suffix = "/telegram"
 
         if path == export_path or path.startswith(export_path + "/"):
             return (
@@ -196,11 +205,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     s.RATE_LIMIT_EMERGENCY_NOTIFY_WINDOW_SECONDS,
                 )
 
-        if path.endswith(strict_suffix) and any(path.startswith(p) for p in auth_prefixes):
+        workouts_prefix = f"{API_V1_PREFIX}/workouts"
+        if path == workouts_prefix or path.startswith(workouts_prefix + "/"):
             return (
-                POLICY_AUTH_STRICT,
-                s.RATE_LIMIT_AUTH_STRICT_REQUESTS,
-                s.RATE_LIMIT_AUTH_STRICT_WINDOW_SECONDS,
+                POLICY_WORKOUTS,
+                s.RATE_LIMIT_WORKOUTS_REQUESTS,
+                s.RATE_LIMIT_WORKOUTS_WINDOW_SECONDS,
+            )
+
+        analytics_prefix = f"{API_V1_PREFIX}/analytics"
+        if path == analytics_prefix or path.startswith(analytics_prefix + "/"):
+            return (
+                POLICY_ANALYTICS,
+                s.RATE_LIMIT_ANALYTICS_REQUESTS,
+                s.RATE_LIMIT_ANALYTICS_WINDOW_SECONDS,
             )
 
         if any(path.startswith(p) for p in auth_prefixes):
@@ -224,6 +242,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         path = request.url.path
         method = request.method.upper()
+
+        if _is_telegram_login_slowapi_path(path, method):
+            return await call_next(request)
 
         if path in {
             "/",

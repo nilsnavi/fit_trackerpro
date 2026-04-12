@@ -45,7 +45,7 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
                 return route.fulfill({ status: 204, headers: corsHeaders, body: '' })
             }
 
-            if (method === 'GET' && path.includes('/auth/me')) {
+            if (method === 'GET' && path.includes('/users/auth/me')) {
                 profileCalls += 1
                 return json(200, {
                     id: 1,
@@ -65,7 +65,7 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
                 })
             }
 
-            if (method === 'POST' && path.includes('/auth/onboarding')) {
+            if (method === 'POST' && path.includes('/users/auth/onboarding')) {
                 onboardingBody = request.postDataJSON() as Record<string, unknown>
                 return json(200, {
                     success: true,

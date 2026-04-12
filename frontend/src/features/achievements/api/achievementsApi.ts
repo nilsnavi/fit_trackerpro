@@ -14,18 +14,15 @@ export interface AchievementsListResponse {
 
 export const achievementsApi = {
     list(params?: { category?: AchievementCategory }): Promise<AchievementsListResponse> {
-        return api.get<AchievementsListResponse>('/achievements', params)
+        return api.get<AchievementsListResponse>('/analytics/achievements', params)
     },
     getUserAchievements(): Promise<UserAchievementStats> {
-        return api.get<UserAchievementStats>('/achievements/user')
+        return api.get<UserAchievementStats>('/analytics/achievements/user')
     },
     claim(achievementId: number): Promise<AchievementUnlockData> {
-        return api.post<AchievementUnlockData>(`/achievements/${achievementId}/claim`)
-    },
-    checkProgress(): Promise<void> {
-        return api.post('/achievements/check-progress')
+        return api.post<AchievementUnlockData>(`/analytics/achievements/${achievementId}/claim`)
     },
     getLeaderboard() {
-        return api.get('/achievements/leaderboard')
+        return api.get('/analytics/achievements/leaderboard')
     },
 }

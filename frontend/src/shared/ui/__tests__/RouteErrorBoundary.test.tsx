@@ -5,7 +5,7 @@ import { RouteErrorBoundary } from '../RouteErrorBoundary'
 
 // Mock @sentry/react so ErrorBoundary calls the fallback prop with controlled props.
 jest.mock('@sentry/react', () => {
-    const ReactInMock = require('react')
+    const ReactActual = jest.requireActual<typeof import('react')>('react')
     return {
         ErrorBoundary: ({
             children,
@@ -20,7 +20,7 @@ jest.mock('@sentry/react', () => {
             }) => React.ReactNode
             showDialog?: boolean
         }) => {
-            const [hasError, setHasError] = ReactInMock.useState(false)
+            const [hasError, setHasError] = ReactActual.useState(false)
 
             if (hasError) {
                 return fallback({
@@ -32,10 +32,10 @@ jest.mock('@sentry/react', () => {
             }
 
             // Wrap children; child can throw to trigger fallback in tests.
-            return ReactInMock.createElement(
+            return ReactActual.createElement(
                 'div',
                 null,
-                ReactInMock.createElement('button', {
+                ReactActual.createElement('button', {
                     'data-testid': 'trigger-error',
                     onClick: () => setHasError(true),
                 }),

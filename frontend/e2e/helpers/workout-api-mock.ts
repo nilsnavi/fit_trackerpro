@@ -254,7 +254,7 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             })
         }
 
-        if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me'))) {
+        if (method === 'GET' && normalizedPath.endsWith('/users/auth/me')) {
             return respond(200, buildUserProfile())
         }
 

@@ -33,7 +33,7 @@ def _sequence(
     *,
     limit: int,
     window: int,
-    path: str = "/api/v1/analytics/summary",
+    path: str = "/api/v1/ratelimit-test/ping",
     identifier: str = "1.2.3.4",
 ) -> list[tuple[bool, int]]:
     """Серия вызовов _check_rate_limit; возвращает (allowed, remaining) на каждом шаге."""
@@ -190,8 +190,8 @@ def _build_rate_limited_app(*, redis_client: redis.Redis | None) -> FastAPI:
     register_exception_handlers(app)
     app.state.redis_rate_limit = redis_client
 
-    @app.get("/api/v1/analytics/summary")
-    async def summary():
+    @app.get("/api/v1/ratelimit-test/ping")
+    async def ping():
         return {"ok": True}
 
     app.add_middleware(RateLimitMiddleware)
@@ -207,14 +207,14 @@ async def test_middleware_allows_normal_traffic_and_sets_headers(monkeypatch):
     app = _build_rate_limited_app(redis_client=None)  # fallback mode (in-memory)
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        r1 = await client.get("/api/v1/analytics/summary")
+        r1 = await client.get("/api/v1/ratelimit-test/ping")
         assert r1.status_code == 200
         assert r1.headers["X-RateLimit-Limit"] == "2"
         assert r1.headers["X-RateLimit-Remaining"] == "1"
         assert r1.headers["X-RateLimit-Window"] == "60"
         assert r1.headers["X-RateLimit-Policy"] == POLICY_DEFAULT
 
-        r2 = await client.get("/api/v1/analytics/summary")
+        r2 = await client.get("/api/v1/ratelimit-test/ping")
         assert r2.status_code == 200
         assert r2.headers["X-RateLimit-Remaining"] == "0"
 
@@ -228,10 +228,10 @@ async def test_middleware_returns_429_on_limit_exceeded_with_retry_after(monkeyp
     app = _build_rate_limited_app(redis_client=None)  # fallback mode (in-memory)
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        ok = await client.get("/api/v1/analytics/summary")
+        ok = await client.get("/api/v1/ratelimit-test/ping")
         assert ok.status_code == 200
 
-        blocked = await client.get("/api/v1/analytics/summary")
+        blocked = await client.get("/api/v1/ratelimit-test/ping")
         assert blocked.status_code == 429
         assert "Rate limit exceeded" in blocked.text
         assert blocked.headers["X-RateLimit-Limit"] == "1"
@@ -258,17 +258,17 @@ async def test_middleware_window_resets_after_time_advance(monkeypatch):
     app = _build_rate_limited_app(redis_client=None)  # fallback mode (in-memory)
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        r1 = await client.get("/api/v1/analytics/summary")
+        r1 = await client.get("/api/v1/ratelimit-test/ping")
         assert r1.status_code == 200
 
         # Still in the same window -> blocked
         fake_time._v = t0 + 1
-        r2 = await client.get("/api/v1/analytics/summary")
+        r2 = await client.get("/api/v1/ratelimit-test/ping")
         assert r2.status_code == 429
 
         # After window -> allowed again
         fake_time._v = t0 + 10.5
-        r3 = await client.get("/api/v1/analytics/summary")
+        r3 = await client.get("/api/v1/ratelimit-test/ping")
         assert r3.status_code == 200
         assert r3.headers["X-RateLimit-Remaining"] == "0"
 
@@ -284,7 +284,7 @@ async def test_middleware_uses_redis_and_sets_ttl(monkeypatch):
 
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        r1 = await client.get("/api/v1/analytics/summary", headers={"X-Forwarded-For": "9.9.9.9"})
+        r1 = await client.get("/api/v1/ratelimit-test/ping", headers={"X-Forwarded-For": "9.9.9.9"})
         assert r1.status_code == 200
 
     # Проверяем, что ключ создан и имеет TTL (expire(key, window)).
@@ -293,3 +293,24 @@ async def test_middleware_uses_redis_and_sets_ttl(monkeypatch):
     ttl = fake.ttl(keys[0])
     assert ttl > 0
     assert ttl <= 60
+
+
+@pytest.mark.asyncio
+async def test_telegram_auth_slowapi_eleventh_post_returns_429_with_retry_after():
+    """POST /users/auth/telegram: SlowAPI 10/min per IP; 11th response is 429 with Retry-After."""
+    from app.core.limiter import limiter
+    from app.main import app
+
+    limiter.reset()
+    url = "/api/v1/users/auth/telegram"
+    payload = {"init_data": "invalid-signature-payload"}
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        for _ in range(10):
+            resp = await ac.post(url, json=payload)
+            assert resp.status_code != 429, resp.text
+        blocked = await ac.post(url, json=payload)
+    assert blocked.status_code == 429
+    ra = blocked.headers.get("Retry-After") or blocked.headers.get("retry-after")
+    assert ra is not None
+    assert int(ra) >= 1

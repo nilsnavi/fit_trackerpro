@@ -298,6 +298,315 @@
         "title": "AchievementUnlockResponse",
         "type": "object"
       },
+      "AnalyticsDashboardResponse": {
+        "description": "Aggregated analytics for the main dashboard (period filter).",
+        "properties": {
+          "avg_duration": {
+            "description": "Mean workout duration in minutes within the selected period.",
+            "title": "Avg Duration",
+            "type": "number"
+          },
+          "avg_rest_time_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mean actual_rest_seconds across sets where rest was tracked.",
+            "title": "Avg Rest Time Seconds"
+          },
+          "avg_rpe_per_workout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mean of per-workout average RPE (only sets with RPE logged).",
+            "title": "Avg Rpe Per Workout"
+          },
+          "avg_rpe_previous_period": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Same metric for the immediately preceding period of equal length.",
+            "title": "Avg Rpe Previous Period"
+          },
+          "avg_rpe_trend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "up | down | flat when both current and previous period have RPE data.",
+            "title": "Avg Rpe Trend"
+          },
+          "favorite_exercise": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Most frequent exercise name in the selected period.",
+            "title": "Favorite Exercise"
+          },
+          "intensity_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "avg_rpe × (sets_count / avg_rest_minutes); None if rest or RPE insufficient.",
+            "title": "Intensity Score"
+          },
+          "intensity_weekly_chart": {
+            "description": "Intensity score by ISO week (for longer windows).",
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsIntensityWeekPoint"
+            },
+            "title": "Intensity Weekly Chart",
+            "type": "array"
+          },
+          "period": {
+            "description": "Echo of requested window: week | month | all.",
+            "title": "Period",
+            "type": "string"
+          },
+          "streak_days": {
+            "description": "Current consecutive-day workout streak (today or yesterday counts as active).",
+            "title": "Streak Days",
+            "type": "integer"
+          },
+          "total_duration_minutes": {
+            "title": "Total Duration Minutes",
+            "type": "integer"
+          },
+          "total_time_under_tension_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sum of (completed_at - started_at) in seconds where both timestamps exist.",
+            "title": "Total Time Under Tension Seconds"
+          },
+          "total_workouts": {
+            "title": "Total Workouts",
+            "type": "integer"
+          },
+          "weekly_chart": {
+            "description": "Workout counts by day or by ISO week start within the chart window.",
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsWeeklyChartPoint"
+            },
+            "title": "Weekly Chart",
+            "type": "array"
+          },
+          "workouts_this_month": {
+            "description": "Workouts logged in the current calendar month.",
+            "title": "Workouts This Month",
+            "type": "integer"
+          },
+          "workouts_this_week": {
+            "description": "Workouts logged in the current calendar week (Mon–Sun).",
+            "title": "Workouts This Week",
+            "type": "integer"
+          },
+          "workouts_with_rpe_count": {
+            "default": 0,
+            "description": "Number of completed workouts in the window that logged at least one RPE value.",
+            "title": "Workouts With Rpe Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period",
+          "total_workouts",
+          "total_duration_minutes",
+          "avg_duration",
+          "workouts_this_week",
+          "workouts_this_month",
+          "streak_days"
+        ],
+        "title": "AnalyticsDashboardResponse",
+        "type": "object"
+      },
+      "AnalyticsIntensityWeekPoint": {
+        "description": "Weekly aggregate for custom intensity score chart.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "intensity_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "avg_rpe × (completed_sets / avg_rest_minutes) for sets in the ISO week starting at date.",
+            "title": "Intensity Score"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "AnalyticsIntensityWeekPoint",
+        "type": "object"
+      },
+      "AnalyticsPerformanceOverviewResponse": {
+        "description": "Overview metrics for volume, frequency, progress over time and estimated 1RM.",
+        "properties": {
+          "active_days": {
+            "title": "Active Days",
+            "type": "integer"
+          },
+          "average_volume_per_workout": {
+            "title": "Average Volume Per Workout",
+            "type": "number"
+          },
+          "average_workouts_per_week": {
+            "title": "Average Workouts Per Week",
+            "type": "number"
+          },
+          "baseline_estimated_1rm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Estimated 1Rm"
+          },
+          "current_estimated_1rm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Estimated 1Rm"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "estimated_1rm_progress_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated 1Rm Progress Pct"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "total_volume": {
+            "title": "Total Volume",
+            "type": "number"
+          },
+          "total_workouts": {
+            "title": "Total Workouts",
+            "type": "integer"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsPerformanceTrendPoint"
+            },
+            "title": "Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "date_from",
+          "date_to",
+          "total_workouts",
+          "active_days",
+          "average_workouts_per_week",
+          "total_volume",
+          "average_volume_per_workout"
+        ],
+        "title": "AnalyticsPerformanceOverviewResponse",
+        "type": "object"
+      },
+      "AnalyticsPerformanceTrendPoint": {
+        "description": "Daily trend point for high-level performance analytics.",
+        "properties": {
+          "best_estimated_1rm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Estimated 1Rm"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "total_volume": {
+            "title": "Total Volume",
+            "type": "number"
+          },
+          "workout_count": {
+            "title": "Workout Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "workout_count",
+          "total_volume"
+        ],
+        "title": "AnalyticsPerformanceTrendPoint",
+        "type": "object"
+      },
       "AnalyticsSummaryResponse": {
         "description": "Analytics summary response",
         "properties": {
@@ -368,6 +677,26 @@
         "title": "AnalyticsSummaryResponse",
         "type": "object"
       },
+      "AnalyticsWeeklyChartPoint": {
+        "description": "Single point for workout frequency chart (day or week bucket).",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "count"
+        ],
+        "title": "AnalyticsWeeklyChartPoint",
+        "type": "object"
+      },
       "AuthResponse": {
         "description": "Authentication response",
         "properties": {
@@ -397,14 +726,53 @@
             "description": "Token expiration in seconds",
             "title": "Expires In"
           },
+          "is_new_user": {
+            "default": false,
+            "description": "True when user has been created during this auth request.",
+            "title": "Is New User",
+            "type": "boolean"
+          },
           "message": {
             "maxLength": 2000,
             "title": "Message",
             "type": "string"
           },
+          "onboarding_required": {
+            "default": false,
+            "description": "True when onboarding form should be shown to the user.",
+            "title": "Onboarding Required",
+            "type": "boolean"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "maxLength": 16384,
+                "minLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Refresh token; optional for backward compatibility.",
+            "title": "Refresh Token"
+          },
           "success": {
             "title": "Success",
             "type": "boolean"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "JWT access token (Mini App / camelCase alias of access_token).",
+            "title": "Token"
           },
           "token_type": {
             "default": "bearer",
@@ -428,6 +796,61 @@
           "message"
         ],
         "title": "AuthResponse",
+        "type": "object"
+      },
+      "Body_create_custom_exercise_multipart_api_v1_exercises_custom_post": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "difficulty": {
+            "default": "beginner",
+            "title": "Difficulty",
+            "type": "string"
+          },
+          "equipment": {
+            "default": "[]",
+            "title": "Equipment",
+            "type": "string"
+          },
+          "media": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "risks": {
+            "default": "[]",
+            "title": "Risks",
+            "type": "string"
+          },
+          "target_muscles": {
+            "default": "[]",
+            "title": "Target Muscles",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "category"
+        ],
+        "title": "Body_create_custom_exercise_multipart_api_v1_exercises_custom_post",
         "type": "object"
       },
       "CalendarDayEntry": {
@@ -942,6 +1365,18 @@
             ],
             "title": "Is Public"
           },
+          "mine": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When true, only challenges created by the current user are listed.",
+            "title": "Mine"
+          },
           "status": {
             "anyOf": [
               {
@@ -1386,10 +1821,37 @@
       "CompletedSet-Input": {
         "description": "Completed set data",
         "properties": {
+          "actual_rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tracked actual rest before the set, in seconds.",
+            "title": "Actual Rest Seconds"
+          },
           "completed": {
             "default": true,
             "title": "Completed",
             "type": "boolean"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set completion timestamp (client).",
+            "title": "Completed At"
           },
           "duration": {
             "anyOf": [
@@ -1404,6 +1866,20 @@
             ],
             "description": "Duration in seconds",
             "title": "Duration"
+          },
+          "planned_rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Planned rest for the set, in seconds.",
+            "title": "Planned Rest Seconds"
           },
           "reps": {
             "anyOf": [
@@ -1460,6 +1936,24 @@
             "minimum": 1.0,
             "title": "Set Number",
             "type": "integer"
+          },
+          "set_type": {
+            "$ref": "#/components/schemas/WorkoutSetType",
+            "default": "working",
+            "description": "Set type: warmup, working, dropset, failure."
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set start timestamp (client, for time-under-tension).",
+            "title": "Started At"
           },
           "weight": {
             "anyOf": [
@@ -1484,10 +1978,37 @@
       "CompletedSet-Output": {
         "description": "Completed set data",
         "properties": {
+          "actual_rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tracked actual rest before the set, in seconds.",
+            "title": "Actual Rest Seconds"
+          },
           "completed": {
             "default": true,
             "title": "Completed",
             "type": "boolean"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set completion timestamp (client).",
+            "title": "Completed At"
           },
           "duration": {
             "anyOf": [
@@ -1502,6 +2023,20 @@
             ],
             "description": "Duration in seconds",
             "title": "Duration"
+          },
+          "planned_rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Planned rest for the set, in seconds.",
+            "title": "Planned Rest Seconds"
           },
           "reps": {
             "anyOf": [
@@ -1548,6 +2083,24 @@
             "minimum": 1.0,
             "title": "Set Number",
             "type": "integer"
+          },
+          "set_type": {
+            "$ref": "#/components/schemas/WorkoutSetType",
+            "default": "working",
+            "description": "Set type: warmup, working, dropset, failure."
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set start timestamp (client, for time-under-tension).",
+            "title": "Started At"
           },
           "weight": {
             "anyOf": [
@@ -2549,6 +3102,17 @@
       "ExerciseCreate": {
         "description": "Request model for creating exercise",
         "properties": {
+          "aliases": {
+            "description": "Alternative names used in exercise search.",
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Aliases",
+            "type": "array"
+          },
           "category": {
             "$ref": "#/components/schemas/ExerciseCategory",
             "description": "Exercise category."
@@ -2589,6 +3153,20 @@
             ],
             "description": "URL to image or video.",
             "title": "Media Url"
+          },
+          "muscle_group": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary muscle group used for fast filtering.",
+            "title": "Muscle Group"
           },
           "muscle_groups": {
             "description": "Muscle groups; at most 30 entries.",
@@ -3035,6 +3613,13 @@
       "ExerciseResponse": {
         "description": "Exercise response",
         "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
           "author_user_id": {
             "anyOf": [
               {
@@ -3087,6 +3672,17 @@
               }
             ],
             "title": "Media Url"
+          },
+          "muscle_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Muscle Group"
           },
           "muscle_groups": {
             "items": {
@@ -3141,6 +3737,23 @@
       "ExerciseUpdate": {
         "description": "Request model for updating exercise",
         "properties": {
+          "aliases": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aliases"
+          },
           "category": {
             "anyOf": [
               {
@@ -3191,6 +3804,19 @@
               }
             ],
             "title": "Media Url"
+          },
+          "muscle_group": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Muscle Group"
           },
           "muscle_groups": {
             "anyOf": [
@@ -3247,6 +3873,15 @@
         "title": "ExerciseUpdate",
         "type": "object"
       },
+      "ExperienceLevel": {
+        "enum": [
+          "beginner",
+          "intermediate",
+          "advanced"
+        ],
+        "title": "ExperienceLevel",
+        "type": "string"
+      },
       "ExportFormat": {
         "enum": [
           "json",
@@ -3279,6 +3914,15 @@
         ],
         "title": "FavoriteExercise",
         "type": "object"
+      },
+      "FitnessGoal": {
+        "enum": [
+          "strength",
+          "weight_loss",
+          "endurance"
+        ],
+        "title": "FitnessGoal",
+        "type": "string"
       },
       "GlucoseHistoryResponse": {
         "description": "Glucose history response",
@@ -3650,6 +4294,27 @@
         ],
         "title": "HealthStatus",
         "type": "string"
+      },
+      "LivenessResponse": {
+        "description": "Liveness probe response: container is running.",
+        "properties": {
+          "status": {
+            "default": "alive",
+            "description": "Always 'alive' if endpoint responds",
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "UTC ISO8601 timestamp",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp"
+        ],
+        "title": "LivenessResponse",
+        "type": "object"
       },
       "LogoutResponse": {
         "description": "Logout response",
@@ -4101,6 +4766,49 @@
         "title": "NotificationResult",
         "type": "object"
       },
+      "OnboardingRequest": {
+        "description": "Request model for first-login onboarding.",
+        "properties": {
+          "experience_level": {
+            "$ref": "#/components/schemas/ExperienceLevel",
+            "description": "Current training level."
+          },
+          "fitness_goal": {
+            "$ref": "#/components/schemas/FitnessGoal",
+            "description": "Primary fitness objective."
+          }
+        },
+        "required": [
+          "fitness_goal",
+          "experience_level"
+        ],
+        "title": "OnboardingRequest",
+        "type": "object"
+      },
+      "OnboardingResponse": {
+        "description": "Response for onboarding save operation.",
+        "properties": {
+          "message": {
+            "default": "Onboarding saved",
+            "maxLength": 500,
+            "title": "Message",
+            "type": "string"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfileData"
+          },
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "title": "OnboardingResponse",
+        "type": "object"
+      },
       "PainZones": {
         "description": "Pain levels by body zone",
         "properties": {
@@ -4240,6 +4948,467 @@
           "improvement"
         ],
         "title": "PersonalRecord",
+        "type": "object"
+      },
+      "ProgressInsightsBestSetItem": {
+        "description": "Top set by volume/weight in selected period.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "set_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Number"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "number"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "exercise_name",
+          "date",
+          "volume"
+        ],
+        "title": "ProgressInsightsBestSetItem",
+        "type": "object"
+      },
+      "ProgressInsightsFrequencyPoint": {
+        "description": "Weekly frequency aggregate point.",
+        "properties": {
+          "active_days": {
+            "title": "Active Days",
+            "type": "integer"
+          },
+          "week_end": {
+            "format": "date",
+            "title": "Week End",
+            "type": "string"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          },
+          "workout_count": {
+            "title": "Workout Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "week_start",
+          "week_end",
+          "active_days",
+          "workout_count"
+        ],
+        "title": "ProgressInsightsFrequencyPoint",
+        "type": "object"
+      },
+      "ProgressInsightsPRItem": {
+        "description": "Detected personal record event for an exercise.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "improvement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement"
+          },
+          "improvement_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement Pct"
+          },
+          "is_first_entry": {
+            "default": false,
+            "title": "Is First Entry",
+            "type": "boolean"
+          },
+          "previous_best_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Best Weight"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "exercise_name",
+          "date"
+        ],
+        "title": "ProgressInsightsPRItem",
+        "type": "object"
+      },
+      "ProgressInsightsResponse": {
+        "description": "Combined progress analytics payload for overview screens.",
+        "properties": {
+          "best_sets": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsBestSetItem"
+            },
+            "title": "Best Sets",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "frequency_trend": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsFrequencyPoint"
+            },
+            "title": "Frequency Trend",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "pr_events": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsPRItem"
+            },
+            "title": "Pr Events",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ProgressInsightsSummary"
+          },
+          "volume_trend": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsVolumePoint"
+            },
+            "title": "Volume Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "date_from",
+          "date_to",
+          "summary"
+        ],
+        "title": "ProgressInsightsResponse",
+        "type": "object"
+      },
+      "ProgressInsightsSummary": {
+        "description": "Compact overview of progress in selected period.",
+        "properties": {
+          "active_days": {
+            "title": "Active Days",
+            "type": "integer"
+          },
+          "average_workouts_per_week": {
+            "title": "Average Workouts Per Week",
+            "type": "number"
+          },
+          "total_reps": {
+            "title": "Total Reps",
+            "type": "integer"
+          },
+          "total_sets": {
+            "title": "Total Sets",
+            "type": "integer"
+          },
+          "total_volume": {
+            "title": "Total Volume",
+            "type": "number"
+          },
+          "total_workouts": {
+            "title": "Total Workouts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_workouts",
+          "active_days",
+          "total_sets",
+          "total_reps",
+          "total_volume",
+          "average_workouts_per_week"
+        ],
+        "title": "ProgressInsightsSummary",
+        "type": "object"
+      },
+      "ProgressInsightsVolumePoint": {
+        "description": "Daily volume aggregate point for trend charts.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "total_reps": {
+            "title": "Total Reps",
+            "type": "integer"
+          },
+          "total_sets": {
+            "title": "Total Sets",
+            "type": "integer"
+          },
+          "total_volume": {
+            "title": "Total Volume",
+            "type": "number"
+          },
+          "workout_count": {
+            "title": "Workout Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "workout_count",
+          "total_sets",
+          "total_reps",
+          "total_volume"
+        ],
+        "title": "ProgressInsightsVolumePoint",
+        "type": "object"
+      },
+      "ReadinessCheckDatabase": {
+        "properties": {
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Round-trip time in milliseconds (best-effort on errors).",
+            "title": "Latency Ms"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ReadinessCheckDatabase",
+        "type": "object"
+      },
+      "ReadinessCheckRedis": {
+        "properties": {
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Round-trip time in milliseconds (best-effort on errors).",
+            "title": "Latency Ms"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ReadinessCheckRedis",
+        "type": "object"
+      },
+      "ReadinessChecks": {
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/ReadinessCheckDatabase"
+          },
+          "migrations": {
+            "$ref": "#/components/schemas/ReadinessMigrationsCheck"
+          },
+          "redis": {
+            "$ref": "#/components/schemas/ReadinessCheckRedis"
+          }
+        },
+        "required": [
+          "database",
+          "redis",
+          "migrations"
+        ],
+        "title": "ReadinessChecks",
+        "type": "object"
+      },
+      "ReadinessMigrationsCheck": {
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Revision in alembic_version",
+            "title": "Current"
+          },
+          "head": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Alembic head revision from scripts",
+            "title": "Head"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "pending",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ReadinessMigrationsCheck",
+        "type": "object"
+      },
+      "ReadinessResponse": {
+        "description": "Readiness probe: PostgreSQL, Redis, and Alembic migration alignment.",
+        "properties": {
+          "checks": {
+            "$ref": "#/components/schemas/ReadinessChecks"
+          },
+          "status": {
+            "description": "'ready' if DB/Redis OK and migrations match head; 'degraded' if DB/Redis OK but migrations pending; 'not_ready' on dependency failures.",
+            "enum": [
+              "ready",
+              "degraded",
+              "not_ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "UTC ISO8601 timestamp with Z suffix",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checks",
+          "timestamp"
+        ],
+        "title": "ReadinessResponse",
         "type": "object"
       },
       "RecoveryStateRecalculateResponse": {
@@ -4450,22 +5619,109 @@
         "title": "ServiceVersionResponse",
         "type": "object"
       },
+      "SessionEffortDistribution": {
+        "properties": {
+          "easy": {
+            "default": 0,
+            "title": "Easy",
+            "type": "integer"
+          },
+          "hard": {
+            "default": 0,
+            "title": "Hard",
+            "type": "integer"
+          },
+          "maximal": {
+            "default": 0,
+            "title": "Maximal",
+            "type": "integer"
+          },
+          "moderate": {
+            "default": 0,
+            "title": "Moderate",
+            "type": "integer"
+          }
+        },
+        "title": "SessionEffortDistribution",
+        "type": "object"
+      },
+      "SessionFatigueTrend": {
+        "properties": {
+          "closing_avg_rpe": {
+            "title": "Closing Avg Rpe",
+            "type": "number"
+          },
+          "delta": {
+            "title": "Delta",
+            "type": "number"
+          },
+          "opening_avg_rpe": {
+            "title": "Opening Avg Rpe",
+            "type": "number"
+          }
+        },
+        "required": [
+          "opening_avg_rpe",
+          "closing_avg_rpe",
+          "delta"
+        ],
+        "title": "SessionFatigueTrend",
+        "type": "object"
+      },
+      "StartWorkoutTemplateOverrides": {
+        "description": "Optional template overrides for start workflow without mutating source template.",
+        "properties": {
+          "comments": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "exercises": {
+            "description": "Override exercise plan for this session only.",
+            "items": {
+              "$ref": "#/components/schemas/ExerciseInTemplate"
+            },
+            "maxItems": 100,
+            "title": "Exercises",
+            "type": "array"
+          },
+          "tags": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "title": "StartWorkoutTemplateOverrides",
+        "type": "object"
+      },
       "TelegramAuthRequest": {
         "description": "Request model for Telegram authentication",
         "properties": {
-          "init_data": {
+          "initData": {
             "description": "Raw initData string from Telegram WebApp",
             "examples": [
               "query_id=...&user={...}&auth_date=...&hash=..."
             ],
             "maxLength": 16384,
             "minLength": 1,
-            "title": "Init Data",
+            "title": "Initdata",
             "type": "string"
           }
         },
         "required": [
-          "init_data"
+          "initData"
         ],
         "title": "TelegramAuthRequest",
         "type": "object"
@@ -4815,12 +6071,62 @@
         "additionalProperties": true,
         "description": "User profile JSON (equipment, limitations, goals).",
         "properties": {
+          "birth_date": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of birth (string; format depends on client).",
+            "title": "Birth Date"
+          },
+          "current_weight": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current body weight in kilograms.",
+            "title": "Current Weight"
+          },
           "equipment": {
             "items": {
               "type": "string"
             },
             "title": "Equipment",
             "type": "array"
+          },
+          "experience_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperienceLevel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Training experience level selected during onboarding."
+          },
+          "fitness_goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FitnessGoal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary fitness objective selected during onboarding."
           },
           "goals": {
             "items": {
@@ -4829,12 +6135,77 @@
             "title": "Goals",
             "type": "array"
           },
+          "height": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 300.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Height in centimeters.",
+            "title": "Height"
+          },
           "limitations": {
             "items": {
               "type": "string"
             },
             "title": "Limitations",
             "type": "array"
+          },
+          "onboarding_completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether onboarding has been completed.",
+            "title": "Onboarding Completed"
+          },
+          "onboarding_completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO timestamp when onboarding was completed.",
+            "title": "Onboarding Completed At"
+          },
+          "target_weight": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Target body weight in kilograms.",
+            "title": "Target Weight"
+          },
+          "telegram_photo_url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Telegram profile photo URL from initData.",
+            "title": "Telegram Photo Url"
           }
         },
         "title": "UserProfileData",
@@ -4844,6 +6215,34 @@
         "additionalProperties": true,
         "description": "Validated subset of profile JSON for updates (merged server-side).",
         "properties": {
+          "birth_date": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of birth (string; format depends on client).",
+            "title": "Birth Date"
+          },
+          "current_weight": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current body weight in kilograms.",
+            "title": "Current Weight"
+          },
           "equipment": {
             "anyOf": [
               {
@@ -4862,6 +6261,28 @@
             ],
             "description": "At most 50 equipment tags.",
             "title": "Equipment"
+          },
+          "experience_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperienceLevel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Training experience level."
+          },
+          "fitness_goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FitnessGoal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary fitness objective."
           },
           "goals": {
             "anyOf": [
@@ -4882,6 +6303,20 @@
             "description": "At most 50 goal tags.",
             "title": "Goals"
           },
+          "height": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 300.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Height in centimeters.",
+            "title": "Height"
+          },
           "limitations": {
             "anyOf": [
               {
@@ -4900,6 +6335,46 @@
             ],
             "description": "At most 50 limitation tags.",
             "title": "Limitations"
+          },
+          "onboarding_completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Onboarding completion marker.",
+            "title": "Onboarding Completed"
+          },
+          "onboarding_completed_at": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO datetime for onboarding completion.",
+            "title": "Onboarding Completed At"
+          },
+          "target_weight": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Target body weight in kilograms.",
+            "title": "Target Weight"
           }
         },
         "title": "UserProfilePatch",
@@ -5384,6 +6859,19 @@
             "title": "Exercises",
             "type": "array"
           },
+          "expected_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected workout version for optimistic locking.",
+            "title": "Expected Version"
+          },
           "glucose_after": {
             "anyOf": [
               {
@@ -5411,6 +6899,20 @@
             ],
             "description": "Glucose before workout (mmol/L).",
             "title": "Glucose Before"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional idempotency key for replay-safe completion.",
+            "title": "Idempotency Key"
           },
           "tags": {
             "description": "Workout tags (max 50, each up to 64 chars).",
@@ -5498,6 +7000,16 @@
             "title": "Message",
             "type": "string"
           },
+          "session_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkoutSessionMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "tags": {
             "items": {
               "type": "string"
@@ -5519,6 +7031,10 @@
           "user_id": {
             "title": "User Id",
             "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -5532,6 +7048,7 @@
           "tags",
           "glucose_before",
           "glucose_after",
+          "version",
           "completed_at"
         ],
         "title": "WorkoutCompleteResponse",
@@ -5605,12 +7122,26 @@
             "title": "Id",
             "type": "integer"
           },
+          "session_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkoutSessionMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "tags": {
             "items": {
               "type": "string"
             },
             "title": "Tags",
             "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -5622,6 +7153,7 @@
           "tags",
           "glucose_before",
           "glucose_after",
+          "version",
           "created_at"
         ],
         "title": "WorkoutHistoryItem",
@@ -5685,6 +7217,201 @@
         "title": "WorkoutHistoryResponse",
         "type": "object"
       },
+      "WorkoutPostSummaryResponse": {
+        "description": "Post-workout snapshot focused on immediate user feedback.",
+        "properties": {
+          "best_sets": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsBestSetItem"
+            },
+            "title": "Best Sets",
+            "type": "array"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "duration": {
+            "title": "Duration",
+            "type": "integer"
+          },
+          "insights": {
+            "items": {
+              "$ref": "#/components/schemas/WorkoutSessionInsightItem"
+            },
+            "title": "Insights",
+            "type": "array"
+          },
+          "pr_events": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsPRItem"
+            },
+            "title": "Pr Events",
+            "type": "array"
+          },
+          "session_metrics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Metrics"
+          },
+          "total_reps": {
+            "title": "Total Reps",
+            "type": "integer"
+          },
+          "total_sets": {
+            "title": "Total Sets",
+            "type": "integer"
+          },
+          "total_volume": {
+            "title": "Total Volume",
+            "type": "number"
+          },
+          "workout_id": {
+            "title": "Workout Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "workout_id",
+          "date",
+          "duration",
+          "total_sets",
+          "total_reps",
+          "total_volume"
+        ],
+        "title": "WorkoutPostSummaryResponse",
+        "type": "object"
+      },
+      "WorkoutSessionInsightItem": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "level",
+          "message"
+        ],
+        "title": "WorkoutSessionInsightItem",
+        "type": "object"
+      },
+      "WorkoutSessionMetrics": {
+        "properties": {
+          "avg_rest_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Rest Seconds"
+          },
+          "avg_rir": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Rir"
+          },
+          "avg_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Rpe"
+          },
+          "completed_sets": {
+            "default": 0,
+            "title": "Completed Sets",
+            "type": "integer"
+          },
+          "effort_distribution": {
+            "$ref": "#/components/schemas/SessionEffortDistribution"
+          },
+          "fatigue_trend": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionFatigueTrend"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rest_consistency_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Consistency Score"
+          },
+          "rest_tracked_sets": {
+            "default": 0,
+            "title": "Rest Tracked Sets",
+            "type": "integer"
+          },
+          "rest_tracking_ratio": {
+            "default": 0.0,
+            "title": "Rest Tracking Ratio",
+            "type": "number"
+          },
+          "total_rest_seconds": {
+            "default": 0,
+            "title": "Total Rest Seconds",
+            "type": "integer"
+          },
+          "volume_per_minute": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Per Minute"
+          }
+        },
+        "title": "WorkoutSessionMetrics",
+        "type": "object"
+      },
       "WorkoutSessionType": {
         "enum": [
           "cardio",
@@ -5695,6 +7422,142 @@
         ],
         "title": "WorkoutSessionType",
         "type": "string"
+      },
+      "WorkoutSessionUpdateRequest": {
+        "description": "Request model for updating an in-progress workout session.",
+        "properties": {
+          "comments": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "exercises": {
+            "description": "Current session exercises persisted before workout completion.",
+            "items": {
+              "$ref": "#/components/schemas/CompletedExercise-Input"
+            },
+            "maxItems": 200,
+            "title": "Exercises",
+            "type": "array"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected workout version for optimistic locking.",
+            "title": "Expected Version"
+          },
+          "glucose_after": {
+            "anyOf": [
+              {
+                "maximum": 30.0,
+                "minimum": 2.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glucose After"
+          },
+          "glucose_before": {
+            "anyOf": [
+              {
+                "maximum": 30.0,
+                "minimum": 2.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glucose Before"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional idempotency key for replay-safe updates.",
+            "title": "Idempotency Key"
+          },
+          "tags": {
+            "description": "Session tags kept while workout is in progress.",
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "title": "WorkoutSessionUpdateRequest",
+        "type": "object"
+      },
+      "WorkoutSetType": {
+        "enum": [
+          "warmup",
+          "working",
+          "dropset",
+          "failure"
+        ],
+        "title": "WorkoutSetType",
+        "type": "string"
+      },
+      "WorkoutStartFromTemplateRequest": {
+        "description": "Start workout from template with optional per-session overrides.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StartWorkoutTemplateOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/WorkoutSessionType",
+            "default": "custom"
+          }
+        },
+        "title": "WorkoutStartFromTemplateRequest",
+        "type": "object"
       },
       "WorkoutStartRequest": {
         "description": "Request model for starting a workout",
@@ -5842,6 +7705,37 @@
         "title": "WorkoutStats",
         "type": "object"
       },
+      "WorkoutTemplateCloneRequest": {
+        "description": "Clone existing template.",
+        "properties": {
+          "is_public": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Public"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "WorkoutTemplateCloneRequest",
+        "type": "object"
+      },
       "WorkoutTemplateCreate": {
         "description": "Request model for creating workout template",
         "properties": {
@@ -5879,6 +7773,39 @@
         "title": "WorkoutTemplateCreate",
         "type": "object"
       },
+      "WorkoutTemplateFromWorkoutCreate": {
+        "description": "Create template from completed workout session.",
+        "properties": {
+          "is_public": {
+            "default": false,
+            "title": "Is Public",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "workout_id": {
+            "minimum": 1.0,
+            "title": "Workout Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "workout_id"
+        ],
+        "title": "WorkoutTemplateFromWorkoutCreate",
+        "type": "object"
+      },
       "WorkoutTemplateList": {
         "description": "List of workout templates",
         "properties": {
@@ -5911,6 +7838,87 @@
         "title": "WorkoutTemplateList",
         "type": "object"
       },
+      "WorkoutTemplatePatchRequest": {
+        "description": "Partial template update payload with optimistic concurrency.",
+        "properties": {
+          "exercise_order": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0-based order of existing exercise indexes for lightweight reorder operations.",
+            "title": "Exercise Order"
+          },
+          "exercises": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ExerciseInTemplate"
+                },
+                "maxItems": 100,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exercises"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "is_public": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Public"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkoutTemplateType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "WorkoutTemplatePatchRequest",
+        "type": "object"
+      },
       "WorkoutTemplateResponse": {
         "description": "Workout template response",
         "properties": {
@@ -5929,6 +7937,10 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "is_archived": {
+            "title": "Is Archived",
+            "type": "boolean"
           },
           "is_public": {
             "title": "Is Public",
@@ -5950,6 +7962,10 @@
           "user_id": {
             "title": "User Id",
             "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -5959,6 +7975,8 @@
           "type",
           "exercises",
           "is_public",
+          "is_archived",
+          "version",
           "created_at",
           "updated_at"
         ],
@@ -5984,7 +8002,7 @@
     }
   },
   "info": {
-    "description": "\n    Backend API for FitTracker Pro Telegram Mini App\n    \n    ## Authentication\n    **Public (no JWT):** ``GET /`` and ``GET /health``, ``/api/v1/system/*``,\n    ``POST /api/v1/users/auth/telegram``, ``POST /api/v1/users/auth/refresh``,\n    ``POST /api/v1/users/``, ``GET /api/v1/users/{user_id}``, plus integration webhooks.\n\n    **Authenticated:** all other ``/api/v1`` routes require a Bearer access token:\n    ```\n    Authorization: Bearer <access_token>\n    ```\n    \n    ## Rate Limiting\n    API has rate limiting enabled. Tiers: default (read), auth, system, write, plus\n    stricter policies for Telegram login, analytics export, and emergency notify.\n    Limits apply per Telegram user when a valid access token, refresh token (on ``/auth/refresh``),\n    or validated WebApp initData (on Telegram login) is present; otherwise per client IP.\n    Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``, ``X-RateLimit-Reset``,\n    ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and matching ``RateLimit-*`` headers.\n    ",
+    "description": "\n    Backend API for FitTracker Pro Telegram Mini App\n    \n    ## Authentication\n    **Public (no JWT):** ``GET /`` and ``GET /health``, ``/api/v1/system/*``,\n    ``POST /api/v1/users/auth/telegram``, ``POST /api/v1/users/auth/refresh``,\n    ``POST /api/v1/users/``, ``GET /api/v1/users/{user_id}``, plus integration webhooks.\n\n    **Authenticated:** all other ``/api/v1`` routes require a Bearer access token:\n    ```\n    Authorization: Bearer <access_token>\n    ```\n    \n    ## Rate Limiting\n    Tiered limits via ``RateLimitMiddleware`` (Redis or in-memory): default reads, auth,\n    ``/workouts`` (60/min per Bearer user), ``/analytics`` (30/min per user), system, writes,\n    export, emergency notify. ``POST .../users/auth/telegram`` (and legacy ``/auth/telegram``)\n    uses **SlowAPI**: 10 requests/minute **per client IP** (429 with ``Retry-After``).\n    Other routes: per Telegram user id when a valid access token or refresh body is present;\n    otherwise per client IP. Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``,\n    ``X-RateLimit-Reset``, ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and ``RateLimit-*``.\n    ",
     "title": "FitTracker Pro API",
     "version": "1.0.0"
   },
@@ -5992,6 +8010,7 @@
   "paths": {
     "/": {
       "get": {
+        "description": "JSON for API clients. Telegram Mini App / browser document loads are redirected to\n``TELEGRAM_WEBAPP_URL`` so a misconfigured WebApp URL on the API host still opens the UI.",
         "operationId": "root__get",
         "responses": {
           "200": {
@@ -6009,26 +8028,19 @@
         ]
       }
     },
-    "/api/v1/achievements/": {
+    "/api/v1/analytics/": {
       "get": {
-        "deprecated": true,
-        "operationId": "get_achievements_api_v1_achievements__get",
+        "operationId": "get_analytics_dashboard_api_v1_analytics__get",
         "parameters": [
           {
             "in": "query",
-            "name": "category",
+            "name": "period",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "pattern": "^(workouts|health|streaks|social|general)$",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Category"
+              "default": "week",
+              "pattern": "^(week|month|all)$",
+              "title": "Period",
+              "type": "string"
             }
           }
         ],
@@ -6037,7 +8049,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AchievementListResponse"
+                  "$ref": "#/components/schemas/AnalyticsDashboardResponse"
                 }
               }
             },
@@ -6059,201 +8071,9 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Get Achievements",
+        "summary": "Get Analytics Dashboard",
         "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/api/v1/achievements/leaderboard": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_achievements_leaderboard_api_v1_achievements_leaderboard_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 10,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AchievementLeaderboardResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Achievements Leaderboard",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/api/v1/achievements/user": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_user_achievements_api_v1_achievements_user_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserAchievementListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get User Achievements",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/api/v1/achievements/user/{achievement_id}": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_user_achievement_detail_api_v1_achievements_user__achievement_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "achievement_id",
-            "required": true,
-            "schema": {
-              "title": "Achievement Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserAchievementResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get User Achievement Detail",
-        "tags": [
-          "Achievements"
-        ]
-      }
-    },
-    "/api/v1/achievements/{achievement_id}/claim": {
-      "post": {
-        "deprecated": true,
-        "operationId": "claim_achievement_api_v1_achievements__achievement_id__claim_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "achievement_id",
-            "required": true,
-            "schema": {
-              "title": "Achievement Id",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Client-generated key; duplicate requests replay the first successful response.",
-            "in": "header",
-            "name": "Idempotency-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Client-generated key; duplicate requests replay the first successful response.",
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AchievementUnlockResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Claim Achievement",
-        "tags": [
-          "Achievements"
+          "Analytics"
         ]
       }
     },
@@ -6521,7 +8341,7 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 3,
+              "default": 4,
               "maximum": 12,
               "minimum": 1,
               "title": "Month",
@@ -6614,6 +8434,18 @@
                 }
               ],
               "title": "Is Public"
+            }
+          },
+          {
+            "description": "If true, return only challenges created by the authenticated user.",
+            "in": "query",
+            "name": "mine",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "If true, return only challenges created by the authenticated user.",
+              "title": "Mine",
+              "type": "boolean"
             }
           },
           {
@@ -7286,6 +9118,89 @@
         ]
       }
     },
+    "/api/v1/analytics/performance-overview": {
+      "get": {
+        "operationId": "get_analytics_performance_overview_api_v1_analytics_performance_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "30d",
+              "pattern": "^(7d|30d|90d|1y|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsPerformanceOverviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Analytics Performance Overview",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
     "/api/v1/analytics/progress": {
       "get": {
         "operationId": "get_exercise_progress_api_v1_analytics_progress_get",
@@ -7315,6 +9230,40 @@
               "pattern": "^(7d|30d|90d|1y|all)$",
               "title": "Period",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
             }
           },
           {
@@ -7374,6 +9323,113 @@
           }
         ],
         "summary": "Get Exercise Progress",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/progress-insights": {
+      "get": {
+        "operationId": "get_progress_insights_api_v1_analytics_progress_insights_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "30d",
+              "pattern": "^(7d|30d|90d|1y|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit_best_sets",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit Best Sets",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit_pr_events",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit Pr Events",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressInsightsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Progress Insights",
         "tags": [
           "Analytics"
         ]
@@ -7714,971 +9770,42 @@
         ]
       }
     },
-    "/api/v1/auth/logout": {
-      "post": {
-        "deprecated": true,
-        "operationId": "logout_api_v1_auth_logout_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LogoutResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Logout",
-        "tags": [
-          "Authentication"
-        ]
-      }
-    },
-    "/api/v1/auth/me": {
+    "/api/v1/analytics/workout-summary": {
       "get": {
-        "deprecated": true,
-        "operationId": "get_current_user_info_api_v1_auth_me_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserProfileResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Current User Info",
-        "tags": [
-          "Authentication"
-        ]
-      },
-      "put": {
-        "deprecated": true,
-        "operationId": "update_user_profile_api_v1_auth_me_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserProfileUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserProfileResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Update User Profile",
-        "tags": [
-          "Authentication"
-        ]
-      }
-    },
-    "/api/v1/auth/refresh": {
-      "post": {
-        "deprecated": true,
-        "operationId": "refresh_token_api_v1_auth_refresh_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefreshTokenResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Refresh Token",
-        "tags": [
-          "Authentication"
-        ]
-      }
-    },
-    "/api/v1/auth/telegram": {
-      "post": {
-        "deprecated": true,
-        "operationId": "authenticate_telegram_api_v1_auth_telegram_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TelegramAuthRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Authenticate Telegram",
-        "tags": [
-          "Authentication"
-        ]
-      }
-    },
-    "/api/v1/challenges/": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_challenges_api_v1_challenges__get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "status",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "pattern": "^(upcoming|active|completed|cancelled)$",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Status"
-            }
-          },
-          {
-            "in": "query",
-            "name": "challenge_type",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "pattern": "^(workout_count|duration|calories|distance|custom)$",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Challenge Type"
-            }
-          },
-          {
-            "in": "query",
-            "name": "is_public",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Is Public"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Page Size",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChallengeListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Challenges",
-        "tags": [
-          "Challenges"
-        ]
-      },
-      "post": {
-        "deprecated": true,
-        "operationId": "create_challenge_api_v1_challenges__post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChallengeCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChallengeResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create Challenge",
-        "tags": [
-          "Challenges"
-        ]
-      }
-    },
-    "/api/v1/challenges/my/active": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_my_active_challenges_api_v1_challenges_my_active_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChallengeMyActiveResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get My Active Challenges",
-        "tags": [
-          "Challenges"
-        ]
-      }
-    },
-    "/api/v1/challenges/{challenge_id}": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_challenge_api_v1_challenges__challenge_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "challenge_id",
-            "required": true,
-            "schema": {
-              "title": "Challenge Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChallengeDetailResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Challenge",
-        "tags": [
-          "Challenges"
-        ]
-      }
-    },
-    "/api/v1/challenges/{challenge_id}/join": {
-      "post": {
-        "deprecated": true,
-        "operationId": "join_challenge_api_v1_challenges__challenge_id__join_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "challenge_id",
-            "required": true,
-            "schema": {
-              "title": "Challenge Id",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "join_code",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Join Code"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChallengeJoinResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Join Challenge",
-        "tags": [
-          "Challenges"
-        ]
-      }
-    },
-    "/api/v1/challenges/{challenge_id}/leaderboard": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_challenge_leaderboard_api_v1_challenges__challenge_id__leaderboard_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "challenge_id",
-            "required": true,
-            "schema": {
-              "title": "Challenge Id",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChallengeLeaderboardResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Challenge Leaderboard",
-        "tags": [
-          "Challenges"
-        ]
-      }
-    },
-    "/api/v1/challenges/{challenge_id}/leave": {
-      "post": {
-        "deprecated": true,
-        "operationId": "leave_challenge_api_v1_challenges__challenge_id__leave_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "challenge_id",
-            "required": true,
-            "schema": {
-              "title": "Challenge Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChallengeLeaveResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Leave Challenge",
-        "tags": [
-          "Challenges"
-        ]
-      }
-    },
-    "/api/v1/emergency/contact": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_emergency_contacts_api_v1_emergency_contact_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencyContactListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Emergency Contacts",
-        "tags": [
-          "Emergency"
-        ]
-      },
-      "post": {
-        "deprecated": true,
-        "operationId": "create_emergency_contact_api_v1_emergency_contact_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmergencyContactCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencyContactResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create Emergency Contact",
-        "tags": [
-          "Emergency"
-        ]
-      }
-    },
-    "/api/v1/emergency/contact/{contact_id}": {
-      "delete": {
-        "deprecated": true,
-        "operationId": "delete_emergency_contact_api_v1_emergency_contact__contact_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "contact_id",
-            "required": true,
-            "schema": {
-              "title": "Contact Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Delete Emergency Contact",
-        "tags": [
-          "Emergency"
-        ]
-      },
-      "get": {
-        "deprecated": true,
-        "operationId": "get_emergency_contact_api_v1_emergency_contact__contact_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "contact_id",
-            "required": true,
-            "schema": {
-              "title": "Contact Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencyContactResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Emergency Contact",
-        "tags": [
-          "Emergency"
-        ]
-      },
-      "put": {
-        "deprecated": true,
-        "operationId": "update_emergency_contact_api_v1_emergency_contact__contact_id__put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "contact_id",
-            "required": true,
-            "schema": {
-              "title": "Contact Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmergencyContactUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencyContactResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Update Emergency Contact",
-        "tags": [
-          "Emergency"
-        ]
-      }
-    },
-    "/api/v1/emergency/log": {
-      "post": {
-        "deprecated": true,
-        "operationId": "log_emergency_event_api_v1_emergency_log_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmergencyLogEventRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencyLogEventResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Log Emergency Event",
-        "tags": [
-          "Emergency"
-        ]
-      }
-    },
-    "/api/v1/emergency/notify": {
-      "post": {
-        "deprecated": true,
-        "operationId": "send_emergency_notification_api_v1_emergency_notify_post",
-        "parameters": [
-          {
-            "description": "Client-generated key; duplicate requests replay the first successful response.",
-            "in": "header",
-            "name": "Idempotency-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Client-generated key; duplicate requests replay the first successful response.",
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmergencyNotifyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencyNotifyResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Send Emergency Notification",
-        "tags": [
-          "Emergency"
-        ]
-      }
-    },
-    "/api/v1/emergency/notify/workout-end": {
-      "post": {
-        "deprecated": true,
-        "operationId": "notify_workout_end_api_v1_emergency_notify_workout_end_post",
+        "operationId": "get_workout_post_summary_api_v1_analytics_workout_summary_get",
         "parameters": [
           {
             "in": "query",
             "name": "workout_id",
             "required": true,
             "schema": {
+              "minimum": 1,
               "title": "Workout Id",
               "type": "integer"
             }
           },
           {
             "in": "query",
-            "name": "duration",
-            "required": true,
+            "name": "limit_best_sets",
+            "required": false,
             "schema": {
-              "title": "Duration",
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit Best Sets",
               "type": "integer"
             }
           },
           {
             "in": "query",
-            "name": "completed_successfully",
+            "name": "limit_pr_events",
             "required": false,
             "schema": {
-              "default": true,
-              "title": "Completed Successfully",
-              "type": "boolean"
-            }
-          },
-          {
-            "description": "Client-generated key; duplicate requests replay the first successful response.",
-            "in": "header",
-            "name": "Idempotency-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Client-generated key; duplicate requests replay the first successful response.",
-              "title": "Idempotency-Key"
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit Pr Events",
+              "type": "integer"
             }
           }
         ],
@@ -8687,7 +9814,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmergencyWorkoutNotifyResponse"
+                  "$ref": "#/components/schemas/WorkoutPostSummaryResponse"
                 }
               }
             },
@@ -8709,118 +9836,9 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Notify Workout End",
+        "summary": "Get Workout Post Summary",
         "tags": [
-          "Emergency"
-        ]
-      }
-    },
-    "/api/v1/emergency/notify/workout-start": {
-      "post": {
-        "deprecated": true,
-        "operationId": "notify_workout_start_api_v1_emergency_notify_workout_start_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "workout_id",
-            "required": true,
-            "schema": {
-              "title": "Workout Id",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "estimated_duration",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Estimated Duration"
-            }
-          },
-          {
-            "description": "Client-generated key; duplicate requests replay the first successful response.",
-            "in": "header",
-            "name": "Idempotency-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Client-generated key; duplicate requests replay the first successful response.",
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencyWorkoutNotifyResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Notify Workout Start",
-        "tags": [
-          "Emergency"
-        ]
-      }
-    },
-    "/api/v1/emergency/settings": {
-      "get": {
-        "deprecated": true,
-        "operationId": "get_emergency_settings_api_v1_emergency_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmergencySettingsResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Emergency Settings",
-        "tags": [
-          "Emergency"
+          "Analytics"
         ]
       }
     },
@@ -9006,6 +10024,62 @@
         ]
       }
     },
+    "/api/v1/exercises/by-slugs": {
+      "get": {
+        "description": "Resolve exercise slugs to IDs. Used by goal-based program presets.",
+        "operationId": "get_exercises_by_slugs_api_v1_exercises_by_slugs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "slugs",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 50,
+              "title": "Slugs",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Get Exercises By Slugs Api V1 Exercises By Slugs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Exercises By Slugs",
+        "tags": [
+          "Exercises"
+        ]
+      }
+    },
     "/api/v1/exercises/categories/list": {
       "get": {
         "operationId": "get_exercise_categories_api_v1_exercises_categories_list_get",
@@ -9027,6 +10101,53 @@
           }
         ],
         "summary": "Get Exercise Categories",
+        "tags": [
+          "Exercises"
+        ]
+      }
+    },
+    "/api/v1/exercises/custom": {
+      "post": {
+        "description": "Compatibility endpoint for the frontend `AddExercise` form.\n\nThe UI submits a multipart/form-data payload with JSON-encoded arrays in some fields.\nFor MVP we accept the payload and create a pending exercise. Media storage is not\nimplemented yet; file is accepted but ignored.",
+        "operationId": "create_custom_exercise_multipart_api_v1_exercises_custom_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_custom_exercise_multipart_api_v1_exercises_custom_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Custom Exercise Multipart",
         "tags": [
           "Exercises"
         ]
@@ -10366,8 +11487,54 @@
             "description": "Successful Response"
           }
         },
-        "summary": "System health check",
+        "summary": "System health check (legacy)",
         "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/v1/system/live": {
+      "get": {
+        "description": "Liveness probe for container orchestration.\nReturns 200 if the application process is running.\nUsed by Docker/Kubernetes to determine if container should be restarted.",
+        "operationId": "liveness_probe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Liveness probe (container is running)",
+        "tags": [
+          "System",
+          "System"
+        ]
+      }
+    },
+    "/api/v1/system/ready": {
+      "get": {
+        "description": "Readiness probe for load balancers and orchestrators.\nПроверяет PostgreSQL (SELECT 1), Redis (PING) и соответствие ревизии Alembic в БД head-ревизии.\n\nHTTP 200 только при ``status == \"ready\"``; ``degraded`` / ``not_ready`` → 503.",
+        "operationId": "readiness_probe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness probe (PostgreSQL, Redis, Alembic)",
+        "tags": [
+          "System",
           "System"
         ]
       }
@@ -10531,6 +11698,52 @@
         ]
       }
     },
+    "/api/v1/users/auth/onboarding": {
+      "post": {
+        "operationId": "save_onboarding_api_v1_users_auth_onboarding_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Onboarding",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
     "/api/v1/users/auth/refresh": {
       "post": {
         "operationId": "refresh_token_api_v1_users_auth_refresh_post",
@@ -10610,6 +11823,121 @@
         "summary": "Authenticate Telegram",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/coach-access": {
+      "get": {
+        "description": "Coach access sharing is not implemented yet.\nKeep the endpoint to avoid breaking the profile UI.",
+        "operationId": "list_coach_access_api_v1_users_coach_access_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Coach Access",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/coach-access/generate": {
+      "post": {
+        "description": "Generate a short-lived share code (stub for MVP UI wiring).",
+        "operationId": "generate_coach_access_api_v1_users_coach_access_generate_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Coach Access",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/coach-access/{access_id}": {
+      "delete": {
+        "operationId": "revoke_coach_access_api_v1_users_coach_access__access_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "access_id",
+            "required": true,
+            "schema": {
+              "title": "Access Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Coach Access",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/export": {
+      "get": {
+        "description": "Simple JSON export for the current UI contract (`usersApi.exportData()` expects a Blob).",
+        "operationId": "export_user_data_api_v1_users_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export User Data",
+        "tags": [
+          "Users"
         ]
       }
     },
@@ -10703,6 +12031,56 @@
         ]
       }
     },
+    "/api/v1/users/me/stats": {
+      "get": {
+        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "operationId": "get_user_stats_api_v1_users_me_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Stats",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/stats": {
+      "get": {
+        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "operationId": "get_user_stats_api_v1_users_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Stats",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/api/v1/users/{user_id}": {
       "get": {
         "description": "Get user by ID",
@@ -10743,6 +12121,67 @@
         "summary": "Get User",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/api/v1/workouts/calendar": {
+      "get": {
+        "description": "Compatibility endpoint for the current frontend calendar page.\n\nReturns a flat list of workouts in the selected month (frontend groups by day).",
+        "operationId": "get_workouts_calendar_month_api_v1_workouts_calendar_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "default": 2026,
+              "maximum": 2030,
+              "minimum": 2020,
+              "title": "Year",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "default": 4,
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Month",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Workouts Calendar Month",
+        "tags": [
+          "Workouts"
         ]
       }
     },
@@ -10961,6 +12400,134 @@
         "tags": [
           "Workouts"
         ]
+      },
+      "patch": {
+        "operationId": "update_active_workout_api_v1_workouts_history__workout_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Client-generated key; duplicate requests replay the first successful response.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client-generated key; duplicate requests replay the first successful response.",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutSessionUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutHistoryItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Active Workout",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/sessions/{session_id}/exercises/{exercise_id}/weight-recommendation": {
+      "get": {
+        "description": "Возвращает рекомендацию по весу для следующего подхода на основе RPE последнего подхода.",
+        "operationId": "get_weight_recommendation_api_v1_workouts_sessions__session_id__exercises__exercise_id__weight_recommendation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "title": "Exercise Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Weight Recommendation",
+        "tags": [
+          "Workouts"
+        ]
       }
     },
     "/api/v1/workouts/start": {
@@ -11009,6 +12576,63 @@
         ]
       }
     },
+    "/api/v1/workouts/start/from-template/{template_id}": {
+      "post": {
+        "operationId": "start_workout_from_template_with_overrides_api_v1_workouts_start_from_template__template_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutStartFromTemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Workout From Template With Overrides",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
     "/api/v1/workouts/templates": {
       "get": {
         "operationId": "get_workout_templates_api_v1_workouts_templates_get",
@@ -11051,6 +12675,16 @@
                 }
               ],
               "title": "Template Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
             }
           }
         ],
@@ -11126,6 +12760,52 @@
           }
         ],
         "summary": "Create Workout Template",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/templates/from-workout": {
+      "post": {
+        "operationId": "create_workout_template_from_workout_api_v1_workouts_templates_from_workout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutTemplateFromWorkoutCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Workout Template From Workout",
         "tags": [
           "Workouts"
         ]
@@ -11215,6 +12895,61 @@
           "Workouts"
         ]
       },
+      "patch": {
+        "operationId": "patch_workout_template_api_v1_workouts_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutTemplatePatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Workout Template",
+        "tags": [
+          "Workouts"
+        ]
+      },
       "put": {
         "operationId": "update_workout_template_api_v1_workouts_templates__template_id__put",
         "parameters": [
@@ -11271,6 +13006,201 @@
         ]
       }
     },
+    "/api/v1/workouts/templates/{template_id}/archive": {
+      "post": {
+        "operationId": "archive_workout_template_api_v1_workouts_templates__template_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Workout Template",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/templates/{template_id}/clone": {
+      "post": {
+        "operationId": "clone_workout_template_api_v1_workouts_templates__template_id__clone_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutTemplateCloneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Clone Workout Template",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/templates/{template_id}/unarchive": {
+      "post": {
+        "operationId": "unarchive_workout_template_api_v1_workouts_templates__template_id__unarchive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unarchive Workout Template",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "description": "Liveness probe for container orchestration.\nReturns 200 if the application process is running.\nUsed by Docker/Kubernetes to determine if container should be restarted.",
+        "operationId": "app_liveness_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Liveness probe (container is running)",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Readiness probe (алиас ``/health/ready``): PostgreSQL, Redis, миграции Alembic.\nHTTP 200 только при ``status == \"ready\"``; иначе 503 с телом проверок.",
+        "operationId": "app_readiness_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness probe (PostgreSQL, Redis, Alembic)",
+        "tags": [
+          "System"
+        ]
+      }
+    },
     "/telegram/webhook": {
       "post": {
         "description": "Handle incoming Telegram webhook updates\n\nThis endpoint receives updates from Telegram when using webhook mode.\nOnly used in production environment.",
@@ -11294,7 +13224,7 @@
   },
   "tags": [
     {
-      "description": "Service health, version, and public API metadata.",
+      "description": "Liveness/readiness probes, service version, and public API metadata.",
       "name": "System"
     },
     {
