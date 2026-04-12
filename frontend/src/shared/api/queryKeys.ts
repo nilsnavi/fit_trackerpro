@@ -65,6 +65,8 @@ export const queryKeys = {
         progressInsights: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'progressInsights', period, dateFrom, dateTo] as const,
         workoutSummary: (workoutId: number) => ['analytics', 'workoutSummary', workoutId] as const,
+        /** GET /api/v1/analytics/challenges/ (mine + active/completed) на дашборде аналитики */
+        challengesMineDashboard: ['analytics', 'challenges', 'mineDashboard'] as const,
     },
     challenges: {
         dashboard: ['challenges', 'dashboard'] as const,

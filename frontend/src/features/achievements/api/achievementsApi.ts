@@ -14,7 +14,7 @@ export interface AchievementsListResponse {
 
 export const achievementsApi = {
     list(params?: { category?: AchievementCategory }): Promise<AchievementsListResponse> {
-        return api.get<AchievementsListResponse>('/analytics/achievements', params)
+        return api.get<AchievementsListResponse>('/analytics/achievements/', params)
     },
     getUserAchievements(): Promise<UserAchievementStats> {
         return api.get<UserAchievementStats>('/analytics/achievements/user')
