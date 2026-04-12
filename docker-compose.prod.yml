@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Infra images pinned by registry index digest (multi-arch). Bump when upgrading:
 #   docker buildx imagetools inspect <image:tag> --format '{{json .Manifest.Digest}}'
 
