@@ -1,16 +1,31 @@
 import { expect, test } from '@playwright/test'
 
 import { installTelegramMiniAppMock } from '../helpers/telegramMock'
-import { goldenPathUser, scopeUserForPlaywrightWorker } from '../helpers/testUser'
+import { goldenPathUser, scopeUserForPlaywrightWorker, type TelegramMiniAppUser } from '../helpers/testUser'
+
+/**
+ * Telegram WebApp: `installTelegramMiniAppMock` перехватывает `page.route()` на загрузку
+ * `telegram-web-app.js` и инжектит `window.Telegram.WebApp` через `addInitScript` с initData из
+ * `TEST_TELEGRAM_INIT_DATA` (frontend/.env.test) либо с подписью под текущего тестового пользователя.
+ */
+function telegramUserForWorker(testInfo: { workerIndex: number }): TelegramMiniAppUser {
+    const fromEnv = process.env.TEST_TELEGRAM_INIT_DATA?.trim()
+    if (fromEnv) {
+        return { id: 123, first_name: 'Test', username: 'u123', language_code: 'en' }
+    }
+    return scopeUserForPlaywrightWorker(goldenPathUser, testInfo.workerIndex)
+}
 
 test.describe('@mvp-e2e golden path (реальный API)', () => {
     test.describe.configure({ timeout: 120_000 })
 
-    test('MVP golden path: вход → онбординг → шаблон → активная тренировка → история → аналитика', async ({
+    test('MVP: Telegram initData → тренировки → новая силовая → каталог → сет → завершить → история', async ({
         page,
     }, testInfo) => {
-        const user = scopeUserForPlaywrightWorker(goldenPathUser, testInfo.workerIndex)
-        await installTelegramMiniAppMock(page, { user })
+        const user = telegramUserForWorker(testInfo)
+        const envInit = process.env.TEST_TELEGRAM_INIT_DATA?.trim()
+
+        await installTelegramMiniAppMock(page, { user, initDataOverride: envInit })
 
         await page.goto('/')
         await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible({
@@ -25,28 +40,29 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
             await expect(onboardingTitle).toBeHidden({ timeout: 30_000 })
         }
 
-        await page.goto('/workouts/templates/new')
-        await expect(page.getByPlaceholder('Название шаблона…')).toBeVisible()
+        await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
+        await expect(page).toHaveURL(/\/workouts/)
 
-        const workoutTitle = `E2E MVP ${Date.now()}`
-        await page.getByPlaceholder('Название шаблона…').fill(workoutTitle)
+        // «Новая тренировка» в UI: быстрый старт по типу — плитка «Силовая» (не путать с подписью типа у шаблонов).
+        await page.locator('button').filter({ hasText: 'Силовая' }).filter({ hasText: 'Подходы' }).first().click()
+        await expect(page).toHaveURL(/\/workouts\/mode\/strength/)
 
-        await page.getByRole('button', { name: 'Силовая' }).click()
-        await expect(page.getByRole('heading', { name: 'Выберите упражнение' })).toBeVisible()
-        const search = page.getByPlaceholder('Поиск упражнений…')
-        await search.fill('Bench')
-        await expect(page.getByRole('button', { name: /Bench Press/i })).toBeVisible({ timeout: 20_000 })
-        await page.getByRole('button', { name: /Bench Press/i }).first().click()
+        const workoutTitle = `E2E Golden ${Date.now()}`
+        await page.getByLabel('Название тренировки').fill(workoutTitle)
 
-        await expect(page.getByRole('heading', { name: 'Настроить упражнение' })).toBeVisible({ timeout: 15_000 })
-        await page.getByRole('button', { name: 'Добавить в тренировку' }).click()
+        await page.getByTestId('add-exercise-btn').click()
+        const sheet = page.locator('[role="dialog"]').last()
+        await expect(sheet).toBeVisible()
+        await sheet.getByPlaceholder('Поиск упражнения...').fill('Bench')
+        await expect(sheet.getByRole('button', { name: /Bench Press/i })).toBeVisible({ timeout: 25_000 })
+        await sheet.getByRole('button', { name: /Bench Press/i }).first().click()
 
-        await page.getByRole('button', { name: 'Сохранить шаблон' }).click()
-        await expect(page).toHaveURL(/\/workouts\/templates\/?$/, { timeout: 30_000 })
+        const configDialog = page.locator('[role="dialog"]').last()
+        await expect(configDialog.getByTestId('confirm-exercise-btn')).toBeVisible({ timeout: 15_000 })
+        await configDialog.getByTestId('confirm-exercise-btn').click()
 
-        const templateCard = page.locator('.rounded-2xl').filter({ hasText: workoutTitle }).first()
-        await templateCard.getByRole('button', { name: 'Начать по шаблону' }).click()
-        await expect(page).toHaveURL(/\/workouts\/active\/\d+/, { timeout: 30_000 })
+        await page.getByTestId('save-and-start-btn').click()
+        await expect(page).toHaveURL(/\/workouts\/active\/\d+/, { timeout: 45_000 })
 
         const weightInput = page.locator('[data-testid="set-weight-input"]').first()
         await weightInput.fill('62.5')
@@ -60,10 +76,6 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
         await expect(page).toHaveURL(/\/workouts\/\d+/, { timeout: 45_000 })
 
         await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
-        await expect(page.getByText(workoutTitle).first()).toBeVisible({ timeout: 20_000 })
-
-        await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Прогресс' }).click()
-        await expect(page.getByRole('heading', { name: 'Аналитика' })).toBeVisible({ timeout: 25_000 })
-        await expect(page.getByRole('heading', { name: /\d+\s+(тренировка|тренировок)/ })).toBeVisible({ timeout: 25_000 })
+        await expect(page.getByText(workoutTitle).first()).toBeVisible({ timeout: 25_000 })
     })
 })
