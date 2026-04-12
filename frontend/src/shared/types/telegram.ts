@@ -375,15 +375,4 @@ export type WebAppEventType =
     | 'writeAccessRequested'
     | 'contactRequested'
 
-/**
- * Telegram WebApp global
- */
-declare global {
-    interface Window {
-        Telegram?: {
-            WebApp?: WebApp
-        }
-    }
-}
-
-export { }
+// Global `Window.Telegram` augmentation lives in `src/types/telegram.d.ts`.

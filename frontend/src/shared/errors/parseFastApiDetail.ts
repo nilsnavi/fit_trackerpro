@@ -46,6 +46,13 @@ export function parseFastApiDetail(detail: unknown): {
         if (typeof o.message === 'string') {
             return { message: o.message }
         }
+        const nestedError = o.error
+        if (nestedError && typeof nestedError === 'object' && nestedError !== null) {
+            const msg = (nestedError as { message?: unknown }).message
+            if (typeof msg === 'string') {
+                return { message: msg }
+            }
+        }
         if (typeof o.error === 'string') {
             return { message: o.error }
         }

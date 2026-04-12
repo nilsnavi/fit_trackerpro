@@ -18,6 +18,15 @@ describe('parseFastApiDetail', () => {
 })
 
 describe('normalizeFromHttpResponse', () => {
+    it('unwraps API error envelope { error: { message } }', () => {
+        const ce = normalizeFromHttpResponse(401, {
+            error: { code: 'authentication_failed', message: 'Подпись недействительна.' },
+            request_id: 'rid-1',
+        })
+        expect(ce.status).toBe(401)
+        expect(ce.message).toBe('Подпись недействительна.')
+    })
+
     it('uses VALIDATION_ERROR for 422', () => {
         const ce = normalizeFromHttpResponse(422, {
             detail: [{ loc: ['query', 'x'], msg: 'required', type: 'missing' }],

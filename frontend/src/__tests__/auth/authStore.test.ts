@@ -6,15 +6,14 @@ describe('authStore', () => {
         localStorage.clear()
     })
 
-    it('starts unauthenticated when localStorage is empty', () => {
-        // Re-create store state after clearing
+    it('starts unauthenticated when no legacy tokens', () => {
         const state = useAuthStore.getState()
         expect(state.isAuthenticated).toBe(false)
         expect(state.accessToken).toBeNull()
         expect(state.refreshToken).toBeNull()
     })
 
-    it('setTokens saves to state and localStorage', () => {
+    it('setTokens keeps JWT only in memory (does not persist to localStorage)', () => {
         useAuthStore.getState().setTokens({
             accessToken: 'access-abc',
             refreshToken: 'refresh-xyz',
@@ -25,8 +24,8 @@ describe('authStore', () => {
         expect(state.refreshToken).toBe('refresh-xyz')
         expect(state.isAuthenticated).toBe(true)
 
-        expect(localStorage.getItem('auth_token')).toBe('access-abc')
-        expect(localStorage.getItem('refresh_token')).toBe('refresh-xyz')
+        expect(localStorage.getItem('auth_token')).toBeNull()
+        expect(localStorage.getItem('refresh_token')).toBeNull()
     })
 
     it('setTokens without refreshToken preserves existing refreshToken', () => {
@@ -42,7 +41,7 @@ describe('authStore', () => {
         expect(useAuthStore.getState().refreshToken).toBe('r1')
     })
 
-    it('clear removes tokens from state and localStorage', () => {
+    it('clear removes tokens from state', () => {
         useAuthStore.getState().setTokens({
             accessToken: 'a',
             refreshToken: 'r',
@@ -54,8 +53,6 @@ describe('authStore', () => {
         expect(state.accessToken).toBeNull()
         expect(state.refreshToken).toBeNull()
         expect(state.isAuthenticated).toBe(false)
-        expect(localStorage.getItem('auth_token')).toBeNull()
-        expect(localStorage.getItem('refresh_token')).toBeNull()
     })
 
     it('getAuthTokens returns current tokens without hooks', () => {
