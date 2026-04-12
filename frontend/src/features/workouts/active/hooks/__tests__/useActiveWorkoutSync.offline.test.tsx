@@ -72,6 +72,7 @@ function makeHook(
         (w: WorkoutHistoryItem) =>
             useActiveWorkoutSync({
                 workoutId: w.id,
+                draftStorageUserId: 1,
                 workout: w,
                 draftWorkoutId: w.id,
                 isActiveDraft: true,
@@ -98,12 +99,14 @@ describe('useActiveWorkoutSync — offline scenarios', () => {
         jest.useFakeTimers()
         jest.clearAllMocks()
         setOnline(true)
+        localStorage.clear()
     })
 
     afterEach(() => {
         jest.runOnlyPendingTimers()
         jest.useRealTimers()
         setOnline(true)
+        localStorage.clear()
     })
 
     // ── Scenario 1: offline open ──────────────────────────────────────────────
@@ -132,6 +135,10 @@ describe('useActiveWorkoutSync — offline scenarios', () => {
 
         expect(mutate).not.toHaveBeenCalled()
         expect(result.current.isOffline).toBe(true)
+
+        const raw = localStorage.getItem('workout_draft_1_99')
+        expect(raw).toBeTruthy()
+        expect(JSON.parse(raw!).payload.comments).toBe('offline-change')
     })
 
     // ── Scenario 2: add sets offline ─────────────────────────────────────────
@@ -198,6 +205,8 @@ describe('useActiveWorkoutSync — offline scenarios', () => {
             { workoutId: 99, payload: makePayload(latestWorkout) },
             expect.objectContaining({ onSuccess: expect.any(Function) }),
         )
+
+        expect(localStorage.getItem('workout_draft_1_99')).toBeNull()
     })
 
     // ── Scenario 4: no duplicate on reconnect (Bug 1 regression) ─────────────
