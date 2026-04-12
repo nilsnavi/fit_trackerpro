@@ -1,63 +1,97 @@
-# Playbook: откат после сбоя миграции (FitTracker Pro)
+# Playbook: откат при неудачном деплое с изменением схемы БД
 
-Alembic-миграции лежат в `database/migrations/`. Деплой выполняется через GitHub Actions (см. `.github/workflows/deploy.yml` и reusable `.github/workflows/deploy-environment.yml`). При ошибке на шаге миграции пайплайн останавливается; ниже — согласованная процедура отката приложения и схемы БД.
+Alembic-миграции: `database/migrations/versions/`. Продакшен: `docker-compose.prod.yml`, переменная **`IMAGE_TAG`** в `.env` на сервере деплоя. Автоматический выкат: `.github/workflows/deploy.yml` и reusable `.github/workflows/deploy-environment.yml`.
 
-## Когда имеет смысл rollback
+## Когда применять
 
-- В логах CI или на сервере видна **ошибка Alembic** (`alembic upgrade head` завершился ненулевым кодом, traceback при применении revision).
-- После выката новой версии **готовность API не восстанавливается**: `GET /api/v1/system/ready` отвечает **503** или нестабильно падает из‑за несовместимости схемы и кода.
-- Зафиксирована **частично применённая миграция** (редкий случай; тогда действуйте осторожно и по шагам ниже, при необходимости — с восстановлением из бэкапа).
+- **Миграция завершилась с ошибкой** — `alembic upgrade head` в job `migrate` завершился с ненулевым кодом или в логах виден traceback при применении revision.
+- **Бэкенд упал после миграции (схема некорректна)** — контейнер `backend` не проходит healthcheck, типичные ошибки при старте из‑за несовместимости кода и схемы; `GET /api/v1/system/ready` нестабилен или **503**.
+- **Нужно откатить релиз на предыдущую версию** — осознанный возврат к последнему стабильному тегу образов и согласованной ревизии схемы (или к дампу до выката).
 
-## Обязательный бэкап до деплоя / до ручного `upgrade`
+## Предварительные условия
 
-На машине с `docker compose` (каталог деплоя, например `~/fittracker-pro`):
+### Резервная копия БД перед деплоем
 
-```bash
-docker compose -f docker-compose.prod.yml exec -T postgres \
-  pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > "backup_$(date +%Y%m%d_%H%M%S).sql"
-```
+Бэкап **создаётся автоматически** в CI перед миграцией: в job `migrate` вызывается скрипт `scripts/backup_before_migrate.sh` (см. `.github/workflows/deploy-environment.yml`, шаг «Backup database before migration»). Пока бэкап не успешен, миграция **не запускается**.
 
-Для локального `docker-compose.yml` сервис также называется `postgres`; при необходимости подставьте `-f docker-compose.yml`.
+Как это устроено на сервере:
 
-В CI перед миграцией дополнительно вызывается `scripts/backup_before_migrate.sh` (см. job `migrate` в `.github/workflows/deploy-environment.yml`).
+1. Скрипт читает `POSTGRES_*` из `backend/.env` или из `.env` в каталоге деплоя.
+2. Выполняется `docker-compose -f <compose> exec -T postgres pg_dump ...` → на хост пишется файл  
+   `backups/pre_migrate_<YYYYMMDD_HHMMSS>.sql` (каталог `backups/` смонтирован в контейнер `postgres` как `/backups`, см. `docker-compose.prod.yml`).
+3. Путь к последнему успешному дампу сохраняется в `backups/.last_pre_migrate_backup_path`; при необходимости он попадает в `.rollback-meta.env` как `DB_BACKUP_PATH` для сценариев отката в пайплайне.
 
-## Откат схемы Alembic
+Ручной бэкап (если откатываете вне CI): из каталога деплоя выполните тот же `scripts/backup_before_migrate.sh` или эквивалентный `pg_dump` в файл `.sql`.
 
-Команды выполняйте в окружении с тем же `alembic.ini`, что и в проде (в образе backend или через `docker compose ... run --rm backend`), из каталога с доступом к `database/migrations`:
+### Версия Alembic до деплоя
 
-```bash
-alembic current          # текущая revision в БД
-alembic history          # цепочка revisions
-
-alembic downgrade -1     # на одну версию назад
-alembic downgrade <revision_id>   # до конкретной revision
-```
-
-После `downgrade` проверьте `alembic current` и прогоните smoke: `GET /api/v1/system/ready`.
-
-## Откат Docker-образов
-
-Тег образа задаётся переменной **`IMAGE_TAG`** в `.env` на сервере (см. `docker-compose.prod.yml`). Откат приложения:
-
-1. Верните в `.env` предыдущий стабильный тег (или значение из `.last-stable-deploy.env` / метаданных деплоя, если вы их ведёте).
-2. Подтяните образы и перезапустите стек:
+Перед изменением схемы зафиксируйте текущую ревизию (на машине с доступом к БД и тем же `alembic.ini`, что в образе backend):
 
 ```bash
-# задайте предыдущий тег в .env (IMAGE_TAG=...)
-docker compose -f docker-compose.prod.yml pull backend frontend
-docker compose -f docker-compose.prod.yml up -d
+alembic current
 ```
 
-Примечание: у `docker compose pull` нет флага `--tag`; тег задаётся через `IMAGE_TAG` в окружении compose.
+Сохраните вывод (и при необходимости `alembic history --verbose`) в тикете/заметке инцидента — это целевая точка для `downgrade` или для сверки после восстановления из дампа.
 
-## Проверка после отката
+## Шаги отката
 
-- `GET /api/v1/system/ready` — ожидается **200**, в теле JSON статус готовности (в т.ч. проверка БД).
-- При необходимости: `GET /api/v1/system/health`, `GET /api/v1/system/version`.
+1. **Остановить трафик** — исключить пользовательскую нагрузку на неконсистентную схему: вывести backend из upstream nginx (закомментировать сервер, `upstream` down, maintenance page) или отключить публичный доступ через **feature flag** / emergency routing, если так настроено.
+2. **Определить целевую ревизию** — `alembic history` (и при необходимости `alembic current`), выбрать revision, соответствующую предыдущему стабильному релизу.
+3. **Выполнить откат схемы** — из окружения с Alembic (контейнер backend / `docker compose run --rm` с теми же переменными `DATABASE_URL_SYNC`, что в проде):
 
-## Когда **не** стоит делать `alembic downgrade`
+   ```bash
+   alembic downgrade <revision>
+   ```
 
-- Миграция выполнила **необратимые** DDL-операции (например `DROP COLUMN`, `DROP TABLE`, необратимые преобразования типов с потерей данных). Откат revision **не вернёт** удалённые данные.
-- В таких случаях путь восстановления — **восстановление из `pg_dump`** (или из инфраструктурного снапшота БД), а не только `downgrade`.
+   Для отката ровно на одну миграцию: `alembic downgrade -1`. После выполнения снова проверьте `alembic current`.
 
-Политика необратимых миграций описана в `docs/db/schema-governance.md`.
+4. **Если `downgrade` невозможен или небезопасен** (частично применённая миграция, необратимый DDL, подозрение на порчу данных) — **восстановить БД из бэкапа** до выката.
+
+   Автоматические pre-migrate дампы в этом репозитории — **plain SQL** (`pg_dump` без `-Fc`). Восстановление:
+
+   ```bash
+   # остановить запись в БД (см. п.1), затем, например:
+   docker exec -i fittracker-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < /path/to/pre_migrate_....sql
+   ```
+
+   Если у вас архивный дамп в формате custom (`pg_dump -Fc`), используйте **`pg_restore`**:
+
+   ```bash
+   pg_restore -h ... -U ... -d ... --clean --if-exists /path/to/dump.dump
+   ```
+
+   Уточняйте флаги (`--no-owner`, `--role=...`) под вашу политику ролей и окружение.
+
+5. **Откатить Docker-образы** — в `.env` на сервере вернуть **`IMAGE_TAG`** на предыдущий стабильный тег (см. также `.last-stable-deploy.env` на хосте, если он записан успешным деплоем). При необходимости отредактировать `docker-compose.prod.yml` не требуется, если тег задаётся только через `IMAGE_TAG`.
+6. **Перезапустить сервисы**:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml pull
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+
+7. **Проверить здоровье** — `GET /api/v1/system/ready` (ожидается **200** и согласованное тело ответа о готовности БД и зависимостей). При необходимости: `GET /api/v1/system/health`, `GET /api/v1/system/version`.
+8. **Включить трафик обратно** — вернуть nginx upstream / feature flag в нормальное состояние и мониторить ошибки.
+
+## Деструктивные миграции (DROP COLUMN, DROP TABLE)
+
+Такие миграции требуют **обязательного двухэтапного выката**:
+
+- **Этап 1:** код перестаёт использовать колонку/таблицу, остаётся **обратно совместимым** со старой схемой (старые инстансы ещё могут работать).
+- **Этап 2:** после подтверждения стабильности релиза выполняется миграция, которая **удаляет** колонку или таблицу.
+
+После этапа 2 откат только через `downgrade` может быть технически возможен, но **восстановить удалённые пользовательские данные** уже нельзя; в инцидентах опирайтесь на **бэкап** и политику хранения дампов.
+
+Подробнее: `docs/db/schema-governance.md`, `docs/db/migration-safety.md`.
+
+## Контакты и эскалация
+
+Имена, телефоны и каналы связи для деплоя и инцидентов **не хранятся в этом репозитории** (чтобы не светить персональные данные в публичной истории git). Актуальный список ответственных и порядок эскалации ведите во **внутренней документации** команды (Confluence, Notion, корпоративная wiki и т.п.).
+
+Ссылка для команды (подставьте реальный URL внутренней страницы): [Контакты и эскалация — внутренняя документация](https://REPLACE_WITH_YOUR_INTERNAL_WIKI_URL/fit-tracker/oncall)
+
+При сбое автоматического rollback в GitHub Actions смотрите также `docs/ROLLBACK_ONCALL_CHEATSHEET.md` и логи job `Rollback on Failure` в `.github/workflows/deploy-environment.yml`.
+
+## Проверка миграций (downgrade)
+
+По состоянию репозитория все файлы в `database/migrations/versions/` содержат реализованный `downgrade()` (не `pass` и не `NotImplementedError`). После добавления новых миграций перепроверяйте откат на стенде перед продакшеном.
