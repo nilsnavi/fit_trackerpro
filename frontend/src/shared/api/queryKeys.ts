@@ -46,6 +46,11 @@ export const queryKeys = {
     },
     analytics: {
         dashboard: (period: string) => ['analytics', 'dashboard', period] as const,
+        /** GET /api/v1/analytics/workouts — период в формате API (week|month|all), userId для ключа кэша */
+        workouts: (apiPeriod: string, userId: number | null) =>
+            ['analytics', 'workouts', apiPeriod, userId] as const,
+        /** Два запроса GET /api/v1/analytics/challenges/ (mine + active/completed) */
+        challengesMine: (userId: number | null) => ['analytics', 'challenges', 'mine', userId] as const,
         summary: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'summary', period, dateFrom, dateTo] as const,
         performanceOverview: (period: string, dateFrom: string | null, dateTo: string | null) =>
@@ -65,8 +70,6 @@ export const queryKeys = {
         progressInsights: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'progressInsights', period, dateFrom, dateTo] as const,
         workoutSummary: (workoutId: number) => ['analytics', 'workoutSummary', workoutId] as const,
-        /** GET /api/v1/analytics/challenges/ (mine + active/completed) на дашборде аналитики */
-        challengesMineDashboard: ['analytics', 'challenges', 'mineDashboard'] as const,
     },
     challenges: {
         dashboard: ['challenges', 'dashboard'] as const,
