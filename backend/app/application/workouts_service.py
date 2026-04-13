@@ -286,6 +286,8 @@ class WorkoutsService:
                             actual_rest_seconds=raw_set.get("actual_rest_seconds"),
                             rest_seconds=raw_set.get("rest_seconds"),
                             duration=raw_set.get("duration"),
+                            speed_kmh=raw_set.get("speed_kmh"),
+                            incline_pct=raw_set.get("incline_pct"),
                             started_at=WorkoutsService._parse_optional_datetime(raw_set.get("started_at")),
                             completed_at=WorkoutsService._parse_optional_datetime(raw_set.get("completed_at")),
                             completed=bool(raw_set.get("completed", True)),

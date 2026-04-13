@@ -124,6 +124,18 @@ class CompletedSet(BaseModel):
         le=86400,
         description="Duration in seconds",
     )
+    speed_kmh: Optional[float] = Field(
+        None,
+        ge=0,
+        le=150,
+        description="Treadmill speed in km/h",
+    )
+    incline_pct: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Treadmill incline in percent",
+    )
     started_at: Optional[datetime] = Field(
         None,
         description="Set start timestamp (client, for time-under-tension).",

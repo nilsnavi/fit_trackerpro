@@ -52,6 +52,8 @@ class WorkoutSet(Base):
     # Single-field rest tracking for set-to-set timer UX.
     rest_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     duration: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    speed_kmh: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    incline_pct: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
@@ -100,6 +102,14 @@ class WorkoutSet(Base):
             name="ck_workout_sets_rest_non_negative",
         ),
         CheckConstraint("duration IS NULL OR duration >= 0", name="ck_workout_sets_duration_non_negative"),
+        CheckConstraint(
+            "speed_kmh IS NULL OR (speed_kmh >= 0 AND speed_kmh <= 150)",
+            name="ck_workout_sets_speed_kmh_range",
+        ),
+        CheckConstraint(
+            "incline_pct IS NULL OR (incline_pct >= 0 AND incline_pct <= 100)",
+            name="ck_workout_sets_incline_pct_range",
+        ),
         Index("ix_workout_sets_session_exercise_number", "workout_session_exercise_id", "set_number"),
         Index("ix_workout_sets_user_session", "user_id", "workout_session_id"),
     )
