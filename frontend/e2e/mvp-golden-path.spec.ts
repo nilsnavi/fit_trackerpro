@@ -41,6 +41,7 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
         await page.setViewportSize({ width: 412, height: 1200 })
 
         const state = buildWorkoutState({
+            // Требование MVP: GET /api/v1/exercises/ должен вернуть 1 упражнение.
             exercises: [buildExercise(9001, 'E2E Mock Exercise', 'strength')],
         })
 
@@ -52,6 +53,24 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
                 body: '/* playwright: skip official Telegram script */',
             }),
         )
+
+        // Шаг 5 — мок каталога упражнений.
+        // Ставим более специфичный роут до общего `mockWorkoutApi`, чтобы было явно видно правило в тесте.
+        await page.route('**/api/v1/exercises/**', async (route) => {
+            if (route.request().method() !== 'GET') return route.continue()
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json; charset=utf-8',
+                headers: { 'access-control-allow-origin': '*' },
+                body: JSON.stringify({
+                    items: state.exercises,
+                    total: state.exercises.length,
+                    page: 1,
+                    page_size: state.exercises.length,
+                    filters: {},
+                }),
+            })
+        })
 
         await page.addInitScript(() => {
             const w = window as Window & {
@@ -79,6 +98,7 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
 
         await mockWorkoutApi(page, state)
 
+        // Шаг 7 — мок аналитики (тренировки).
         await page.route('**/api/v1/analytics/workouts**', async (route) => {
             if (route.request().method() !== 'GET') {
                 return route.continue()
@@ -103,6 +123,7 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             })
         })
 
+        // Шаг 2 — мок auth endpoint (Telegram).
         await page.route('**/api/v1/users/auth/telegram', async (route) => {
             if (route.request().method() !== 'POST') {
                 return route.continue()
@@ -120,13 +141,18 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             })
         })
 
+        // Шаг 3 — главная страница загрузилась.
         await page.goto('/')
         await expect(page).toHaveURL(/\/$/)
 
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
         await expect(nav).toBeVisible()
 
-        await page.goto('/workouts/mode/strength')
+        // Шаг 4 — создать тренировку через UI (кнопки по тексту).
+        await page.getByRole('button', { name: /Записать тренировку/i }).click()
+        await expect(page).toHaveURL(/\/workouts/)
+
+        await page.getByRole('button', { name: /Силовая/i }).click()
         await expect(page).toHaveURL(/\/workouts\/mode\/\w+/)
 
         await page.getByLabel('Название тренировки').fill(WORKOUT_TITLE)
