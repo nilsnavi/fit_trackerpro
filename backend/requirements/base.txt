@@ -27,7 +27,7 @@ aiohttp==3.13.5
 # Utilities
 python-dotenv==1.2.2
 orjson==3.11.8
-redis==5.0.1
+redis==7.4.0
 slowapi==0.1.9
 
 # Logging and Monitoring
