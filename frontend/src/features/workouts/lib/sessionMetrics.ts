@@ -40,8 +40,14 @@ export function computeSessionMetricsPreview(
             if (typeof set.rir === 'number') {
                 rirValues.push(set.rir)
             }
-            if (typeof set.actual_rest_seconds === 'number' && set.actual_rest_seconds >= 0) {
-                restValues.push(set.actual_rest_seconds)
+            const restSeconds =
+                typeof set.rest_seconds === 'number'
+                    ? set.rest_seconds
+                    : typeof set.actual_rest_seconds === 'number'
+                        ? set.actual_rest_seconds
+                        : null
+            if (typeof restSeconds === 'number' && restSeconds >= 0) {
+                restValues.push(restSeconds)
             }
         }
         if (completedInExercise > 1) {

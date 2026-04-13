@@ -4,6 +4,7 @@ from datetime import date
 from typing import List, Optional
 
 from sqlalchemy import and_, delete, desc, func, select, update
+from sqlalchemy.orm import selectinload
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.exercise import Exercise
@@ -20,6 +21,26 @@ from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
 class WorkoutsRepository(SQLAlchemyRepository):
+    async def get_workout_set(
+        self,
+        *,
+        user_id: int,
+        workout_session_id: int,
+        set_id: int,
+    ) -> Optional[WorkoutSet]:
+        result = await self.db.execute(
+            select(WorkoutSet)
+            .options(selectinload(WorkoutSet.session_exercise))
+            .where(
+                and_(
+                    WorkoutSet.id == set_id,
+                    WorkoutSet.user_id == user_id,
+                    WorkoutSet.workout_session_id == workout_session_id,
+                )
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
     async def get_last_set_for_exercise(
         self,
         user_id: int,

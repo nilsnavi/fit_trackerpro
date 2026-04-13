@@ -70,6 +70,8 @@ export interface CompletedSet {
     rir?: number
     planned_rest_seconds?: number
     actual_rest_seconds?: number
+    /** Фактический отдых перед подходом (таймер), сек */
+    rest_seconds?: number
     duration?: number
     distance?: number
     /** ISO-8601, время начала подхода (клиент) */

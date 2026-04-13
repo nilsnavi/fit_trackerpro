@@ -33,6 +33,8 @@ from app.schemas.workouts import (
     WorkoutTemplateList,
     WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
+    WorkoutSetPatchRequest,
+    WorkoutSetResponse,
 )
 
 router = APIRouter()
@@ -391,4 +393,23 @@ async def get_weight_recommendation(
         user_id=current_user.id,
         workout_session_id=session_id,
         exercise_id=exercise_id,
+    )
+
+
+@router.patch("/{workout_id}/sets/{set_id}", response_model=WorkoutSetResponse)
+async def patch_workout_set(
+    workout_id: int,
+    set_id: int,
+    payload: WorkoutSetPatchRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.patch_workout_set(
+        user_id=current_user.id,
+        workout_id=workout_id,
+        set_id=set_id,
+        data=payload,
+        client_ip=get_client_ip(request),
     )

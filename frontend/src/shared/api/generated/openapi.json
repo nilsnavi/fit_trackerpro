@@ -1894,6 +1894,20 @@
             ],
             "title": "Reps"
           },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rest before the set (single-field tracking), in seconds.",
+            "title": "Rest Seconds"
+          },
           "rir": {
             "anyOf": [
               {
@@ -1916,18 +1930,14 @@
             "anyOf": [
               {
                 "maximum": 10.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,4}0*$)\\d{0,2}\\.\\d{0,1}0*$)",
-                "type": "string"
+                "minimum": 1.0,
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Rate of Perceived Exertion (0-10).",
+            "description": "Rate of Perceived Exertion (1-10).",
             "title": "Rpe"
           },
           "set_number": {
@@ -2051,6 +2061,20 @@
             ],
             "title": "Reps"
           },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rest before the set (single-field tracking), in seconds.",
+            "title": "Rest Seconds"
+          },
           "rir": {
             "anyOf": [
               {
@@ -2067,14 +2091,15 @@
           "rpe": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,4}0*$)\\d{0,2}\\.\\d{0,1}0*$)",
-                "type": "string"
+                "maximum": 10.0,
+                "minimum": 1.0,
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Rate of Perceived Exertion (0-10).",
+            "description": "Rate of Perceived Exertion (1-10).",
             "title": "Rpe"
           },
           "set_number": {
@@ -7422,6 +7447,88 @@
           }
         },
         "title": "WorkoutSessionUpdateRequest",
+        "type": "object"
+      },
+      "WorkoutSetPatchRequest": {
+        "properties": {
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Seconds"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          }
+        },
+        "title": "WorkoutSetPatchRequest",
+        "type": "object"
+      },
+      "WorkoutSetResponse": {
+        "properties": {
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Seconds"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "set_number": {
+            "title": "Set Number",
+            "type": "integer"
+          },
+          "workout_id": {
+            "title": "Workout Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "workout_id",
+          "exercise_id",
+          "set_number"
+        ],
+        "title": "WorkoutSetResponse",
         "type": "object"
       },
       "WorkoutSetType": {
@@ -13194,6 +13301,72 @@
           }
         ],
         "summary": "Unarchive Workout Template",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/{workout_id}/sets/{set_id}": {
+      "patch": {
+        "operationId": "patch_workout_set_api_v1_workouts__workout_id__sets__set_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "title": "Set Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutSetPatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutSetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Workout Set",
         "tags": [
           "Workouts"
         ]

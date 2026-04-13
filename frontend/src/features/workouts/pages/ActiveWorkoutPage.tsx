@@ -109,6 +109,7 @@ export function ActiveWorkoutPage() {
         startRestTimer,
         skipRestTimer,
         setRestDefaultSeconds,
+        setLastCompletedSet,
         reset: resetActiveWorkoutState,
     } = useActiveWorkoutActions()
 
@@ -421,6 +422,7 @@ export function ActiveWorkoutPage() {
         startRestTimer,
         setCurrentPosition,
         updateSet,
+        setLastCompletedSet,
         tg,
     })
 
@@ -662,7 +664,7 @@ export function ActiveWorkoutPage() {
 
             {isActiveDraft && !isLoading && !errorMessage && workout && (
                 <>
-                    <FloatingRestTimer />
+                    <FloatingRestTimer workout={workout} onUpdateSet={updateSet} />
                     <ActiveWorkoutBottomActions
                         isActiveDraft={isActiveDraft}
                         restPresets={restPresets}

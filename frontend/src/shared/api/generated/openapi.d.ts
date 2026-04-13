@@ -1525,6 +1525,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workouts/{workout_id}/sets/{set_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Workout Set */
+        patch: operations["patch_workout_set_api_v1_workouts__workout_id__sets__set_id__patch"];
+        trace?: never;
+    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -2418,15 +2435,20 @@ export type components = {
             /** Reps */
             reps?: number | null;
             /**
+             * Rest Seconds
+             * @description Rest before the set (single-field tracking), in seconds.
+             */
+            rest_seconds?: number | null;
+            /**
              * Rir
              * @description Reps in Reserve
              */
             rir?: number | string | null;
             /**
              * Rpe
-             * @description Rate of Perceived Exertion (0-10).
+             * @description Rate of Perceived Exertion (1-10).
              */
-            rpe?: number | string | null;
+            rpe?: number | null;
             /**
              * Set Number
              * @description 1-based set index within the exercise.
@@ -2478,15 +2500,20 @@ export type components = {
             /** Reps */
             reps?: number | null;
             /**
+             * Rest Seconds
+             * @description Rest before the set (single-field tracking), in seconds.
+             */
+            rest_seconds?: number | null;
+            /**
              * Rir
              * @description Reps in Reserve
              */
             rir?: string | null;
             /**
              * Rpe
-             * @description Rate of Perceived Exertion (0-10).
+             * @description Rate of Perceived Exertion (1-10).
              */
-            rpe?: string | null;
+            rpe?: number | null;
             /**
              * Set Number
              * @description 1-based set index within the exercise.
@@ -4678,6 +4705,28 @@ export type components = {
              * @description Session tags kept while workout is in progress.
              */
             tags?: string[];
+        };
+        /** WorkoutSetPatchRequest */
+        WorkoutSetPatchRequest: {
+            /** Rest Seconds */
+            rest_seconds?: number | null;
+            /** Rpe */
+            rpe?: number | null;
+        };
+        /** WorkoutSetResponse */
+        WorkoutSetResponse: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Id */
+            id: number;
+            /** Rest Seconds */
+            rest_seconds?: number | null;
+            /** Rpe */
+            rpe?: number | null;
+            /** Set Number */
+            set_number: number;
+            /** Workout Id */
+            workout_id: number;
         };
         /**
          * WorkoutSetType
@@ -7928,6 +7977,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutTemplateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_workout_set_api_v1_workouts__workout_id__sets__set_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+                set_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutSetPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutSetResponse"];
                 };
             };
             /** @description Validation Error */

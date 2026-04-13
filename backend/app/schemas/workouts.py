@@ -84,13 +84,11 @@ class CompletedSet(BaseModel):
         ge=0,
         le=2000,
     )
-    rpe: Optional[Decimal] = Field(
+    rpe: Optional[int] = Field(
         None,
-        ge=0,
+        ge=1,
         le=10,
-        max_digits=3,
-        decimal_places=1,
-        description="Rate of Perceived Exertion (0-10).",
+        description="Rate of Perceived Exertion (1-10).",
     )
     rir: Optional[Decimal] = Field(
         None,
@@ -111,6 +109,12 @@ class CompletedSet(BaseModel):
         ge=0,
         le=3600,
         description="Tracked actual rest before the set, in seconds.",
+    )
+    rest_seconds: Optional[int] = Field(
+        None,
+        ge=0,
+        le=3600,
+        description="Rest before the set (single-field tracking), in seconds.",
     )
     duration: Optional[int] = Field(
         None,
@@ -440,3 +444,29 @@ class WorkoutHistoryResponse(BaseModel):
     page_size: int
     date_from: Optional[date]
     date_to: Optional[date]
+
+
+class WorkoutSetPatchRequest(BaseModel):
+    rest_seconds: Optional[int] = Field(None, ge=0, le=3600)
+    rpe: Optional[int] = Field(None, ge=1, le=10)
+
+
+class WorkoutSetResponse(BaseModel):
+    id: int
+    workout_id: int
+    exercise_id: int
+    set_number: int
+    rest_seconds: Optional[int] = None
+    rpe: Optional[int] = None
+
+
+# Ensure Pydantic v2 resolves postponed annotations for OpenAPI export tooling.
+def _rebuild_pydantic_models() -> None:
+    for obj in list(globals().values()):
+        if isinstance(obj, type) and issubclass(obj, BaseModel):
+            if obj is BaseModel:
+                continue
+            obj.model_rebuild()
+
+
+_rebuild_pydantic_models()

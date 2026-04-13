@@ -88,6 +88,7 @@ describe('useActiveWorkoutRestFlow', () => {
                 startRestTimer: jest.fn(),
                 setCurrentPosition: jest.fn(),
                 updateSet: jest.fn(),
+                setLastCompletedSet: jest.fn(),
                 tg: makeTg(),
             }),
         )
@@ -113,6 +114,7 @@ describe('useActiveWorkoutRestFlow', () => {
                 startRestTimer: jest.fn(),
                 setCurrentPosition: jest.fn(),
                 updateSet: jest.fn(),
+                setLastCompletedSet: jest.fn(),
                 tg: makeTg(),
             }),
         )
@@ -120,6 +122,7 @@ describe('useActiveWorkoutRestFlow', () => {
         expect(result.current.getTrackedRestPatch(0, 2)).toEqual({
             planned_rest_seconds: 90,
             actual_rest_seconds: 60,
+            rest_seconds: 60,
         })
     })
 })

@@ -51,6 +51,8 @@ from app.schemas.workouts import (
     WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
     WorkoutSessionMetrics,
+    WorkoutSetPatchRequest,
+    WorkoutSetResponse,
 )
 from app.settings import settings
 
@@ -282,6 +284,7 @@ class WorkoutsService:
                             rir=raw_set.get("rir"),
                             planned_rest_seconds=raw_set.get("planned_rest_seconds"),
                             actual_rest_seconds=raw_set.get("actual_rest_seconds"),
+                            rest_seconds=raw_set.get("rest_seconds"),
                             duration=raw_set.get("duration"),
                             started_at=WorkoutsService._parse_optional_datetime(raw_set.get("started_at")),
                             completed_at=WorkoutsService._parse_optional_datetime(raw_set.get("completed_at")),
@@ -1193,3 +1196,88 @@ class WorkoutsService:
         raw_exercises = workout.exercises or []
         exercises = [CompletedExercise.model_validate(ex) for ex in raw_exercises]
         return self._workout_log_to_history_item(workout, exercises)
+
+    async def patch_workout_set(
+        self,
+        *,
+        user_id: int,
+        workout_id: int,
+        set_id: int,
+        data: WorkoutSetPatchRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutSetResponse:
+        workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
+        if not workout or workout.duration is not None:
+            raise WorkoutNotFoundError("Workout not found")
+
+        db_set = await self.repository.get_workout_set(
+            user_id=user_id,
+            workout_session_id=workout_id,
+            set_id=set_id,
+        )
+        if not db_set or not db_set.session_exercise:
+            raise WorkoutNotFoundError("Set not found")
+
+        exercise_id = int(db_set.session_exercise.exercise_id)
+        target_set_number = int(db_set.set_number)
+
+        exercises = list(workout.exercises or [])
+        updated_set: dict | None = None
+        for ex in exercises:
+            if not isinstance(ex, dict):
+                continue
+            if int(ex.get("exercise_id") or 0) != exercise_id:
+                continue
+            sets = ex.get("sets_completed")
+            if not isinstance(sets, list):
+                continue
+            for set_item in sets:
+                if not isinstance(set_item, dict):
+                    continue
+                if int(set_item.get("set_number") or 0) != target_set_number:
+                    continue
+                if data.rest_seconds is not None:
+                    set_item["rest_seconds"] = data.rest_seconds
+                    # keep legacy field in sync for existing analytics/clients
+                    set_item["actual_rest_seconds"] = data.rest_seconds
+                if data.rpe is not None:
+                    set_item["rpe"] = data.rpe
+                updated_set = set_item
+                break
+            break
+
+        if updated_set is None:
+            raise WorkoutNotFoundError("Set not found")
+
+        workout.exercises = exercises
+        workout.session_metrics = compute_session_metrics(workout.exercises, workout.duration)
+        workout.version += 1
+
+        workout = await self.repository.commit_workout_update(workout)
+        await self.repository.replace_session_snapshot(
+            user_id=user_id,
+            workout_session_id=workout.id,
+            session_exercises=self._build_session_snapshot_rows(
+                user_id=user_id,
+                workout_session_id=workout.id,
+                exercises_payload=workout.exercises or [],
+            ),
+        )
+
+        audit_log(
+            action=WORKOUT_UPDATE,
+            user_db_id=user_id,
+            resource_type="workout_log",
+            resource_id=workout_id,
+            client_ip=client_ip,
+            meta={"mode": "patch_set", "set_id": set_id},
+        )
+
+        return WorkoutSetResponse(
+            id=set_id,
+            workout_id=workout_id,
+            exercise_id=exercise_id,
+            set_number=target_set_number,
+            rest_seconds=updated_set.get("rest_seconds"),
+            rpe=updated_set.get("rpe"),
+        )
