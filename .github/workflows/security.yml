@@ -14,6 +14,21 @@ permissions:
   security-events: write
 
 jobs:
+  gitleaks:
+    name: Secrets scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history for accurate scanning.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
   dependency-review:
     name: Dependency Review (PR)
     if: github.event_name == 'pull_request'

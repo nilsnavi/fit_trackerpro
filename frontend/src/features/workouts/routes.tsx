@@ -31,6 +31,9 @@ const WorkoutDetailPage = lazy(() =>
 const ActiveWorkoutPage = lazy(() =>
     import('@features/workouts/pages/ActiveWorkoutPage').then((m) => ({ default: m.ActiveWorkoutPage })),
 )
+const WorkoutSummaryPage = lazy(() =>
+    import('@features/workouts/pages/WorkoutSummaryPage').then((m) => ({ default: m.WorkoutSummaryPage })),
+)
 const WorkoutModePage = lazy(() => import('@features/workouts/pages/WorkoutModePage'))
 const WorkoutCalendarPage = lazy(() => import('@features/workouts/pages/Calendar'))
 const Catalog = lazy(() => import('@features/exercises/pages/Catalog'))
@@ -100,6 +103,14 @@ export function workoutRoutes() {
                 element={
                     <RouteGuard screenTitle="Календарь" skeleton={<WorkoutHistorySkeleton />}>
                         <WorkoutCalendarPage />
+                    </RouteGuard>
+                }
+            />
+            <Route
+                path="/workouts/active/:id/summary"
+                element={
+                    <RouteGuard screenTitle="Итог тренировки" skeleton={<ActiveWorkoutSkeleton />}>
+                        <WorkoutSummaryPage />
                     </RouteGuard>
                 }
             />

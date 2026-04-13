@@ -1,4 +1,4 @@
-describe('useWorkoutSessionDraftCloudSync (skeleton)', () => {
+describe.skip('useWorkoutSessionDraftCloudSync (pending)', () => {
     it('hydrates local from cloud when cloud is newer', () => {
         // TODO: mock TelegramProvider context with cloudStorage.getItem returning newer blob
         // TODO: assert store hydrateFromRemote called

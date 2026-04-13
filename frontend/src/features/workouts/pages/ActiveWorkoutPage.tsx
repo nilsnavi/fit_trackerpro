@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@shared/ui/Button'
+import { ActiveWorkoutSessionDetailsCollapsible } from '@features/workouts/active/components/ActiveWorkoutSessionDetailsCollapsible'
+import { cn } from '@shared/lib/cn'
 import { getErrorMessage } from '@shared/errors'
 import { toast } from '@shared/stores/toastStore'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
@@ -35,6 +37,7 @@ import {
     useActiveWorkoutStore,
     useWorkoutRestPresetsStore,
     useWorkoutSessionDraftStore,
+    useWorkoutSessionUiStore,
 } from '@/state/local'
 import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
 
@@ -56,13 +59,20 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useWorkoutSync } from '@/hooks/useWorkoutSync'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
 
+import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { ActiveWorkoutSummarySection } from '@features/workouts/active/containers/ActiveWorkoutSummarySection'
 import { ActiveWorkoutExerciseSection } from '@features/workouts/active/containers/ActiveWorkoutExerciseSection'
 import { ActiveWorkoutBottomActions } from '@features/workouts/active/containers/ActiveWorkoutBottomActions'
+import { WorkoutSessionScreenHeader } from '@features/workouts/active/components/WorkoutSessionScreenHeader'
+import { WorkoutExerciseCard } from '@features/workouts/active/components/WorkoutExerciseCard'
+import { ExerciseSessionBottomSheet } from '@features/workouts/active/components/ExerciseSessionBottomSheet'
+import { countExercisesDone, deriveExerciseSessionState } from '@features/workouts/active/lib/exerciseSessionDerivation'
+import { computeWorkoutSessionSummaryMetrics } from '@features/workouts/active/lib/workoutSessionSummaryMetrics'
 const ActiveWorkoutModals = lazy(() =>
     import('@features/workouts/active/containers/ActiveWorkoutModals').then((m) => ({ default: m.ActiveWorkoutModals })),
 )
 
+/** Экран активной сессии (макет «WorkoutSessionScreen»). */
 export function ActiveWorkoutPage() {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -70,7 +80,13 @@ export function ActiveWorkoutPage() {
     const tg = useTelegramWebApp()
     const { isOnline } = useNetworkStatus()
     const [reconnectBanner, setReconnectBanner] = useState<'hidden' | 'syncing' | 'saved'>('hidden')
+    const [sessionMenuOpen, setSessionMenuOpen] = useState(false)
+    const [finishSessionConfirmOpen, setFinishSessionConfirmOpen] = useState(false)
     const prevOnlineRef = useRef(isOnline)
+
+    const modalExerciseIndex = useWorkoutSessionUiStore((s) => s.modalExerciseIndex)
+    const openExerciseModal = useWorkoutSessionUiStore((s) => s.openExerciseModal)
+    const closeExerciseModal = useWorkoutSessionUiStore((s) => s.closeExerciseModal)
 
     const workoutId: number = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId: boolean = Number.isFinite(workoutId)
@@ -300,6 +316,7 @@ export function ActiveWorkoutPage() {
     const {
         currentExercise,
         currentSet,
+        normalizedCurrentSetIndex,
         hasNextExercise,
         hasPrevExercise,
         goToNextSet,
@@ -360,6 +377,13 @@ export function ActiveWorkoutPage() {
     }, [workout?.comments, workout?.id, workoutId])
 
     const elapsedLabel = useMemo(() => formatElapsedDuration(elapsedSeconds), [elapsedSeconds])
+
+    const exercisesDoneCount = useMemo(() => {
+        if (!workout) return 0
+        return countExercisesDone(workout.exercises, currentExerciseIndex, currentSetIndex)
+    }, [workout, currentExerciseIndex, currentSetIndex])
+
+    const allExercisesDone = exerciseCount > 0 && exercisesDoneCount >= exerciseCount
 
     const completion = useActiveWorkoutCompletion({
         workoutId,
@@ -467,6 +491,65 @@ export function ActiveWorkoutPage() {
         updateSet(currentExerciseIndex, currentSet.set_number, { completed: false })
         goToNextSet()
     }
+
+    const handleExerciseCardOpen = useCallback(
+        (index: number) => {
+            if (!workout) return
+            const ex = workout.exercises[index]
+            const st = deriveExerciseSessionState(ex, index, currentExerciseIndex, currentSetIndex)
+            if (st.status === 'pending') {
+                setCurrentPosition(index, 0)
+            }
+            openExerciseModal(index)
+        },
+        [workout, currentExerciseIndex, currentSetIndex, setCurrentPosition, openExerciseModal],
+    )
+
+    const handleNavigateToSummaryAfterConfirm = useCallback(() => {
+        if (!workout) return
+        void flushWorkoutSync().then(() => {
+            const metrics = computeWorkoutSessionSummaryMetrics(
+                workout,
+                elapsedSeconds,
+                currentExerciseIndex,
+                currentSetIndex,
+            )
+            navigate(`/workouts/active/${workoutId}/summary`, { state: metrics })
+            setFinishSessionConfirmOpen(false)
+        })
+    }, [workout, flushWorkoutSync, elapsedSeconds, currentExerciseIndex, currentSetIndex, navigate, workoutId])
+
+    const handleModalCompleteSet = useCallback(
+        (exerciseIndex: number, setNumber: number) => {
+            handleToggleSetCompletedWithAdvance(exerciseIndex, setNumber, true)
+        },
+        [handleToggleSetCompletedWithAdvance],
+    )
+
+    const handleModalUpdateRpe = useCallback(
+        (exerciseIndex: number, setNumber: number, rpe: number) => {
+            updateSet(exerciseIndex, setNumber, { rpe })
+        },
+        [updateSet],
+    )
+
+    const modalExercise = useMemo(() => {
+        if (modalExerciseIndex == null || !workout) return null
+        return workout.exercises[modalExerciseIndex] ?? null
+    }, [modalExerciseIndex, workout])
+
+    const modalSessionStatus = useMemo(() => {
+        if (!modalExercise || modalExerciseIndex == null) return 'pending' as const
+        return deriveExerciseSessionState(
+            modalExercise,
+            modalExerciseIndex,
+            currentExerciseIndex,
+            currentSetIndex,
+        ).status
+    }, [modalExercise, modalExerciseIndex, currentExerciseIndex, currentSetIndex])
+
+    const modalNormalizedSetIndex =
+        modalExerciseIndex != null && modalExerciseIndex === currentExerciseIndex ? normalizedCurrentSetIndex : 0
 
     const shouldLoadModals =
         isLeaveConfirmOpen ||
@@ -588,11 +671,78 @@ export function ActiveWorkoutPage() {
                 </Suspense>
             ) : null}
 
-            <ActiveWorkoutHeader
-                onBack={() => guardedAction(() => navigate('/workouts'))}
-                syncState={syncState}
-                pendingCount={syncPendingItems.length}
-            />
+            {isActiveDraft && workout ? (
+                <WorkoutSessionScreenHeader
+                    title={workoutTitle}
+                    onBack={() => guardedAction(() => navigate('/workouts'))}
+                    syncState={syncState}
+                    pendingCount={syncPendingItems.length}
+                    menuOpen={sessionMenuOpen}
+                    onMenuToggle={() => setSessionMenuOpen((v) => !v)}
+                    menuContent={(
+                        <div className="py-1">
+                            {repeatSource ? (
+                                <button
+                                    type="button"
+                                    className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
+                                    onClick={() => {
+                                        exerciseActions.handleRepeatPrevious()
+                                        setSessionMenuOpen(false)
+                                    }}
+                                >
+                                    Повторить прошлую
+                                </button>
+                            ) : null}
+                            <button
+                                type="button"
+                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
+                                onClick={() => {
+                                    exerciseActions.resetAddItemForm('exercise')
+                                    setSessionMenuOpen(false)
+                                }}
+                            >
+                                Добавить упражнение
+                            </button>
+                            <button
+                                type="button"
+                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
+                                onClick={() => {
+                                    exerciseActions.resetAddItemForm('timer')
+                                    setSessionMenuOpen(false)
+                                }}
+                            >
+                                Добавить таймер
+                            </button>
+                            <button
+                                type="button"
+                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
+                                onClick={() => {
+                                    openRestPresets()
+                                    setSessionMenuOpen(false)
+                                }}
+                            >
+                                Пресеты отдыха
+                            </button>
+                            <button
+                                type="button"
+                                className="block w-full px-4 py-3 text-left text-sm text-danger hover:bg-danger/10"
+                                onClick={() => {
+                                    completion.openAbandonConfirm()
+                                    setSessionMenuOpen(false)
+                                }}
+                            >
+                                Отменить тренировку
+                            </button>
+                        </div>
+                    )}
+                />
+            ) : (
+                <ActiveWorkoutHeader
+                    onBack={() => guardedAction(() => navigate('/workouts'))}
+                    syncState={syncState}
+                    pendingCount={syncPendingItems.length}
+                />
+            )}
 
             {isActiveDraft && workoutId && (
                 <WorkoutSyncQueueStatus workoutId={workoutId} showDetails={false} />
@@ -601,7 +751,124 @@ export function ActiveWorkoutPage() {
             {isLoading && <div className="text-sm text-telegram-hint">Загрузка...</div>}
             {!isLoading && errorMessage && <div className="text-sm text-danger">{errorMessage}</div>}
 
-            {!isLoading && !errorMessage && workout && (
+            {!isLoading && !errorMessage && workout && isActiveDraft ? (
+                <>
+                    <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm text-telegram-hint">
+                                {exerciseCount} упражнений · {exercisesDoneCount} выполнено
+                            </p>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                                {elapsedLabel}
+                            </span>
+                        </div>
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        data-testid="finish-workout-btn"
+                        className={cn(
+                            'w-full touch-manipulation border-2',
+                            allExercisesDone && 'border-danger/50 text-danger hover:bg-danger/10',
+                        )}
+                        onClick={() => setFinishSessionConfirmOpen(true)}
+                        disabled={completeMutation.isPending}
+                    >
+                        Завершить тренировку
+                    </Button>
+
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">Упражнения</p>
+
+                    <div className="flex flex-col gap-3">
+                        {workout.exercises.map((exercise, index) => (
+                            <WorkoutExerciseCard
+                                key={`${exercise.exercise_id}-${index}`}
+                                exercise={exercise}
+                                exerciseIndex={index}
+                                currentExerciseIndex={currentExerciseIndex}
+                                currentSetIndex={currentSetIndex}
+                                onOpen={() => handleExerciseCardOpen(index)}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="rounded-xl border border-warning/35 bg-warning/10 p-3 space-y-2">
+                        <p className="text-sm text-telegram-text">
+                            Черновик сохраняется автоматически до завершения сессии.
+                        </p>
+                    </div>
+
+                    {completion.sessionError ? <p className="text-sm text-danger">{completion.sessionError}</p> : null}
+                    {completeMutation.isError ? (
+                        <p className="text-sm text-danger">{getErrorMessage(completeMutation.error)}</p>
+                    ) : null}
+                    {updateSessionMutation.isError ? (
+                        <p className="text-sm text-danger">{getErrorMessage(updateSessionMutation.error)}</p>
+                    ) : null}
+
+                    {syncState === 'error' || syncRetryExhausted ? (
+                        <div className="flex flex-col gap-2 rounded-lg border border-danger/25 bg-danger/5 p-3 sm:flex-row sm:flex-wrap">
+                            <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={retrySessionSyncNow}>
+                                Повторить
+                            </Button>
+                            {syncRetryExhausted ? (
+                                <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={handleSaveSessionLocalFinish}>
+                                    Сохранить локально и завершить
+                                </Button>
+                            ) : null}
+                        </div>
+                    ) : null}
+
+                    <ActiveWorkoutSessionDetailsCollapsible
+                        workout={workout}
+                        workoutTitle={workoutTitle}
+                        elapsedLabel={elapsedLabel}
+                        isActiveDraft={isActiveDraft}
+                        durationMinutes={completion.durationMinutes}
+                        exerciseCount={exerciseCount}
+                        completedSetCount={completedSetCount}
+                        onDurationChange={completion.setDurationMinutes}
+                        onCommentsChange={(value) => updateSessionFields({ comments: value || undefined })}
+                        onOpenRestPresets={openRestPresets}
+                    />
+
+                    {modalExercise && modalExerciseIndex != null ? (
+                        <ExerciseSessionBottomSheet
+                            isOpen
+                            onClose={closeExerciseModal}
+                            exercise={modalExercise}
+                            exerciseIndex={modalExerciseIndex}
+                            readOnly={modalSessionStatus === 'done'}
+                            sessionStatus={modalSessionStatus}
+                            currentExerciseIndex={currentExerciseIndex}
+                            currentSetIndex={currentSetIndex}
+                            normalizedCurrentSetIndex={modalNormalizedSetIndex}
+                            onUpdateSet={updateSet}
+                            onFocusPosition={setCurrentPosition}
+                            onCompleteSet={handleModalCompleteSet}
+                            onSkipSet={handleSkipCurrentSetQuick}
+                            onUpdateSetRpe={handleModalUpdateRpe}
+                            weightRecommendation={modalExerciseIndex === currentExerciseIndex ? weightRecommendation : undefined}
+                            isWeightRecLoading={modalExerciseIndex === currentExerciseIndex ? isWeightRecLoading : false}
+                            isWeightRecError={modalExerciseIndex === currentExerciseIndex ? isWeightRecError : false}
+                        />
+                    ) : null}
+
+                    <WorkoutConfirmModal
+                        isOpen={finishSessionConfirmOpen}
+                        title="Завершить тренировку?"
+                        description={`Выполнено ${exercisesDoneCount} из ${exerciseCount} упражнений`}
+                        confirmLabel="Завершить"
+                        cancelLabel="Продолжить"
+                        confirmVariant="emergency"
+                        onClose={() => setFinishSessionConfirmOpen(false)}
+                        onConfirm={handleNavigateToSummaryAfterConfirm}
+                    />
+                </>
+            ) : null}
+
+            {!isLoading && !errorMessage && workout && !isActiveDraft ? (
                 <>
                     <ActiveWorkoutSummarySection
                         workout={workout}
@@ -660,7 +927,7 @@ export function ActiveWorkoutPage() {
                         onSelectExerciseIndex={handleSelectExerciseIndex}
                     />
                 </>
-            )}
+            ) : null}
 
             {isActiveDraft && !isLoading && !errorMessage && workout && (
                 <>
@@ -676,10 +943,13 @@ export function ActiveWorkoutPage() {
                         onRemoveSet={exerciseActions.handleRemoveLastSetFromCurrentExercise}
                         onAddSet={exerciseActions.handleAddSetToCurrentExercise}
                         onFinishWorkout={completion.handleOpenFinishSheet}
+                        hideFinishButton
                     />
                 </>
             )}
         </div>
     )
 }
+
+export { ActiveWorkoutPage as WorkoutSessionScreen }
 

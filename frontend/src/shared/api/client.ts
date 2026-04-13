@@ -5,7 +5,8 @@ import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, normalizeError } from '@shared/errors'
 import { getAuthTokens, useAuthStore } from '@/stores/authStore'
 
-// TODO: Устаревшие алиасы бэкенда удаляются в v1.2.0 (2026-06-30)
+// NOTE: Backend deprecated aliases are scheduled for removal in v1.2.0 (2026-06-30).
+// Keep frontend calls on the canonical routes documented in the repo README (API v1 section).
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean }
 

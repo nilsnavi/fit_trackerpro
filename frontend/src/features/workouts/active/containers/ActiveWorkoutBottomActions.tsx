@@ -15,6 +15,8 @@ export interface ActiveWorkoutBottomActionsProps {
     onRemoveSet: () => void
     onAddSet: () => void
     onFinishWorkout: () => void
+    /** Когда кнопка завершения вынесена в основной layout (верх страницы) */
+    hideFinishButton?: boolean
 }
 
 export function ActiveWorkoutBottomActions({
@@ -28,6 +30,7 @@ export function ActiveWorkoutBottomActions({
     onRemoveSet,
     onAddSet,
     onFinishWorkout,
+    hideFinishButton = false,
 }: ActiveWorkoutBottomActionsProps) {
     if (!isActiveDraft) return null
 
@@ -91,17 +94,21 @@ export function ActiveWorkoutBottomActions({
                         disabled: !currentExercise,
                     },
                 ],
-                [
-                    {
-                        id: 'finish-workout',
-                        label: 'Завершить тренировку',
-                        onClick: onFinishWorkout,
-                        disabled: isFinishing,
-                        isLoading: isFinishing,
-                        className: 'w-full',
-                        'data-testid': 'finish-workout-btn',
-                    },
-                ],
+                ...(hideFinishButton
+                    ? []
+                    : [
+                            [
+                                {
+                                    id: 'finish-workout',
+                                    label: 'Завершить тренировку',
+                                    onClick: onFinishWorkout,
+                                    disabled: isFinishing,
+                                    isLoading: isFinishing,
+                                    className: 'w-full',
+                                    'data-testid': 'finish-workout-btn',
+                                },
+                            ],
+                        ]),
             ]}
         />
     )
