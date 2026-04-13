@@ -1,0 +1,83 @@
+# После каждого push в main успешно завершается workflow «Build and Push» (образы в GHCR).
+# Этот workflow подключается по SSH к вашему хосту с Docker, синхронизирует репозиторий на нужный
+# коммит и заново собирает/поднимает сервисы backend и frontend.
+#
+# Включение: Settings → Secrets and variables → Actions → Variables
+#   ENABLE_DOCKER_REDEPLOY = true
+#
+# Секреты (repository или environment «actions»):
+#   DOCKER_REDEPLOY_SSH_PRIVATE_KEY — приватный ключ SSH
+#   DOCKER_REDEPLOY_HOST — хост или IP сервера
+#   DOCKER_REDEPLOY_USER — пользователь SSH
+#   DOCKER_REDEPLOY_PATH — абсолютный путь к клону репозитория на сервере
+#
+# Опционально (Variables):
+#   DOCKER_REDEPLOY_STRATEGY = build | pull
+#     build (по умолчанию): docker compose build backend frontend
+#     pull: docker compose pull backend frontend (если в compose заданы образы из registry)
+#   DOCKER_REDEPLOY_COMPOSE_ARGS — например: -f docker-compose.yml -f docker-compose.prod.yml
+#
+name: Docker redeploy (after push to main)
+
+on:
+  workflow_run:
+    workflows:
+      - Build and Push
+    types:
+      - completed
+
+concurrency:
+  group: docker-redeploy-${{ github.event.workflow_run.head_branch }}-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  redeploy-remote:
+    name: SSH — пересборка и перезапуск backend / frontend
+    runs-on: ubuntu-latest
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      vars.ENABLE_DOCKER_REDEPLOY == 'true'
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout (composite action SSH + скрипт redeploy)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Настроить SSH
+        uses: ./.github/actions/setup-ssh-deploy
+        with:
+          ssh-private-key: ${{ secrets.DOCKER_REDEPLOY_SSH_PRIVATE_KEY }}
+          deploy-host: ${{ secrets.DOCKER_REDEPLOY_HOST }}
+
+      - name: Git sync и docker compose на сервере
+        env:
+          DEPLOY_USER: ${{ secrets.DOCKER_REDEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DOCKER_REDEPLOY_HOST }}
+          REMOTE_PATH: ${{ secrets.DOCKER_REDEPLOY_PATH }}
+          STRATEGY: ${{ vars.DOCKER_REDEPLOY_STRATEGY }}
+          COMPOSE_EXTRA: ${{ vars.DOCKER_REDEPLOY_COMPOSE_ARGS }}
+        run: |
+          set -Eeuo pipefail
+          for v in DEPLOY_USER DEPLOY_HOST REMOTE_PATH; do
+            eval "val=\${$v:-}"
+            if [ -z "${val}" ]; then
+              echo "::error::Задайте секреты DOCKER_REDEPLOY_USER, DOCKER_REDEPLOY_HOST, DOCKER_REDEPLOY_PATH"
+              exit 1
+            fi
+          done
+          chmod +x scripts/remote-docker-redeploy.sh
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          ssh -o BatchMode=yes "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s -- \
+            "${REMOTE_PATH}" \
+            "${HEAD_SHA}" \
+            "${STRATEGY:-build}" \
+            "${COMPOSE_EXTRA:-}" \
+            < scripts/remote-docker-redeploy.sh
