@@ -35,6 +35,8 @@ lerna-debug.log*
 # --- Environment & secrets ---
 .env
 .env.ngrok
+*.ngrok
+ngrok.*.yml
 .env.local
 .env.*.local
 .env.development.local
