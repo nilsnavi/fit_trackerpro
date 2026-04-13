@@ -171,7 +171,20 @@ class TestUser:
 @pytest_asyncio.fixture
 async def authenticated_client(client: AsyncClient) -> AsyncClient:
     """Create an authenticated client for testing protected endpoints."""
+    # SlowAPI rate limit for /users/auth/telegram is 10/min per IP.
+    # Many tests need an authenticated client, so authenticate once per test run and reuse the JWT.
+    global _AUTH_TOKEN_CACHE
+    if _AUTH_TOKEN_CACHE is not None:
+        client.headers.update({"Authorization": f"Bearer {_AUTH_TOKEN_CACHE}"})
+        sanity = await client.get("/api/v1/users/me")
+        if sanity.status_code == 200:
+            return client
+
     test_user = TestUser(client)
-    await test_user.authenticate()
-    client.headers.update(test_user.get_headers())
+    _AUTH_TOKEN_CACHE = await test_user.authenticate()
+    client.headers.update({"Authorization": f"Bearer {_AUTH_TOKEN_CACHE}"})
     return client
+
+
+# Cached token for authenticated_client fixture (see note above).
+_AUTH_TOKEN_CACHE: str | None = None
