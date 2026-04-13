@@ -1,8 +1,5 @@
 version: "2"
 tunnels:
-  fittracker-frontend:
+  fittracker-edge:
     proto: http
-    addr: frontend:80
-  fittracker-backend:
-    proto: http
-    addr: backend:8000
+    addr: edge:80

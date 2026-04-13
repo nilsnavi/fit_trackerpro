@@ -205,6 +205,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Start E2E stack
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml up -d --build
+
+      - name: Wait for API
+        working-directory: .
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:28000/api/v1/system/health && exit 0
+            sleep 2
+          done; exit 1
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -230,6 +242,11 @@ jobs:
             ./frontend/playwright-report
             ./frontend/test-results
 
+      - name: Tear down E2E stack
+        if: always()
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml down -v
+
   e2e-regression:
     name: E2E Full Regression
     runs-on: ubuntu-latest
@@ -240,6 +257,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Start E2E stack
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml up -d --build
+
+      - name: Wait for API
+        working-directory: .
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:28000/api/v1/system/health && exit 0
+            sleep 2
+          done; exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -266,6 +295,11 @@ jobs:
             ./frontend/playwright-report
             ./frontend/test-results
 
+      - name: Tear down E2E stack
+        if: always()
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml down -v
+
   e2e-playwright-default:
     name: E2E Playwright (default suite)
     runs-on: ubuntu-latest
@@ -276,6 +310,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Start E2E stack
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml up -d --build
+
+      - name: Wait for API
+        working-directory: .
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:28000/api/v1/system/health && exit 0
+            sleep 2
+          done; exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -302,6 +348,11 @@ jobs:
             ./frontend/playwright-report
             ./frontend/test-results
 
+      - name: Tear down E2E stack
+        if: always()
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml down -v
+
   e2e-playwright-mobile:
     name: E2E Playwright (mobile projects)
     runs-on: ubuntu-latest
@@ -312,6 +363,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Start E2E stack
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml up -d --build
+
+      - name: Wait for API
+        working-directory: .
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:28000/api/v1/system/health && exit 0
+            sleep 2
+          done; exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -338,6 +401,11 @@ jobs:
             ./frontend/playwright-report
             ./frontend/test-results
 
+      - name: Tear down E2E stack
+        if: always()
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml down -v
+
   e2e-mvp-golden-path:
     name: E2E MVP golden path (mvp-regression spec)
     runs-on: ubuntu-latest
@@ -348,6 +416,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Start E2E stack
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml up -d --build
+
+      - name: Wait for API
+        working-directory: .
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:28000/api/v1/system/health && exit 0
+            sleep 2
+          done; exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -373,6 +453,11 @@ jobs:
           path: |
             ./frontend/playwright-report
             ./frontend/test-results
+
+      - name: Tear down E2E stack
+        if: always()
+        working-directory: .
+        run: docker compose -f docker-compose.e2e.yml down -v
 
   db-migrations-fresh:
     name: DB migrations (fresh database)

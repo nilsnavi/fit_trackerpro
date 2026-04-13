@@ -45,6 +45,7 @@ export function TelegramAuthGate({ children }: PropsWithChildren) {
 
     const [phase, setPhase] = useState<GatePhase>(() => (trimmed ? 'authenticating' : 'stub'))
     const [nonAuthError, setNonAuthError] = useState(false)
+    const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null)
 
     useEffect(() => {
         if (devBypass) return
@@ -52,6 +53,7 @@ export function TelegramAuthGate({ children }: PropsWithChildren) {
 
         let cancelled = false
         setNonAuthError(false)
+        setAuthErrorMessage(null)
 
         void (async () => {
             try {
@@ -70,6 +72,10 @@ export function TelegramAuthGate({ children }: PropsWithChildren) {
                 const isAuth =
                     isAppHttpError(e) && (e.status === 401 || e.status === 403)
                 setNonAuthError(!isAuth)
+                if (isAuth) {
+                    const msg = (e as { message?: unknown }).message
+                    setAuthErrorMessage(typeof msg === 'string' && msg.trim() ? msg : null)
+                }
                 setPhase('auth_error')
             }
         })()
@@ -125,7 +131,7 @@ export function TelegramAuthGate({ children }: PropsWithChildren) {
                     <p className="mt-2 text-sm text-telegram-hint" role="alert">
                         {nonAuthError
                             ? 'Не удалось завершить вход. Проверьте соединение и попробуйте снова.'
-                            : 'Не удалось подтвердить данные Telegram (initData).'}
+                            : authErrorMessage ?? 'Не удалось подтвердить данные Telegram (initData).'}
                     </p>
                     <Button type="button" className="mt-4 w-full" onClick={retry}>
                         Попробовать снова

@@ -1,99 +1,87 @@
-# Изолированный стек для Playwright E2E против реального API (postgres + redis + миграции + backend).
-# Запуск: scripts/e2e-setup.sh
-
-name: fittracker-e2e
-
 services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: e2e
-      POSTGRES_PASSWORD: e2e
-      POSTGRES_DB: fittracker_e2e
-    ports:
-      - "55432:5432"
+      POSTGRES_DB: ${POSTGRES_DB:-fittracker_test}
+      POSTGRES_USER: ${POSTGRES_USER:-fittracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fittracker_ci_password}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U e2e -d fittracker_e2e"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
-      timeout: 3s
-      retries: 12
-    networks:
-      - e2e
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    volumes:
+      - postgres_e2e_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "56379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 8
-    networks:
-      - e2e
-
-  migrator:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    restart: "no"
-    environment:
-      DATABASE_URL: postgresql+asyncpg://e2e:e2e@postgres:5432/fittracker_e2e
-      DATABASE_URL_SYNC: postgresql://e2e:e2e@postgres:5432/fittracker_e2e
-      REDIS_URL: redis://redis:6379/0
-      ENVIRONMENT: test
-      DEBUG: "true"
-    volumes:
-      - ./backend:/backend
-      - ./database/migrations:/migrations
-    command:
-      [
-        "sh",
-        "-c",
-        "python /backend/tools/bootstrap_alembic_version.py /migrations/alembic.ini && python -m alembic -c /migrations/alembic.ini upgrade head",
-      ]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - e2e
+      retries: 30
+      start_period: 5s
 
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    ports:
-      - "28000:8000"
-    env_file:
-      - backend/.env.test
     environment:
-      DATABASE_URL: postgresql+asyncpg://e2e:e2e@postgres:5432/fittracker_e2e
-      DATABASE_URL_SYNC: postgresql://e2e:e2e@postgres:5432/fittracker_e2e
-      REDIS_URL: redis://redis:6379/0
-      ALEMBIC_INI_PATH: /migrations/alembic.ini
-      ENVIRONMENT: test
-      DEBUG: "true"
-    volumes:
-      - ./backend:/app
-      - ./database/migrations:/migrations:ro
+      ENVIRONMENT: ${ENVIRONMENT:-test}
+      DEBUG: ${DEBUG:-false}
+      AUTO_CREATE_DB_SCHEMA: ${AUTO_CREATE_DB_SCHEMA:-true}
+      POSTGRES_DB: ${POSTGRES_DB:-fittracker_test}
+      POSTGRES_USER: ${POSTGRES_USER:-fittracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fittracker_ci_password}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fittracker:fittracker_ci_password@postgres:5432/fittracker_test}
+      DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fittracker:fittracker_ci_password@postgres:5432/fittracker_test}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SECRET_KEY: ${SECRET_KEY:-ci-test-secret-key-not-used-in-production-32chars}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA}
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-https://test.example.com}
+      TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-false}
     command:
-      ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/system/ready"]
-      interval: 8s
-      timeout: 5s
-      retries: 12
-      start_period: 25s
+      - gunicorn
+      - -k
+      - uvicorn.workers.UvicornWorker
+      - -w
+      - "2"
+      - -b
+      - 0.0.0.0:28000
+      - --access-logfile
+      - "-"
+      - --error-logfile
+      - "-"
+      - --capture-output
+      - --enable-stdio-inheritance
+      - app.main:app
+    ports:
+      - "28000:28000"
     depends_on:
-      migrator:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - e2e
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:28000/api/v1/system/health >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
-networks:
-  e2e:
-    driver: bridge
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://127.0.0.1:28000/api/v1}
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-https://test.example.com}
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_e2e_data:

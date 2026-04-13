@@ -24,12 +24,15 @@ def parse_init_data(init_data: str) -> Dict[str, Any]:
     Returns:
         Dictionary of parsed parameters
     """
-    params = {}
-    for param in init_data.split('&'):
-        if '=' in param:
-            key, value = param.split('=', 1)
-            params[key] = urllib.parse.unquote(value)
-    return params
+    # Telegram passes initData as a query-string-like payload (application/x-www-form-urlencoded).
+    # Use `parse_qsl` to correctly handle percent-encoding and `+` (space) normalization.
+    return dict(
+        urllib.parse.parse_qsl(
+            init_data,
+            keep_blank_values=True,
+            strict_parsing=False,
+        )
+    )
 
 
 def extract_user_data(parsed_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -80,6 +83,7 @@ def validate_init_data(init_data: str, bot_token: str) -> bool:
         received_hash = parsed.pop('hash', None)
         if not received_hash:
             return False
+        received_hash = received_hash.strip().lower()
 
         # Create data-check-string by sorting parameters alphabetically
         data_check_string = '\n'.join(
@@ -90,7 +94,7 @@ def validate_init_data(init_data: str, bot_token: str) -> bool:
         # Create secret key: HMAC-SHA256("WebAppData", bot_token)
         secret_key = hmac.new(
             key=b"WebAppData",
-            msg=bot_token.encode(),
+            msg=bot_token.strip().encode(),
             digestmod=hashlib.sha256
         ).digest()
 
@@ -99,7 +103,7 @@ def validate_init_data(init_data: str, bot_token: str) -> bool:
             key=secret_key,
             msg=data_check_string.encode(),
             digestmod=hashlib.sha256
-        ).hexdigest()
+        ).hexdigest().lower()
 
         # Compare hashes
         return hmac.compare_digest(calculated_hash, received_hash)

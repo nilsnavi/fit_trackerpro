@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import Integer, and_, cast, desc, func, literal, or_, select, text, true
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.domain.daily_wellness import DailyWellness
 from app.domain.muscle_load import MuscleLoad
@@ -228,7 +229,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                     NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                     NULLIF(set_item.item->>'reps', '')::int AS reps
                 FROM workout_logs wl
-                CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                 CROSS JOIN LATERAL jsonb_array_elements(
                     COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                 ) AS set_item(item)
@@ -298,7 +299,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                     NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                     NULLIF(set_item.item->>'reps', '')::int AS reps
                 FROM workout_logs wl
-                CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                 CROSS JOIN LATERAL jsonb_array_elements(
                     COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                 ) AS set_item(item)
@@ -385,7 +386,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                     NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                     NULLIF(set_item.item->>'reps', '')::int AS reps
                 FROM workout_logs wl
-                CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                 CROSS JOIN LATERAL jsonb_array_elements(
                     COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                 ) AS set_item(item)
@@ -480,7 +481,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
             WorkoutLog.date >= first_day,
             WorkoutLog.date <= last_day,
         )
-        tag_elements = func.jsonb_array_elements_text(WorkoutLog.tags).table_valued("tag").alias("tag_elements")
+        tag_elements = func.jsonb_array_elements_text(cast(WorkoutLog.tags, JSONB)).table_valued("tag").alias("tag_elements")
         result = await self.db.execute(
             select(
                 WorkoutLog.date.label("workout_date"),
@@ -528,7 +529,11 @@ class AnalyticsRepository(SQLAlchemyRepository):
         return result.one()
 
     async def get_total_unique_exercises(self, user_id: int, date_from: date) -> int:
-        exercise_elements = func.jsonb_array_elements(WorkoutLog.exercises).table_valued("item").alias("exercise_elements")
+        exercise_elements = (
+            func.jsonb_array_elements(cast(WorkoutLog.exercises, JSONB))
+            .table_valued("item")
+            .alias("exercise_elements")
+        )
         exercise_id_expr = cast(
             exercise_elements.c.item.op("->>")("exercise_id"),
             Integer,
@@ -635,7 +640,11 @@ class AnalyticsRepository(SQLAlchemyRepository):
         limit: int = 5,
         date_to: Optional[date] = None,
     ) -> List[Dict[str, Any]]:
-        exercise_elements = func.jsonb_array_elements(WorkoutLog.exercises).table_valued("item").alias("exercise_elements")
+        exercise_elements = (
+            func.jsonb_array_elements(cast(WorkoutLog.exercises, JSONB))
+            .table_valued("item")
+            .alias("exercise_elements")
+        )
         exercise_id_expr = cast(
             exercise_elements.c.item.op("->>")("exercise_id"),
             Integer,
@@ -710,7 +719,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                         NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                         NULLIF(set_item.item->>'reps', '')::int AS reps
                     FROM workout_logs wl
-                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                     CROSS JOIN LATERAL jsonb_array_elements(
                         COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                     ) AS set_item(item)
@@ -771,7 +780,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                         NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                         NULLIF(set_item.item->>'reps', '')::int AS reps
                     FROM workout_logs wl
-                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                     CROSS JOIN LATERAL jsonb_array_elements(
                         COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                     ) AS set_item(item)
@@ -855,7 +864,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                         NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                         NULLIF(set_item.item->>'reps', '')::int AS reps
                     FROM workout_logs wl
-                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                     CROSS JOIN LATERAL jsonb_array_elements(
                         COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                     ) AS set_item(item)
@@ -925,7 +934,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                         NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                         NULLIF(set_item.item->>'reps', '')::int AS reps
                     FROM workout_logs wl
-                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                     CROSS JOIN LATERAL jsonb_array_elements(
                         COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                     ) AS set_item(item)
@@ -979,7 +988,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                         COALESCE(NULLIF(set_item.item->>'weight', '')::double precision, 0)
                             * COALESCE(NULLIF(set_item.item->>'reps', '')::int, 0) AS volume
                     FROM workout_logs wl
-                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                     CROSS JOIN LATERAL jsonb_array_elements(
                         COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                     ) AS set_item(item)
@@ -1029,7 +1038,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                         NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                         NULLIF(set_item.item->>'reps', '')::int AS reps
                     FROM workout_logs wl
-                    CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                     CROSS JOIN LATERAL jsonb_array_elements(
                         COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                     ) AS set_item(item)
@@ -1136,7 +1145,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                             NULLIF(set_item.item->>'weight', '')::double precision AS weight,
                             NULLIF(set_item.item->>'reps', '')::int AS reps
                         FROM workout_logs wl
-                        CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                        CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                         CROSS JOIN LATERAL jsonb_array_elements(
                             COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                         ) AS set_item(item)
@@ -1173,7 +1182,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                             COALESCE(NULLIF(set_item.item->>'weight', '')::double precision, 0)
                                 * COALESCE(NULLIF(set_item.item->>'reps', '')::int, 0) AS volume
                         FROM workout_logs wl
-                        CROSS JOIN LATERAL jsonb_array_elements(wl.exercises) AS exercise_item(item)
+                        CROSS JOIN LATERAL jsonb_array_elements(COALESCE(wl.exercises::jsonb, '[]'::jsonb)) AS exercise_item(item)
                         CROSS JOIN LATERAL jsonb_array_elements(
                             COALESCE(exercise_item.item->'sets_completed', '[]'::jsonb)
                         ) AS set_item(item)

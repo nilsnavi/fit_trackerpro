@@ -1,4 +1,24 @@
 services:
+  # Single public entrypoint (routes / -> frontend, /api -> backend)
+  edge:
+    image: caddy:2-alpine
+    container_name: fittracker-edge
+    restart: unless-stopped
+    environment:
+      - http_proxy=
+      - https_proxy=
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - ALL_PROXY=
+      - NO_PROXY=localhost,127.0.0.1,backend,frontend,postgres,redis,edge
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - fittracker-network
+
   # Public HTTPS URLs for Telegram Mini App and API via ngrok
   tunnel:
     image: ngrok/ngrok:latest
@@ -18,8 +38,7 @@ services:
     volumes:
       - ./ngrok.fittracker.yml:/etc/ngrok.yml:ro
     depends_on:
-      - frontend
-      - backend
+      - edge
     networks:
       - fittracker-network
 
