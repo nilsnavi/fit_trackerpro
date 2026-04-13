@@ -39,6 +39,7 @@ import {
     useWorkoutSessionDraftStore,
     useWorkoutSessionUiStore,
 } from '@/state/local'
+import { isTreadmillExercise } from '@features/workouts/active/lib/treadmillExercise'
 import { useActiveWorkoutSessionDraftStore } from '@/stores/activeWorkoutSessionDraftStore'
 
 import { buildSyncPayload, formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
@@ -66,6 +67,7 @@ import { ActiveWorkoutBottomActions } from '@features/workouts/active/containers
 import { WorkoutSessionScreenHeader } from '@features/workouts/active/components/WorkoutSessionScreenHeader'
 import { WorkoutExerciseCard } from '@features/workouts/active/components/WorkoutExerciseCard'
 import { ExerciseSessionBottomSheet } from '@features/workouts/active/components/ExerciseSessionBottomSheet'
+import { WorkoutSessionRestOverlay } from '@features/workouts/active/components/WorkoutSessionRestOverlay'
 import { countExercisesDone, deriveExerciseSessionState } from '@features/workouts/active/lib/exerciseSessionDerivation'
 import { computeWorkoutSessionSummaryMetrics } from '@features/workouts/active/lib/workoutSessionSummaryMetrics'
 const ActiveWorkoutModals = lazy(() =>
@@ -87,6 +89,7 @@ export function ActiveWorkoutPage() {
     const modalExerciseIndex = useWorkoutSessionUiStore((s) => s.modalExerciseIndex)
     const openExerciseModal = useWorkoutSessionUiStore((s) => s.openExerciseModal)
     const closeExerciseModal = useWorkoutSessionUiStore((s) => s.closeExerciseModal)
+    const startSessionRestTimer = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
 
     const workoutId: number = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId: boolean = Number.isFinite(workoutId)
@@ -519,13 +522,6 @@ export function ActiveWorkoutPage() {
         })
     }, [workout, flushWorkoutSync, elapsedSeconds, currentExerciseIndex, currentSetIndex, navigate, workoutId])
 
-    const handleModalCompleteSet = useCallback(
-        (exerciseIndex: number, setNumber: number) => {
-            handleToggleSetCompletedWithAdvance(exerciseIndex, setNumber, true)
-        },
-        [handleToggleSetCompletedWithAdvance],
-    )
-
     const handleModalUpdateRpe = useCallback(
         (exerciseIndex: number, setNumber: number, rpe: number) => {
             updateSet(exerciseIndex, setNumber, { rpe })
@@ -550,6 +546,118 @@ export function ActiveWorkoutPage() {
 
     const modalNormalizedSetIndex =
         modalExerciseIndex != null && modalExerciseIndex === currentExerciseIndex ? normalizedCurrentSetIndex : 0
+
+    const modalCatalogExercise = useMemo(() => {
+        if (!modalExercise) return null
+        return catalogExercises.find((e) => e.id === modalExercise.exercise_id) ?? null
+    }, [modalExercise, catalogExercises])
+
+    const isModalTreadmill = useMemo(
+        () => (modalExercise ? isTreadmillExercise(modalExercise, modalCatalogExercise) : false),
+        [modalExercise, modalCatalogExercise],
+    )
+
+    const handleRestTimerEnd = useCallback(
+        (exerciseIndex: number) => {
+            openExerciseModal(exerciseIndex)
+        },
+        [openExerciseModal],
+    )
+
+    const handleSheetComplete = useCallback(
+        (opts: { restEnabled: boolean; restSeconds: number }) => {
+            if (modalExerciseIndex == null || !workout || !modalExercise) return
+            const exerciseIndex = modalExerciseIndex
+            const currentSet = modalExercise.sets_completed[modalNormalizedSetIndex]
+            if (!currentSet) return
+            const isLastSet = modalNormalizedSetIndex >= modalExercise.sets_completed.length - 1
+
+            handleToggleSetCompleted(exerciseIndex, currentSet.set_number, true, { skipAutoRestTimer: true })
+            notifySetCompleted()
+
+            if (isLastSet) {
+                goToNextSet()
+                closeExerciseModal()
+                toast.success('Упражнение завершено')
+                return
+            }
+
+            goToNextSet()
+
+            if (opts.restEnabled) {
+                closeExerciseModal()
+                const { currentExerciseIndex: ci, currentSetIndex: csi } = useActiveWorkoutStore.getState()
+                const ord = workout.exercises[ci]?.sets_completed[csi]?.set_number ?? 1
+                startSessionRestTimer({
+                    forExerciseId: `${modalExercise.exercise_id}-${exerciseIndex}`,
+                    exerciseIndex,
+                    exerciseName: modalExercise.name,
+                    nextSetOrdinal: ord,
+                    totalSets: modalExercise.sets_completed.length,
+                    total: opts.restSeconds,
+                })
+            }
+        },
+        [
+            modalExerciseIndex,
+            workout,
+            modalExercise,
+            modalNormalizedSetIndex,
+            handleToggleSetCompleted,
+            notifySetCompleted,
+            goToNextSet,
+            closeExerciseModal,
+            startSessionRestTimer,
+        ],
+    )
+
+    const handleSheetSkip = useCallback(
+        (opts: { restEnabled: boolean; restSeconds: number }) => {
+            if (modalExerciseIndex == null || !workout || !modalExercise) return
+            const exerciseIndex = modalExerciseIndex
+            const currentSet = modalExercise.sets_completed[modalNormalizedSetIndex]
+            if (!currentSet) return
+            const isLastSet = modalNormalizedSetIndex >= modalExercise.sets_completed.length - 1
+
+            tg.hapticFeedback({ type: 'selection' })
+            setCurrentPosition(exerciseIndex, modalNormalizedSetIndex)
+            updateSet(exerciseIndex, currentSet.set_number, { completed: false })
+
+            if (isLastSet) {
+                goToNextSet()
+                closeExerciseModal()
+                return
+            }
+
+            goToNextSet()
+
+            if (opts.restEnabled) {
+                closeExerciseModal()
+                const { currentExerciseIndex: ci, currentSetIndex: csi } = useActiveWorkoutStore.getState()
+                const ord = workout.exercises[ci]?.sets_completed[csi]?.set_number ?? 1
+                startSessionRestTimer({
+                    forExerciseId: `${modalExercise.exercise_id}-${exerciseIndex}`,
+                    exerciseIndex,
+                    exerciseName: modalExercise.name,
+                    nextSetOrdinal: ord,
+                    totalSets: modalExercise.sets_completed.length,
+                    total: opts.restSeconds,
+                })
+            }
+        },
+        [
+            modalExerciseIndex,
+            workout,
+            modalExercise,
+            modalNormalizedSetIndex,
+            tg,
+            setCurrentPosition,
+            updateSet,
+            goToNextSet,
+            closeExerciseModal,
+            startSessionRestTimer,
+        ],
+    )
 
     const shouldLoadModals =
         isLeaveConfirmOpen ||
@@ -844,10 +952,12 @@ export function ActiveWorkoutPage() {
                             currentExerciseIndex={currentExerciseIndex}
                             currentSetIndex={currentSetIndex}
                             normalizedCurrentSetIndex={modalNormalizedSetIndex}
+                            isTreadmill={isModalTreadmill}
+                            defaultRestSeconds={restDefaultSeconds}
                             onUpdateSet={updateSet}
                             onFocusPosition={setCurrentPosition}
-                            onCompleteSet={handleModalCompleteSet}
-                            onSkipSet={handleSkipCurrentSetQuick}
+                            onCompleteSet={handleSheetComplete}
+                            onSkipSet={handleSheetSkip}
                             onUpdateSetRpe={handleModalUpdateRpe}
                             weightRecommendation={modalExerciseIndex === currentExerciseIndex ? weightRecommendation : undefined}
                             isWeightRecLoading={modalExerciseIndex === currentExerciseIndex ? isWeightRecLoading : false}
@@ -931,6 +1041,7 @@ export function ActiveWorkoutPage() {
 
             {isActiveDraft && !isLoading && !errorMessage && workout && (
                 <>
+                    <WorkoutSessionRestOverlay onTimerEnd={handleRestTimerEnd} />
                     <FloatingRestTimer workout={workout} onUpdateSet={updateSet} />
                     <ActiveWorkoutBottomActions
                         isActiveDraft={isActiveDraft}

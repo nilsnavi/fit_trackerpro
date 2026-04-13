@@ -74,6 +74,10 @@ export interface CompletedSet {
     rest_seconds?: number
     duration?: number
     distance?: number
+    /** км/ч (беговая дорожка); опционально для API */
+    speed_kmh?: number
+    /** Наклон % (беговая дорожка); опционально для API */
+    incline_pct?: number
     /** ISO-8601, время начала подхода (клиент) */
     started_at?: string
     /** ISO-8601, время завершения движения (клиент) */
