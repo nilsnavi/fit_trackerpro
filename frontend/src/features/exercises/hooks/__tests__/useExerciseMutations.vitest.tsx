@@ -38,7 +38,9 @@ describe('useCreateCustomExerciseMutation', () => {
             description: 'Some description',
             category: 'strength',
             equipment: ['dumbbells'],
+            muscle_group: 'Chest',
             muscle_groups: ['Chest'],
+            aliases: [],
             risk_flags: {
                 high_blood_pressure: false,
                 diabetes: false,

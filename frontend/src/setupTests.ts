@@ -6,7 +6,7 @@ import { jest } from '@jest/globals'
 // jest-environment-jsdom v29 / jsdom 20 does not expose these to the global scope by default.
 if (typeof globalThis.Response === 'undefined') {
     // node-fetch v2 is a transitive dependency — safe to polyfill here.
-    const nf = require('node-fetch') as typeof import('node-fetch')
+    const nf = require('node-fetch') as any
     globalThis.Response = nf.Response as unknown as typeof Response
     globalThis.Request = nf.Request as unknown as typeof Request
     globalThis.Headers = nf.Headers as unknown as typeof Headers

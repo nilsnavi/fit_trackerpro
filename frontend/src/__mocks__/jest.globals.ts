@@ -43,9 +43,10 @@ try {
 try {
     if (typeof (globalThis as unknown as Record<string, unknown>).structuredClone === 'undefined') {
         const nodeUtil = require('util') as typeof import('util')
-        if (typeof nodeUtil?.structuredClone === 'function') {
+        const sc = (nodeUtil as unknown as { structuredClone?: (value: unknown) => unknown }).structuredClone
+        if (typeof sc === 'function') {
             Object.defineProperty(globalThis, 'structuredClone', {
-                value: nodeUtil.structuredClone.bind(nodeUtil),
+                value: sc.bind(nodeUtil),
                 configurable: true,
                 writable: true,
                 enumerable: true,

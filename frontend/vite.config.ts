@@ -193,10 +193,22 @@ export default defineConfig({
         sourcemap: true,
         rollupOptions: {
             output: {
-                manualChunks: {
-                    'telegram-sdk': ['@telegram-apps/sdk-react', '@telegram-apps/sdk'],
-                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-                    'charts': ['recharts'],
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) return
+
+                    if (id.includes('@telegram-apps/sdk-react') || id.includes('@telegram-apps/sdk')) {
+                        return 'telegram-sdk'
+                    }
+                    if (
+                        id.includes('/node_modules/react/') ||
+                        id.includes('/node_modules/react-dom/') ||
+                        id.includes('/node_modules/react-router-dom/')
+                    ) {
+                        return 'react-vendor'
+                    }
+                    if (id.includes('/node_modules/recharts/')) {
+                        return 'charts'
+                    }
                 },
             },
         },

@@ -58,7 +58,7 @@ describe('offline query persistence (IndexedDB)', () => {
   })
 
   test('graceful fallback when IndexedDB is unavailable', async () => {
-    const g = globalThis as typeof globalThis & { indexedDB?: IDBFactory }
+    const g = globalThis as unknown as { indexedDB?: IDBFactory }
     const original = g.indexedDB
     g.indexedDB = undefined
 
