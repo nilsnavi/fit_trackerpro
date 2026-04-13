@@ -90,7 +90,9 @@ def compute_session_metrics(exercises: Optional[list[dict[str, Any]]], duration_
             if rir is not None and 0 <= rir <= 10:
                 rir_values.append(rir)
 
-            actual_rest = _safe_float(set_item.get("actual_rest_seconds"))
+            actual_rest = _safe_float(set_item.get("rest_seconds"))
+            if actual_rest is None:
+                actual_rest = _safe_float(set_item.get("actual_rest_seconds"))
             if actual_rest is not None and actual_rest >= 0:
                 rest_values.append(actual_rest)
 

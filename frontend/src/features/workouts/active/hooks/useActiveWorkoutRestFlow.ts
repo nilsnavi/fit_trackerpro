@@ -19,6 +19,7 @@ export interface UseActiveWorkoutRestFlowParams {
     startRestTimer: (seconds: number) => void
     setCurrentPosition: (exerciseIndex: number, setIndex: number) => void
     updateSet: (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
+    setLastCompletedSet: (value: { exerciseIndex: number; setNumber: number } | null) => void
     tg: UseTelegramWebAppReturn
 }
 
@@ -59,6 +60,7 @@ export function useActiveWorkoutRestFlow({
     startRestTimer,
     setCurrentPosition,
     updateSet,
+    setLastCompletedSet,
     tg,
 }: UseActiveWorkoutRestFlowParams): UseActiveWorkoutRestFlowResult {
     const restPresetScopeKey = useMemo(() => {
@@ -130,6 +132,7 @@ export function useActiveWorkoutRestFlow({
         return {
             planned_rest_seconds: restTimer.durationSeconds > 0 ? restTimer.durationSeconds : restDefaultSeconds,
             actual_rest_seconds: trackedRestSeconds,
+            rest_seconds: trackedRestSeconds,
         }
     }, [restDefaultSeconds, restTimer.durationSeconds, restTimer.remainingSeconds, workout])
 
@@ -149,12 +152,14 @@ export function useActiveWorkoutRestFlow({
                   }),
         })
         if (nextCompleted) {
+            setLastCompletedSet({ exerciseIndex, setNumber })
             startRestTimer(restDefaultSeconds)
         }
     }, [
         getTrackedRestPatch,
         restDefaultSeconds,
         setCurrentPosition,
+        setLastCompletedSet,
         startRestTimer,
         tg,
         updateSet,

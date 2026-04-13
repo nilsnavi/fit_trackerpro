@@ -20,6 +20,7 @@ interface ActiveWorkoutState {
     elapsedSeconds: number
     restTimer: ActiveWorkoutRestTimerState
     restDefaultSeconds: number
+    lastCompletedSet: { exerciseIndex: number; setNumber: number } | null
     exercises: CompletedExercise[]
     syncState: ActiveWorkoutSyncState
 
@@ -38,6 +39,7 @@ interface ActiveWorkoutState {
     skipRestTimer: () => void
     stopRestTimer: () => void
     setRestDefaultSeconds: (seconds: number) => void
+    setLastCompletedSet: (value: { exerciseIndex: number; setNumber: number } | null) => void
     setExercises: (exercises: CompletedExercise[]) => void
     setSyncState: (syncState: ActiveWorkoutSyncState) => void
     reset: () => void
@@ -58,6 +60,7 @@ const initialState = {
     elapsedSeconds: 0,
     restTimer: initialRestTimerState,
     restDefaultSeconds: 90,
+    lastCompletedSet: null as { exerciseIndex: number; setNumber: number } | null,
     exercises: [] as CompletedExercise[],
     syncState: 'idle' as ActiveWorkoutSyncState,
 }
@@ -78,6 +81,7 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set) => ({
                 currentSetIndex: 0,
                 restTimer: initialRestTimerState,
                 restDefaultSeconds: 90,
+                lastCompletedSet: null,
                 exercises,
                 syncState: 'idle',
             }
@@ -104,12 +108,13 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set) => ({
         set((state) => {
             if (!state.restTimer.isRunning) return state
             const remainingSeconds = Math.max(0, state.restTimer.remainingSeconds - 1)
+            const finished = remainingSeconds <= 0
             return {
                 restTimer: {
                     ...state.restTimer,
                     remainingSeconds,
-                    isPaused: false,
-                    isRunning: remainingSeconds > 0,
+                    isPaused: finished,
+                    isRunning: !finished,
                 },
             }
         }),
@@ -157,6 +162,8 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set) => ({
 
     setRestDefaultSeconds: (seconds) => set({ restDefaultSeconds: Math.max(15, Math.floor(seconds)) }),
 
+    setLastCompletedSet: (value) => set({ lastCompletedSet: value }),
+
     setExercises: (exercises) => set({ exercises }),
 
     setSyncState: (syncState) => set({ syncState }),
@@ -182,6 +189,7 @@ export function useActiveWorkoutStateSlice() {
             syncState: s.syncState,
             restTimer: s.restTimer,
             restDefaultSeconds: s.restDefaultSeconds,
+            lastCompletedSet: s.lastCompletedSet,
         })),
     )
 }
@@ -201,6 +209,7 @@ export function useActiveWorkoutActions() {
             setSyncState: s.setSyncState,
             setExercises: s.setExercises,
             setRestDefaultSeconds: s.setRestDefaultSeconds,
+            setLastCompletedSet: s.setLastCompletedSet,
             startRestTimer: s.startRestTimer,
             tickRestTimer: s.tickRestTimer,
             pauseRestTimer: s.pauseRestTimer,
