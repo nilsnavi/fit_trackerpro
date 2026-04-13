@@ -80,6 +80,27 @@ class Settings(BaseSettings):
         str | None,
         Field(description="Optional sync driver URL (e.g. Alembic); derived if unset."),
     ] = None
+    POSTGRES_DB: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Optional DB name (used by docker-compose/env templates).",
+        ),
+    ] = None
+    POSTGRES_USER: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Optional DB user (used by docker-compose/env templates).",
+        ),
+    ] = None
+    POSTGRES_PASSWORD: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Optional DB password (used by docker-compose/env templates).",
+        ),
+    ] = None
     ALEMBIC_INI_PATH: Annotated[
         str | None,
         Field(

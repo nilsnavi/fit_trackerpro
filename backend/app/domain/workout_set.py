@@ -14,7 +14,6 @@ from sqlalchemy import (
     Index,
     Integer,
     Numeric,
-    SmallInteger,
     String,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -46,7 +45,7 @@ class WorkoutSet(Base):
     reps: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     weight: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
     # Subjective difficulty: 1-10 scale (nullable for legacy data).
-    rpe: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    rpe: Mapped[Optional[float]] = mapped_column(Numeric(3, 1), nullable=True)
     rir: Mapped[Optional[float]] = mapped_column(Numeric(3, 1), nullable=True)
     planned_rest_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     actual_rest_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

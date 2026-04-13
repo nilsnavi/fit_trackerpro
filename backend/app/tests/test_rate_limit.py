@@ -307,9 +307,9 @@ async def test_telegram_auth_slowapi_eleventh_post_returns_429_with_retry_after(
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         for _ in range(10):
-            resp = await ac.post(url, json=payload)
+            resp = await ac.post(url, json=payload, headers={"X-SlowAPI-Test": "1"})
             assert resp.status_code != 429, resp.text
-        blocked = await ac.post(url, json=payload)
+        blocked = await ac.post(url, json=payload, headers={"X-SlowAPI-Test": "1"})
     assert blocked.status_code == 429
     ra = blocked.headers.get("Retry-After") or blocked.headers.get("retry-after")
     assert ra is not None
