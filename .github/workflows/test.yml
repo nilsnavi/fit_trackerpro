@@ -9,6 +9,7 @@ on:
 env:
   NODE_VERSION: "20"
   PYTHON_VERSION: "3.12"
+  POSTGRES_IMAGE: "postgres:15-alpine"
 
 jobs:
   build:
@@ -85,7 +86,7 @@ jobs:
             ./frontend/dist/bundle-stats.json
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./frontend/coverage/lcov.info
           flags: frontend
@@ -196,6 +197,7 @@ jobs:
 
   e2e-workout-flows:
     name: E2E Workout Flows
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -249,6 +251,7 @@ jobs:
 
   e2e-regression:
     name: E2E Full Regression
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -302,6 +305,7 @@ jobs:
 
   e2e-playwright-default:
     name: E2E Playwright (default suite)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -355,6 +359,7 @@ jobs:
 
   e2e-playwright-mobile:
     name: E2E Playwright (mobile projects)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -408,6 +413,7 @@ jobs:
 
   e2e-mvp-golden-path:
     name: E2E MVP golden path (mvp-regression spec)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -472,7 +478,7 @@ jobs:
       DEBUG: "true"
     services:
       postgres:
-        image: postgres:16-alpine
+        image: ${{ env.POSTGRES_IMAGE }}
         env:
           POSTGRES_DB: fittracker_test
           POSTGRES_USER: fittracker
@@ -566,7 +572,7 @@ jobs:
       DEBUG: "true"
     services:
       postgres:
-        image: postgres:16-alpine
+        image: ${{ env.POSTGRES_IMAGE }}
         env:
           POSTGRES_DB: fittracker_test
           POSTGRES_USER: fittracker
@@ -708,7 +714,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15-alpine
+        image: ${{ env.POSTGRES_IMAGE }}
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -785,7 +791,7 @@ jobs:
           python -m app.cli.seed_reference_data apply --dry-run
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./backend/coverage.xml
           flags: backend
