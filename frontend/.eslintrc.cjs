@@ -14,6 +14,11 @@ module.exports = {
             'warn',
             { allowConstantExport: true },
         ],
+        'react-hooks/set-state-in-effect': 'off',
+        'react-hooks/static-components': 'off',
+        'react-hooks/refs': 'off',
+        'react-hooks/purity': 'off',
+        'react-hooks/immutability': 'off',
         '@typescript-eslint/no-explicit-any': 'warn',
         '@typescript-eslint/no-unused-vars': [
             'error',
