@@ -12,10 +12,11 @@
 #   DOCKER_REDEPLOY_PATH — абсолютный путь к клону репозитория на сервере
 #
 # Опционально (Variables):
-#   DOCKER_REDEPLOY_STRATEGY = build | pull
-#     build (по умолчанию): docker compose build backend frontend
-#     pull: docker compose pull backend frontend (если в compose заданы образы из registry)
-#   DOCKER_REDEPLOY_COMPOSE_ARGS — например: -f docker-compose.yml -f docker-compose.prod.yml
+#   DOCKER_REDEPLOY_STRATEGY = pull | build
+#     pull (рекомендуется для GHCR): обновляет IMAGE_TAG в .env на main-<short_sha>, pull и up
+#     build: docker compose build (нужен build: в compose, не только image:)
+#   DOCKER_REDEPLOY_COMPOSE_ARGS — обязательно для prod, например: -f docker-compose.prod.yml
+#   DOCKER_REDEPLOY_SHA_IN_TAG = short | full  (как в GHCR: обычно short = 7 символов коммита)
 #
 name: Docker redeploy (after push to main)
 
@@ -64,6 +65,7 @@ jobs:
           REMOTE_PATH: ${{ secrets.DOCKER_REDEPLOY_PATH }}
           STRATEGY: ${{ vars.DOCKER_REDEPLOY_STRATEGY }}
           COMPOSE_EXTRA: ${{ vars.DOCKER_REDEPLOY_COMPOSE_ARGS }}
+          SHA_MODE: ${{ vars.DOCKER_REDEPLOY_SHA_IN_TAG }}
         run: |
           set -Eeuo pipefail
           for v in DEPLOY_USER DEPLOY_HOST REMOTE_PATH; do
@@ -75,9 +77,25 @@ jobs:
           done
           chmod +x scripts/remote-docker-redeploy.sh
           HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          MODE="${SHA_MODE:-short}"
+          if [ "${MODE}" = "full" ]; then
+            TAG_SUFFIX="${HEAD_SHA}"
+          else
+            TAG_SUFFIX="$(printf '%s' "${HEAD_SHA}" | cut -c1-7)"
+          fi
+          IMAGE_TAG="main-${TAG_SUFFIX}"
+          STR="${STRATEGY:-pull}"
+          # Тег в .env нужен только при pull из GHCR; при локальном build не перезаписываем IMAGE_TAG.
+          if [ "${STR}" = "pull" ]; then
+            TAG_ARG="${IMAGE_TAG}"
+          else
+            TAG_ARG=""
+          fi
+          echo "Using STRATEGY=${STR} IMAGE_TAG=${IMAGE_TAG:-}(for .env only if strategy=pull)"
           ssh -o BatchMode=yes "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s -- \
             "${REMOTE_PATH}" \
             "${HEAD_SHA}" \
-            "${STRATEGY:-build}" \
+            "${STR}" \
             "${COMPOSE_EXTRA:-}" \
+            "${TAG_ARG}" \
             < scripts/remote-docker-redeploy.sh
