@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, Dumbbell, User, Library, BarChart3 } from 'lucide-react'
+import { Home, User, LayoutGrid, Dumbbell, BarChart3 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 
 const navItems = [
     { path: '/', icon: Home, label: 'Главная' },
-    { path: '/exercises', icon: Library, label: 'Каталог' },
+    { path: '/exercises', icon: LayoutGrid, label: 'Каталог' },
     { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
     { path: '/analytics', icon: BarChart3, label: 'Прогресс' },
     { path: '/profile', icon: User, label: 'Профиль' },

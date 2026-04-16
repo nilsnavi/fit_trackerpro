@@ -30,6 +30,7 @@ import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { SectionHeader } from '@shared/ui/SectionHeader'
 import { ProgressScreenTabs } from '@features/analytics/components/ProgressScreenTabs'
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
+import { MuscleSignalsCard } from '@features/analytics/components/MuscleSignalsCard'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 
 const PERIOD_OPTIONS: { id: AnalyticsPagePeriod; label: string }[] = [
@@ -318,6 +319,8 @@ export default function AnalyticsDashboardPage() {
                         valueFormatter={(v) => `${v}`}
                         emptyMessage="Нет данных для графика."
                     />
+
+                    <MuscleSignalsCard />
                 </>
             ) : null}
 
@@ -391,7 +394,7 @@ export default function AnalyticsDashboardPage() {
                         </Button>
                     </div>
                 ) : (challengesQuery.data?.active.length ?? 0) === 0 &&
-                  (challengesQuery.data?.completed.length ?? 0) === 0 ? (
+                    (challengesQuery.data?.completed.length ?? 0) === 0 ? (
                     <SectionEmptyState
                         icon={Target}
                         title="Челленджей пока нет"
@@ -458,7 +461,7 @@ export default function AnalyticsDashboardPage() {
                         </Button>
                     </div>
                 ) : healthQuery.data?.wellness?.avg_sleep_score_30d == null &&
-                  healthQuery.data?.wellness?.avg_energy_score_30d == null ? (
+                    healthQuery.data?.wellness?.avg_energy_score_30d == null ? (
                     <SectionEmptyState
                         icon={HeartPulse}
                         title="Нет данных о самочувствии"

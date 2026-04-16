@@ -10,19 +10,24 @@ import {
 type AppShellLayoutContextValue = {
     headerRight: ReactNode
     setHeaderRight: (node: ReactNode) => void
+    hideHeader: boolean
+    setHideHeader: (hide: boolean) => void
 }
 
 const AppShellLayoutContext = createContext<AppShellLayoutContextValue | null>(null)
 
 export function AppShellLayoutProvider({ children }: { children: ReactNode }) {
     const [headerRight, setHeaderRight] = useState<ReactNode>(null)
+    const [hideHeader, setHideHeader] = useState(false)
 
     const value = useMemo(
         () => ({
             headerRight,
             setHeaderRight,
+            hideHeader,
+            setHideHeader,
         }),
-        [headerRight],
+        [headerRight, hideHeader],
     )
 
     return <AppShellLayoutContext.Provider value={value}>{children}</AppShellLayoutContext.Provider>
@@ -48,4 +53,17 @@ export function useAppShellHeaderRight(node: ReactNode) {
         setHeaderRight(node)
         return () => setHeaderRight(null)
     }, [node, setHeaderRight])
+}
+
+/**
+ * Скрыть глобальный AppShellHeader для текущей страницы.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useHideAppShellHeader() {
+    const { setHideHeader } = useAppShellLayoutContext()
+
+    useLayoutEffect(() => {
+        setHideHeader(true)
+        return () => setHideHeader(false)
+    }, [setHideHeader])
 }
