@@ -101,7 +101,7 @@ export function ActiveWorkoutPage() {
         return buildSyncPayload(w)
     }, [queryClient, detailQueryKey])
 
-    const refreshOfflineQueueRef = useRef<() => void>(() => {})
+    const refreshOfflineQueueRef = useRef<() => void>(() => { })
 
     const draftWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
     const clearWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.clearDraft)
@@ -333,6 +333,16 @@ export function ActiveWorkoutPage() {
         updateSet,
     })
 
+    /**
+     * Проверяем, есть ли предыдущий завершённый подход с RPE для текущего упражнения.
+     * Recommendation показывается для текущего подхода, если предыдущий был завершён с RPE.
+     */
+    const hasPreviousSetWithRpe = useMemo(() => {
+        if (!currentExercise || currentSetIndex === 0) return false
+        const previousSet = currentExercise.sets_completed[currentSetIndex - 1]
+        return previousSet?.completed && previousSet?.rpe != null
+    }, [currentExercise, currentSetIndex])
+
     const {
         data: weightRecommendation,
         isLoading: isWeightRecLoading,
@@ -340,7 +350,7 @@ export function ActiveWorkoutPage() {
     } = useWeightRecommendation(
         workoutId,
         currentExercise?.exercise_id ?? 0,
-        Boolean(isActiveDraft && currentExercise?.exercise_id && currentSet?.rpe != null),
+        Boolean(isActiveDraft && currentExercise?.exercise_id && hasPreviousSetWithRpe && !currentSet?.completed),
     )
 
     useActiveWorkoutLifecycle({

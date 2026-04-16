@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Minus, Plus } from 'lucide-react'
 import { parseOptionalNumber } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedSet } from '@features/workouts/types/workouts'
+import { WeightRecommendationChip } from './WeightRecommendationChip'
 
 const RPE_OPTIONS = [6, 7, 8, 9, 10]
 const RIR_OPTIONS = [0, 1, 2, 3, 4]
@@ -329,39 +330,22 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
             {!isCollapsed ? (
                 <>
                     {/* Блок рекомендации веса */}
-                    {isCurrent && weightRecommendation && (weightRecommendation.suggested_weight || weightRecommendation.message) && (
-                        <div className="mt-2 rounded-lg border border-primary/40 bg-primary/5 p-2">
-                            <span className="block text-xs font-semibold text-primary mb-1">Рекомендация веса</span>
-                            {isWeightRecLoading ? (
-                                <span className="text-xs text-telegram-hint">Загрузка рекомендации...</span>
-                            ) : isWeightRecError ? (
-                                <span className="text-xs text-danger">Ошибка загрузки рекомендации</span>
-                            ) : (
-                                <>
-                                    {weightRecommendation.suggested_weight != null && (
-                                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                                            <span className="text-base font-bold text-primary">{weightRecommendation.suggested_weight} кг</span>
-                                            <button
-                                                type="button"
-                                                data-testid="set-apply-suggested-weight-btn"
-                                                onClick={() => {
-                                                    onFocusSet(exerciseIndex, setIndex)
-                                                    onUpdateSet(exerciseIndex, set.set_number, {
-                                                        weight: weightRecommendation.suggested_weight,
-                                                    })
-                                                }}
-                                                className="min-h-10 touch-manipulation rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground active:opacity-90"
-                                            >
-                                                Подставить
-                                            </button>
-                                        </div>
-                                    )}
-                                    {weightRecommendation.message && (
-                                        <span className="block text-xs text-telegram-hint mt-1">{weightRecommendation.message}</span>
-                                    )}
-                                </>
-                            )}
-                        </div>
+                    {isCurrent && (
+                        <WeightRecommendationChip
+                            suggestedWeight={weightRecommendation?.suggested_weight}
+                            message={weightRecommendation?.message}
+                            isLoading={isWeightRecLoading}
+                            isError={isWeightRecError}
+                            onApply={() => {
+                                if (weightRecommendation?.suggested_weight != null) {
+                                    onFocusSet(exerciseIndex, setIndex)
+                                    onUpdateSet(exerciseIndex, set.set_number, {
+                                        weight: weightRecommendation.suggested_weight,
+                                    })
+                                }
+                            }}
+                            className="mt-2"
+                        />
                     )}
                     <p className="mt-1 text-[11px] text-telegram-hint">Предыдущий лучший: {previousBestLabel}</p>
                     {previousSetHint && isCurrent && (
@@ -390,8 +374,8 @@ export const ExerciseSetRow = memo(function ExerciseSetRow({
                                         data-step={step}
                                         onClick={() => setWeightStep(step)}
                                         className={`min-h-10 min-w-10 shrink-0 touch-manipulation rounded-full px-2.5 text-xs font-semibold ${weightStep === step
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-telegram-bg text-telegram-hint active:bg-telegram-secondary-bg'
                                             }`}
                                     >
                                         {step}

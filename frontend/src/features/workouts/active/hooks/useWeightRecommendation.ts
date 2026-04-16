@@ -10,10 +10,12 @@ export function useWeightRecommendation(sessionId: number, exerciseId: number, e
   return useQuery({
     queryKey: ['weight-recommendation', sessionId, exerciseId],
     queryFn: async (): Promise<WeightRecommendationResponse> => {
-      const res = await fetch(`/api/v1/sessions/${sessionId}/exercises/${exerciseId}/weight-recommendation`)
+      const res = await fetch(`/api/v1/workouts/sessions/${sessionId}/exercises/${exerciseId}/weight-recommendation`)
       if (!res.ok) throw new Error('Ошибка получения рекомендации веса')
       return res.json()
     },
-    enabled
+    enabled,
+    staleTime: 30_000, // 30 секунд - рекомендация актуальна короткое время
+    refetchOnWindowFocus: false,
   })
 }
