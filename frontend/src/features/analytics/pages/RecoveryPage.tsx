@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { HeartPulse, Moon, ShieldCheck, Zap } from 'lucide-react'
+import { HeartPulse, Loader2, Moon, RefreshCw, ShieldCheck, Zap } from 'lucide-react'
 import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
 import { SectionHeader } from '@shared/ui/SectionHeader'
@@ -16,6 +16,8 @@ import {
     type ApiRecoveryStateResponse,
     type ApiTrainingLoadDailyEntry,
 } from '@features/analytics/api/analyticsDomain'
+import { useRecalculateRecoveryMutation } from '@features/analytics/hooks/useRecoveryMutations'
+import { useToastStore } from '@shared/stores/toastStore'
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
 import {
     getAnalyticsDateRange,
@@ -54,12 +56,32 @@ export default function RecoveryPage() {
     const range = useMemo(() => getAnalyticsDateRange(period), [period])
     const dateFrom = range.date_from ?? null
     const dateTo = range.date_to ?? null
+    const pushToast = useToastStore((s) => s.push)
 
     const recoveryQuery = useQuery<ApiRecoveryStateResponse>({
         queryKey: queryKeys.analytics.recoveryState,
         queryFn: () => getAnalyticsRecoveryState(),
         staleTime: 30_000,
     })
+
+    const recalculateMutation = useRecalculateRecoveryMutation()
+
+    const handleRecalculate = () => {
+        recalculateMutation.mutate(
+            {
+                date_from: dateFrom ?? undefined,
+                date_to: dateTo ?? undefined,
+            },
+            {
+                onSuccess: () => {
+                    pushToast({ kind: 'success', message: 'Состояние восстановления пересчитано' })
+                },
+                onError: (err) => {
+                    pushToast({ kind: 'error', message: `Ошибка пересчёта: ${getErrorMessage(err)}` })
+                },
+            }
+        )
+    }
 
     const dailyLoadQuery = useQuery<ApiTrainingLoadDailyEntry[]>({
         queryKey: queryKeys.analytics.trainingLoadDaily(dateFrom, dateTo),
@@ -126,6 +148,22 @@ export default function RecoveryPage() {
 
             {!isLoading && !noData ? (
                 <>
+                    <section className="flex items-center justify-end">
+                        <button
+                            type="button"
+                            onClick={handleRecalculate}
+                            disabled={recalculateMutation.isPending || recoveryQuery.isFetching}
+                            className="flex items-center gap-1.5 rounded-lg bg-telegram-secondary-bg px-3 py-1.5 text-sm font-medium text-telegram-text transition-colors hover:bg-telegram-secondary-bg/80 disabled:opacity-50"
+                        >
+                            {recalculateMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-4 w-4" />
+                            )}
+                            <span>{recalculateMutation.isPending ? 'Пересчёт...' : 'Обновить'}</span>
+                        </button>
+                    </section>
+
                     <section className="grid grid-cols-2 gap-2">
                         <article className="rounded-2xl bg-telegram-secondary-bg p-3">
                             <div className="flex items-center justify-between">

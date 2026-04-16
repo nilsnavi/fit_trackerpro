@@ -53,8 +53,20 @@ export interface ApiMuscleLoadEntry {
 }
 
 export interface ApiRecoveryStateResponse {
+    id: number
+    userId: number
     fatigueLevel: number
     readinessScore: number
+}
+
+export interface ApiRecoveryStateRecalculateResponse {
+    id: number
+    userId: number
+    fatigueLevel: number
+    readinessScore: number
+    recalculatedForDate: string
+    dateFrom: string
+    dateTo: string
 }
 
 export interface ApiProgressInsightsVolumePoint {
@@ -195,6 +207,14 @@ export function getAnalyticsMuscleLoad(params?: Record<string, unknown>) {
 
 export function getAnalyticsRecoveryState() {
     return analyticsApi.getRecoveryState() as Promise<ApiRecoveryStateResponse>
+}
+
+export function recalculateRecoveryState(params?: {
+    target_date?: string
+    date_from?: string
+    date_to?: string
+}) {
+    return analyticsApi.recalculateRecoveryState(params) as Promise<ApiRecoveryStateRecalculateResponse>
 }
 
 export function getAnalyticsProgressInsights(params?: Record<string, unknown>) {

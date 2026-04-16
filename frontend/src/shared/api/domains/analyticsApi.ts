@@ -38,4 +38,13 @@ export const analyticsApi = {
     getMuscleSignals() {
         return api.get('/analytics/muscle-signals')
     },
+    recalculateRecoveryState(params?: { target_date?: string; date_from?: string; date_to?: string }) {
+        // Backend expects query params, not body (FastAPI Query parameters)
+        const query = new URLSearchParams()
+        if (params?.target_date) query.set('target_date', params.target_date)
+        if (params?.date_from) query.set('date_from', params.date_from)
+        if (params?.date_to) query.set('date_to', params.date_to)
+        const queryString = query.toString()
+        return api.post(`/analytics/recovery-state/recalculate${queryString ? `?${queryString}` : ''}`)
+    },
 }
