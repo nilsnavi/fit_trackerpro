@@ -40,10 +40,21 @@ export interface ApiAnalyticsSummaryResponse {
 }
 
 export interface ApiTrainingLoadDailyEntry {
+    id?: number
+    userId?: number
     date: ApiDate
     volume: number
     fatigueScore: number
     avgRpe: number | null
+}
+
+export interface ApiTrainingLoadDailyTableResponse {
+    items: ApiTrainingLoadDailyEntry[]
+    page: number
+    pageSize: number
+    total: number
+    dateFrom: string
+    dateTo: string
 }
 
 export interface ApiMuscleLoadEntry {
@@ -199,6 +210,15 @@ export function getAnalyticsProgress(params?: Record<string, unknown>) {
 
 export function getAnalyticsTrainingLoadDaily(params?: Record<string, unknown>) {
     return analyticsApi.getTrainingLoadDaily(params) as Promise<ApiTrainingLoadDailyEntry[]>
+}
+
+export function getAnalyticsTrainingLoadDailyTable(params: {
+    page?: number
+    page_size?: number
+    date_from?: string
+    date_to?: string
+}) {
+    return analyticsApi.getTrainingLoadDailyTable(params) as Promise<ApiTrainingLoadDailyTableResponse>
 }
 
 export function getAnalyticsMuscleLoad(params?: Record<string, unknown>) {

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { HeartPulse, Loader2, Moon, RefreshCw, ShieldCheck, Zap } from 'lucide-react'
+import { BarChart2, HeartPulse, Loader2, Moon, RefreshCw, ShieldCheck, Table2, Zap } from 'lucide-react'
 import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
 import { SectionHeader } from '@shared/ui/SectionHeader'
@@ -19,6 +19,7 @@ import {
 import { useRecalculateRecoveryMutation } from '@features/analytics/hooks/useRecoveryMutations'
 import { useToastStore } from '@shared/stores/toastStore'
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
+import { TrainingLoadTable } from '@features/analytics/components/TrainingLoadTable'
 import {
     getAnalyticsDateRange,
     PROGRESS_PERIODS_SHORT,
@@ -53,6 +54,7 @@ function topMuscles(rows: ApiMuscleLoadEntry[]) {
 
 export default function RecoveryPage() {
     const [period, setPeriod] = useState<ProgressPeriod>('30d')
+    const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart')
     const range = useMemo(() => getAnalyticsDateRange(period), [period])
     const dateFrom = range.date_from ?? null
     const dateTo = range.date_to ?? null
@@ -186,31 +188,69 @@ export default function RecoveryPage() {
 
                     <section className="space-y-3">
                         <div className="rounded-2xl bg-telegram-secondary-bg p-4">
-                            <div className="mb-3 flex items-center gap-2">
-                                <Zap className="h-4 w-4 text-primary" />
-                                <h2 className="text-sm font-semibold text-telegram-text">Динамика нагрузки</h2>
+                            <div className="mb-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Zap className="h-4 w-4 text-primary" />
+                                    <h2 className="text-sm font-semibold text-telegram-text">Динамика нагрузки</h2>
+                                </div>
+                                {/* View Mode Toggle */}
+                                <div className="flex rounded-lg bg-telegram-bg p-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewMode('chart')}
+                                        className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === 'chart'
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'text-telegram-hint hover:text-telegram-text'
+                                            }`}
+                                    >
+                                        <BarChart2 className="h-3.5 w-3.5" />
+                                        <span>График</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewMode('table')}
+                                        className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === 'table'
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'text-telegram-hint hover:text-telegram-text'
+                                            }`}
+                                    >
+                                        <Table2 className="h-3.5 w-3.5" />
+                                        <span>Таблица</span>
+                                    </button>
+                                </div>
                             </div>
-                            <ProgressTrendBars
-                                title="Утомление за последние сессии"
-                                subtitle="Оценка нагрузки по дням"
-                                items={fatigueItems}
-                                emptyMessage="Нет данных для тренда утомления."
-                            />
 
-                            <div className="mt-3 grid grid-cols-3 gap-2">
-                                <article className="rounded-xl bg-telegram-bg p-3">
-                                    <p className="text-xs text-telegram-hint">Ср. объём</p>
-                                    <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgVolume}</p>
-                                </article>
-                                <article className="rounded-xl bg-telegram-bg p-3">
-                                    <p className="text-xs text-telegram-hint">Ср. утомл.</p>
-                                    <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgFatigue}</p>
-                                </article>
-                                <article className="rounded-xl bg-telegram-bg p-3">
-                                    <p className="text-xs text-telegram-hint">Ср. RPE</p>
-                                    <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgRpe}</p>
-                                </article>
-                            </div>
+                            {viewMode === 'chart' ? (
+                                <>
+                                    <ProgressTrendBars
+                                        title="Утомление за последние сессии"
+                                        subtitle="Оценка нагрузки по дням"
+                                        items={fatigueItems}
+                                        emptyMessage="Нет данных для тренда утомления."
+                                    />
+
+                                    <div className="mt-3 grid grid-cols-3 gap-2">
+                                        <article className="rounded-xl bg-telegram-bg p-3">
+                                            <p className="text-xs text-telegram-hint">Ср. объём</p>
+                                            <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgVolume}</p>
+                                        </article>
+                                        <article className="rounded-xl bg-telegram-bg p-3">
+                                            <p className="text-xs text-telegram-hint">Ср. утомл.</p>
+                                            <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgFatigue}</p>
+                                        </article>
+                                        <article className="rounded-xl bg-telegram-bg p-3">
+                                            <p className="text-xs text-telegram-hint">Ср. RPE</p>
+                                            <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgRpe}</p>
+                                        </article>
+                                    </div>
+                                </>
+                            ) : (
+                                <TrainingLoadTable
+                                    dateFrom={dateFrom}
+                                    dateTo={dateTo}
+                                    pageSize={10}
+                                />
+                            )}
                         </div>
                     </section>
 

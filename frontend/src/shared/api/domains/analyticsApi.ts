@@ -20,6 +20,9 @@ export const analyticsApi = {
     getTrainingLoadDaily(params?: Record<string, unknown>) {
         return api.get('/analytics/training-load/daily', params)
     },
+    getTrainingLoadDailyTable(params?: Record<string, unknown>) {
+        return api.get('/analytics/training-load/daily/table', params)
+    },
     getCalendar(params?: Record<string, unknown>) {
         return api.get('/analytics/calendar', params)
     },
