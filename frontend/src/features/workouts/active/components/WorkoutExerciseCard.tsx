@@ -1,4 +1,5 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
+import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { getExerciseSummaryMeta, pluralizeRu } from '@features/workouts/lib/workoutDetailFormatters'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
@@ -56,6 +57,9 @@ export interface WorkoutExerciseCardProps {
     currentExerciseIndex: number
     currentSetIndex: number
     onOpen: () => void
+    onToggleSet?: (setNumber: number) => void
+    /** Раскрыть карточку (для текущего упражнения) */
+    defaultExpanded?: boolean
 }
 
 export const WorkoutExerciseCard = memo(function WorkoutExerciseCard({
@@ -64,49 +68,121 @@ export const WorkoutExerciseCard = memo(function WorkoutExerciseCard({
     currentExerciseIndex,
     currentSetIndex,
     onOpen,
+    onToggleSet,
+    defaultExpanded,
 }: WorkoutExerciseCardProps) {
     const meta = getExerciseSummaryMeta(exercise)
     const session = deriveExerciseSessionState(exercise, exerciseIndex, currentExerciseIndex, currentSetIndex)
     const badge = statusBadge(session.status)
     const metaLine = buildMetaLine(exercise)
+    const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? session.status === 'current')
+
+    const handleToggleExpand = () => {
+        setIsExpanded((v) => !v)
+    }
+
+    const handleSetClick = (setNumber: number, e: React.MouseEvent) => {
+        e.stopPropagation()
+        onToggleSet?.(setNumber)
+    }
 
     return (
-        <button
-            type="button"
-            onClick={onOpen}
+        <div
             className={cn(
-                'w-full rounded-2xl border p-4 text-left transition-opacity touch-manipulation',
-                'active:scale-[0.99]',
+                'rounded-2xl border transition-opacity touch-manipulation',
+                'min-h-[72px]', // Large touch target
                 session.status === 'current'
                     ? 'border-primary border-l-4 bg-telegram-secondary-bg'
                     : 'border-border bg-telegram-secondary-bg',
                 session.status === 'done' && 'opacity-70',
             )}
         >
-            <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                    <p className="text-base font-semibold leading-snug text-telegram-text">{exercise.name}</p>
-                    <p className="mt-1 text-xs text-telegram-hint">
-                        {meta.label} · {metaLine}
-                    </p>
+            {/* Header — clickable */}
+            <button
+                type="button"
+                onClick={onOpen}
+                className="w-full p-4 text-left active:scale-[0.99]"
+            >
+                <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-base font-semibold leading-snug text-telegram-text">{exercise.name}</p>
+                        <p className="mt-1 text-xs text-telegram-hint">
+                            {meta.label} · {metaLine}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold', badge.className)}>
+                            {badge.label}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                handleToggleExpand()
+                            }}
+                            className="rounded-full p-1.5 text-telegram-hint transition-colors hover:bg-telegram-bg"
+                            aria-label={isExpanded ? 'Свернуть' : 'Развернуть'}
+                        >
+                            {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                            ) : (
+                                <ChevronDown className="h-4 w-4" />
+                            )}
+                        </button>
+                    </div>
                 </div>
-                <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold', badge.className)}>
-                    {badge.label}
-                </span>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-                {exercise.sets_completed.map((set, setIndex) => (
-                    <span
-                        key={set.set_number}
-                        className={cn(
-                            'h-2 w-2 rounded-full',
-                            setDotClass(exerciseIndex, setIndex, currentExerciseIndex, currentSetIndex, set.completed),
-                        )}
-                        aria-hidden
-                    />
-                ))}
-            </div>
-        </button>
+            </button>
+
+            {/* Set dots (collapsed) */}
+            {!isExpanded && (
+                <div className="flex flex-wrap gap-1.5 pb-4 px-4">
+                    {exercise.sets_completed.map((set, setIndex) => (
+                        <span
+                            key={set.set_number}
+                            className={cn(
+                                'h-2 w-2 rounded-full',
+                                setDotClass(exerciseIndex, setIndex, currentExerciseIndex, currentSetIndex, set.completed),
+                            )}
+                            aria-hidden
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Set buttons (expanded — large touch targets) */}
+            {isExpanded && (
+                <div className="grid grid-cols-3 gap-2 p-4 pt-0">
+                    {exercise.sets_completed.map((set, setIndex) => {
+                        const isCurrent = exerciseIndex === currentExerciseIndex && setIndex === currentSetIndex
+                        const isCompleted = set.completed
+                        return (
+                            <button
+                                key={set.set_number}
+                                type="button"
+                                onClick={(e) => handleSetClick(set.set_number, e)}
+                                className={cn(
+                                    'flex min-h-[56px] flex-col items-center justify-center rounded-xl text-sm font-semibold transition-all',
+                                    'active:scale-[0.98]',
+                                    isCompleted && 'bg-emerald-500 text-white',
+                                    isCurrent && !isCompleted && 'bg-primary text-white',
+                                    !isCurrent && !isCompleted && 'bg-telegram-bg text-telegram-text border border-border',
+                                )}
+                            >
+                                <span className="text-xs opacity-80">{set.set_number}</span>
+                                {isCompleted ? (
+                                    <Check className="h-5 w-5" />
+                                ) : (
+                                    <span className="text-lg">
+                                        {set.weight != null ? `${set.weight}` : '—'}
+                                        {set.reps != null ? `×${set.reps}` : ''}
+                                    </span>
+                                )}
+                            </button>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
     )
 })
 

@@ -11,3 +11,15 @@ export {
     useWorkoutSessionDraftStore,
 } from '../state/local'
 export type { AnalyticsRange } from '../state/local'
+
+// Smart Settings Store
+export {
+    useWorkoutSmartSettingsStore,
+    useGhostMode,
+    useSmartRest,
+    useAutoStartRest,
+    useOneTapLogging,
+    useHapticIntensity,
+    useShowFeatureHints,
+} from './workoutSmartSettingsStore'
+export type { HapticIntensity, WorkoutSmartSettings } from './workoutSmartSettingsStore'

@@ -19,6 +19,15 @@ from app.schemas.health import (
     GlucoseLogCreate,
     GlucoseLogResponse,
     HealthStatsResponse,
+    WaterDailyStats,
+    WaterEntryCreate,
+    WaterEntryResponse,
+    WaterGoalCreate,
+    WaterGoalResponse,
+    WaterHistoryResponse,
+    WaterReminderCreate,
+    WaterReminderResponse,
+    WaterWeeklyStats,
 )
 
 router = APIRouter()
@@ -40,7 +49,8 @@ async def get_glucose_history(
     page_size: int = Query(50, ge=1, le=100),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
-    measurement_type: Optional[str] = Query(None, pattern="^(fasting|pre_workout|post_workout|random|bedtime)$"),
+    measurement_type: Optional[str] = Query(
+        None, pattern="^(fasting|pre_workout|post_workout|random|bedtime)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -141,3 +151,115 @@ async def get_wellness_stats(
 ):
     service = HealthService(db)
     return await service.get_health_stats(user_id=current_user.id, period=period)
+
+
+# ==================== Water Endpoints ====================
+
+
+@router.post("/water", response_model=WaterEntryResponse, status_code=status.HTTP_201_CREATED)
+async def create_water_entry(
+    entry_data: WaterEntryCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.create_water_entry(user_id=current_user.id, data=entry_data)
+
+
+@router.get("/water", response_model=WaterHistoryResponse)
+async def get_water_history(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.get_water_history(
+        user_id=current_user.id,
+        page=page,
+        page_size=page_size,
+        date_from=date_from,
+        date_to=date_to,
+    )
+
+
+# Specific routes BEFORE parameterized routes (important for FastAPI routing)
+@router.get("/water/weekly", response_model=WaterWeeklyStats)
+async def get_water_weekly_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.get_water_weekly_stats(user_id=current_user.id)
+
+
+@router.get("/water/goal", response_model=WaterGoalResponse)
+async def get_water_goal(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.get_water_goal(user_id=current_user.id)
+
+
+@router.post("/water/goal", response_model=WaterGoalResponse, status_code=status.HTTP_201_CREATED)
+async def set_water_goal(
+    goal_data: WaterGoalCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.set_water_goal(user_id=current_user.id, data=goal_data)
+
+
+@router.get("/water/reminder", response_model=WaterReminderResponse)
+async def get_water_reminder(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.get_water_reminder(user_id=current_user.id)
+
+
+@router.post("/water/reminder", response_model=WaterReminderResponse, status_code=status.HTTP_201_CREATED)
+async def set_water_reminder(
+    reminder_data: WaterReminderCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.set_water_reminder(user_id=current_user.id, data=reminder_data)
+
+
+@router.get("/water/daily/{target_date}", response_model=WaterDailyStats)
+async def get_water_daily_stats(
+    target_date: date,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.get_water_daily_stats(user_id=current_user.id, target_date=target_date)
+
+
+# Parameterized routes MUST come last
+@router.get("/water/{entry_id}", response_model=WaterEntryResponse)
+async def get_water_entry(
+    entry_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.get_water_entry(user_id=current_user.id, entry_id=entry_id)
+
+
+@router.delete("/water/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_water_entry(
+    entry_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    await service.delete_water_entry(user_id=current_user.id, entry_id=entry_id)
+    return None

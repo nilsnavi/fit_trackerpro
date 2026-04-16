@@ -719,6 +719,112 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/health-metrics/water": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water History */
+        get: operations["get_water_history_api_v1_health_metrics_water_get"];
+        put?: never;
+        /** Create Water Entry */
+        post: operations["create_water_entry_api_v1_health_metrics_water_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/daily/{target_date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Daily Stats */
+        get: operations["get_water_daily_stats_api_v1_health_metrics_water_daily__target_date__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/goal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Goal */
+        get: operations["get_water_goal_api_v1_health_metrics_water_goal_get"];
+        put?: never;
+        /** Set Water Goal */
+        post: operations["set_water_goal_api_v1_health_metrics_water_goal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/reminder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Reminder */
+        get: operations["get_water_reminder_api_v1_health_metrics_water_reminder_get"];
+        put?: never;
+        /** Set Water Reminder */
+        post: operations["set_water_reminder_api_v1_health_metrics_water_reminder_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Weekly Stats */
+        get: operations["get_water_weekly_stats_api_v1_health_metrics_water_weekly_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Entry */
+        get: operations["get_water_entry_api_v1_health_metrics_water__entry_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Water Entry */
+        delete: operations["delete_water_entry_api_v1_health_metrics_water__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health-metrics/wellness": {
         parameters: {
             query?: never;
@@ -2428,6 +2534,11 @@ export type components = {
              */
             duration?: number | null;
             /**
+             * Incline Pct
+             * @description Treadmill incline in percent
+             */
+            incline_pct?: number | null;
+            /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
              */
@@ -2448,7 +2559,7 @@ export type components = {
              * Rpe
              * @description Rate of Perceived Exertion (1-10).
              */
-            rpe?: number | null;
+            rpe?: number | string | null;
             /**
              * Set Number
              * @description 1-based set index within the exercise.
@@ -2459,6 +2570,11 @@ export type components = {
              * @default working
              */
             set_type: components["schemas"]["WorkoutSetType"];
+            /**
+             * Speed Kmh
+             * @description Treadmill speed in km/h
+             */
+            speed_kmh?: number | null;
             /**
              * Started At
              * @description Set start timestamp (client, for time-under-tension).
@@ -2493,6 +2609,11 @@ export type components = {
              */
             duration?: number | null;
             /**
+             * Incline Pct
+             * @description Treadmill incline in percent
+             */
+            incline_pct?: number | null;
+            /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
              */
@@ -2513,7 +2634,7 @@ export type components = {
              * Rpe
              * @description Rate of Perceived Exertion (1-10).
              */
-            rpe?: number | null;
+            rpe?: string | null;
             /**
              * Set Number
              * @description 1-based set index within the exercise.
@@ -2524,6 +2645,11 @@ export type components = {
              * @default working
              */
             set_type: components["schemas"]["WorkoutSetType"];
+            /**
+             * Speed Kmh
+             * @description Treadmill speed in km/h
+             */
+            speed_kmh?: number | null;
             /**
              * Started At
              * @description Set start timestamp (client, for time-under-tension).
@@ -4412,6 +4538,228 @@ export type components = {
             type: string;
         };
         /**
+         * WaterDailyStats
+         * @description Water daily statistics
+         */
+        WaterDailyStats: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Entry Count */
+            entry_count: number;
+            /** Goal */
+            goal: number;
+            /** Is Goal Reached */
+            is_goal_reached: boolean;
+            /** Percentage */
+            percentage: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * WaterEntryCreate
+         * @description Request model for creating water entry
+         */
+        WaterEntryCreate: {
+            /**
+             * Amount
+             * @description Water amount in milliliters.
+             */
+            amount: number;
+            /**
+             * Recorded At
+             * @description When water was consumed (default: now)
+             */
+            recorded_at?: string | null;
+        };
+        /**
+         * WaterEntryResponse
+         * @description Water entry response
+         */
+        WaterEntryResponse: {
+            /** Amount */
+            amount: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** User Id */
+            user_id: number;
+        };
+        /**
+         * WaterGoalCreate
+         * @description Request model for creating/updating water goal
+         */
+        WaterGoalCreate: {
+            /**
+             * Daily Goal
+             * @description Daily water goal in milliliters.
+             * @default 2000
+             */
+            daily_goal: number;
+            /**
+             * Is Workout Day
+             * @description Whether today is a workout day
+             * @default false
+             */
+            is_workout_day: boolean;
+            /**
+             * Workout Increase
+             * @description Extra water on workout days.
+             * @default 500
+             */
+            workout_increase: number;
+        };
+        /**
+         * WaterGoalResponse
+         * @description Water goal response
+         */
+        WaterGoalResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Daily Goal */
+            daily_goal: number;
+            /** Id */
+            id: number;
+            /** Is Workout Day */
+            is_workout_day: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** User Id */
+            user_id: number;
+            /** Workout Increase */
+            workout_increase: number;
+        };
+        /**
+         * WaterHistoryResponse
+         * @description Water history response
+         */
+        WaterHistoryResponse: {
+            /** Date From */
+            date_from: string | null;
+            /** Date To */
+            date_to: string | null;
+            /** Items */
+            items: components["schemas"]["WaterEntryResponse"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Total Amount */
+            total_amount: number;
+        };
+        /**
+         * WaterReminderCreate
+         * @description Request model for creating/updating water reminder
+         */
+        WaterReminderCreate: {
+            /**
+             * Enabled
+             * @description Whether reminders are enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * End Time
+             * @description Reminder end time (HH:MM)
+             * @default 22:00
+             */
+            end_time: string;
+            /**
+             * Interval Hours
+             * @description Hours between reminders
+             * @default 2
+             */
+            interval_hours: number;
+            /**
+             * Quiet Hours End
+             * @description Quiet hours end time (HH:MM)
+             */
+            quiet_hours_end?: string | null;
+            /**
+             * Quiet Hours Start
+             * @description Quiet hours start time (HH:MM)
+             */
+            quiet_hours_start?: string | null;
+            /**
+             * Start Time
+             * @description Reminder start time (HH:MM)
+             * @default 08:00
+             */
+            start_time: string;
+            /**
+             * Telegram Notifications
+             * @description Send reminders via Telegram
+             * @default true
+             */
+            telegram_notifications: boolean;
+        };
+        /**
+         * WaterReminderResponse
+         * @description Water reminder response
+         */
+        WaterReminderResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Enabled */
+            enabled: boolean;
+            /** End Time */
+            end_time: string;
+            /** Id */
+            id: number;
+            /** Interval Hours */
+            interval_hours: number;
+            /** Quiet Hours End */
+            quiet_hours_end: string | null;
+            /** Quiet Hours Start */
+            quiet_hours_start: string | null;
+            /** Start Time */
+            start_time: string;
+            /** Telegram Notifications */
+            telegram_notifications: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** User Id */
+            user_id: number;
+        };
+        /**
+         * WaterWeeklyStats
+         * @description Water weekly statistics
+         */
+        WaterWeeklyStats: {
+            /** Average */
+            average: number;
+            best_day: components["schemas"]["WaterDailyStats"] | null;
+            /** Days */
+            days: components["schemas"]["WaterDailyStats"][];
+            /** Total Entries */
+            total_entries: number;
+        };
+        /**
          * WellnessStats
          * @description Wellness statistics
          */
@@ -4711,7 +5059,7 @@ export type components = {
             /** Rest Seconds */
             rest_seconds?: number | null;
             /** Rpe */
-            rpe?: number | null;
+            rpe?: number | string | null;
         };
         /** WorkoutSetResponse */
         WorkoutSetResponse: {
@@ -4722,7 +5070,7 @@ export type components = {
             /** Rest Seconds */
             rest_seconds?: number | null;
             /** Rpe */
-            rpe?: number | null;
+            rpe?: string | null;
             /** Set Number */
             set_number: number;
             /** Workout Id */
@@ -6360,6 +6708,290 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthStatsResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_history_api_v1_health_metrics_water_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_water_entry_api_v1_health_metrics_water_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_daily_stats_api_v1_health_metrics_water_daily__target_date__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target_date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterDailyStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_goal_api_v1_health_metrics_water_goal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterGoalResponse"];
+                };
+            };
+        };
+    };
+    set_water_goal_api_v1_health_metrics_water_goal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterGoalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterGoalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_reminder_api_v1_health_metrics_water_reminder_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterReminderResponse"];
+                };
+            };
+        };
+    };
+    set_water_reminder_api_v1_health_metrics_water_reminder_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterReminderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterReminderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_weekly_stats_api_v1_health_metrics_water_weekly_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterWeeklyStats"];
+                };
+            };
+        };
+    };
+    get_water_entry_api_v1_health_metrics_water__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_water_entry_api_v1_health_metrics_water__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -21,6 +21,9 @@ if TYPE_CHECKING:
     from .template_exercise import TemplateExercise
     from .training_load_daily import TrainingLoadDaily
     from .user_achievement import UserAchievement
+    from .water_entry import WaterEntry
+    from .water_goal import WaterGoal
+    from .water_reminder import WaterReminder
     from .workout_log import WorkoutLog
     from .workout_session_exercise import WorkoutSessionExercise
     from .workout_set import WorkoutSet
@@ -161,6 +164,23 @@ class User(Base):
         "Exercise",
         back_populates="author",
         cascade="all, delete-orphan"
+    )
+    water_entries: Mapped[list["WaterEntry"]] = relationship(
+        "WaterEntry",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    water_goal: Mapped[Optional["WaterGoal"]] = relationship(
+        "WaterGoal",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    water_reminder: Mapped[Optional["WaterReminder"]] = relationship(
+        "WaterReminder",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
     __table_args__ = (

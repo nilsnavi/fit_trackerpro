@@ -9,7 +9,7 @@ export function useHomeWaterQuery() {
 
     const data = useMemo((): WaterData | null => {
         if (!goalQ.data) return null
-        const total = (todayQ.data ?? []).reduce((sum, e) => sum + e.amount, 0)
+        const total = todayQ.data?.total ?? 0
         return {
             current: total,
             goal: goalQ.data.daily_goal,

@@ -8,6 +8,7 @@ import {
     useWaterGoalQuery,
     useWaterReminderQuery,
     useWaterTodayQuery,
+    useWaterTodayEntriesQuery,
     useWaterWeeklyStatsQuery,
     useAddWaterEntryMutation,
     useUpdateWaterGoalMutation,
@@ -704,7 +705,8 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
 
     const goalQuery = useWaterGoalQuery();
     const reminderQuery = useWaterReminderQuery();
-    const todayQuery = useWaterTodayQuery();
+    const todayStatsQuery = useWaterTodayQuery();
+    const todayEntriesQuery = useWaterTodayEntriesQuery();
     const weeklyStatsQuery = useWaterWeeklyStatsQuery('7d');
     const addWaterMutation = useAddWaterEntryMutation();
     const updateGoalMutation = useUpdateWaterGoalMutation();
@@ -712,13 +714,13 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
 
     const goal = goalQuery.data ?? null;
     const reminder = reminderQuery.data ?? null;
-    const todayEntries = useMemo(() => todayQuery.data ?? [], [todayQuery.data]);
+    const todayStats = todayStatsQuery.data;
+    const todayEntries = todayEntriesQuery.data ?? [];
     const weeklyStats = weeklyStatsQuery.data ?? null;
 
-    const currentAmount = useMemo(
-        () => todayEntries.reduce((sum, entry) => sum + entry.amount, 0),
-        [todayEntries],
-    );
+    const currentAmount = todayStats?.total ?? 0;
+    const percentage = todayStats?.percentage ?? 0;
+    const isGoalReached = todayStats?.is_goal_reached ?? false;
 
     const isMutating =
         addWaterMutation.isPending ||
@@ -733,19 +735,12 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
             : goal.daily_goal;
     }, [goal]);
 
-    const percentage = useMemo(() => {
-        return (currentAmount / effectiveGoal) * 100;
-    }, [currentAmount, effectiveGoal]);
-
-    const isGoalReached = currentAmount >= effectiveGoal;
-
     // Add water entry
     const handleAddWater = async (amount: number) => {
         const prev = currentAmount;
         try {
             const response = await addWaterMutation.mutateAsync({
                 amount,
-                recorded_at: new Date().toISOString(),
             });
 
             const newAmount = prev + amount;
@@ -1011,21 +1006,19 @@ interface WaterCompactWidgetProps {
 
 export const WaterCompactWidget: React.FC<WaterCompactWidgetProps> = ({ onClick, className }) => {
     const goalQuery = useWaterGoalQuery();
-    const todayQuery = useWaterTodayQuery();
+    const todayStatsQuery = useWaterTodayQuery();
     const goal = goalQuery.data ?? null;
-    const currentAmount = useMemo(
-        () => (todayQuery.data ?? []).reduce((sum, entry) => sum + entry.amount, 0),
-        [todayQuery.data],
-    );
+    const todayStats = todayStatsQuery.data;
+
+    const currentAmount = todayStats?.total ?? 0;
+    const percentage = todayStats?.percentage ?? 0;
+    const isGoalReached = todayStats?.is_goal_reached ?? false;
 
     const effectiveGoal = goal
         ? goal.is_workout_day
             ? goal.daily_goal + goal.workout_increase
             : goal.daily_goal
         : DEFAULT_GOAL;
-
-    const percentage = Math.min(Math.round((currentAmount / effectiveGoal) * 100), 100);
-    const isGoalReached = currentAmount >= effectiveGoal;
 
     return (
         <button

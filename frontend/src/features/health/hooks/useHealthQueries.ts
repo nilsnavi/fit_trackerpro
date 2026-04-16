@@ -15,6 +15,10 @@ const WATER_STATS_PERIOD = '7d'
 const GLUCOSE_STATS_PERIOD = '7d'
 const WELLNESS_RECENT_LIMIT = 30
 
+const getTodayDate = (): string => {
+    return new Date().toISOString().split('T')[0]
+}
+
 export function useWaterGoalQuery() {
     return useQuery({
         queryKey: queryKeys.health.waterGoal,
@@ -36,10 +40,34 @@ export function useWaterTodayQuery() {
     })
 }
 
-export function useWaterWeeklyStatsQuery(period: string = WATER_STATS_PERIOD) {
+export function useWaterTodayEntriesQuery() {
+    const today = getTodayDate()
     return useQuery({
-        queryKey: queryKeys.health.waterStats(period),
+        queryKey: ['health', 'water', 'entries', 'today'],
+        queryFn: () => healthApi.getWaterHistory({
+            date_from: today,
+            date_to: today,
+        }),
+        select: (data) => data.items,
+    })
+}
+
+export function useWaterWeeklyStatsQuery(period?: string) {
+    return useQuery({
+        queryKey: queryKeys.health.waterStats(period || '7d'),
         queryFn: () => healthApi.getWaterWeeklyStats(period),
+    })
+}
+
+export function useWaterHistoryQuery(params?: {
+    page?: number
+    page_size?: number
+    date_from?: string
+    date_to?: string
+}) {
+    return useQuery({
+        queryKey: ['health', 'water', 'history', params],
+        queryFn: () => healthApi.getWaterHistory(params),
     })
 }
 
@@ -49,6 +77,19 @@ export function useAddWaterEntryMutation() {
         mutationFn: healthApi.addWaterEntry,
         onSuccess: async () => {
             await qc.invalidateQueries({ queryKey: queryKeys.health.waterToday })
+            await qc.invalidateQueries({ queryKey: ['health', 'water', 'entries', 'today'] })
+            await qc.invalidateQueries({ queryKey: queryKeys.health.waterStats(WATER_STATS_PERIOD) })
+        },
+    })
+}
+
+export function useDeleteWaterEntryMutation() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (entryId: number) => healthApi.deleteWaterEntry(entryId),
+        onSuccess: async () => {
+            await qc.invalidateQueries({ queryKey: queryKeys.health.waterToday })
+            await qc.invalidateQueries({ queryKey: ['health', 'water', 'entries', 'today'] })
             await qc.invalidateQueries({ queryKey: queryKeys.health.waterStats(WATER_STATS_PERIOD) })
         },
     })

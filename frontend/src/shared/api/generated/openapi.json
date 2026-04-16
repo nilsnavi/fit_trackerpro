@@ -1867,6 +1867,20 @@
             "description": "Duration in seconds",
             "title": "Duration"
           },
+          "incline_pct": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Treadmill incline in percent",
+            "title": "Incline Pct"
+          },
           "planned_rest_seconds": {
             "anyOf": [
               {
@@ -1931,7 +1945,11 @@
               {
                 "maximum": 10.0,
                 "minimum": 1.0,
-                "type": "integer"
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,4}0*$)\\d{0,2}\\.\\d{0,1}0*$)",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -1951,6 +1969,20 @@
             "$ref": "#/components/schemas/WorkoutSetType",
             "default": "working",
             "description": "Set type: warmup, working, dropset, failure."
+          },
+          "speed_kmh": {
+            "anyOf": [
+              {
+                "maximum": 150.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Treadmill speed in km/h",
+            "title": "Speed Kmh"
           },
           "started_at": {
             "anyOf": [
@@ -2034,6 +2066,20 @@
             "description": "Duration in seconds",
             "title": "Duration"
           },
+          "incline_pct": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Treadmill incline in percent",
+            "title": "Incline Pct"
+          },
           "planned_rest_seconds": {
             "anyOf": [
               {
@@ -2091,9 +2137,8 @@
           "rpe": {
             "anyOf": [
               {
-                "maximum": 10.0,
-                "minimum": 1.0,
-                "type": "integer"
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,4}0*$)\\d{0,2}\\.\\d{0,1}0*$)",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -2113,6 +2158,20 @@
             "$ref": "#/components/schemas/WorkoutSetType",
             "default": "working",
             "description": "Set type: warmup, working, dropset, failure."
+          },
+          "speed_kmh": {
+            "anyOf": [
+              {
+                "maximum": 150.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Treadmill speed in km/h",
+            "title": "Speed Kmh"
           },
           "started_at": {
             "anyOf": [
@@ -6620,6 +6679,431 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WaterDailyStats": {
+        "description": "Water daily statistics",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "entry_count": {
+            "title": "Entry Count",
+            "type": "integer"
+          },
+          "goal": {
+            "title": "Goal",
+            "type": "integer"
+          },
+          "is_goal_reached": {
+            "title": "Is Goal Reached",
+            "type": "boolean"
+          },
+          "percentage": {
+            "title": "Percentage",
+            "type": "number"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "total",
+          "goal",
+          "percentage",
+          "is_goal_reached",
+          "entry_count"
+        ],
+        "title": "WaterDailyStats",
+        "type": "object"
+      },
+      "WaterEntryCreate": {
+        "description": "Request model for creating water entry",
+        "properties": {
+          "amount": {
+            "description": "Water amount in milliliters.",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Amount",
+            "type": "integer"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When water was consumed (default: now)",
+            "title": "Recorded At"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "title": "WaterEntryCreate",
+        "type": "object"
+      },
+      "WaterEntryResponse": {
+        "description": "Water entry response",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "amount",
+          "recorded_at",
+          "created_at"
+        ],
+        "title": "WaterEntryResponse",
+        "type": "object"
+      },
+      "WaterGoalCreate": {
+        "description": "Request model for creating/updating water goal",
+        "properties": {
+          "daily_goal": {
+            "default": 2000,
+            "description": "Daily water goal in milliliters.",
+            "maximum": 10000.0,
+            "minimum": 500.0,
+            "title": "Daily Goal",
+            "type": "integer"
+          },
+          "is_workout_day": {
+            "default": false,
+            "description": "Whether today is a workout day",
+            "title": "Is Workout Day",
+            "type": "boolean"
+          },
+          "workout_increase": {
+            "default": 500,
+            "description": "Extra water on workout days.",
+            "maximum": 3000.0,
+            "minimum": 0.0,
+            "title": "Workout Increase",
+            "type": "integer"
+          }
+        },
+        "title": "WaterGoalCreate",
+        "type": "object"
+      },
+      "WaterGoalResponse": {
+        "description": "Water goal response",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "daily_goal": {
+            "title": "Daily Goal",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_workout_day": {
+            "title": "Is Workout Day",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "workout_increase": {
+            "title": "Workout Increase",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "daily_goal",
+          "workout_increase",
+          "is_workout_day",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WaterGoalResponse",
+        "type": "object"
+      },
+      "WaterHistoryResponse": {
+        "description": "Water history response",
+        "properties": {
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WaterEntryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "total_amount": {
+            "title": "Total Amount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "date_from",
+          "date_to",
+          "total_amount"
+        ],
+        "title": "WaterHistoryResponse",
+        "type": "object"
+      },
+      "WaterReminderCreate": {
+        "description": "Request model for creating/updating water reminder",
+        "properties": {
+          "enabled": {
+            "default": true,
+            "description": "Whether reminders are enabled",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "end_time": {
+            "default": "22:00",
+            "description": "Reminder end time (HH:MM)",
+            "title": "End Time",
+            "type": "string"
+          },
+          "interval_hours": {
+            "default": 2,
+            "description": "Hours between reminders",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Interval Hours",
+            "type": "integer"
+          },
+          "quiet_hours_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Quiet hours end time (HH:MM)",
+            "title": "Quiet Hours End"
+          },
+          "quiet_hours_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Quiet hours start time (HH:MM)",
+            "title": "Quiet Hours Start"
+          },
+          "start_time": {
+            "default": "08:00",
+            "description": "Reminder start time (HH:MM)",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "telegram_notifications": {
+            "default": true,
+            "description": "Send reminders via Telegram",
+            "title": "Telegram Notifications",
+            "type": "boolean"
+          }
+        },
+        "title": "WaterReminderCreate",
+        "type": "object"
+      },
+      "WaterReminderResponse": {
+        "description": "Water reminder response",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "end_time": {
+            "title": "End Time",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "interval_hours": {
+            "title": "Interval Hours",
+            "type": "integer"
+          },
+          "quiet_hours_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quiet Hours End"
+          },
+          "quiet_hours_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quiet Hours Start"
+          },
+          "start_time": {
+            "title": "Start Time",
+            "type": "string"
+          },
+          "telegram_notifications": {
+            "title": "Telegram Notifications",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "enabled",
+          "interval_hours",
+          "start_time",
+          "end_time",
+          "quiet_hours_start",
+          "quiet_hours_end",
+          "telegram_notifications",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WaterReminderResponse",
+        "type": "object"
+      },
+      "WaterWeeklyStats": {
+        "description": "Water weekly statistics",
+        "properties": {
+          "average": {
+            "title": "Average",
+            "type": "number"
+          },
+          "best_day": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WaterDailyStats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/WaterDailyStats"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "total_entries": {
+            "title": "Total Entries",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "average",
+          "best_day",
+          "total_entries"
+        ],
+        "title": "WaterWeeklyStats",
+        "type": "object"
+      },
       "WellnessStats": {
         "description": "Wellness statistics",
         "properties": {
@@ -7469,7 +7953,11 @@
               {
                 "maximum": 10.0,
                 "minimum": 1.0,
-                "type": "integer"
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,4}0*$)\\d{0,2}\\.\\d{0,1}0*$)",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -7505,7 +7993,8 @@
           "rpe": {
             "anyOf": [
               {
-                "type": "integer"
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -10792,6 +11281,444 @@
           }
         ],
         "summary": "Get Health Stats",
+        "tags": [
+          "Health metrics"
+        ]
+      }
+    },
+    "/api/v1/health-metrics/water": {
+      "get": {
+        "operationId": "get_water_history_api_v1_health_metrics_water_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Water History",
+        "tags": [
+          "Health metrics"
+        ]
+      },
+      "post": {
+        "operationId": "create_water_entry_api_v1_health_metrics_water_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaterEntryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterEntryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Water Entry",
+        "tags": [
+          "Health metrics"
+        ]
+      }
+    },
+    "/api/v1/health-metrics/water/daily/{target_date}": {
+      "get": {
+        "operationId": "get_water_daily_stats_api_v1_health_metrics_water_daily__target_date__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "target_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Target Date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterDailyStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Water Daily Stats",
+        "tags": [
+          "Health metrics"
+        ]
+      }
+    },
+    "/api/v1/health-metrics/water/goal": {
+      "get": {
+        "operationId": "get_water_goal_api_v1_health_metrics_water_goal_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterGoalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Water Goal",
+        "tags": [
+          "Health metrics"
+        ]
+      },
+      "post": {
+        "operationId": "set_water_goal_api_v1_health_metrics_water_goal_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaterGoalCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterGoalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Water Goal",
+        "tags": [
+          "Health metrics"
+        ]
+      }
+    },
+    "/api/v1/health-metrics/water/reminder": {
+      "get": {
+        "operationId": "get_water_reminder_api_v1_health_metrics_water_reminder_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterReminderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Water Reminder",
+        "tags": [
+          "Health metrics"
+        ]
+      },
+      "post": {
+        "operationId": "set_water_reminder_api_v1_health_metrics_water_reminder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaterReminderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterReminderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Water Reminder",
+        "tags": [
+          "Health metrics"
+        ]
+      }
+    },
+    "/api/v1/health-metrics/water/weekly": {
+      "get": {
+        "operationId": "get_water_weekly_stats_api_v1_health_metrics_water_weekly_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterWeeklyStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Water Weekly Stats",
+        "tags": [
+          "Health metrics"
+        ]
+      }
+    },
+    "/api/v1/health-metrics/water/{entry_id}": {
+      "delete": {
+        "operationId": "delete_water_entry_api_v1_health_metrics_water__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Water Entry",
+        "tags": [
+          "Health metrics"
+        ]
+      },
+      "get": {
+        "operationId": "get_water_entry_api_v1_health_metrics_water__entry_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterEntryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Water Entry",
         "tags": [
           "Health metrics"
         ]
