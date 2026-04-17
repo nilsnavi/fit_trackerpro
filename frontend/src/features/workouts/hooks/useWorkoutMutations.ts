@@ -11,6 +11,8 @@ import type {
     WorkoutTemplateCreateFromWorkoutRequest,
     WorkoutHistoryItem,
     WorkoutTemplateListResponse,
+    WorkoutSetPatchRequest,
+    WorkoutSetResponse,
 } from '@features/workouts/types/workouts'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
@@ -508,6 +510,133 @@ export function useCompleteWorkoutMutation() {
         onSettled: () => {
             invalidateWorkouts(queryClient)
             void queryClient.invalidateQueries({ queryKey: ['analytics'] })
+        },
+    })
+}
+
+export type PatchWorkoutSetVariables = {
+    workoutId: number
+    setId: number
+    payload: WorkoutSetPatchRequest
+}
+
+/**
+ * Updates a single set in a workout history item.
+ * Used for optimistic update in usePatchWorkoutSet.
+ */
+function updateSetInHistoryItemOptimistic(
+    prev: WorkoutHistoryItem,
+    exerciseId: number,
+    setNumber: number,
+    patch: WorkoutSetPatchRequest,
+): WorkoutHistoryItem {
+    return {
+        ...prev,
+        exercises: prev.exercises.map((exercise) => {
+            if (exercise.exercise_id !== exerciseId) return exercise
+            return {
+                ...exercise,
+                sets_completed: exercise.sets_completed.map((set) => {
+                    if (set.set_number !== setNumber) return set
+                    return {
+                        ...set,
+                        ...(patch.reps !== null && patch.reps !== undefined ? { reps: patch.reps } : {}),
+                        ...(patch.weight !== null && patch.weight !== undefined ? { weight: patch.weight } : {}),
+                        ...(patch.rpe !== null && patch.rpe !== undefined ? { rpe: patch.rpe } : {}),
+                        ...(patch.rest_seconds !== null && patch.rest_seconds !== undefined ? { rest_seconds: patch.rest_seconds } : {}),
+                        ...(patch.completed !== null && patch.completed !== undefined ? { completed: patch.completed } : {}),
+                        ...(patch.notes !== null && patch.notes !== undefined ? { notes: patch.notes } : {}),
+                    }
+                }),
+            }
+        }),
+    }
+}
+
+/**
+ * Hook for editing individual completed sets from workout history.
+ * Supports editing reps, weight, rpe, rest_seconds, and completed status.
+ */
+export function usePatchWorkoutSetMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async ({ workoutId, setId, payload }: PatchWorkoutSetVariables) => {
+            return workoutsApi.patchWorkoutSet(workoutId, setId, payload)
+        },
+        onMutate: async ({ workoutId, setId, payload }) => {
+            await queryClient.cancelQueries({ queryKey: WORKOUTS_ROOT })
+            const detailKey = queryKeys.workouts.historyItem(workoutId)
+            const previousDetail = queryClient.getQueryData<WorkoutHistoryItem>(detailKey)
+
+            if (previousDetail) {
+                // Find the exercise and set number from the setId
+                // setId is the database ID of the workout_set row
+                let exerciseId: number | null = null
+                let setNumber: number | null = null
+                for (const exercise of previousDetail.exercises) {
+                    for (const set of exercise.sets_completed) {
+                        // Match by database ID if available, otherwise fall back to set_number
+                        if (set.id === setId || set.set_number === setId) {
+                            exerciseId = exercise.exercise_id
+                            setNumber = set.set_number
+                            break
+                        }
+                    }
+                    if (exerciseId !== null) break
+                }
+
+                if (exerciseId !== null && setNumber !== null) {
+                    queryClient.setQueryData<WorkoutHistoryItem>(
+                        detailKey,
+                        updateSetInHistoryItemOptimistic(previousDetail, exerciseId, setNumber, payload),
+                    )
+                }
+            }
+
+            return { previousDetail, detailKey }
+        },
+        onError: (err, _vars, ctx) => {
+            if (isOfflineMutationQueuedError(err)) return
+            if (!ctx) return
+            if (ctx.previousDetail) {
+                queryClient.setQueryData(ctx.detailKey, ctx.previousDetail)
+            }
+            toast.error(`Не удалось сохранить изменения: ${getErrorMessage(err)}`, {
+                toastKey: 'patch-set-error',
+            })
+        },
+        onSuccess: (data, variables) => {
+            // Update cache with actual response data
+            const detailKey = queryKeys.workouts.historyItem(variables.workoutId)
+            const previousDetail = queryClient.getQueryData<WorkoutHistoryItem>(detailKey)
+            if (previousDetail) {
+                queryClient.setQueryData<WorkoutHistoryItem>(
+                    detailKey,
+                    updateSetInHistoryItemOptimistic(
+                        previousDetail,
+                        data.exercise_id,
+                        data.set_number,
+                        {
+                            reps: data.reps ?? undefined,
+                            weight: data.weight ?? undefined,
+                            rpe: data.rpe ? Number(data.rpe) : undefined,
+                            rest_seconds: data.rest_seconds ?? undefined,
+                            completed: data.completed,
+                            notes: data.notes ?? undefined,
+                        },
+                    ),
+                )
+            }
+            trackBusinessMetric('edited_workout_set', {
+                workout_id: data.workout_id,
+                set_id: data.id,
+                exercise_id: data.exercise_id,
+            })
+        },
+        onSettled: (_data, _err, variables) => {
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.workouts.historyItem(variables.workoutId),
+            })
         },
     })
 }

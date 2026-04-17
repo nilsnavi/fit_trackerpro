@@ -41,6 +41,27 @@ class WorkoutsRepository(SQLAlchemyRepository):
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+    async def get_workout_sets_for_session(
+        self,
+        *,
+        user_id: int,
+        workout_session_id: int,
+    ) -> list[WorkoutSet]:
+        """Get all workout sets for a session with exercise relationships."""
+        result = await self.db.execute(
+            select(WorkoutSet)
+            .options(selectinload(WorkoutSet.session_exercise))
+            .where(
+                and_(
+                    WorkoutSet.user_id == user_id,
+                    WorkoutSet.workout_session_id == workout_session_id,
+                )
+            )
+            .order_by(WorkoutSet.set_number)
+        )
+        return list(result.scalars().all())
+
     async def get_last_set_for_exercise(
         self,
         user_id: int,
@@ -67,7 +88,8 @@ class WorkoutsRepository(SQLAlchemyRepository):
         template_type: Optional[str],
         include_archived: bool = False,
     ) -> int:
-        query = select(func.count(WorkoutTemplate.id)).where(WorkoutTemplate.user_id == user_id)
+        query = select(func.count(WorkoutTemplate.id)).where(
+            WorkoutTemplate.user_id == user_id)
         if not include_archived:
             query = query.where(WorkoutTemplate.is_archived.is_(False))
         if template_type:
@@ -83,7 +105,8 @@ class WorkoutsRepository(SQLAlchemyRepository):
         template_type: Optional[str],
         include_archived: bool = False,
     ) -> List[WorkoutTemplate]:
-        query = select(WorkoutTemplate).where(WorkoutTemplate.user_id == user_id)
+        query = select(WorkoutTemplate).where(
+            WorkoutTemplate.user_id == user_id)
         if not include_archived:
             query = query.where(WorkoutTemplate.is_archived.is_(False))
         if template_type:
@@ -98,7 +121,8 @@ class WorkoutsRepository(SQLAlchemyRepository):
 
     async def list_template_names(self, user_id: int) -> List[str]:
         result = await self.db.execute(
-            select(WorkoutTemplate.name).where(WorkoutTemplate.user_id == user_id)
+            select(WorkoutTemplate.name).where(
+                WorkoutTemplate.user_id == user_id)
         )
         return [name for name in result.scalars().all() if isinstance(name, str) and name.strip()]
 
@@ -149,7 +173,8 @@ class WorkoutsRepository(SQLAlchemyRepository):
         date_from: Optional[date],
         date_to: Optional[date],
     ) -> int:
-        query = select(func.count(WorkoutLog.id)).where(WorkoutLog.user_id == user_id)
+        query = select(func.count(WorkoutLog.id)).where(
+            WorkoutLog.user_id == user_id)
         if date_from:
             query = query.where(WorkoutLog.date >= date_from)
         if date_to:
@@ -170,7 +195,8 @@ class WorkoutsRepository(SQLAlchemyRepository):
             query = query.where(WorkoutLog.date >= date_from)
         if date_to:
             query = query.where(WorkoutLog.date <= date_to)
-        query = query.order_by(desc(WorkoutLog.date)).offset((page - 1) * page_size).limit(page_size)
+        query = query.order_by(desc(WorkoutLog.date)).offset(
+            (page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
         return result.scalars().all()
 

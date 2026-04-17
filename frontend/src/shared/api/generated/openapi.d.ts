@@ -2534,10 +2534,20 @@ export type components = {
              */
             duration?: number | null;
             /**
+             * Id
+             * @description Database ID of the workout_set row, if persisted.
+             */
+            id?: number | null;
+            /**
              * Incline Pct
              * @description Treadmill incline in percent
              */
             incline_pct?: number | null;
+            /**
+             * Notes
+             * @description Set-level notes/comments.
+             */
+            notes?: string | null;
             /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
@@ -2609,10 +2619,20 @@ export type components = {
              */
             duration?: number | null;
             /**
+             * Id
+             * @description Database ID of the workout_set row, if persisted.
+             */
+            id?: number | null;
+            /**
              * Incline Pct
              * @description Treadmill incline in percent
              */
             incline_pct?: number | null;
+            /**
+             * Notes
+             * @description Set-level notes/comments.
+             */
+            notes?: string | null;
             /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
@@ -5054,25 +5074,50 @@ export type components = {
              */
             tags?: string[];
         };
-        /** WorkoutSetPatchRequest */
+        /**
+         * WorkoutSetPatchRequest
+         * @description Editable fields for a completed set from workout history.
+         */
         WorkoutSetPatchRequest: {
+            /** Completed */
+            completed?: boolean | null;
+            /** Notes */
+            notes?: string | null;
+            /** Reps */
+            reps?: number | null;
             /** Rest Seconds */
             rest_seconds?: number | null;
             /** Rpe */
             rpe?: number | string | null;
+            /** Weight */
+            weight?: number | string | null;
         };
-        /** WorkoutSetResponse */
+        /**
+         * WorkoutSetResponse
+         * @description Response after patching a workout set.
+         */
         WorkoutSetResponse: {
+            /**
+             * Completed
+             * @default true
+             */
+            completed: boolean;
             /** Exercise Id */
             exercise_id: number;
             /** Id */
             id: number;
+            /** Notes */
+            notes?: string | null;
+            /** Reps */
+            reps?: number | null;
             /** Rest Seconds */
             rest_seconds?: number | null;
             /** Rpe */
             rpe?: string | null;
             /** Set Number */
             set_number: number;
+            /** Weight */
+            weight?: string | null;
             /** Workout Id */
             workout_id: number;
         };

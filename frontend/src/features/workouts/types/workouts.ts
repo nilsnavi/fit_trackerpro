@@ -63,6 +63,8 @@ export interface WorkoutTemplateListResponse {
 }
 
 export interface CompletedSet {
+    /** Database ID of the workout_set row */
+    id?: number
     set_number: number
     reps?: number
     weight?: number
@@ -83,6 +85,32 @@ export interface CompletedSet {
     /** ISO-8601, время завершения движения (клиент) */
     completed_at?: string
     completed: boolean
+    /** Set-level notes/comments */
+    notes?: string
+}
+
+/** Editable fields for a completed set from workout history. */
+export interface WorkoutSetPatchRequest {
+    reps?: number | null
+    weight?: number | null
+    rpe?: number | null
+    rest_seconds?: number | null
+    completed?: boolean | null
+    notes?: string | null
+}
+
+/** Response after patching a workout set. */
+export interface WorkoutSetResponse {
+    id: number
+    workout_id: number
+    exercise_id: number
+    set_number: number
+    reps?: number | null
+    weight?: number | null
+    rpe?: number | null
+    rest_seconds?: number | null
+    completed: boolean
+    notes?: string | null
 }
 
 export interface CompletedExercise {

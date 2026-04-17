@@ -15,6 +15,8 @@ import type {
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
     CalendarWorkout,
+    WorkoutSetPatchRequest,
+    WorkoutSetResponse,
 } from '@features/workouts/types/workouts'
 
 function normalizeWorkoutStartResponse(response: WorkoutStartResponse): WorkoutStartResponse {
@@ -22,8 +24,8 @@ function normalizeWorkoutStartResponse(response: WorkoutStartResponse): WorkoutS
         typeof response.id === 'number'
             ? response.id
             : typeof response.workout_id === 'number'
-              ? response.workout_id
-              : null
+                ? response.workout_id
+                : null
 
     if (normalizedId == null) {
         throw new Error('Workout start response does not contain workout id')
@@ -40,8 +42,8 @@ function normalizeWorkoutHistoryItem(response: WorkoutHistoryItem): WorkoutHisto
         typeof response.id === 'number'
             ? response.id
             : typeof response.workout_id === 'number'
-              ? response.workout_id
-              : null
+                ? response.workout_id
+                : null
 
     if (normalizedId == null) {
         throw new Error('Workout history response does not contain workout id')
@@ -168,6 +170,17 @@ export const workoutsApi = {
     ): Promise<WorkoutCompleteResponse> {
         return api.post<WorkoutCompleteResponse>(
             `/workouts/complete?workout_id=${workoutId}`,
+            payload,
+        )
+    },
+
+    patchWorkoutSet(
+        workoutId: number,
+        setId: number,
+        payload: WorkoutSetPatchRequest,
+    ): Promise<WorkoutSetResponse> {
+        return api.patch<WorkoutSetResponse>(
+            `/workouts/${workoutId}/sets/${setId}`,
             payload,
         )
     },

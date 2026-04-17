@@ -171,12 +171,14 @@ class WorkoutsService:
                 if reps is None or reps < 0:
                     continue
                 weight = self._safe_float(set_item.get("weight"))
-                set_load_score = reps * (weight if weight is not None and weight >= 0 else 1.0)
+                set_load_score = reps * \
+                    (weight if weight is not None and weight >= 0 else 1.0)
                 if set_load_score <= 0:
                     continue
                 share = set_load_score / len(muscle_groups)
                 for muscle_group in muscle_groups:
-                    muscle_load[muscle_group] = muscle_load.get(muscle_group, 0.0) + share
+                    muscle_load[muscle_group] = muscle_load.get(
+                        muscle_group, 0.0) + share
         return muscle_load
 
     @staticmethod
@@ -214,7 +216,8 @@ class WorkoutsService:
             return value
         if isinstance(value, str):
             try:
-                normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+                normalized = value.replace(
+                    "Z", "+00:00") if value.endswith("Z") else value
                 return datetime.fromisoformat(normalized)
             except ValueError:
                 return None
@@ -223,7 +226,8 @@ class WorkoutsService:
     @staticmethod
     def _normalize_set_type(value: object) -> str:
         allowed = {item.value for item in WorkoutSetType}
-        candidate = str(value).strip().lower() if value is not None else WorkoutSetType.WORKING.value
+        candidate = str(value).strip().lower(
+        ) if value is not None else WorkoutSetType.WORKING.value
         return candidate if candidate in allowed else WorkoutSetType.WORKING.value
 
     def _build_template_exercise_rows(
@@ -239,7 +243,8 @@ class WorkoutsService:
                     user_id=user_id,
                     exercise_id=int(raw.get("exercise_id") or (idx + 1)),
                     order_index=idx,
-                    name=str(raw.get("name") or f"Exercise #{idx + 1}").strip() or f"Exercise #{idx + 1}",
+                    name=str(
+                        raw.get("name") or f"Exercise #{idx + 1}").strip() or f"Exercise #{idx + 1}",
                     sets=max(int(raw.get("sets") or 1), 1),
                     reps=raw.get("reps"),
                     duration=raw.get("duration"),
@@ -262,12 +267,15 @@ class WorkoutsService:
             session_exercise = WorkoutSessionExercise(
                 user_id=user_id,
                 workout_session_id=workout_session_id,
-                exercise_id=int(raw_exercise.get("exercise_id") or (ex_idx + 1)),
+                exercise_id=int(raw_exercise.get(
+                    "exercise_id") or (ex_idx + 1)),
                 order_index=ex_idx,
-                name=str(raw_exercise.get("name") or f"Exercise #{ex_idx + 1}").strip() or f"Exercise #{ex_idx + 1}",
+                name=str(raw_exercise.get(
+                    "name") or f"Exercise #{ex_idx + 1}").strip() or f"Exercise #{ex_idx + 1}",
                 notes=raw_exercise.get("notes"),
             )
-            sets_payload = raw_exercise.get("sets_completed") if isinstance(raw_exercise, dict) else None
+            sets_payload = raw_exercise.get("sets_completed") if isinstance(
+                raw_exercise, dict) else None
             if isinstance(sets_payload, list):
                 for set_idx, raw_set in enumerate(sets_payload):
                     if not isinstance(raw_set, dict):
@@ -276,21 +284,28 @@ class WorkoutsService:
                         WorkoutSet(
                             user_id=user_id,
                             workout_session_id=workout_session_id,
-                            set_number=int(raw_set.get("set_number") or set_idx + 1),
-                            set_type=self._normalize_set_type(raw_set.get("set_type")),
+                            set_number=int(raw_set.get(
+                                "set_number") or set_idx + 1),
+                            set_type=self._normalize_set_type(
+                                raw_set.get("set_type")),
                             reps=raw_set.get("reps"),
                             weight=raw_set.get("weight"),
                             rpe=raw_set.get("rpe"),
                             rir=raw_set.get("rir"),
-                            planned_rest_seconds=raw_set.get("planned_rest_seconds"),
-                            actual_rest_seconds=raw_set.get("actual_rest_seconds"),
+                            planned_rest_seconds=raw_set.get(
+                                "planned_rest_seconds"),
+                            actual_rest_seconds=raw_set.get(
+                                "actual_rest_seconds"),
                             rest_seconds=raw_set.get("rest_seconds"),
                             duration=raw_set.get("duration"),
                             speed_kmh=raw_set.get("speed_kmh"),
                             incline_pct=raw_set.get("incline_pct"),
-                            started_at=WorkoutsService._parse_optional_datetime(raw_set.get("started_at")),
-                            completed_at=WorkoutsService._parse_optional_datetime(raw_set.get("completed_at")),
+                            started_at=WorkoutsService._parse_optional_datetime(
+                                raw_set.get("started_at")),
+                            completed_at=WorkoutsService._parse_optional_datetime(
+                                raw_set.get("completed_at")),
                             completed=bool(raw_set.get("completed", True)),
+                            notes=raw_set.get("notes"),
                         )
                     )
             rows.append(session_exercise)
@@ -299,9 +314,11 @@ class WorkoutsService:
     @staticmethod
     def _apply_reorder(existing: list[dict], order: list[int]) -> list[dict]:
         if len(existing) != len(order):
-            raise WorkoutConflictError("exercise_order length must match existing exercises")
+            raise WorkoutConflictError(
+                "exercise_order length must match existing exercises")
         if sorted(order) != list(range(len(existing))):
-            raise WorkoutConflictError("exercise_order must be a full 0-based permutation")
+            raise WorkoutConflictError(
+                "exercise_order must be a full 0-based permutation")
         return [existing[idx] for idx in order]
 
     async def _build_clone_name(self, user_id: int, source_name: str) -> str:
@@ -322,7 +339,8 @@ class WorkoutsService:
     ) -> tuple[list[dict], str | None, list[str]]:
         source_exercises: list[dict]
         if overrides and overrides.exercises:
-            source_exercises = [ex.model_dump(mode="json") for ex in overrides.exercises]
+            source_exercises = [ex.model_dump(
+                mode="json") for ex in overrides.exercises]
         else:
             source_exercises = template_exercises or []
         initial_exercises = [
@@ -353,7 +371,8 @@ class WorkoutsService:
             include_archived=include_archived,
         )
         return WorkoutTemplateList(
-            items=[WorkoutTemplateResponse.model_validate(t, from_attributes=True) for t in templates],
+            items=[WorkoutTemplateResponse.model_validate(
+                t, from_attributes=True) for t in templates],
             total=total,
             page=page,
             page_size=page_size,
@@ -410,7 +429,8 @@ class WorkoutsService:
 
         template.name = data.name
         template.type = data.type
-        template.exercises = [ex.model_dump(mode="json") for ex in data.exercises]
+        template.exercises = [ex.model_dump(
+            mode="json") for ex in data.exercises]
         template.is_public = data.is_public
         template.version += 1
         template = await self.repository.update_template(template)
@@ -447,9 +467,11 @@ class WorkoutsService:
         next_public = data.is_public if data.is_public is not None else template.is_public
         next_exercises = template.exercises
         if data.exercises is not None:
-            next_exercises = [ex.model_dump(mode="json") for ex in data.exercises]
+            next_exercises = [ex.model_dump(mode="json")
+                              for ex in data.exercises]
         if data.exercise_order is not None:
-            next_exercises = self._apply_reorder(next_exercises or [], data.exercise_order)
+            next_exercises = self._apply_reorder(
+                next_exercises or [], data.exercise_order)
 
         updated = await self.repository.update_template_with_expected_version(
             user_id=user_id,
@@ -463,7 +485,8 @@ class WorkoutsService:
             },
         )
         if not updated:
-            raise WorkoutConflictError("Template version mismatch. Refresh template and retry.")
+            raise WorkoutConflictError(
+                "Template version mismatch. Refresh template and retry.")
 
         await self.repository.replace_template_exercises(
             user_id=user_id,
@@ -499,7 +522,8 @@ class WorkoutsService:
         for idx, raw in enumerate(exercises_raw):
             ex = CompletedExercise.model_validate(raw)
             first_set = ex.sets_completed[0]
-            weight = next((s.weight for s in ex.sets_completed if s.weight is not None), None)
+            weight = next(
+                (s.weight for s in ex.sets_completed if s.weight is not None), None)
             template_exercises.append(
                 ExerciseInTemplate(
                     exercise_id=ex.exercise_id or (idx + 1),
@@ -514,7 +538,8 @@ class WorkoutsService:
             )
 
         if not template_exercises:
-            raise WorkoutConflictError("Workout has no exercises to create template")
+            raise WorkoutConflictError(
+                "Workout has no exercises to create template")
 
         detected_type = "mixed"
         tags_set = {str(tag).lower() for tag in (workout.tags or [])}
@@ -523,12 +548,14 @@ class WorkoutsService:
                 detected_type = candidate
                 break
 
-        template_name = (data.name or workout.comments or f"Шаблон из тренировки #{workout.id}").strip()
+        template_name = (
+            data.name or workout.comments or f"Шаблон из тренировки #{workout.id}").strip()
         template = WorkoutTemplate(
             user_id=user_id,
             name=template_name,
             type=detected_type,
-            exercises=[ex.model_dump(mode="json") for ex in template_exercises],
+            exercises=[ex.model_dump(mode="json")
+                       for ex in template_exercises],
             is_public=data.is_public,
         )
         template = await self.repository.create_template(template)
@@ -671,7 +698,8 @@ class WorkoutsService:
             date_to=date_to,
         )
         return WorkoutHistoryResponse(
-            items=[WorkoutHistoryItem.model_validate(w, from_attributes=True) for w in workouts],
+            items=[WorkoutHistoryItem.model_validate(
+                w, from_attributes=True) for w in workouts],
             total=total,
             page=page,
             page_size=page_size,
@@ -705,7 +733,8 @@ class WorkoutsService:
             exercises=initial_exercises,
             session_metrics=compute_session_metrics(initial_exercises, None),
             comments=data.name or (template.name if template else None),
-            tags=([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
+            tags=([data.type.value] if data.type !=
+                  WorkoutSessionType.CUSTOM else []),
         )
         workout = await self.repository.create_workout_log(workout)
         await self.repository.replace_session_snapshot(
@@ -761,7 +790,8 @@ class WorkoutsService:
             exercises=initial_exercises,
             session_metrics=compute_session_metrics(initial_exercises, None),
             comments=data.name or override_comments or template.name,
-            tags=override_tags or ([data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
+            tags=override_tags or (
+                [data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
         )
         workout = await self.repository.create_workout_log(workout)
         await self.repository.replace_session_snapshot(
@@ -807,17 +837,21 @@ class WorkoutsService:
         for workout in day_workouts:
             if workout.duration:
                 total_duration += int(workout.duration)
-            workout_volume, workout_rpe_values = self._extract_workout_volume_and_rpe(workout.exercises)
+            workout_volume, workout_rpe_values = self._extract_workout_volume_and_rpe(
+                workout.exercises)
             total_volume += workout_volume
             day_rpe_values.extend(workout_rpe_values)
 
-        avg_rpe = round(sum(day_rpe_values) / len(day_rpe_values), 1) if day_rpe_values else None
-        fatigue_score = round(total_duration * avg_rpe, 2) if avg_rpe is not None else 0.0
+        avg_rpe = round(sum(day_rpe_values) / len(day_rpe_values),
+                        1) if day_rpe_values else None
+        fatigue_score = round(total_duration * avg_rpe,
+                              2) if avg_rpe is not None else 0.0
 
         training_load = await self.repository.get_training_load(user_id=user_id, target_date=target_date)
         if training_load:
             training_load.volume = Decimal(str(round(total_volume, 2)))
-            training_load.avg_rpe = Decimal(str(avg_rpe)) if avg_rpe is not None else None
+            training_load.avg_rpe = Decimal(
+                str(avg_rpe)) if avg_rpe is not None else None
             training_load.fatigue_score = Decimal(str(fatigue_score))
             return
 
@@ -854,9 +888,11 @@ class WorkoutsService:
 
         day_muscle_load: dict[str, float] = {}
         for workout in day_workouts:
-            workout_load = self._extract_workout_muscle_load(workout.exercises, exercise_groups_map)
+            workout_load = self._extract_workout_muscle_load(
+                workout.exercises, exercise_groups_map)
             for muscle_group, value in workout_load.items():
-                day_muscle_load[muscle_group] = day_muscle_load.get(muscle_group, 0.0) + value
+                day_muscle_load[muscle_group] = day_muscle_load.get(
+                    muscle_group, 0.0) + value
 
         existing_rows = await self.repository.list_muscle_load_for_day(user_id=user_id, target_date=target_date)
         existing_by_group = {row.muscle_group: row for row in existing_rows}
@@ -883,7 +919,8 @@ class WorkoutsService:
 
     async def _upsert_recovery_state(self, user_id: int, target_date: date) -> None:
         training = await self.repository.get_training_load(user_id=user_id, target_date=target_date)
-        fatigue_score = float(training.fatigue_score) if training and training.fatigue_score is not None else 0.0
+        fatigue_score = float(
+            training.fatigue_score) if training and training.fatigue_score is not None else 0.0
         fatigue_level = int(round(self._clamp(fatigue_score / 5.0)))
 
         latest_wellness = await self.repository.get_latest_wellness_on_or_before(
@@ -930,10 +967,13 @@ class WorkoutsService:
             exercises=exercises,
             comments=workout.comments,
             tags=list(workout.tags or []),
-            glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
-            glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            glucose_before=float(
+                workout.glucose_before) if workout.glucose_before is not None else None,
+            glucose_after=float(
+                workout.glucose_after) if workout.glucose_after is not None else None,
             session_metrics=self._session_metrics_model(
-                workout.session_metrics or compute_session_metrics(workout.exercises or [], workout.duration)
+                workout.session_metrics or compute_session_metrics(
+                    workout.exercises or [], workout.duration)
             ),
             version=workout.version,
             completed_at=workout.updated_at,
@@ -952,10 +992,13 @@ class WorkoutsService:
             exercises=exercises,
             comments=workout.comments,
             tags=list(workout.tags or []),
-            glucose_before=float(workout.glucose_before) if workout.glucose_before is not None else None,
-            glucose_after=float(workout.glucose_after) if workout.glucose_after is not None else None,
+            glucose_before=float(
+                workout.glucose_before) if workout.glucose_before is not None else None,
+            glucose_after=float(
+                workout.glucose_after) if workout.glucose_after is not None else None,
             session_metrics=self._session_metrics_model(
-                workout.session_metrics or compute_session_metrics(workout.exercises or [], workout.duration)
+                workout.session_metrics or compute_session_metrics(
+                    workout.exercises or [], workout.duration)
             ),
             version=workout.version,
             created_at=workout.created_at,
@@ -1009,12 +1052,14 @@ class WorkoutsService:
                 },
             )
 
-        workout.exercises = [ex.model_dump(mode="json") for ex in data.exercises]
+        workout.exercises = [ex.model_dump(
+            mode="json") for ex in data.exercises]
         workout.comments = data.comments
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
         workout.glucose_after = data.glucose_after
-        workout.session_metrics = compute_session_metrics(workout.exercises, workout.duration)
+        workout.session_metrics = compute_session_metrics(
+            workout.exercises, workout.duration)
         workout.version += 1
 
         workout = await self.repository.commit_workout_update(workout)
@@ -1027,7 +1072,8 @@ class WorkoutsService:
                 exercises_payload=workout.exercises or [],
             ),
         )
-        response_item = self._workout_log_to_history_item(workout, data.exercises)
+        response_item = self._workout_log_to_history_item(
+            workout, data.exercises)
 
         if data.idempotency_key:
             await self.repository.create_idempotency_record(
@@ -1080,12 +1126,14 @@ class WorkoutsService:
             )
 
         workout.duration = data.duration
-        workout.exercises = [ex.model_dump(mode="json") for ex in data.exercises]
+        workout.exercises = [ex.model_dump(
+            mode="json") for ex in data.exercises]
         workout.comments = data.comments
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
         workout.glucose_after = data.glucose_after
-        workout.session_metrics = compute_session_metrics(workout.exercises, workout.duration)
+        workout.session_metrics = compute_session_metrics(
+            workout.exercises, workout.duration)
         workout.version += 1
 
         await self._upsert_training_load_daily(user_id=user_id, target_date=workout.date)
@@ -1124,7 +1172,8 @@ class WorkoutsService:
             tags=workout.tags,
             glucose_before=workout.glucose_before,
             glucose_after=workout.glucose_after,
-            session_metrics=self._session_metrics_model(workout.session_metrics),
+            session_metrics=self._session_metrics_model(
+                workout.session_metrics),
             version=workout.version,
             completed_at=workout.updated_at,
             message="Workout completed successfully",
@@ -1187,7 +1236,8 @@ class WorkoutsService:
                 ttl_seconds=settings.IDEMPOTENCY_DEFAULT_TTL_SECONDS,
                 execute=_run,
                 serialize_result=lambda r: r.model_dump(mode="json"),
-                deserialize_result=lambda d: WorkoutCompleteResponse.model_validate(d),
+                deserialize_result=lambda d: WorkoutCompleteResponse.model_validate(
+                    d),
             )
         return await _run()
 
@@ -1196,7 +1246,45 @@ class WorkoutsService:
         if not workout:
             raise WorkoutNotFoundError("Workout not found")
         raw_exercises = workout.exercises or []
-        exercises = [CompletedExercise.model_validate(ex) for ex in raw_exercises]
+
+        # Query workout_sets to get IDs and merge with exercises
+        sets_from_db = await self.repository.get_workout_sets_for_session(
+            user_id=user_id,
+            workout_session_id=workout_id,
+        )
+
+        # Build a map: (exercise_id, set_number) -> (id, notes)
+        set_metadata: dict[tuple[int, int], dict] = {}
+        for s in sets_from_db:
+            if s.session_exercise:
+                key = (int(s.session_exercise.exercise_id), s.set_number)
+                set_metadata[key] = {"id": s.id, "notes": s.notes}
+
+        # Enrich raw_exercises with IDs and notes from DB
+        enriched_exercises = []
+        for ex in raw_exercises:
+            if not isinstance(ex, dict):
+                enriched_exercises.append(ex)
+                continue
+            exercise_id = int(ex.get("exercise_id") or 0)
+            sets_completed = ex.get("sets_completed", [])
+            if isinstance(sets_completed, list):
+                enriched_sets = []
+                for s in sets_completed:
+                    if not isinstance(s, dict):
+                        enriched_sets.append(s)
+                        continue
+                    set_number = int(s.get("set_number") or 0)
+                    key = (exercise_id, set_number)
+                    meta = set_metadata.get(key, {})
+                    enriched_set = {
+                        **s, "id": meta.get("id"), "notes": meta.get("notes") or s.get("notes")}
+                    enriched_sets.append(enriched_set)
+                ex = {**ex, "sets_completed": enriched_sets}
+            enriched_exercises.append(ex)
+
+        exercises = [CompletedExercise.model_validate(
+            ex) for ex in enriched_exercises]
         return self._workout_log_to_history_item(workout, exercises)
 
     async def patch_workout_set(
@@ -1209,7 +1297,7 @@ class WorkoutsService:
         client_ip: str | None = None,
     ) -> WorkoutSetResponse:
         workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
-        if not workout or workout.duration is not None:
+        if not workout:
             raise WorkoutNotFoundError("Workout not found")
 
         db_set = await self.repository.get_workout_set(
@@ -1238,12 +1326,20 @@ class WorkoutsService:
                     continue
                 if int(set_item.get("set_number") or 0) != target_set_number:
                     continue
+                if data.reps is not None:
+                    set_item["reps"] = int(data.reps)
+                if data.weight is not None:
+                    set_item["weight"] = float(data.weight)
+                if data.rpe is not None:
+                    set_item["rpe"] = float(data.rpe)
                 if data.rest_seconds is not None:
                     set_item["rest_seconds"] = data.rest_seconds
                     # keep legacy field in sync for existing analytics/clients
                     set_item["actual_rest_seconds"] = data.rest_seconds
-                if data.rpe is not None:
-                    set_item["rpe"] = data.rpe
+                if data.completed is not None:
+                    set_item["completed"] = data.completed
+                if data.notes is not None:
+                    set_item["notes"] = data.notes
                 updated_set = set_item
                 break
             break
@@ -1252,7 +1348,8 @@ class WorkoutsService:
             raise WorkoutNotFoundError("Set not found")
 
         workout.exercises = exercises
-        workout.session_metrics = compute_session_metrics(workout.exercises, workout.duration)
+        workout.session_metrics = compute_session_metrics(
+            workout.exercises, workout.duration)
         workout.version += 1
 
         workout = await self.repository.commit_workout_update(workout)
@@ -1280,6 +1377,10 @@ class WorkoutsService:
             workout_id=workout_id,
             exercise_id=exercise_id,
             set_number=target_set_number,
-            rest_seconds=updated_set.get("rest_seconds"),
+            reps=updated_set.get("reps"),
+            weight=updated_set.get("weight"),
             rpe=updated_set.get("rpe"),
+            rest_seconds=updated_set.get("rest_seconds"),
+            completed=updated_set.get("completed", True),
+            notes=updated_set.get("notes"),
         )

@@ -64,6 +64,10 @@ class ExerciseInTemplate(BaseModel):
 
 class CompletedSet(BaseModel):
     """Completed set data"""
+    id: Optional[int] = Field(
+        None,
+        description="Database ID of the workout_set row, if persisted.",
+    )
     set_number: int = Field(
         ...,
         ge=1,
@@ -145,6 +149,11 @@ class CompletedSet(BaseModel):
         description="Set completion timestamp (client).",
     )
     completed: bool = Field(default=True)
+    notes: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Set-level notes/comments.",
+    )
 
 
 class CompletedExercise(BaseModel):
@@ -190,7 +199,8 @@ class WorkoutSessionMetrics(BaseModel):
     rest_tracking_ratio: float = 0.0
     rest_consistency_score: Optional[float] = None
     fatigue_trend: Optional[SessionFatigueTrend] = None
-    effort_distribution: SessionEffortDistribution = Field(default_factory=SessionEffortDistribution)
+    effort_distribution: SessionEffortDistribution = Field(
+        default_factory=SessionEffortDistribution)
     volume_per_minute: Optional[float] = None
 
 
@@ -300,7 +310,8 @@ class WorkoutTemplatePatchRequest(BaseModel):
     expected_version: int = Field(..., ge=1)
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     type: Optional[WorkoutTemplateType] = None
-    exercises: Optional[List[ExerciseInTemplate]] = Field(None, min_length=1, max_length=100)
+    exercises: Optional[List[ExerciseInTemplate]] = Field(
+        None, min_length=1, max_length=100)
     is_public: Optional[bool] = None
     exercise_order: Optional[List[int]] = Field(
         None,
@@ -461,17 +472,29 @@ class WorkoutHistoryResponse(BaseModel):
 
 
 class WorkoutSetPatchRequest(BaseModel):
+    """Editable fields for a completed set from workout history."""
+    reps: Optional[int] = Field(None, ge=0, le=1000)
+    weight: Optional[Decimal] = Field(
+        None, ge=0, le=5000, max_digits=7, decimal_places=2)
+    rpe: Optional[Decimal] = Field(
+        None, ge=1, le=10, max_digits=3, decimal_places=1)
     rest_seconds: Optional[int] = Field(None, ge=0, le=3600)
-    rpe: Optional[Decimal] = Field(None, ge=1, le=10, max_digits=3, decimal_places=1)
+    completed: Optional[bool] = None
+    notes: Optional[str] = Field(None, max_length=1000)
 
 
 class WorkoutSetResponse(BaseModel):
+    """Response after patching a workout set."""
     id: int
     workout_id: int
     exercise_id: int
     set_number: int
-    rest_seconds: Optional[int] = None
+    reps: Optional[int] = None
+    weight: Optional[Decimal] = None
     rpe: Optional[Decimal] = None
+    rest_seconds: Optional[int] = None
+    completed: bool = True
+    notes: Optional[str] = None
 
 
 # Ensure Pydantic v2 resolves postponed annotations for OpenAPI export tooling.

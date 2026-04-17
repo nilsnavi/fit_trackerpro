@@ -1867,6 +1867,18 @@
             "description": "Duration in seconds",
             "title": "Duration"
           },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Database ID of the workout_set row, if persisted.",
+            "title": "Id"
+          },
           "incline_pct": {
             "anyOf": [
               {
@@ -1880,6 +1892,19 @@
             ],
             "description": "Treadmill incline in percent",
             "title": "Incline Pct"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set-level notes/comments.",
+            "title": "Notes"
           },
           "planned_rest_seconds": {
             "anyOf": [
@@ -2066,6 +2091,18 @@
             "description": "Duration in seconds",
             "title": "Duration"
           },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Database ID of the workout_set row, if persisted.",
+            "title": "Id"
+          },
           "incline_pct": {
             "anyOf": [
               {
@@ -2079,6 +2116,19 @@
             ],
             "description": "Treadmill incline in percent",
             "title": "Incline Pct"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set-level notes/comments.",
+            "title": "Notes"
           },
           "planned_rest_seconds": {
             "anyOf": [
@@ -7934,7 +7984,44 @@
         "type": "object"
       },
       "WorkoutSetPatchRequest": {
+        "description": "Editable fields for a completed set from workout history.",
         "properties": {
+          "completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
           "rest_seconds": {
             "anyOf": [
               {
@@ -7964,13 +8051,36 @@
               }
             ],
             "title": "Rpe"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,8}0*$)\\d{0,5}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
           }
         },
         "title": "WorkoutSetPatchRequest",
         "type": "object"
       },
       "WorkoutSetResponse": {
+        "description": "Response after patching a workout set.",
         "properties": {
+          "completed": {
+            "default": true,
+            "title": "Completed",
+            "type": "boolean"
+          },
           "exercise_id": {
             "title": "Exercise Id",
             "type": "integer"
@@ -7978,6 +8088,28 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
           },
           "rest_seconds": {
             "anyOf": [
@@ -8005,6 +8137,18 @@
           "set_number": {
             "title": "Set Number",
             "type": "integer"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
           },
           "workout_id": {
             "title": "Workout Id",
