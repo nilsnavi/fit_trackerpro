@@ -17,6 +17,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -70,12 +71,12 @@ class WorkoutLog(Base):
 
     # Completed exercises stored as JSONB
     exercises: Mapped[list[dict]] = mapped_column(
-        JSON,
+        JSONB,
         default=list,
         comment="Completed exercises with actual sets, reps, weight"
     )
     session_metrics: Mapped[Optional[dict]] = mapped_column(
-        JSON,
+        JSONB,
         nullable=True,
         comment="Optional derived session metrics for richer summaries and analytics",
     )
