@@ -63,6 +63,23 @@ export interface ApiMuscleLoadEntry {
     loadScore: number
 }
 
+export interface ApiMuscleLoadTableEntry {
+    id: number
+    userId: number
+    muscleGroup: string
+    date: ApiDate
+    loadScore: number
+}
+
+export interface ApiMuscleLoadTableResponse {
+    items: ApiMuscleLoadTableEntry[]
+    page: number
+    pageSize: number
+    total: number
+    dateFrom: string
+    dateTo: string
+}
+
 export interface ApiRecoveryStateResponse {
     id: number
     userId: number
@@ -223,6 +240,16 @@ export function getAnalyticsTrainingLoadDailyTable(params: {
 
 export function getAnalyticsMuscleLoad(params?: Record<string, unknown>) {
     return analyticsApi.getMuscleLoad(params) as Promise<ApiMuscleLoadEntry[]>
+}
+
+export function getAnalyticsMuscleLoadTable(params: {
+    page?: number
+    page_size?: number
+    date_from?: string
+    date_to?: string
+    muscle_group?: string
+}) {
+    return analyticsApi.getMuscleLoadTable(params) as Promise<ApiMuscleLoadTableResponse>
 }
 
 export function getAnalyticsRecoveryState() {

@@ -29,6 +29,9 @@ export const analyticsApi = {
     getMuscleLoad(params?: Record<string, unknown>) {
         return api.get('/analytics/muscle-load', params)
     },
+    getMuscleLoadTable(params?: Record<string, unknown>) {
+        return api.get('/analytics/muscle-load/table', params)
+    },
     getRecoveryState() {
         return api.get('/analytics/recovery-state')
     },

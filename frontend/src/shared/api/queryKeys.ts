@@ -68,6 +68,13 @@ export const queryKeys = {
             ['analytics', 'trainingLoadDailyTable', page, pageSize, dateFrom, dateTo] as const,
         muscleLoad: (dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'muscleLoad', dateFrom, dateTo] as const,
+        muscleLoadTable: (
+            page: number,
+            pageSize: number,
+            dateFrom: string | null,
+            dateTo: string | null,
+            muscleGroup: string | null
+        ) => ['analytics', 'muscleLoadTable', page, pageSize, dateFrom, dateTo, muscleGroup] as const,
         recoveryState: ['analytics', 'recoveryState'] as const,
         progressInsights: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'progressInsights', period, dateFrom, dateTo] as const,
