@@ -34,7 +34,8 @@ services:
       - HTTP_PROXY=
       - HTTPS_PROXY=
       - ALL_PROXY=
-      - NO_PROXY=localhost,127.0.0.1,backend,frontend
+      - NO_PROXY=localhost,127.0.0.1,backend,frontend,.ngrok.io,.ngrok-free.app,.ngrok.com,tunnel.ngrok.com
+      - no_proxy=localhost,127.0.0.1,backend,frontend,.ngrok.io,.ngrok-free.app,.ngrok.com,tunnel.ngrok.com
     volumes:
       - ./ngrok.fittracker.yml:/etc/ngrok.yml:ro
     depends_on:
