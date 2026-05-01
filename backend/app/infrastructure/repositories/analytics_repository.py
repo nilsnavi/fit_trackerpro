@@ -237,7 +237,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                   AND wl.date >= :date_from
                   AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
-                  AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
+                  AND (CAST(:exercise_id AS integer) IS NULL OR (exercise_item.item->>'exercise_id')::int = CAST(:exercise_id AS integer))
             ),
             limited_exercises AS (
                 SELECT exercise_id
@@ -307,7 +307,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                   AND wl.date >= :date_from
                   AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
-                  AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
+                  AND (CAST(:exercise_id AS integer) IS NULL OR (exercise_item.item->>'exercise_id')::int = CAST(:exercise_id AS integer))
             ),
             limited_exercises AS (
                 SELECT exercise_id
@@ -394,7 +394,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                   AND wl.date >= :date_from
                   AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
-                  AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
+                  AND (CAST(:exercise_id AS integer) IS NULL OR (exercise_item.item->>'exercise_id')::int = CAST(:exercise_id AS integer))
             ),
             limited_exercises AS (
                 SELECT exercise_id
