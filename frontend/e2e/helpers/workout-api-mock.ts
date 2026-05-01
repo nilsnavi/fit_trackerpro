@@ -33,8 +33,9 @@ export type ExerciseApiItem = {
 
 export type CompletedSet = {
     set_number: number
-    reps: number
+    reps?: number
     weight?: number
+    duration?: number
     completed: boolean
 }
 

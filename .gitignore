@@ -50,8 +50,7 @@ ngrok.*.yml
 .env.production.local
 .sentryclirc
 
-# Docker (корневой .dockerignore не коммитим; см. также frontend/.dockerignore)
-/.dockerignore
+# Docker
 docker-compose.override.yml
 docker-compose.override.yaml
 *.local.yml

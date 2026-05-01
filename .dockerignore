@@ -1,0 +1,16 @@
+# Build context is repo root (backend/Dockerfile). Keep uploads to Docker daemon small.
+.git
+frontend
+monitoring
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+**/htmlcov
+**/.coverage
+**/dist
+**/.venv
+**/venv
+.idea
+.vscode
+.qoder

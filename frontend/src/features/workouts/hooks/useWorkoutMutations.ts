@@ -12,7 +12,6 @@ import type {
     WorkoutHistoryItem,
     WorkoutTemplateListResponse,
     WorkoutSetPatchRequest,
-    WorkoutSetResponse,
 } from '@features/workouts/types/workouts'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { trackBusinessMetric } from '@shared/lib/businessMetrics'
