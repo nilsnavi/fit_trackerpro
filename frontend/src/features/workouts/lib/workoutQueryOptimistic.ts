@@ -198,6 +198,12 @@ export function restoreSnapshotEntries(queryClient: QueryClient, entries: [Query
     }
 }
 
+function isWorkoutHistoryResponse(value: unknown): value is WorkoutHistoryResponse {
+    if (!value || typeof value !== 'object') return false
+    const candidate = value as Partial<WorkoutHistoryResponse>
+    return Array.isArray(candidate.items) && typeof candidate.total === 'number'
+}
+
 export function appendCalendarWorkoutForMatchingMonth(
     queryClient: QueryClient,
     entry: CalendarWorkout,
@@ -244,7 +250,7 @@ export function replaceHistoryListTemporalId(
     queryClient.setQueriesData<WorkoutHistoryResponse>(
         { queryKey: ['workouts', 'history'], exact: false },
         (old) => {
-            if (!old?.items?.length) return old
+            if (!isWorkoutHistoryResponse(old) || old.items.length === 0) return old
             const idx = old.items.findIndex((w) => w.id === fromId)
             if (idx < 0) {
                 if (old.items.some((w) => w.id === item.id)) return old
@@ -265,7 +271,7 @@ export function prependHistoryListItem(queryClient: QueryClient, item: WorkoutHi
     queryClient.setQueriesData<WorkoutHistoryResponse>(
         { queryKey: ['workouts', 'history'], exact: false },
         (old) => {
-            if (!old) return old
+            if (!isWorkoutHistoryResponse(old)) return old
             if (old.items.some((w) => w.id === item.id)) return old
             return {
                 ...old,
@@ -414,7 +420,7 @@ export function patchHistoryListItemComplete(
     queryClient.setQueriesData<WorkoutHistoryResponse>(
         { queryKey: ['workouts', 'history'], exact: false },
         (old) => {
-            if (!old?.items?.length) return old
+            if (!isWorkoutHistoryResponse(old) || old.items.length === 0) return old
             const idx = old.items.findIndex((w) => w.id === workoutId)
             if (idx < 0) return old
             const items = [...old.items]

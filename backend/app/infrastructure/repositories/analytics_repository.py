@@ -483,7 +483,8 @@ class AnalyticsRepository(SQLAlchemyRepository):
             WorkoutLog.date <= last_day,
         )
         tag_elements = func.jsonb_array_elements_text(
-            cast(WorkoutLog.tags, JSONB)).table_valued("tag").alias("tag_elements")
+            cast(WorkoutLog.tags, JSONB)
+        ).table_valued("tag").render_derived(name="tag_elements")
         result = await self.db.execute(
             select(
                 WorkoutLog.date.label("workout_date"),
@@ -535,7 +536,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         exercise_elements = (
             func.jsonb_array_elements(cast(WorkoutLog.exercises, JSONB))
             .table_valued("item")
-            .alias("exercise_elements")
+            .render_derived(name="exercise_elements")
         )
         exercise_id_expr = cast(
             exercise_elements.c.item.op("->>")("exercise_id"),
@@ -648,7 +649,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         exercise_elements = (
             func.jsonb_array_elements(cast(WorkoutLog.exercises, JSONB))
             .table_valued("item")
-            .alias("exercise_elements")
+            .render_derived(name="exercise_elements")
         )
         exercise_id_expr = cast(
             exercise_elements.c.item.op("->>")("exercise_id"),
