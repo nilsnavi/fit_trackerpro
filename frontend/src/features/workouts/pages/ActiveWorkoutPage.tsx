@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { CheckCircle2, Clock3, Dumbbell } from 'lucide-react'
 
 import { Button } from '@shared/ui/Button'
 import { ActiveWorkoutSessionDetailsCollapsible } from '@features/workouts/active/components/ActiveWorkoutSessionDetailsCollapsible'
@@ -398,6 +399,7 @@ export function ActiveWorkoutPage() {
     }, [workout, currentExerciseIndex, currentSetIndex])
 
     const allExercisesDone = exerciseCount > 0 && exercisesDoneCount >= exerciseCount
+    const activeSessionProgressPercent = totalSetCount > 0 ? Math.round((completedSetCount / totalSetCount) * 100) : 0
 
     const completion = useActiveWorkoutCompletion({
         workoutId,
@@ -710,7 +712,7 @@ export function ActiveWorkoutPage() {
     // PR UX: `pb-[calc(15rem+safe-area)]` — запас под раскрытый нижний rail, контент не упирается в панель.
     return (
         <div
-            className={`p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
+            className={`min-h-full bg-telegram-bg p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
         >
             {isActiveDraft && !isOnline ? (
                 <OfflineBanner variant="offline" offlineSetCount={offlineSetQueueSize} />
@@ -883,14 +885,35 @@ export function ActiveWorkoutPage() {
 
             {!isLoading && !errorMessage && workout && isActiveDraft ? (
                 <>
-                    <div className="space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm text-telegram-hint">
-                                {exerciseCount} упражнений · {exercisesDoneCount} выполнено
-                            </p>
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                                {elapsedLabel}
+                    <div className="rounded-2xl border border-border bg-telegram-secondary-bg/80 p-3 shadow-sm">
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                <Dumbbell className="h-4 w-4 text-primary" />
+                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exerciseCount}</p>
+                                <p className="text-[11px] leading-tight text-telegram-hint">упражнений</p>
+                            </div>
+                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exercisesDoneCount}</p>
+                                <p className="text-[11px] leading-tight text-telegram-hint">выполнено</p>
+                            </div>
+                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                <Clock3 className="h-4 w-4 text-primary" />
+                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{elapsedLabel}</p>
+                                <p className="text-[11px] leading-tight text-telegram-hint">время</p>
+                            </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs">
+                            <span className="font-medium text-telegram-hint">Общий прогресс</span>
+                            <span className="font-semibold text-telegram-text">
+                                {completedSetCount}/{totalSetCount} подходов
                             </span>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-telegram-bg">
+                            <div
+                                className="h-full rounded-full bg-primary transition-[width] duration-300"
+                                style={{ width: `${Math.min(100, Math.max(0, activeSessionProgressPercent))}%` }}
+                            />
                         </div>
                     </div>
 
@@ -932,7 +955,12 @@ export function ActiveWorkoutPage() {
                         Завершить тренировку
                     </Button>
 
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">Упражнения</p>
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">План тренировки</p>
+                        <span className="text-xs font-medium text-telegram-hint">
+                            {currentExerciseIndex + 1}/{exerciseCount}
+                        </span>
+                    </div>
 
                     <div className="flex flex-col gap-3">
                         {workout.exercises.map((exercise, index) => (
@@ -947,8 +975,8 @@ export function ActiveWorkoutPage() {
                         ))}
                     </div>
 
-                    <div className="rounded-xl border border-warning/35 bg-warning/10 p-3 space-y-2">
-                        <p className="text-sm text-telegram-text">
+                    <div className="rounded-2xl border border-warning/35 bg-warning/10 p-3 space-y-2">
+                        <p className="text-sm leading-relaxed text-telegram-text">
                             Черновик сохраняется автоматически до завершения сессии.
                         </p>
                     </div>

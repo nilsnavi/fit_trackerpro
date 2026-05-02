@@ -1,4 +1,4 @@
-import { Plus, Timer, Check } from 'lucide-react'
+import { Plus, Timer, Check, Minus } from 'lucide-react'
 import { WorkoutActionRail } from '@features/workouts/components/WorkoutActionRail'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
 import type { AddItemKind } from '../lib/activeWorkoutUtils'
@@ -39,8 +39,7 @@ export function ActiveWorkoutBottomActions({
 }: ActiveWorkoutBottomActionsProps) {
     if (!isActiveDraft) return null
 
-    /* PR UX note: before — collapsible rail started hidden (~20px handle), so +set/finish needed swipe-up every time.
-       after — rail starts expanded; user can still collapse via handle / swipe-down for more list space. */
+    /* Keep the rail collapsed by default so it does not cover the current-set inputs. */
     return (
         <>
             {/* Floating Action Button для завершения подхода */}
@@ -57,20 +56,20 @@ export function ActiveWorkoutBottomActions({
 
             <WorkoutActionRail
                 collapsible
-                defaultCollapsed={false}
+                defaultCollapsed
                 className="space-y-2"
                 topSlot={(
                     <>
                         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                            <span className="shrink-0 text-[11px] text-telegram-hint">Отдых:</span>
+                            <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">Отдых</span>
                             {(restPresets.length > 0 ? restPresets : FALLBACK_REST_PRESETS_SECONDS).map((seconds) => (
                                 <button
                                     key={`sticky-rest-${seconds}`}
                                     type="button"
                                     onClick={() => onSelectRestPreset(seconds)}
-                                    className={`min-h-[44px] min-w-[56px] shrink-0 touch-manipulation rounded-full px-4 py-2.5 text-sm font-medium ${restDefaultSeconds === seconds
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-telegram-secondary-bg text-telegram-text'
+                                    className={`min-h-[44px] min-w-[58px] shrink-0 touch-manipulation rounded-full px-4 py-2.5 text-sm font-semibold ${restDefaultSeconds === seconds
+                                        ? 'bg-primary text-primary-foreground shadow-primary'
+                                        : 'border border-border bg-telegram-secondary-bg text-telegram-text'
                                         }`}
                                 >
                                     {seconds < 60 ? `${seconds}с` : `${Math.floor(seconds / 60)}м`}
@@ -101,16 +100,18 @@ export function ActiveWorkoutBottomActions({
                     [
                         {
                             id: 'remove-set',
-                            label: '- Подход',
+                            label: 'Убрать',
                             variant: 'secondary',
+                            leftIcon: <Minus className="h-5 w-5" />,
                             onClick: onRemoveSet,
                             disabled: !currentExercise || currentExercise.sets_completed.length <= 1,
                             className: 'min-h-[56px]',
                         },
                         {
                             id: 'add-set',
-                            label: '+ Подход',
+                            label: 'Подход',
                             variant: 'secondary',
+                            leftIcon: <Plus className="h-5 w-5" />,
                             onClick: onAddSet,
                             disabled: !currentExercise,
                             className: 'min-h-[56px]',
