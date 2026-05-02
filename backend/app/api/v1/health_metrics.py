@@ -13,6 +13,11 @@ from app.application.health_service import HealthService
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.health import (
+    BodyMeasurementCreate,
+    BodyMeasurementHistoryResponse,
+    BodyMeasurementResponse,
+    BodyMeasurementType,
+    BodyMeasurementUpdate,
     DailyWellnessCreate,
     DailyWellnessResponse,
     GlucoseHistoryResponse,
@@ -31,6 +36,69 @@ from app.schemas.health import (
 )
 
 router = APIRouter()
+
+
+@router.post(
+    "/body-measurements",
+    response_model=BodyMeasurementResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_body_measurement(
+    measurement_data: BodyMeasurementCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.create_body_measurement(user_id=current_user.id, data=measurement_data)
+
+
+@router.get("/body-measurements", response_model=BodyMeasurementHistoryResponse)
+async def get_body_measurements(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    measurement_type: Optional[BodyMeasurementType] = Query(None),
+    latest: bool = Query(False),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.get_body_measurements(
+        user_id=current_user.id,
+        page=page,
+        page_size=page_size,
+        date_from=date_from,
+        date_to=date_to,
+        measurement_type=measurement_type,
+        latest=latest,
+    )
+
+
+@router.patch("/body-measurements/{measurement_id}", response_model=BodyMeasurementResponse)
+async def update_body_measurement(
+    measurement_id: int,
+    measurement_data: BodyMeasurementUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    return await service.update_body_measurement(
+        user_id=current_user.id,
+        measurement_id=measurement_id,
+        data=measurement_data,
+    )
+
+
+@router.delete("/body-measurements/{measurement_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_body_measurement(
+    measurement_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = HealthService(db)
+    await service.delete_body_measurement(user_id=current_user.id, measurement_id=measurement_id)
+    return None
 
 
 @router.post("/glucose", response_model=GlucoseLogResponse, status_code=status.HTTP_201_CREATED)

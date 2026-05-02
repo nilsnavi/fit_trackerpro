@@ -5,11 +5,82 @@ Pydantic models for health tracking endpoints
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 from app.schemas.enums import GlucoseMeasurementType, HealthDashboardPeriod
+
+BodyMeasurementType = Literal[
+    "chest",
+    "waist",
+    "hips",
+    "left_thigh",
+    "right_thigh",
+    "left_bicep",
+    "right_bicep",
+]
+
+
+class BodyMeasurementCreate(BaseModel):
+    """Request model for creating body circumference measurement."""
+
+    measurement_type: BodyMeasurementType = Field(
+        ...,
+        description="Body measurement type.",
+    )
+    value_cm: float = Field(
+        ...,
+        gt=0,
+        le=400,
+        description="Measurement value in centimeters.",
+    )
+    measured_at: date = Field(
+        ...,
+        description="Measurement date in YYYY-MM-DD format.",
+    )
+
+
+class BodyMeasurementUpdate(BaseModel):
+    """Request model for updating body circumference measurement."""
+
+    measurement_type: Optional[BodyMeasurementType] = Field(
+        None,
+        description="Body measurement type.",
+    )
+    value_cm: Optional[float] = Field(
+        None,
+        gt=0,
+        le=400,
+        description="Measurement value in centimeters.",
+    )
+    measured_at: Optional[date] = Field(
+        None,
+        description="Measurement date in YYYY-MM-DD format.",
+    )
+
+
+class BodyMeasurementResponse(BaseModel):
+    """Body measurement response."""
+
+    id: int
+    user_id: int
+    measurement_type: str
+    value_cm: float
+    measured_at: date
+    created_at: datetime
+    updated_at: datetime
+
+
+class BodyMeasurementHistoryResponse(BaseModel):
+    """Body measurements history response."""
+
+    items: List[BodyMeasurementResponse]
+    total: int
+    page: int
+    page_size: int
+    date_from: Optional[date]
+    date_to: Optional[date]
 
 
 class WaterEntryCreate(BaseModel):

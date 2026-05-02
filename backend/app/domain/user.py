@@ -11,6 +11,7 @@ from sqlalchemy.sql import func
 from app.domain.base import Base
 
 if TYPE_CHECKING:
+    from .body_measurement import BodyMeasurement
     from .challenge import Challenge
     from .daily_wellness import DailyWellness
     from .emergency_contact import EmergencyContact
@@ -123,6 +124,11 @@ class User(Base):
         "GlucoseLog",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    body_measurements: Mapped[list["BodyMeasurement"]] = relationship(
+        "BodyMeasurement",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
     daily_wellness_entries: Mapped[list["DailyWellness"]] = relationship(
         "DailyWellness",

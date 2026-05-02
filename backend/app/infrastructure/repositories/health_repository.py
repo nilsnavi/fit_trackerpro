@@ -5,6 +5,7 @@ from typing import Optional
 
 from sqlalchemy import and_, desc, func, select
 
+from app.domain.body_measurement import BodyMeasurement
 from app.domain.daily_wellness import DailyWellness
 from app.domain.glucose_log import GlucoseLog
 from app.domain.water_entry import WaterEntry
@@ -26,6 +27,91 @@ class HealthRepository(SQLAlchemyRepository):
             )
         )
         return result.scalar_one_or_none()
+
+    async def count_body_measurements(
+        self,
+        user_id: int,
+        date_from: Optional[date],
+        date_to: Optional[date],
+        measurement_type: Optional[str],
+    ) -> int:
+        query = select(func.count(BodyMeasurement.id)).where(BodyMeasurement.user_id == user_id)
+        if date_from:
+            query = query.where(BodyMeasurement.measured_at >= date_from)
+        if date_to:
+            query = query.where(BodyMeasurement.measured_at <= date_to)
+        if measurement_type:
+            query = query.where(BodyMeasurement.measurement_type == measurement_type)
+        result = await self.db.execute(query)
+        return int(result.scalar() or 0)
+
+    async def list_body_measurements(
+        self,
+        user_id: int,
+        page: int,
+        page_size: int,
+        date_from: Optional[date],
+        date_to: Optional[date],
+        measurement_type: Optional[str],
+    ):
+        query = select(BodyMeasurement).where(BodyMeasurement.user_id == user_id)
+        if date_from:
+            query = query.where(BodyMeasurement.measured_at >= date_from)
+        if date_to:
+            query = query.where(BodyMeasurement.measured_at <= date_to)
+        if measurement_type:
+            query = query.where(BodyMeasurement.measurement_type == measurement_type)
+        query = query.order_by(
+            desc(BodyMeasurement.measured_at),
+            desc(BodyMeasurement.id),
+        ).offset((page - 1) * page_size).limit(page_size)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    async def list_latest_body_measurements(self, user_id: int):
+        result = await self.db.execute(
+            select(BodyMeasurement)
+            .where(BodyMeasurement.user_id == user_id)
+            .order_by(
+                BodyMeasurement.measurement_type,
+                desc(BodyMeasurement.measured_at),
+                desc(BodyMeasurement.id),
+            )
+        )
+        latest = {}
+        for measurement in result.scalars().all():
+            latest.setdefault(measurement.measurement_type, measurement)
+        return list(latest.values())
+
+    async def get_body_measurement(
+        self,
+        user_id: int,
+        measurement_id: int,
+    ) -> Optional[BodyMeasurement]:
+        result = await self.db.execute(
+            select(BodyMeasurement).where(
+                and_(
+                    BodyMeasurement.id == measurement_id,
+                    BodyMeasurement.user_id == user_id,
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def create_body_measurement(self, measurement: BodyMeasurement) -> BodyMeasurement:
+        self.add(measurement)
+        await self.commit()
+        await self.refresh(measurement)
+        return measurement
+
+    async def update_body_measurement(self, measurement: BodyMeasurement) -> BodyMeasurement:
+        await self.commit()
+        await self.refresh(measurement)
+        return measurement
+
+    async def delete_body_measurement(self, measurement: BodyMeasurement) -> None:
+        await self.delete(measurement)
+        await self.commit()
 
     async def count_glucose_logs(
         self,

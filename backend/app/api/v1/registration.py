@@ -75,6 +75,12 @@ def register_v1_routes(app: FastAPI) -> None:
         tags=[TAG_HEALTH_METRICS],
         **auth_mount_kw,
     )
+    api_v1.include_router(
+        health_metrics_router,
+        prefix="/health",
+        tags=[TAG_HEALTH_METRICS],
+        **auth_mount_kw,
+    )
     api_v1.include_router(analytics_router, prefix="/analytics", tags=[TAG_ANALYTICS], **auth_mount_kw)
     api_v1.include_router(
         achievements_router,

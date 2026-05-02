@@ -6,6 +6,7 @@ import {
 import { queryKeys } from '@shared/api/queryKeys'
 import { healthApi } from '@shared/api/domains/healthApi'
 import type {
+    BodyMeasurement,
     GlucoseReading,
     WaterGoal,
     WaterReminder,
@@ -17,6 +18,56 @@ const WELLNESS_RECENT_LIMIT = 30
 
 const getTodayDate = (): string => {
     return new Date().toISOString().split('T')[0]
+}
+
+export function useBodyMeasurementsQuery(params?: {
+    page?: number
+    page_size?: number
+    date_from?: string
+    date_to?: string
+    measurement_type?: BodyMeasurement['measurement_type']
+    latest?: boolean
+}) {
+    return useQuery({
+        queryKey: queryKeys.health.bodyMeasurements(params),
+        queryFn: () => healthApi.getBodyMeasurements(params),
+    })
+}
+
+export function useAddBodyMeasurementMutation() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: healthApi.addBodyMeasurement,
+        onSuccess: async () => {
+            await qc.invalidateQueries({ queryKey: ['health', 'bodyMeasurements'] })
+        },
+    })
+}
+
+export function useUpdateBodyMeasurementMutation() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: ({
+            measurementId,
+            payload,
+        }: {
+            measurementId: number
+            payload: Partial<Pick<BodyMeasurement, 'measurement_type' | 'value_cm' | 'measured_at'>>
+        }) => healthApi.updateBodyMeasurement(measurementId, payload),
+        onSuccess: async () => {
+            await qc.invalidateQueries({ queryKey: ['health', 'bodyMeasurements'] })
+        },
+    })
+}
+
+export function useDeleteBodyMeasurementMutation() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (measurementId: number) => healthApi.deleteBodyMeasurement(measurementId),
+        onSuccess: async () => {
+            await qc.invalidateQueries({ queryKey: ['health', 'bodyMeasurements'] })
+        },
+    })
 }
 
 export function useWaterGoalQuery() {

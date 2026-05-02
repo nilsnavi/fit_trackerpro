@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.body_measurement import BodyMeasurement
 from app.domain.daily_wellness import DailyWellness
 from app.domain.exceptions import HealthNotFoundError
 from app.domain.glucose_log import GlucoseLog
@@ -15,6 +16,10 @@ from app.domain.water_reminder import WaterReminder
 from app.infrastructure.cache import invalidate_user_analytics_cache
 from app.infrastructure.repositories.health_repository import HealthRepository
 from app.schemas.health import (
+    BodyMeasurementCreate,
+    BodyMeasurementHistoryResponse,
+    BodyMeasurementResponse,
+    BodyMeasurementUpdate,
     DailyWellnessCreate,
     DailyWellnessResponse,
     GlucoseHistoryResponse,
@@ -39,6 +44,98 @@ from app.schemas.health import (
 class HealthService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = HealthRepository(db)
+
+    async def create_body_measurement(
+        self,
+        user_id: int,
+        data: BodyMeasurementCreate,
+    ) -> BodyMeasurementResponse:
+        measurement = BodyMeasurement(
+            user_id=user_id,
+            measurement_type=data.measurement_type,
+            value_cm=data.value_cm,
+            measured_at=data.measured_at,
+        )
+        measurement = await self.repository.create_body_measurement(measurement)
+        return BodyMeasurementResponse.model_validate(measurement, from_attributes=True)
+
+    async def get_body_measurements(
+        self,
+        user_id: int,
+        page: int,
+        page_size: int,
+        date_from: Optional[date],
+        date_to: Optional[date],
+        measurement_type: Optional[str],
+        latest: bool,
+    ) -> BodyMeasurementHistoryResponse:
+        if latest:
+            measurements = await self.repository.list_latest_body_measurements(user_id=user_id)
+            return BodyMeasurementHistoryResponse(
+                items=[
+                    BodyMeasurementResponse.model_validate(m, from_attributes=True)
+                    for m in measurements
+                ],
+                total=len(measurements),
+                page=1,
+                page_size=len(measurements),
+                date_from=None,
+                date_to=None,
+            )
+
+        total = await self.repository.count_body_measurements(
+            user_id=user_id,
+            date_from=date_from,
+            date_to=date_to,
+            measurement_type=measurement_type,
+        )
+        measurements = await self.repository.list_body_measurements(
+            user_id=user_id,
+            page=page,
+            page_size=page_size,
+            date_from=date_from,
+            date_to=date_to,
+            measurement_type=measurement_type,
+        )
+        return BodyMeasurementHistoryResponse(
+            items=[
+                BodyMeasurementResponse.model_validate(m, from_attributes=True)
+                for m in measurements
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
+            date_from=date_from,
+            date_to=date_to,
+        )
+
+    async def update_body_measurement(
+        self,
+        user_id: int,
+        measurement_id: int,
+        data: BodyMeasurementUpdate,
+    ) -> BodyMeasurementResponse:
+        measurement = await self.repository.get_body_measurement(
+            user_id=user_id,
+            measurement_id=measurement_id,
+        )
+        if not measurement:
+            raise HealthNotFoundError("Body measurement not found")
+
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(measurement, field, value)
+        measurement = await self.repository.update_body_measurement(measurement)
+        return BodyMeasurementResponse.model_validate(measurement, from_attributes=True)
+
+    async def delete_body_measurement(self, user_id: int, measurement_id: int) -> None:
+        measurement = await self.repository.get_body_measurement(
+            user_id=user_id,
+            measurement_id=measurement_id,
+        )
+        if not measurement:
+            raise HealthNotFoundError("Body measurement not found")
+        await self.repository.delete_body_measurement(measurement)
 
     async def create_glucose_log(self, user_id: int, data: GlucoseLogCreate) -> GlucoseLogResponse:
         if data.workout_id:

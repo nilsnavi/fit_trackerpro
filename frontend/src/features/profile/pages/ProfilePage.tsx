@@ -24,11 +24,13 @@ import {
     ChevronRight,
     X,
     Check,
+    Save,
     Trash2,
     Plus,
     Calendar,
     Flame,
-    Activity
+    Activity,
+    ScanLine
 } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
 import { Button } from '@shared/ui/Button';
@@ -38,6 +40,14 @@ import { ProgressBar } from '@shared/ui/ProgressBar';
 import { Modal } from '@shared/ui/Modal';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import { useAchievements } from '@features/achievements/hooks/useAchievements';
+import {
+    useAddBodyMeasurementMutation,
+    useBodyMeasurementsQuery,
+} from '@features/health/hooks/useHealthQueries';
+import type {
+    BodyMeasurement,
+    BodyMeasurementType,
+} from '@features/health/types/metrics';
 import { useProfile } from '@features/profile/hooks/useProfile';
 import { ProfileShowcase } from '@features/achievements/components';
 import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
@@ -69,6 +79,16 @@ const LIMITATION_OPTIONS = [
     { value: 'neck', label: 'Шея', description: 'Проблемы с шеей' },
 ];
 
+const BODY_MEASUREMENT_FIELDS: Array<{ key: BodyMeasurementType; label: string }> = [
+    { key: 'chest', label: 'Обхват груди' },
+    { key: 'waist', label: 'Обхват талии' },
+    { key: 'hips', label: 'Обхват бедер' },
+    { key: 'left_thigh', label: 'Обхват левого бедра' },
+    { key: 'right_thigh', label: 'Обхват правого бедра' },
+    { key: 'left_bicep', label: 'Обхват левого бицепса' },
+    { key: 'right_bicep', label: 'Обхват правого бицепса' },
+];
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -79,6 +99,17 @@ const formatDate = (date: Date): string => {
         month: 'long',
     });
 };
+
+const formatMeasurementDate = (value?: string): string => {
+    if (!value) return 'Дата не указана';
+    const [year, month, day] = value.split('-');
+    if (year && month && day) return `${day}.${month}.${year}`;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('ru-RU');
+};
+
+const todayInputValue = (): string => new Date().toISOString().slice(0, 10);
 
 // ============================================
 // Components
@@ -194,6 +225,136 @@ const EditableField: React.FC<EditableFieldProps> = ({ value, onSave, type = 'te
     );
 };
 
+interface BodyMeasurementsListProps {
+    measurements: Partial<Record<BodyMeasurementType, BodyMeasurement>>;
+    onSave: (key: BodyMeasurementType, valueCm: number, measuredAt: string) => Promise<void>;
+}
+
+const BodyMeasurementsList: React.FC<BodyMeasurementsListProps> = ({ measurements, onSave }) => {
+    const [drafts, setDrafts] = useState<Record<BodyMeasurementType, { value: string; date: string }>>(() => {
+        const today = todayInputValue();
+        return BODY_MEASUREMENT_FIELDS.reduce(
+            (acc, field) => {
+                const measurement = measurements?.[field.key];
+                acc[field.key] = {
+                    value: measurement?.value_cm ? String(measurement.value_cm) : '',
+                    date: measurement?.measured_at || today,
+                };
+                return acc;
+            },
+            {} as Record<BodyMeasurementType, { value: string; date: string }>,
+        );
+    });
+    const [savingKey, setSavingKey] = useState<BodyMeasurementType | null>(null);
+
+    useEffect(() => {
+        const today = todayInputValue();
+        setDrafts((current) => {
+            const next = { ...current };
+            BODY_MEASUREMENT_FIELDS.forEach((field) => {
+                const measurement = measurements?.[field.key];
+                next[field.key] = {
+                    value: measurement?.value_cm ? String(measurement.value_cm) : current[field.key]?.value || '',
+                    date: measurement?.measured_at || current[field.key]?.date || today,
+                };
+            });
+            return next;
+        });
+    }, [measurements]);
+
+    const updateDraft = (key: BodyMeasurementType, patch: Partial<{ value: string; date: string }>) => {
+        setDrafts((current) => ({
+            ...current,
+            [key]: {
+                ...current[key],
+                ...patch,
+            },
+        }));
+    };
+
+    const saveMeasurement = async (key: BodyMeasurementType) => {
+        const draft = drafts[key];
+        const normalizedValue = draft.value.replace(',', '.').trim();
+        const value = Number(normalizedValue);
+        if (!Number.isFinite(value) || value <= 0 || !draft.date) return;
+
+        try {
+            setSavingKey(key);
+            await onSave(key, value, draft.date);
+        } finally {
+            setSavingKey(null);
+        }
+    };
+
+    return (
+        <div className="space-y-3">
+            {BODY_MEASUREMENT_FIELDS.map((field) => {
+                const saved = measurements?.[field.key];
+                const draft = drafts[field.key] || { value: '', date: todayInputValue() };
+                const value = Number(draft.value.replace(',', '.'));
+                const canSave = Number.isFinite(value) && value > 0 && Boolean(draft.date);
+
+                return (
+                    <div
+                        key={field.key}
+                        className="rounded-xl bg-telegram-bg p-3"
+                    >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-medium text-telegram-text">{field.label}</p>
+                                <p className="text-xs text-telegram-hint">
+                                    {saved
+                                        ? `${saved.value_cm} см, ${formatMeasurementDate(saved.measured_at)}`
+                                        : 'Не указано'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={!canSave || savingKey === field.key}
+                                onClick={() => void saveMeasurement(field.key)}
+                                className={cn(
+                                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                                    canSave
+                                        ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                                        : 'bg-telegram-secondary-bg text-telegram-hint opacity-60',
+                                )}
+                                aria-label={`Сохранить ${field.label.toLowerCase()}`}
+                            >
+                                {savingKey === field.key ? (
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                ) : (
+                                    <Save className="h-4 w-4" />
+                                )}
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-[minmax(0,1fr)_minmax(8.5rem,0.9fr)] gap-2">
+                            <Input
+                                type="number"
+                                value={draft.value}
+                                onChange={(event) => updateDraft(field.key, { value: event.target.value })}
+                                placeholder="см"
+                                className="bg-telegram-secondary-bg"
+                                aria-label={`${field.label}, значение в см`}
+                            />
+                            <input
+                                type="date"
+                                value={draft.date}
+                                onChange={(event) => updateDraft(field.key, { date: event.target.value })}
+                                className={cn(
+                                    'w-full rounded-xl bg-telegram-secondary-bg px-3 py-3',
+                                    'text-sm text-telegram-text transition-all duration-200',
+                                    'focus:outline-none focus:ring-2 focus:ring-primary/20',
+                                )}
+                                aria-label={`${field.label}, дата измерения`}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 /**
  * Section Header Component
  */
@@ -243,6 +404,8 @@ export const ProfilePage: React.FC = () => {
         revokeCoachAccess,
         exportData,
     } = useProfile();
+    const bodyMeasurementsQuery = useBodyMeasurementsQuery({ latest: true });
+    const addBodyMeasurementMutation = useAddBodyMeasurementMutation();
 
     const [, setShowAllAchievements] = useState(false);
     const [, setShowSettings] = useState(false);
@@ -256,6 +419,26 @@ export const ProfilePage: React.FC = () => {
 
     const revokeAccess = async (accessId: string) => {
         await revokeCoachAccess(accessId);
+    };
+
+    const latestBodyMeasurements = (bodyMeasurementsQuery.data?.items || []).reduce(
+        (acc, measurement) => {
+            acc[measurement.measurement_type] = measurement;
+            return acc;
+        },
+        {} as Partial<Record<BodyMeasurementType, BodyMeasurement>>,
+    );
+
+    const saveBodyMeasurement = async (
+        key: BodyMeasurementType,
+        valueCm: number,
+        measuredAt: string,
+    ) => {
+        await addBodyMeasurementMutation.mutateAsync({
+            measurement_type: key,
+            value_cm: valueCm,
+            measured_at: measuredAt,
+        });
     };
 
     const handleLogout = async () => {
@@ -398,6 +581,18 @@ export const ProfilePage: React.FC = () => {
                         </>
                     )}
                 </div>
+            </div>
+
+            {/* Body Measurements */}
+            <div className="bg-telegram-secondary-bg rounded-2xl p-4">
+                <SectionHeader
+                    icon={<ScanLine className="w-5 h-5" />}
+                    title="Замеры тела"
+                />
+                <BodyMeasurementsList
+                    measurements={latestBodyMeasurements}
+                    onSave={saveBodyMeasurement}
+                />
             </div>
 
             {/* Achievements Showcase */}

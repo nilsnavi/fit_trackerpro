@@ -27,6 +27,8 @@ export const queryKeys = {
         templatesDetail: (templateId: number) => ['workouts', 'templates', 'detail', templateId] as const,
     },
     health: {
+        bodyMeasurements: (params?: Record<string, unknown>) =>
+            ['health', 'bodyMeasurements', params ?? {}] as const,
         waterGoal: ['health', 'water', 'goal'] as const,
         waterReminder: ['health', 'water', 'reminder'] as const,
         waterToday: ['health', 'water', 'today'] as const,

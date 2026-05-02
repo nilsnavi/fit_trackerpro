@@ -9,6 +9,7 @@ from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.domain.body_measurement import BodyMeasurement
 from app.domain.exceptions import UserNotFoundError
 from app.domain.user import User
 from app.domain.workout_log import WorkoutLog
@@ -139,6 +140,14 @@ class UsersService:
         )
         workouts = workouts_result.scalars().all()
 
+        body_measurements_result = await self.db.execute(
+            select(BodyMeasurement)
+            .where(BodyMeasurement.user_id == user.id)
+            .order_by(desc(BodyMeasurement.measured_at), desc(BodyMeasurement.id))
+            .limit(1000)
+        )
+        body_measurements = body_measurements_result.scalars().all()
+
         valid_templates = [t for t in templates if t.type in VALID_WORKOUT_TYPES]
         type_distribution = {
             t: sum(1 for row in valid_templates if row.type == t) for t in sorted(VALID_WORKOUT_TYPES)
@@ -187,6 +196,17 @@ class UsersService:
                     "comments": w.comments,
                 }
                 for w in workouts[:100]
+            ],
+            "body_measurements": [
+                {
+                    "id": int(m.id),
+                    "measurement_type": m.measurement_type,
+                    "value_cm": float(m.value_cm),
+                    "measured_at": m.measured_at.isoformat() if m.measured_at else None,
+                    "created_at": m.created_at.isoformat() if m.created_at else None,
+                    "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+                }
+                for m in body_measurements
             ],
         }
 
