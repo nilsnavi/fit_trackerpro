@@ -26,6 +26,7 @@ import type { WorkoutHistoryItem, WorkoutSessionUpdateRequest } from '@features/
 
 import { useConflictResolution } from '@features/workouts/components/ConflictResolutionUI'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
+import { ActiveCurrentSetPanel } from '@features/workouts/active/components/ActiveCurrentSetPanel'
 import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/WorkoutSyncQueueStatus'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
@@ -340,7 +341,7 @@ export function ActiveWorkoutPage() {
     const hasPreviousSetWithRpe = useMemo(() => {
         if (!currentExercise || currentSetIndex === 0) return false
         const previousSet = currentExercise.sets_completed[currentSetIndex - 1]
-        return previousSet?.completed && previousSet?.rpe != null
+        return previousSet?.rpe != null
     }, [currentExercise, currentSetIndex])
 
     const {
@@ -504,6 +505,17 @@ export function ActiveWorkoutPage() {
         updateSet(currentExerciseIndex, currentSet.set_number, { completed: false })
         goToNextSet()
     }
+
+    const handleCompleteCurrentSetQuick = useCallback(() => {
+        if (!currentSet) return
+        handleToggleSetCompletedWithAdvance(currentExerciseIndex, currentSet.set_number, true)
+    }, [currentExerciseIndex, currentSet, handleToggleSetCompletedWithAdvance])
+
+    const handleAddSetWithRest = useCallback(() => {
+        exerciseActions.handleAddSetToCurrentExercise()
+        startRestTimer(restDefaultSeconds)
+        notifySetCompleted()
+    }, [exerciseActions, notifySetCompleted, restDefaultSeconds, startRestTimer])
 
     const handleExerciseCardOpen = useCallback(
         (index: number) => {
@@ -882,6 +894,30 @@ export function ActiveWorkoutPage() {
                         </div>
                     </div>
 
+                    <ActiveCurrentSetPanel
+                        exercise={currentExercise}
+                        set={currentSet}
+                        exerciseIndex={currentExerciseIndex}
+                        setIndex={normalizedCurrentSetIndex}
+                        exerciseCount={exerciseCount}
+                        completedSetCount={completedSetCount}
+                        totalSetCount={totalSetCount}
+                        elapsedLabel={elapsedLabel}
+                        restDefaultSeconds={restDefaultSeconds}
+                        hasPrevExercise={hasPrevExercise}
+                        hasNextExercise={hasNextExercise}
+                        weightRecommendation={weightRecommendation}
+                        isWeightRecLoading={isWeightRecLoading}
+                        isWeightRecError={isWeightRecError}
+                        onUpdateSet={updateSet}
+                        onCompleteSet={handleCompleteCurrentSetQuick}
+                        onSkipSet={handleSkipCurrentSetQuick}
+                        onAddSet={handleAddSetWithRest}
+                        onStartRest={handleStartQuickRest}
+                        onGoToPreviousExercise={goToPreviousExercise}
+                        onGoToNextExercise={goToNextExercise}
+                    />
+
                     <Button
                         type="button"
                         variant="secondary"
@@ -1062,7 +1098,7 @@ export function ActiveWorkoutPage() {
                         onSelectRestPreset={handleSelectRestPreset}
                         onAddItem={exerciseActions.resetAddItemForm}
                         onRemoveSet={exerciseActions.handleRemoveLastSetFromCurrentExercise}
-                        onAddSet={exerciseActions.handleAddSetToCurrentExercise}
+                        onAddSet={handleAddSetWithRest}
                         onFinishWorkout={completion.handleOpenFinishSheet}
                         hideFinishButton
                     />
