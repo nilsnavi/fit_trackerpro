@@ -58,7 +58,7 @@ services:
       [
         "sh",
         "-c",
-        "python /backend/tools/bootstrap_alembic_version.py /migrations/alembic.ini && python -m alembic -c /migrations/alembic.ini upgrade head",
+        "python /backend/tools/bootstrap_alembic_version.py /migrations/alembic.ini && python -m alembic -c /migrations/alembic.ini upgrade head && python -m app.cli.seed_reference_data --data-dir /backend/reference_data apply",
       ]
     depends_on:
       postgres:

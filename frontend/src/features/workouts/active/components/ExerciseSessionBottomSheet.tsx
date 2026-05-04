@@ -220,7 +220,7 @@ export const ExerciseSessionBottomSheet = memo(function ExerciseSessionBottomShe
     const durationMinutes = useMemo(() => {
         const sec = typeof currentSet?.duration === 'number' ? currentSet.duration : 0
         return Math.max(1, Math.round(sec / 60) || 1)
-    }, [currentSet?.duration])
+    }, [currentSet])
 
     const adjustTreadmillMinutes = useCallback(
         (delta: number) => {

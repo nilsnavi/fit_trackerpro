@@ -35,6 +35,7 @@ const CATEGORIES: { value: ExerciseCategory; label: string }[] = [
     { value: 'flexibility', label: 'Гибкость' },
     { value: 'balance', label: 'Баланс' },
     { value: 'sport', label: 'Спорт' },
+    { value: 'rehab', label: 'ЛФК' },
 ];
 
 const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string; icon: string }[] = [
@@ -54,6 +55,7 @@ const MUSCLE_GROUPS: Record<Exclude<ExerciseCategory, 'all'>, string[]> = {
     flexibility: ['Всё тело', 'Спина', 'Ноги', 'Плечи', 'Бёдра'],
     balance: ['Кор', 'Ноги', 'Ягодицы', 'Спина'],
     sport: ['Всё тело', 'Ноги', 'Кор', 'Плечи'],
+    rehab: ['Спина', 'Плечи', 'Бёдра', 'Колени', 'Стопы', 'Кор'],
 };
 
 const RISK_OPTIONS: { value: RiskType; label: string; description: string }[] = [

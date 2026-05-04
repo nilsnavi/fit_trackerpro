@@ -28,6 +28,7 @@ import type { WorkoutHistoryItem, WorkoutSessionUpdateRequest } from '@features/
 import { useConflictResolution } from '@features/workouts/components/ConflictResolutionUI'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
 import { ActiveCurrentSetPanel } from '@features/workouts/active/components/ActiveCurrentSetPanel'
+import { ActiveWorkoutScreen } from '@features/workouts/active/components/ActiveWorkoutScreen'
 import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/WorkoutSyncQueueStatus'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
@@ -66,7 +67,6 @@ import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfir
 import { ActiveWorkoutSummarySection } from '@features/workouts/active/containers/ActiveWorkoutSummarySection'
 import { ActiveWorkoutExerciseSection } from '@features/workouts/active/containers/ActiveWorkoutExerciseSection'
 import { ActiveWorkoutBottomActions } from '@features/workouts/active/containers/ActiveWorkoutBottomActions'
-import { WorkoutSessionScreenHeader } from '@features/workouts/active/components/WorkoutSessionScreenHeader'
 import { WorkoutExerciseCard } from '@features/workouts/active/components/WorkoutExerciseCard'
 import { ExerciseSessionBottomSheet } from '@features/workouts/active/components/ExerciseSessionBottomSheet'
 import { WorkoutSessionRestOverlay } from '@features/workouts/active/components/WorkoutSessionRestOverlay'
@@ -75,6 +75,7 @@ import { computeWorkoutSessionSummaryMetrics } from '@features/workouts/active/l
 const ActiveWorkoutModals = lazy(() =>
     import('@features/workouts/active/containers/ActiveWorkoutModals').then((m) => ({ default: m.ActiveWorkoutModals })),
 )
+const renderLegacyActiveWorkoutDebug = false
 
 /** Экран активной сессии (макет «WorkoutSessionScreen»). */
 export function ActiveWorkoutPage() {
@@ -84,8 +85,8 @@ export function ActiveWorkoutPage() {
     const tg = useTelegramWebApp()
     const { isOnline } = useNetworkStatus()
     const [reconnectBanner, setReconnectBanner] = useState<'hidden' | 'syncing' | 'saved'>('hidden')
-    const [sessionMenuOpen, setSessionMenuOpen] = useState(false)
     const [finishSessionConfirmOpen, setFinishSessionConfirmOpen] = useState(false)
+    const [isInlineSetSaving, setIsInlineSetSaving] = useState(false)
     const prevOnlineRef = useRef(isOnline)
 
     const modalExerciseIndex = useWorkoutSessionUiStore((s) => s.modalExerciseIndex)
@@ -339,11 +340,11 @@ export function ActiveWorkoutPage() {
      * Проверяем, есть ли предыдущий завершённый подход с RPE для текущего упражнения.
      * Recommendation показывается для текущего подхода, если предыдущий был завершён с RPE.
      */
+    const recommendationExercise = workout?.exercises[currentExerciseIndex] ?? currentExercise
     const hasPreviousSetWithRpe = useMemo(() => {
-        if (!currentExercise || currentSetIndex === 0) return false
-        const previousSet = currentExercise.sets_completed[currentSetIndex - 1]
-        return previousSet?.rpe != null
-    }, [currentExercise, currentSetIndex])
+        if (!recommendationExercise) return false
+        return recommendationExercise.sets_completed.some((set) => set.completed && set.rpe != null)
+    }, [recommendationExercise])
 
     const {
         data: weightRecommendation,
@@ -351,8 +352,18 @@ export function ActiveWorkoutPage() {
         isError: isWeightRecError,
     } = useWeightRecommendation(
         workoutId,
-        currentExercise?.exercise_id ?? 0,
-        Boolean(isActiveDraft && currentExercise?.exercise_id && hasPreviousSetWithRpe && !currentSet?.completed),
+        recommendationExercise?.exercise_id ?? 0,
+        Boolean(isActiveDraft && recommendationExercise?.exercise_id && hasPreviousSetWithRpe),
+    )
+    const legacyWeightRecommendation = useMemo(
+        () =>
+            weightRecommendation
+                ? {
+                    suggested_weight: weightRecommendation.suggested_weight ?? undefined,
+                    message: weightRecommendation.message,
+                }
+                : undefined,
+        [weightRecommendation],
     )
 
     useActiveWorkoutLifecycle({
@@ -518,6 +529,17 @@ export function ActiveWorkoutPage() {
         startRestTimer(restDefaultSeconds)
         notifySetCompleted()
     }, [exerciseActions, notifySetCompleted, restDefaultSeconds, startRestTimer])
+
+    const handleInlineSetChanged = useCallback(() => {
+        setIsInlineSetSaving(true)
+        notifySetCompleted()
+        void queryClient.invalidateQueries({
+            queryKey: ['weight-recommendation', workoutId, recommendationExercise?.exercise_id ?? 0],
+        })
+        window.setTimeout(() => {
+            setIsInlineSetSaving(false)
+        }, 350)
+    }, [notifySetCompleted, queryClient, recommendationExercise?.exercise_id, workoutId])
 
     const handleExerciseCardOpen = useCallback(
         (index: number) => {
@@ -803,72 +825,7 @@ export function ActiveWorkoutPage() {
                 </Suspense>
             ) : null}
 
-            {isActiveDraft && workout ? (
-                <WorkoutSessionScreenHeader
-                    title={workoutTitle}
-                    onBack={() => guardedAction(() => navigate('/workouts'))}
-                    syncState={syncState}
-                    pendingCount={syncPendingItems.length}
-                    menuOpen={sessionMenuOpen}
-                    onMenuToggle={() => setSessionMenuOpen((v) => !v)}
-                    menuContent={(
-                        <div className="py-1">
-                            {repeatSource ? (
-                                <button
-                                    type="button"
-                                    className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                    onClick={() => {
-                                        exerciseActions.handleRepeatPrevious()
-                                        setSessionMenuOpen(false)
-                                    }}
-                                >
-                                    Повторить прошлую
-                                </button>
-                            ) : null}
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                onClick={() => {
-                                    exerciseActions.resetAddItemForm('exercise')
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Добавить упражнение
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                onClick={() => {
-                                    exerciseActions.resetAddItemForm('timer')
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Добавить таймер
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                onClick={() => {
-                                    openRestPresets()
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Пресеты отдыха
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-danger hover:bg-danger/10"
-                                onClick={() => {
-                                    completion.openAbandonConfirm()
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Отменить тренировку
-                            </button>
-                        </div>
-                    )}
-                />
-            ) : (
+            {isActiveDraft && workout ? null : (
                 <ActiveWorkoutHeader
                     onBack={() => guardedAction(() => navigate('/workouts'))}
                     syncState={syncState}
@@ -885,6 +842,29 @@ export function ActiveWorkoutPage() {
 
             {!isLoading && !errorMessage && workout && isActiveDraft ? (
                 <>
+                    <ActiveWorkoutScreen
+                        workoutId={workoutId}
+                        workout={workout}
+                        workoutTitle={workoutTitle}
+                        elapsedSeconds={elapsedSeconds}
+                        currentExerciseIndex={currentExerciseIndex}
+                        previousBestByExercise={previousBestByExercise}
+                        weightRecommendation={weightRecommendation}
+                        isWeightRecLoading={isWeightRecLoading}
+                        isWeightRecError={isWeightRecError}
+                        isSavingSet={isInlineSetSaving || updateSessionMutation.isPending}
+                        onBack={() => guardedAction(() => navigate(-1))}
+                        onSelectExercise={handleSelectExerciseIndex}
+                        onPatchWorkout={patchItem}
+                        onUpdateSet={updateSet}
+                        onNotifySetCompleted={handleInlineSetChanged}
+                        onSetLastCompletedSet={setLastCompletedSet}
+                        onAddExercise={() => exerciseActions.resetAddItemForm('exercise')}
+                        onFinishWorkout={() => setFinishSessionConfirmOpen(true)}
+                    />
+
+                    {renderLegacyActiveWorkoutDebug ? (
+                        <>
                     <div className="rounded-2xl border border-border bg-telegram-secondary-bg/80 p-3 shadow-sm">
                         <div className="grid grid-cols-3 gap-2">
                             <div className="rounded-xl bg-telegram-bg/80 p-3">
@@ -929,7 +909,7 @@ export function ActiveWorkoutPage() {
                         restDefaultSeconds={restDefaultSeconds}
                         hasPrevExercise={hasPrevExercise}
                         hasNextExercise={hasNextExercise}
-                        weightRecommendation={weightRecommendation}
+                        weightRecommendation={legacyWeightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
                         onUpdateSet={updateSet}
@@ -963,7 +943,7 @@ export function ActiveWorkoutPage() {
                     </div>
 
                     <div className="flex flex-col gap-3">
-                        {workout.exercises.map((exercise, index) => (
+                        {workout!.exercises.map((exercise, index) => (
                             <WorkoutExerciseCard
                                 key={`${exercise.exercise_id}-${index}`}
                                 exercise={exercise}
@@ -1003,7 +983,7 @@ export function ActiveWorkoutPage() {
                     ) : null}
 
                     <ActiveWorkoutSessionDetailsCollapsible
-                        workout={workout}
+                        workout={workout!}
                         workoutTitle={workoutTitle}
                         elapsedLabel={elapsedLabel}
                         isActiveDraft={isActiveDraft}
@@ -1019,8 +999,8 @@ export function ActiveWorkoutPage() {
                         <ExerciseSessionBottomSheet
                             isOpen
                             onClose={closeExerciseModal}
-                            exercise={modalExercise}
-                            exerciseIndex={modalExerciseIndex}
+                            exercise={modalExercise!}
+                            exerciseIndex={modalExerciseIndex!}
                             readOnly={modalSessionStatus === 'done'}
                             sessionStatus={modalSessionStatus}
                             currentExerciseIndex={currentExerciseIndex}
@@ -1033,10 +1013,13 @@ export function ActiveWorkoutPage() {
                             onCompleteSet={handleSheetComplete}
                             onSkipSet={handleSheetSkip}
                             onUpdateSetRpe={handleModalUpdateRpe}
-                            weightRecommendation={modalExerciseIndex === currentExerciseIndex ? weightRecommendation : undefined}
+                            weightRecommendation={modalExerciseIndex === currentExerciseIndex ? legacyWeightRecommendation : undefined}
                             isWeightRecLoading={modalExerciseIndex === currentExerciseIndex ? isWeightRecLoading : false}
                             isWeightRecError={modalExerciseIndex === currentExerciseIndex ? isWeightRecError : false}
                         />
+                    ) : null}
+
+                        </>
                     ) : null}
 
                     <WorkoutConfirmModal
@@ -1101,7 +1084,7 @@ export function ActiveWorkoutPage() {
                         onAdjustWeight={exerciseActions.handleAdjustWeight}
                         onUpdateSet={updateSet}
                         onNotesChange={exerciseActions.handleExerciseNotesChange}
-                        weightRecommendation={weightRecommendation}
+                        weightRecommendation={legacyWeightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
                         hasNextExercise={hasNextExercise}
@@ -1113,7 +1096,7 @@ export function ActiveWorkoutPage() {
                 </>
             ) : null}
 
-            {isActiveDraft && !isLoading && !errorMessage && workout && (
+            {renderLegacyActiveWorkoutDebug && isActiveDraft && !isLoading && !errorMessage && workout && (
                 <>
                     <WorkoutSessionRestOverlay onTimerEnd={handleRestTimerEnd} />
                     <FloatingRestTimer workout={workout} onUpdateSet={updateSet} />

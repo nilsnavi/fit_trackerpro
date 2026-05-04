@@ -3079,7 +3079,7 @@ export type components = {
          * ExerciseCategory
          * @enum {string}
          */
-        ExerciseCategory: "strength" | "cardio" | "flexibility" | "balance" | "sport";
+        ExerciseCategory: "strength" | "cardio" | "flexibility" | "balance" | "sport" | "rehab";
         /** ExerciseCategoryItem */
         ExerciseCategoryItem: {
             /** Icon */

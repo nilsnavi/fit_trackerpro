@@ -17,6 +17,7 @@ import type {
     CalendarWorkout,
     WorkoutSetPatchRequest,
     WorkoutSetResponse,
+    WeightRecommendationResponse,
 } from '@features/workouts/types/workouts'
 
 function normalizeWorkoutStartResponse(response: WorkoutStartResponse): WorkoutStartResponse {
@@ -182,6 +183,15 @@ export const workoutsApi = {
         return api.patch<WorkoutSetResponse>(
             `/workouts/${workoutId}/sets/${setId}`,
             payload,
+        )
+    },
+
+    getWeightRecommendation(
+        sessionId: number,
+        exerciseId: number,
+    ): Promise<WeightRecommendationResponse> {
+        return api.get<WeightRecommendationResponse>(
+            `/workouts/sessions/${sessionId}/exercises/${exerciseId}/weight-recommendation`,
         )
     },
 }

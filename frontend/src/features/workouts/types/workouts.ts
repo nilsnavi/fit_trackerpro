@@ -113,6 +113,12 @@ export interface WorkoutSetResponse {
     notes?: string | null
 }
 
+export interface WeightRecommendationResponse {
+    recommendation: 'increase' | 'keep' | 'decrease' | 'no_data'
+    suggested_weight?: number | null
+    message: string
+}
+
 export interface CompletedExercise {
     exercise_id: number
     name: string

@@ -11,6 +11,7 @@ class ExerciseCategory(StrEnum):
     FLEXIBILITY = "flexibility"
     BALANCE = "balance"
     SPORT = "sport"
+    REHAB = "rehab"
 
 
 class ExerciseStatus(StrEnum):

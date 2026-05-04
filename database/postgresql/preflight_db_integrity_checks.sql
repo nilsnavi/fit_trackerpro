@@ -89,7 +89,7 @@ WHERE type NOT IN ('cardio', 'strength', 'flexibility', 'mixed');
 -- EXERCISES: category + status allowed sets
 SELECT COUNT(*) AS invalid_exercises_category
 FROM public.exercises
-WHERE category NOT IN ('strength', 'cardio', 'flexibility', 'balance', 'sport');
+WHERE category NOT IN ('strength', 'cardio', 'flexibility', 'balance', 'sport', 'rehab');
 
 SELECT COUNT(*) AS invalid_exercises_status
 FROM public.exercises
