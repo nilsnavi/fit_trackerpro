@@ -12,7 +12,7 @@ import type {
 
 export const exercisesApi = {
     list(params?: ExerciseListApiParams): Promise<ExerciseListApiResponse> {
-        return api.get<ExerciseListApiResponse>('/exercises', params as Record<string, unknown> | undefined)
+        return api.get<ExerciseListApiResponse>('/exercises/', params as Record<string, unknown> | undefined)
     },
     /** Multipart custom exercise (same URL as AddExercise form). */
     createCustom(formData: FormData): Promise<ExerciseApiItem> {
@@ -22,7 +22,7 @@ export const exercisesApi = {
         return api.get<ExerciseApiItem>(`/exercises/${exerciseId}`)
     },
     create(payload: unknown) {
-        return api.post('/exercises', payload)
+        return api.post('/exercises/', payload)
     },
     update(exerciseId: number, payload: unknown) {
         return api.put(`/exercises/${exerciseId}`, payload)
