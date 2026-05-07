@@ -3,17 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Activity, ChevronDown, ChevronUp, Dumbbell, TrendingUp, Trophy } from 'lucide-react'
-import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts'
 import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
 import { SectionHeader } from '@shared/ui/SectionHeader'
@@ -21,6 +10,7 @@ import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { ProgressPeriodFilter } from '@features/analytics/components/ProgressPeriodFilter'
 import { ProgressScreenTabs } from '@features/analytics/components/ProgressScreenTabs'
 import { PREventCard } from '@features/analytics/components/PREventCard'
+import { SimpleLineChart } from '@features/analytics/components/SimpleCharts'
 import {
     getAnalyticsProgress,
     getAnalyticsProgressInsights,
@@ -43,38 +33,6 @@ import {
 
 const LINE_COLORS = ['#2481cc', '#22c55e', '#f97316', '#ef4444', '#a855f7']
 const MAX_SELECTED_EXERCISES = 3
-
-function ExerciseChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number }>; label?: string }) {
-    if (!active || !payload || payload.length === 0) {
-        return null
-    }
-
-    return (
-        <div className="rounded-xl border border-border bg-telegram-bg px-3 py-2 shadow-lg">
-            <p className="text-xs font-semibold text-telegram-text">{label}</p>
-            <div className="mt-2 space-y-1">
-                {payload.map((item) => (
-                    <p key={item.name} className="text-xs text-telegram-hint">
-                        <span className="font-medium text-telegram-text">{item.name}</span>: {item.value} кг
-                    </p>
-                ))}
-            </div>
-        </div>
-    )
-}
-
-function VolumeTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
-    if (!active || !payload || payload.length === 0) return null
-
-    return (
-        <div className="rounded-xl border border-border bg-telegram-bg px-3 py-2 shadow-lg">
-            <p className="text-xs font-semibold text-telegram-text">{label}</p>
-            <p className="mt-1 text-xs text-telegram-hint">
-                Объём: <span className="font-medium text-telegram-text">{payload[0]?.value ?? 0}</span>
-            </p>
-        </div>
-    )
-}
 
 export default function ExerciseProgressPage() {
     const [period, setPeriod] = useState<ProgressPeriod>('30d')
@@ -325,27 +283,17 @@ export default function ExerciseProgressPage() {
                                     ))}
                                 </div>
 
-                                <div className="mt-3 h-64 -mx-2">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={chartData} margin={{ top: 8, right: 16, left: 6, bottom: 8 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.35)" />
-                                        <XAxis dataKey="formattedDate" tick={{ fontSize: 11 }} minTickGap={20} />
-                                        <YAxis tick={{ fontSize: 11 }} width={32} />
-                                        <Tooltip content={<ExerciseChartTooltip />} />
-                                        {selectedExercises.map((exercise, index) => (
-                                            <Line
-                                                key={exercise.id}
-                                                type="monotone"
-                                                dataKey={exercise.name}
-                                                stroke={LINE_COLORS[index % LINE_COLORS.length]}
-                                                strokeWidth={2}
-                                                dot={{ r: 3 }}
-                                                connectNulls
-                                            />
-                                        ))}
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                <SimpleLineChart
+                                    data={chartData}
+                                    labelKey="formattedDate"
+                                    heightClassName="h-64"
+                                    series={selectedExercises.map((exercise, index) => ({
+                                        key: exercise.name,
+                                        label: exercise.name,
+                                        color: LINE_COLORS[index % LINE_COLORS.length],
+                                        formatter: (value) => `${value} кг`,
+                                    }))}
+                                />
                             </>
                         )}
                     </section>
@@ -364,30 +312,20 @@ export default function ExerciseProgressPage() {
                                 Недостаточно данных для графика объёма.
                             </p>
                         ) : (
-                            <div className="-mx-2 mt-3 h-48">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={volumeTrendData} margin={{ top: 8, right: 16, left: 6, bottom: 8 }}>
-                                        <defs>
-                                            <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.35)" />
-                                        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={20} />
-                                        <YAxis tick={{ fontSize: 11 }} width={36} />
-                                        <Tooltip content={<VolumeTooltip />} />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="volume"
-                                            stroke="hsl(var(--primary))"
-                                            strokeWidth={2}
-                                            fill="url(#volumeGradient)"
-                                            dot={false}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
+                            <SimpleLineChart
+                                data={volumeTrendData}
+                                labelKey="label"
+                                heightClassName="h-48"
+                                series={[
+                                    {
+                                        key: 'volume',
+                                        label: 'Volume',
+                                        color: 'hsl(var(--primary))',
+                                        area: true,
+                                        formatter: (value) => String(Math.round(value)),
+                                    },
+                                ]}
+                            />
                         )}
                     </section>
 

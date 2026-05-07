@@ -126,21 +126,17 @@ describe('WorkoutsPage (critical flow)', () => {
         mockUseWorkoutsPageState.mockReturnValue(makePageState())
     })
 
-    it('shows draft banner and resumes active workout flow', () => {
-        const state = makePageState({
-            draftWorkoutId: 777,
-            draftTitle: 'Черновик сессии',
-            draftUpdatedAt: Date.now() - 120_000,
-        })
+    it('opens workout start sheet from the primary call to action', () => {
+        const state = makePageState()
         mockUseWorkoutsPageState.mockReturnValue(state)
 
         renderPage()
 
-        expect(screen.getByText('Продолжить тренировку')).toBeInTheDocument()
-        expect(screen.getByText('Черновик сессии')).toBeInTheDocument()
+        fireEvent.click(screen.getByTestId('start-workout-main-btn'))
 
-        fireEvent.click(screen.getByTestId('resume-draft-btn'))
-        expect(state.handleResumeDraft).toHaveBeenCalledTimes(1)
+        expect(screen.getByText('Пустая тренировка')).toBeInTheDocument()
+        expect(screen.getByText('Создать тренировку вручную')).toBeInTheDocument()
+        expect(screen.getByText('Из шаблона')).toBeInTheDocument()
     })
 
     it('starts workout from template via quick-start chip', () => {
@@ -176,7 +172,8 @@ describe('WorkoutsPage (critical flow)', () => {
         expect(screen.getByText('Нет сохранённых шаблонов')).toBeInTheDocument()
         expect(screen.getByText('История пока пуста')).toBeInTheDocument()
 
-        fireEvent.click(screen.getAllByRole('button', { name: /Начать пустую тренировку/i })[0])
+        fireEvent.click(screen.getByTestId('start-workout-main-btn'))
+        fireEvent.click(screen.getByRole('button', { name: /Пустая тренировка/i }))
         expect(state.handleStartEmpty).toHaveBeenCalled()
     })
 
