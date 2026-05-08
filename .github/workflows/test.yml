@@ -478,7 +478,7 @@ jobs:
       DEBUG: "true"
     services:
       postgres:
-        image: ${{ env.POSTGRES_IMAGE }}
+        image: postgres:15-alpine
         env:
           POSTGRES_DB: fittracker_test
           POSTGRES_USER: fittracker
@@ -572,7 +572,7 @@ jobs:
       DEBUG: "true"
     services:
       postgres:
-        image: ${{ env.POSTGRES_IMAGE }}
+        image: postgres:15-alpine
         env:
           POSTGRES_DB: fittracker_test
           POSTGRES_USER: fittracker
@@ -714,7 +714,7 @@ jobs:
 
     services:
       postgres:
-        image: ${{ env.POSTGRES_IMAGE }}
+        image: postgres:15-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
