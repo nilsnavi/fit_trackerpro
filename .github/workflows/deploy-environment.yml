@@ -243,7 +243,7 @@ jobs:
             echo "Waiting for backend readiness (GET /api/v1/system/ready, up to 120s)..."
             n=0
             max=24
-            until curl -fsS http://localhost:8000/api/v1/system/ready; do
+            until docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/ready; do
               n=$((n+1))
               if [ "$n" -ge "$max" ]; then
                 echo "Timed out waiting for readiness (${max} attempts, 5s interval)"
@@ -254,17 +254,24 @@ jobs:
             done
             echo "Backend readiness check passed"
 
-            if curl -fsS http://localhost:8000/api/v1/system/version; then
+            if docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/version; then
               echo "Backend version endpoint is healthy"
             else
               echo "Backend version endpoint failed"
               exit 1
             fi
 
-            if curl -fsS http://localhost/; then
-              echo "Reverse proxy smoke check passed"
+            if curl -fk https://localhost/health; then
+              echo "Reverse proxy backend health check passed"
             else
-              echo "Reverse proxy smoke check failed"
+              echo "Reverse proxy backend health check failed"
+              exit 1
+            fi
+
+            if curl -fk https://localhost/healthz; then
+              echo "Frontend healthz check passed"
+            else
+              echo "Frontend healthz check failed"
               exit 1
             fi
 
@@ -294,8 +301,9 @@ jobs:
           FRONTEND_BASE_URL="${FRONTEND_BASE_URL%/}"
 
           HEALTH_URL="${API_BASE_TRIMMED}/system/health"
-          VERSION_URL="${API_BASE_TRIMMED}/version"
+          VERSION_URL="${API_BASE_TRIMMED}/system/version"
           NGINX_HEALTH_URL="${FRONTEND_BASE_URL}/health"
+          FRONTEND_HEALTHZ_URL="${FRONTEND_BASE_URL}/healthz"
           DOMAIN_URL="${API_BASE_TRIMMED}/workouts/templates?page=1&page_size=1"
 
           smoke_check() {
@@ -344,6 +352,8 @@ jobs:
           smoke_check "API connectivity (GET /api/v1/system/version)" "${VERSION_URL}" "200"
           curl -fsS "${VERSION_URL}" | jq -e '.version != null' >/dev/null
           echo "Version JSON validated"
+
+          smoke_check "frontend health (GET /healthz)" "${FRONTEND_HEALTHZ_URL}" "200"
 
           smoke_check "frontend (site root HTML)" "${FRONTEND_BASE_URL}/" "200"
           curl -fsS "${FRONTEND_BASE_URL}/" | grep -qiE '<!DOCTYPE[[:space:]]+html|<html[[:space:]>]'
@@ -451,7 +461,7 @@ jobs:
 
             n=0
             max=24
-            until curl -fsS http://localhost:8000/api/v1/system/ready; do
+            until docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/ready; do
               n=$((n+1))
               if [ "$n" -ge "$max" ]; then
                 echo "Rollback readiness wait timed out"
@@ -459,8 +469,9 @@ jobs:
               fi
               sleep 5
             done
-            curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
-            curl -fsS http://localhost/ > /dev/null
+            docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
+            curl -fk https://localhost/health > /dev/null
+            curl -fk https://localhost/healthz > /dev/null
             echo "Rollback completed and health checks passed"
           EOF
 
