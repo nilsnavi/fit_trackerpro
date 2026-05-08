@@ -169,36 +169,35 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         // STEP 5: Log sets
         // ═══════════════════════════════════════════════════════════════════════
         // Wait for active workout page to load
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+        await expect(page.getByRole('button', { name: /Отметить подход 1 выполненным/ })).toBeVisible({ timeout: 30_000 })
 
         // Mark first set as completed (click "Готово" button)
-        const setToggleButton = page.locator('[data-testid="set-toggle-btn"]').first()
-        await setToggleButton.click()
+        await page.getByRole('button', { name: /Отметить подход 1 выполненным/ }).click()
 
         // Wait for sync queue to process the set update
         await waitForSyncQueueEmpty(page, 15_000)
 
-        // Verify set is marked as completed (button shows checkmark/done state)
-        await expect(setToggleButton).toContainText(/Готово/)
+        // Verify set is marked as completed and the next set becomes actionable.
+        await expect(page.getByRole('button', { name: /Отметить подход 2 выполненным/ })).toBeVisible()
 
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 6: Complete workout
         // ═══════════════════════════════════════════════════════════════════════
         // Click finish workout button
-        const finishBtn = page.locator('[data-testid="finish-workout-btn"]')
+        const finishBtn = page.getByRole('button', { name: 'Завершить' }).last()
         await expect(finishBtn).toBeVisible({ timeout: 10_000 })
         await finishBtn.click()
 
         // Confirm finish in modal
-        const confirmFinishBtn = page.locator('[data-testid="confirm-finish-btn"]')
+        const confirmFinishBtn = page.getByRole('dialog').getByRole('button', { name: 'Завершить' })
         await expect(confirmFinishBtn).toBeVisible({ timeout: 10_000 })
         await confirmFinishBtn.click()
 
         // Wait for sync queue to process completion
         await waitForSyncQueueEmpty(page, 30_000)
 
-        // Verify navigation away from active workout
-        await expect(page).not.toHaveURL(/\/workouts\/active\//)
+        // Verify completion flow moved to the workout summary.
+        await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary/)
 
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 7: Verify workout in history
@@ -217,10 +216,10 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         // STEP 8: Verify analytics page loads
         // ═══════════════════════════════════════════════════════════════════════
         await nav.getByRole('link', { name: 'Прогресс' }).click()
-        await expect(page).toHaveURL(/\/progress/)
+        await expect(page).toHaveURL(/\/analytics/)
 
         // Verify analytics page loads (heading visible)
-        const progressHeading = page.getByRole('heading', { name: 'Прогресс' })
+        const progressHeading = page.getByRole('heading', { name: 'Аналитика' })
         await expect(progressHeading).toBeVisible({ timeout: 15_000 })
 
         // For MVP regression, we just verify the page loads without crashing
@@ -264,7 +263,7 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         const sections = [
             { name: 'Каталог', url: /\/exercises/ },
             { name: 'Тренировки', url: /\/workouts/ },
-            { name: 'Прогресс', url: /\/progress/ },
+            { name: 'Прогресс', url: /\/analytics/ },
             { name: 'Профиль', url: /\/profile/ },
         ]
 
@@ -275,6 +274,6 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
 
         // Return home
         await nav.getByRole('link', { name: 'Главная' }).click()
-        await expect(page).toHaveURL(/\/$/)
+        await expect(page).toHaveURL(/\/home/)
     })
 })

@@ -259,6 +259,26 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, buildUserProfile())
         }
 
+        if (method === 'POST' && normalizedPath.endsWith('/users/auth/lookup')) {
+            return respond(200, { registered: true })
+        }
+
+        if (
+            method === 'POST' &&
+            (normalizedPath.endsWith('/users/auth/telegram') ||
+                normalizedPath.endsWith('/users/auth/register') ||
+                normalizedPath.endsWith('/users/auth/refresh'))
+        ) {
+            return respond(200, {
+                access_token: 'e2e-token',
+                refresh_token: 'e2e-refresh-token',
+                token_type: 'bearer',
+                user: buildUserProfile(),
+                onboarding_required: false,
+                is_new_user: false,
+            })
+        }
+
         if (method === 'GET' && /\/users\/stats$/.test(normalizedPath)) {
             return respond(200, {
                 active_days: 5,
