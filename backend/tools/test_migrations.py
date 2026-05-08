@@ -35,7 +35,7 @@ VERSIONS_DIR = REPO_ROOT / "database" / "migrations" / "versions"
 @dataclass
 class RevisionInfo:
     revision: str
-    down_revision: Optional[str]
+    down_revision: Optional[str | tuple[str, ...]]
     branch_labels: Optional[str]
     file: Path
     has_nontrivial_downgrade: bool
@@ -129,6 +129,14 @@ def load_all_revisions() -> list[RevisionInfo]:
     return revisions
 
 
+def _parents(r: RevisionInfo) -> tuple[str, ...]:
+    if r.down_revision is None:
+        return ()
+    if isinstance(r.down_revision, tuple):
+        return r.down_revision
+    return (r.down_revision,)
+
+
 def validate_chain(revisions: list[RevisionInfo]) -> list[str]:
     errors: list[str] = []
     by_revision: dict[str, RevisionInfo] = {}
@@ -148,14 +156,30 @@ def validate_chain(revisions: list[RevisionInfo]) -> list[str]:
         errors.append(
             "Multiple root revisions detected: "
             + str([r.revision for r in roots])
-            + ". The migration chain must be linear."
+            + ". The migration graph must have a single root."
         )
 
     for r in revisions:
-        if r.down_revision and r.down_revision not in by_revision:
+        for parent in _parents(r):
+            if parent not in by_revision:
+                errors.append(
+                    f"Revision '{r.revision}' references unknown parent "
+                    f"'{parent}'"
+                )
+
+    children_by_parent: dict[str, list[str]] = {}
+    for r in revisions:
+        for parent in _parents(r):
+            children_by_parent.setdefault(parent, []).append(r.revision)
+
+    heads = [
+        r.revision
+        for r in revisions
+        if r.revision not in children_by_parent
+    ]
+    if len(heads) != 1:
             errors.append(
-                f"Revision '{r.revision}' references unknown parent "
-                f"'{r.down_revision}'"
+            "Expected exactly one migration head, found: " + str(heads)
             )
 
     for r in revisions:
@@ -185,16 +209,22 @@ def _c(color: str, text: str) -> str:
 
 # ---- Report ----------------------------------------------------------------
 def print_report(revisions: list[RevisionInfo], chain_errors: list[str]) -> bool:
-    root = next((r for r in revisions if r.down_revision is None), None)
+    by_revision = {r.revision: r for r in revisions}
     ordered: list[RevisionInfo] = []
-    cur = root
     visited: set[str] = set()
-    while cur and cur.revision not in visited:
-        ordered.append(cur)
-        visited.add(cur.revision)
-        cur = next(
-            (r for r in revisions if r.down_revision == cur.revision), None
-        )
+
+    def visit(r: RevisionInfo) -> None:
+        if r.revision in visited:
+            return
+        for parent in _parents(r):
+            parent_revision = by_revision.get(parent)
+            if parent_revision is not None:
+                visit(parent_revision)
+        visited.add(r.revision)
+        ordered.append(r)
+
+    for revision in sorted(revisions, key=lambda item: item.revision):
+        visit(revision)
 
     sep = "-" * 72
     print()
@@ -209,7 +239,7 @@ def print_report(revisions: list[RevisionInfo], chain_errors: list[str]) -> bool
 
     all_ok = True
     for i, r in enumerate(ordered, 1):
-        parent = r.down_revision or "(root)"
+        parent = ", ".join(_parents(r)) or "(root)"
         if r.has_nontrivial_downgrade:
             dg_str = _c(GREEN, "[OK]     ")
         else:
@@ -236,7 +266,7 @@ def print_report(revisions: list[RevisionInfo], chain_errors: list[str]) -> bool
             print("  [X] " + e)
         print()
     else:
-        print(_c(GREEN, "  [OK] Chain is linear -- no branches or orphans"))
+        print(_c(GREEN, "  [OK] Migration graph has one root, valid parents, and one head"))
 
     total_dangers = sum(len(r.dangers) for r in revisions)
     if total_dangers:
