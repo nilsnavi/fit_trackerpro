@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import and_, desc, select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -15,7 +15,6 @@ from app.domain.user import User
 from app.domain.workout_log import WorkoutLog
 from app.domain.workout_template import WorkoutTemplate
 from app.schemas.users import UserCreate, UserResponse
-
 
 VALID_WORKOUT_TYPES = {"cardio", "strength", "flexibility", "mixed"}
 

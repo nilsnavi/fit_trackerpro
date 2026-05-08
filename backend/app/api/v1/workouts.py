@@ -24,6 +24,8 @@ from app.schemas.workouts import (
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
     WorkoutSessionUpdateRequest,
+    WorkoutSetPatchRequest,
+    WorkoutSetResponse,
     WorkoutStartFromTemplateRequest,
     WorkoutStartRequest,
     WorkoutStartResponse,
@@ -33,8 +35,6 @@ from app.schemas.workouts import (
     WorkoutTemplateList,
     WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
-    WorkoutSetPatchRequest,
-    WorkoutSetResponse,
 )
 
 router = APIRouter()

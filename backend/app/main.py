@@ -12,19 +12,18 @@ import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.exception_handlers import register_exception_handlers
 from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
 from app.api.v1.registration import register_v1_routes
-from app.core.limiter import limiter
-from app.core.rate_limit_handlers import slowapi_rate_limit_exceeded_handler
 from app.api.v1.system import health_check_response
 from app.application.health_check_service import HealthCheckService
 from app.bot import process_webhook_update, setup_bot, start_bot, start_bot_webhook, stop_bot
+from app.core.limiter import limiter
 from app.core.logging import configure_logging
+from app.core.rate_limit_handlers import slowapi_rate_limit_exceeded_handler
 from app.core.telemetry import init_sentry, setup_prometheus_metrics
 from app.infrastructure.cache import close_cache
 from app.infrastructure.database import close_db, init_db

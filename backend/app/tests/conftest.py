@@ -37,7 +37,7 @@ from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool, StaticPool
 
 import app.domain.registry  # noqa: F401 — full metadata for create_all
 from app.domain.base import Base
@@ -103,6 +103,9 @@ if _is_sqlite_url(_test_db_url):
         "connect_args": {"check_same_thread": False},
         "poolclass": StaticPool,
     }
+else:
+    # pytest-asyncio uses function-scoped loops; do not reuse asyncpg connections across loops.
+    _engine_kwargs = {"poolclass": NullPool}
 
 _test_engine = create_async_engine(settings.DATABASE_URL, **_engine_kwargs)
 TestingSessionLocal = sessionmaker(
@@ -152,6 +155,21 @@ async def _reset_schema() -> None:
         else:
             await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+        await _create_test_support_tables(conn)
+
+
+async def _create_test_support_tables(conn) -> None:
+    """Create raw-SQL tables used by repositories but not mapped in ORM metadata."""
+    await conn.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS feature_flags (
+                key VARCHAR(120) PRIMARY KEY,
+                enabled BOOLEAN NOT NULL DEFAULT false
+            )
+            """
+        )
+    )
 
 
 async def _clear_data() -> None:
@@ -169,7 +187,51 @@ async def _clear_data() -> None:
             await conn.execute(text("PRAGMA foreign_keys=OFF"))
             for name in table_names:
                 await conn.execute(text(f'DELETE FROM "{name}"'))
+            await conn.execute(text("DELETE FROM feature_flags"))
             await conn.execute(text("PRAGMA foreign_keys=ON"))
+        await _seed_test_reference_rows(conn)
+
+
+async def _seed_test_reference_rows(conn) -> None:
+    """Seed stable rows that API tests reference by id under real FK enforcement."""
+    exercise_ids = (1, 2, 10, 11, 20, 99, 101, 102, 201)
+    if _is_postgres_url(_test_db_url):
+        for exercise_id in exercise_ids:
+            await conn.execute(
+                text(
+                    """
+                    INSERT INTO exercises (
+                        id, name, description, category, equipment, muscle_groups,
+                        muscle_group, aliases, risk_flags, status, source
+                    )
+                    VALUES (
+                        :id, :name, 'Seed exercise for FK-backed API tests',
+                        'strength', '[]'::jsonb, '[]'::jsonb, 'Chest', '[]'::jsonb,
+                        '{}'::jsonb, 'active', 'system'
+                    )
+                    ON CONFLICT (id) DO NOTHING
+                    """
+                ),
+                {"id": exercise_id, "name": f"Seed Exercise {exercise_id}"},
+            )
+        await conn.execute(text("SELECT setval(pg_get_serial_sequence('exercises', 'id'), 201, true)"))
+    else:
+        for exercise_id in exercise_ids:
+            await conn.execute(
+                text(
+                    """
+                    INSERT OR IGNORE INTO exercises (
+                        id, name, description, category, equipment, muscle_groups,
+                        muscle_group, aliases, risk_flags, status, source
+                    )
+                    VALUES (
+                        :id, :name, 'Seed exercise for FK-backed API tests',
+                        'strength', '[]', '[]', 'Chest', '[]', '{}', 'active', 'system'
+                    )
+                    """
+                ),
+                {"id": exercise_id, "name": f"Seed Exercise {exercise_id}"},
+            )
 
 
 @pytest_asyncio.fixture(autouse=True)

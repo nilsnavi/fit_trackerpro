@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.application.auth_service import AuthService
-from app.core.limiter import limiter
 from app.core.audit import get_client_ip
+from app.core.limiter import limiter
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.auth import (

@@ -771,18 +771,24 @@ jobs:
       - name: Enforce backend coverage baseline (no regressions)
         run: python tools/coverage_baseline.py check coverage.xml
 
-      - name: Enforce critical module coverage (settings + telegram env)
-        run: |
-          pytest app/tests/test_config_validation.py app/tests/test_env_consistency.py \
-            --cov=app/settings \
-            --cov-fail-under=80 \
-            --no-header -q --tb=short
-
       - name: Enforce zero-coverage guard (workout domain + middleware)
         run: |
           python -m coverage report \
             --include="app/domain/workout_template.py,app/domain/workout_log.py,app/domain/workout_set.py,app/middleware/*" \
             --fail-under=40
+
+      - name: Enforce critical module coverage (settings + telegram env)
+        env:
+          COVERAGE_FILE: .coverage.settings
+        run: |
+          cp coverage.xml coverage.full.xml
+          pytest app/tests/test_config_validation.py app/tests/test_env_consistency.py \
+            --cov-reset \
+            --cov=app/settings \
+            --cov-report= \
+            --cov-fail-under=80 \
+            --no-header -q --tb=short
+          mv coverage.full.xml coverage.xml
 
       - name: Reference data seed check
         env:

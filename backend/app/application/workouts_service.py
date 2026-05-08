@@ -40,7 +40,10 @@ from app.schemas.workouts import (
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
+    WorkoutSessionMetrics,
     WorkoutSessionUpdateRequest,
+    WorkoutSetPatchRequest,
+    WorkoutSetResponse,
     WorkoutStartFromTemplateRequest,
     WorkoutStartRequest,
     WorkoutStartResponse,
@@ -50,9 +53,6 @@ from app.schemas.workouts import (
     WorkoutTemplateList,
     WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
-    WorkoutSessionMetrics,
-    WorkoutSetPatchRequest,
-    WorkoutSetResponse,
 )
 from app.settings import settings
 

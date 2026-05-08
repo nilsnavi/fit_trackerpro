@@ -7,7 +7,6 @@ Protected: ``/me`` (profile read, patch, delete) — Bearer access token.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import Response as FastApiResponse
