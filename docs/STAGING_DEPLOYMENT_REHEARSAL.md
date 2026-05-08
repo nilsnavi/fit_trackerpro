@@ -84,10 +84,8 @@ done
 Рекомендуемый tag для текущего HEAD на момент подготовки:
 
 ```bash
-git rev-parse --short HEAD
-# 2cce3f5
-
-IMAGE_TAG="main-2cce3f5"
+IMAGE_TAG="main-$(git rev-parse --short HEAD)"
+echo "${IMAGE_TAG}"
 ```
 
 Если нужно использовать последний release/tag:
@@ -104,7 +102,7 @@ docker manifest inspect ghcr.io/nilsnavi/fit_trackerpro/backend:${IMAGE_TAG} >/d
 docker manifest inspect ghcr.io/nilsnavi/fit_trackerpro/frontend:${IMAGE_TAG} >/dev/null
 ```
 
-Если образов с `main-2cce3f5` нет, сначала запустить build/publish pipeline или выбрать существующий release tag.
+Если образов с выбранным `main-<sha>` нет, сначала запустить build/publish pipeline или выбрать существующий release tag.
 
 ## 5. Запустить staging workflow
 
@@ -189,7 +187,8 @@ gh workflow run rollback-production.yml \
   --ref main \
   -f environment=staging \
   -f rollback_image_tag='<previous-known-good-tag>' \
-  -f rollback_restore_db=false
+  -f rollback_restore_db=false \
+  -f confirm=ROLLBACK
 ```
 
 Manual SSH fallback:

@@ -110,10 +110,11 @@
 - автоматический rollback образов из `deploy-environment.yml` завершится ошибкой (это ожидаемо).
 
 Безопасный порядок:
-1. Запустить `.github/workflows/rollback-production.yml` вручную.
+1. Запустить `.github/workflows/rollback-production.yml` вручную для нужного `environment` (`production` или `staging`).
 2. Передать `rollback_image_tag` явно (последний известный рабочий тег).
-3. `rollback_restore_db=true` включать только при необходимости и только при наличии валидного `DB_BACKUP_PATH`.
-4. Если рабочего тега нет, rollback образа невозможен: фиксировать инцидент, выполнять hotfix/redeploy.
+3. Передать `confirm=ROLLBACK`.
+4. `rollback_restore_db=true` включать только при необходимости и только при наличии валидного `DB_BACKUP_PATH`.
+5. Если рабочего тега нет, rollback образа невозможен: фиксировать инцидент, выполнять hotfix/redeploy.
 
 ## 5. Совместимость rollback с текущим CI/CD
 

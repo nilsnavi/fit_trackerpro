@@ -4,12 +4,12 @@
 
 Репозиторий: `nilsnavi/fit_trackerpro`
 
-Локальный commit: `2cce3f5357b0c25c9b4ad5f7b626eec38400a1d3` (`main-2cce3f5`)
+Локальный commit на момент проверки: `dd0cd42d3ad3859501e5868c86dc7d3e65d039f1` (`main-dd0cd42`)
 
 ## Итог
 
 Staging deployment rehearsal не был запущен из текущего окружения, потому что:
-- `gh` CLI не установлен;
+- `gh` CLI не установлен в текущем окружении;
 - переменные `GITHUB_TOKEN`/`GH_TOKEN` в окружении отсутствуют;
 - GitHub API без authentication не дает проверить secrets (`401 Requires authentication`);
 - доступа к staging серверу и значениям secrets нет.
@@ -26,8 +26,8 @@ Staging deployment rehearsal не был запущен из текущего о
   - `image_tag`: обязательный versioned tag, `latest` запрещен;
   - `rollback_restore_db`: optional boolean.
 - Reusable workflow `.github/workflows/deploy-environment.yml` привязан к GitHub Environment через `environment: ${{ inputs.deploy_environment }}`.
-- Последний удаленный release tag: `v2026.04.05-workouts-modal-standardization`.
-- Текущий HEAD новее release tag, поэтому рекомендуемый rehearsal tag для текущего состояния: `main-2cce3f5`, при условии что GHCR images с таким tag уже опубликованы.
+- Последние локальные tags: `pre-sanitize-2026-04-13`, `v2026.04.05-workouts-modal-standardization`.
+- `git describe --tags --abbrev=0` для текущего HEAD не находит описывающий tag, поэтому рекомендуемый rehearsal tag для текущего состояния нужно вычислить как `main-$(git rev-parse --short HEAD)`, при условии что GHCR images с таким tag уже опубликованы.
 
 ## Исправления перед rehearsal
 
@@ -38,6 +38,7 @@ Staging deployment rehearsal не был запущен из текущего о
 - Добавлена frontend health проверка `/healthz`.
 - Reverse proxy health проверяется через `https://localhost/health` с `-k`, что соответствует TLS-only nginx конфигурации.
 - Rollback verification использует те же корректные backend-in-container и nginx `/health`/`/healthz` проверки.
+- Manual rollback workflow `.github/workflows/rollback-production.yml` теперь поддерживает выбор `environment=staging` и требует `confirm=ROLLBACK`.
 
 ## Environment `staging`
 
@@ -99,7 +100,7 @@ gh secret list --env staging --repo nilsnavi/fit_trackerpro
 Команда запуска для оператора:
 
 ```bash
-IMAGE_TAG="main-2cce3f5"
+IMAGE_TAG="main-$(git rev-parse --short HEAD)"
 
 gh workflow run deploy.yml \
   --repo nilsnavi/fit_trackerpro \
@@ -159,6 +160,18 @@ grep -E '^DB_BACKUP_PATH=' .rollback-meta.env
 ```
 
 Rollback rehearsal: использовать сценарий A из `docs/ROLLBACK_STRATEGY.md` для staging, если нет явного разрешения на DB restore.
+
+Команда manual rollback workflow для staging:
+
+```bash
+gh workflow run rollback-production.yml \
+  --repo nilsnavi/fit_trackerpro \
+  --ref main \
+  -f environment=staging \
+  -f rollback_image_tag='<previous-known-good-tag>' \
+  -f rollback_restore_db=false \
+  -f confirm=ROLLBACK
+```
 
 ## Решение go/no-go
 

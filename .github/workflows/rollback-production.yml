@@ -5,6 +5,14 @@ name: Rollback Production
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: "GitHub Environment to roll back"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
       rollback_image_tag:
         description: "Explicit image tag (empty = PREVIOUS_IMAGE_TAG from .rollback-meta.env, else LAST_STABLE_PREVIOUS_TAG from .last-stable-deploy.env)"
         required: false
@@ -35,7 +43,7 @@ jobs:
     name: Rollback on server
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.confirm == 'ROLLBACK' }}
-    environment: production
+    environment: ${{ github.event.inputs.environment }}
 
     steps:
       - name: Setup SSH
@@ -117,11 +125,21 @@ jobs:
               echo "DB restore skipped (rollback_restore_db=false)"
             fi
 
-            sleep 15
-            curl -fsS http://localhost:8000/health > /dev/null
-            curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
-            curl -fsS http://localhost/ > /dev/null
-            echo "Manual rollback completed and host health checks passed."
+            n=0
+            max=24
+            until docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/ready; do
+              n=$((n+1))
+              if [ "$n" -ge "$max" ]; then
+                echo "Rollback readiness wait timed out"
+                exit 1
+              fi
+              sleep 5
+            done
+            docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
+            curl -fk https://localhost/health > /dev/null
+            curl -fk https://localhost/healthz > /dev/null
+            curl -fk https://localhost/ > /dev/null
+            echo "Manual rollback completed and health checks passed."
           EOF
 
       - name: Notify Slack
