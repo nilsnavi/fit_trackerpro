@@ -20,23 +20,33 @@
 | `ANALYTICS_MAX_EXERCISES_HARD_LIMIT` | backend | `backend/.env*.example`, `backend/app/settings/config.py` | `100` | опционально |
 | `ANALYTICS_DEFAULT_MAX_DATA_POINTS` | backend | `backend/.env*.example`, `backend/app/settings/config.py` | `120` | опционально |
 | `ANALYTICS_MAX_DATA_POINTS_HARD_LIMIT` | backend | `backend/.env*.example`, `backend/app/settings/config.py` | `365` | опционально |
-| `TELEGRAM_BOT_TOKEN` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `your_bot_token_here` | обязательно для Telegram-функций |
-| `TELEGRAM_WEBAPP_URL` | backend/frontend bridge | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `https://fittrackpro.ru` (prod) | обязательно в prod |
-| `SECRET_KEY` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `your_secret_key_here...` | обязательно |
+| `TELEGRAM_BOT_TOKEN` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml` | `your_bot_token_here` | обязательно для Telegram-функций |
+| `TELEGRAM_WEBAPP_URL` | backend/frontend bridge | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml` | `https://fittrackpro.ru` (prod) | обязательно в prod |
+| `SECRET_KEY` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml` | `your_secret_key_here...` | обязательно |
 | `ALGORITHM` | backend | `backend/.env.example`, `backend/app/settings/config.py` | `HS256` | опционально |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | backend | `backend/.env.example`, `backend/app/settings/config.py` | `30` | опционально |
-| `ALLOWED_ORIGINS` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | `http://localhost:3000,...` | обязательно в prod (не `*`) |
-| `SENTRY_DSN` | backend/frontend | `backend/.env*.example`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | пусто | опционально |
-| `VITE_API_URL` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts`, `frontend/src/services/api.ts`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | `http://localhost:8000/api/v1`; prod: `https://fittrackpro.ru/api/v1` | обязательно для frontend |
-| `VITE_TELEGRAM_BOT_USERNAME` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts`, `docker-compose*.yml`, `.github/workflows/deploy.yml` | `your_bot_username` | обязательно для Telegram Mini App |
+| `ALLOWED_ORIGINS` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/deploy-environment.yml` | `http://localhost:3000,...` | обязательно в prod (не `*`) |
+| `SENTRY_DSN` | backend/frontend | `backend/.env*.example`, `docker-compose*.yml`, `.github/workflows/deploy-environment.yml` | пусто | опционально |
+| `SENTRY_ENVIRONMENT` | frontend runtime | `backend/.env.production.example`, `frontend/.env.example`, `docker-compose.prod.yml` | `production` | опционально |
+| `SENTRY_RELEASE` | backend/frontend runtime | `backend/.env.production.example`, `frontend/.env.example`, `docker-compose.prod.yml` | пусто / commit SHA | опционально |
+| `SENTRY_DIST` | frontend runtime | `backend/.env.production.example`, `frontend/.env.example`, `docker-compose.prod.yml` | пусто | опционально |
+| `API_URL` | frontend runtime / CI bridge | `backend/.env.production.example`, `frontend/.env.example`, `docker-compose.prod.yml`, `.github/workflows/deploy-environment.yml` | `https://fittrackpro.ru/api/v1` | обязательно для prod runtime config |
+| `VITE_API_URL` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts`, `frontend/src/shared/config/runtime.ts`, `docker-compose*.yml`, `.github/workflows/deploy-environment.yml` | `http://localhost:8000/api/v1`; prod: `https://fittrackpro.ru/api/v1` | обязательно для frontend |
+| `VITE_TELEGRAM_BOT_USERNAME` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts`, `docker-compose*.yml`, `.github/workflows/deploy-environment.yml` | `your_bot_username` | обязательно для Telegram Mini App |
+| `VITE_TELEGRAM_WEBAPP_URL` | frontend | `frontend/.env.example`, `frontend/src/vite-env.d.ts` | `https://fittrackpro.ru` | опционально |
 | `VITE_ENVIRONMENT` | frontend | `frontend/.env.example`, `docker-compose*.yml` | `development` / `production` | опционально |
 | `VITE_SENTRY_DSN` | frontend | `frontend/.env.example` | пусто | опционально |
+| `VITE_SENTRY_RELEASE` | frontend | `frontend/.env.example`, `frontend/src/shared/config/runtime.ts` | пусто / commit SHA | опционально |
 | `VITE_ENABLE_ANALYTICS` | frontend | `frontend/.env.example` | `false` | опционально |
 | `VITE_ENABLE_DEBUG_TOOLS` | frontend | `frontend/.env.example` | `true` | опционально |
-| `POSTGRES_USER` | infrastructure | `docker-compose*.yml`, `backend/.env.production.example`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml`, `.github/workflows/migrate.yml` | `fittracker` / `test` | обязательно |
-| `POSTGRES_PASSWORD` | infrastructure | `docker-compose*.yml`, `backend/.env.production.example`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml` | `fittracker_password` / `test` | обязательно |
-| `POSTGRES_DB` | infrastructure | `docker-compose*.yml`, `backend/.env.production.example`, `.github/workflows/test.yml`, `.github/workflows/deploy.yml`, `.github/workflows/migrate.yml` | `fittracker` / `test` | обязательно |
-| `GITHUB_REPOSITORY` | infrastructure/CI | `docker-compose.prod.yml`, `backend/.env.production.example`, `.github/workflows/deploy.yml` | `owner/repo` | обязательно для prod-образов |
+| `POSTGRES_USER` | infrastructure | `docker-compose*.yml`, `backend/.env.production.example`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml`, `.github/workflows/migrate.yml` | `fittracker` / `test` | обязательно |
+| `POSTGRES_PASSWORD` | infrastructure | `docker-compose*.yml`, `backend/.env.production.example`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml` | `fittracker_password` / `test` | обязательно |
+| `POSTGRES_DB` | infrastructure | `docker-compose*.yml`, `backend/.env.production.example`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml`, `.github/workflows/migrate.yml` | `fittracker` / `test` | обязательно |
+| `GITHUB_REPOSITORY` | infrastructure/CI | `docker-compose.prod.yml`, `backend/.env.production.example`, `.github/workflows/deploy-environment.yml` | `owner/repo` | обязательно для prod-образов |
+| `IMAGE_TAG` | infrastructure/CI | `docker-compose.prod.yml`, `backend/.env.production.example`, `.github/workflows/deploy.yml`, `.github/workflows/deploy-environment.yml` | `v1.0.0` / `main-<sha>` | обязательно, не `latest` |
+| `TELEGRAM_BOT_USERNAME` | frontend runtime / CI bridge | `backend/.env.production.example`, `frontend/.env.example`, `docker-compose.prod.yml`, `.github/workflows/deploy-environment.yml` | `your_bot_username` | обязательно для Telegram Mini App |
+| `NGINX_SSL_DIR` | infrastructure | `docker-compose.prod.yml`, `backend/.env.production.example`, `docs/DEPLOYMENT.md` | `/etc/fittracker-pro/nginx/ssl` | обязательно на prod-хосте; может быть вне repo |
+| `BACKUPS_DIR` | infrastructure | `docker-compose.prod.yml`, `backend/.env.production.example`, `docs/DEPLOYMENT.md` | `/var/backups/fittracker-pro` | рекомендуется/обязательно для backup-процедуры; может быть вне repo |
 
 ## 2) Backend .env-шаблон: переменные, которые пока не видны в `Settings`
 
@@ -74,14 +84,11 @@
 | `IMAGE_NAME_FRONTEND` | `build.yml` | `${{ github.repository }}/frontend` |
 | `NODE_VERSION` | `test.yml` | `20` |
 | `PYTHON_VERSION` | `test.yml` | `3.11` |
-| `DEPLOY_HOST` | `deploy.yml` | `${{ secrets.DEPLOY_HOST }}` |
-| `DEPLOY_USER` | `deploy.yml` | `${{ secrets.DEPLOY_USER }}` |
-| `DATABASE_URL` | `migrate.yml` | `${{ secrets.DATABASE_URL }}` |
-| `DATABASE_URL_SYNC` | `migrate.yml` | `${{ secrets.DATABASE_URL_SYNC }}` |
+| `DEPLOY_HOST` | `deploy-environment.yml` | `${{ secrets.DEPLOY_HOST }}` |
+| `DEPLOY_USER` | `deploy-environment.yml` | `${{ secrets.DEPLOY_USER }}` |
 
-### 4.2 Workflow secrets (используются напрямую как env/inputs)
+### 4.2 Workflow secrets (`deploy.yml` + `deploy-environment.yml`)
 
-- `GITHUB_TOKEN`
 - `SSH_PRIVATE_KEY`
 - `DEPLOY_HOST`
 - `DEPLOY_USER`
@@ -92,12 +99,15 @@
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_WEBAPP_URL`
 - `ALLOWED_ORIGINS`
-- `SENTRY_DSN`
 - `VITE_API_URL`
 - `VITE_TELEGRAM_BOT_USERNAME`
-- `DATABASE_URL`
-- `DATABASE_URL_SYNC`
+
+Опциональные:
+
+- `SENTRY_DSN`
 - `SLACK_WEBHOOK_URL`
+
+`GITHUB_TOKEN` предоставляется GitHub Actions автоматически. `DATABASE_URL` и `DATABASE_URL_SYNC` не используются текущим deploy DAG; production compose строит URL из `POSTGRES_*`.
 
 ## 5) Nginx
 
@@ -119,3 +129,11 @@
 - сравнивает ключи из `backend/.env.example` и поля `Settings` (`backend/app/settings/config.py`);
 - падает, если ключ есть в шаблоне, но отсутствует в `Settings`;
 - падает, если поле есть в `Settings`, но отсутствует в шаблоне.
+
+Для production/server `.env` добавлен отдельный валидатор:
+
+```bash
+node scripts/validate-production-env.mjs .env
+```
+
+Он проверяет обязательность и формат `IMAGE_TAG`, `POSTGRES_*`, `SECRET_KEY`, `TELEGRAM_*`, `ALLOWED_ORIGINS`, `API_URL`, `VITE_API_URL`, `NGINX_SSL_DIR`, `BACKUPS_DIR` без вывода значений.
