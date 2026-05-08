@@ -19,12 +19,49 @@ git fetch --tags origin
 - write access к Actions workflow dispatch;
 - доступ к настройке Environment secrets.
 
+Если `gh` CLI недоступен, используйте PowerShell runner из репозитория. Он работает через GitHub REST API и требует только `GITHUB_TOKEN` или `GH_TOKEN`:
+
+```powershell
+$env:GITHUB_TOKEN = "<token-with-repo-actions-environment-access>"
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1
+```
+
+Полный запуск с dispatch, ожиданием workflow и smoke checks:
+
+```powershell
+$env:GITHUB_TOKEN = "<token-with-repo-actions-environment-access>"
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1 `
+  -Dispatch `
+  -Wait `
+  -ApiBaseUrl "https://<staging-domain>/api/v1" `
+  -Smoke
+```
+
+Проверка backup metadata на сервере через тот же runner:
+
+```powershell
+$env:DEPLOY_HOST = "<staging-host>"
+$env:DEPLOY_USER = "<staging-user>"
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1 `
+  -ApiBaseUrl "https://<staging-domain>/api/v1" `
+  -Smoke `
+  -CheckServer
+```
+
 Требуемый серверный доступ:
 - SSH на `DEPLOY_USER@DEPLOY_HOST`;
 - Docker/Docker Compose на сервере;
 - доступ к каталогу деплоя `~/fittracker-pro`.
 
 ## 2. Проверить Environment `staging`
+
+Без `gh`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1
+```
+
+Через `gh`:
 
 ```bash
 gh api repos/nilsnavi/fit_trackerpro/environments/staging
@@ -45,6 +82,14 @@ gh api repos/nilsnavi/fit_trackerpro/environments/staging
 ## 3. Проверить staging secrets
 
 Значения GitHub secrets через API не раскрываются; проверяется только наличие имен.
+
+Без `gh`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1
+```
+
+Через `gh`:
 
 ```bash
 gh secret list --env staging --repo nilsnavi/fit_trackerpro
@@ -105,6 +150,17 @@ docker manifest inspect ghcr.io/nilsnavi/fit_trackerpro/frontend:${IMAGE_TAG} >/
 Если образов с выбранным `main-<sha>` нет, сначала запустить build/publish pipeline или выбрать существующий release tag.
 
 ## 5. Запустить staging workflow
+
+Без `gh`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1 `
+  -ImageTag "${IMAGE_TAG}" `
+  -Dispatch `
+  -Wait
+```
+
+Через `gh`:
 
 ```bash
 gh workflow run deploy.yml \

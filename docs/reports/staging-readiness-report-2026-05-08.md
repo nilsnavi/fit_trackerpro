@@ -9,7 +9,7 @@
 ## Итог
 
 Staging deployment rehearsal не был запущен из текущего окружения, потому что:
-- `gh` CLI не установлен в текущем окружении;
+- `gh` CLI не установлен в текущем окружении, а Chocolatey install failed из-за отсутствия elevated shell и lock в `C:\ProgramData\chocolatey\lib`;
 - переменные `GITHUB_TOKEN`/`GH_TOKEN` в окружении отсутствуют;
 - GitHub API без authentication не дает проверить secrets (`401 Requires authentication`);
 - доступа к staging серверу и значениям secrets нет.
@@ -17,6 +17,8 @@ Staging deployment rehearsal не был запущен из текущего о
 Успешный деплой не имитировался.
 
 Подготовлен операторский runbook: `docs/STAGING_DEPLOYMENT_REHEARSAL.md`.
+
+Добавлен fallback runner без зависимости от `gh`: `scripts/staging-rehearsal.ps1`.
 
 ## Что проверено локально
 
@@ -39,6 +41,7 @@ Staging deployment rehearsal не был запущен из текущего о
 - Reverse proxy health проверяется через `https://localhost/health` с `-k`, что соответствует TLS-only nginx конфигурации.
 - Rollback verification использует те же корректные backend-in-container и nginx `/health`/`/healthz` проверки.
 - Manual rollback workflow `.github/workflows/rollback-production.yml` теперь поддерживает выбор `environment=staging` и требует `confirm=ROLLBACK`.
+- Добавлен `scripts/staging-rehearsal.ps1`: проверяет GitHub Environment, наличие обязательных Environment secrets, active state workflow `deploy.yml`, умеет выполнить `workflow_dispatch`, дождаться результата, запустить smoke checks и проверить backup metadata на сервере.
 
 ## Environment `staging`
 
@@ -53,6 +56,13 @@ GET /repos/nilsnavi/fit_trackerpro/environments/staging -> 404 Not Found
 Этот результат не доказывает отсутствие Environment, потому что endpoint требует подходящих прав для private/settings data.
 
 Команда для оператора:
+
+```powershell
+$env:GITHUB_TOKEN = "<token-with-repo-actions-environment-access>"
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1
+```
+
+Альтернатива через `gh`:
 
 ```bash
 gh api repos/nilsnavi/fit_trackerpro/environments/staging
@@ -89,6 +99,13 @@ VITE_TELEGRAM_BOT_USERNAME
 
 Оператор должен проверить наличие имен:
 
+```powershell
+$env:GITHUB_TOKEN = "<token-with-repo-actions-environment-access>"
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1
+```
+
+Альтернатива через `gh`:
+
 ```bash
 gh secret list --env staging --repo nilsnavi/fit_trackerpro
 ```
@@ -98,6 +115,16 @@ gh secret list --env staging --repo nilsnavi/fit_trackerpro
 Статус: не запускался из текущего окружения.
 
 Команда запуска для оператора:
+
+```powershell
+$env:GITHUB_TOKEN = "<token-with-repo-actions-environment-access>"
+powershell -ExecutionPolicy Bypass -File scripts/staging-rehearsal.ps1 `
+  -ImageTag "main-$(git rev-parse --short HEAD)" `
+  -Dispatch `
+  -Wait
+```
+
+Альтернатива через `gh`:
 
 ```bash
 IMAGE_TAG="main-$(git rev-parse --short HEAD)"
