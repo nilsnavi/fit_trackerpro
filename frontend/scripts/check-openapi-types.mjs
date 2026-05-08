@@ -18,7 +18,19 @@ async function exportOpenApi(tmpOpenapiPath) {
     const child = spawn(
       'python',
       ['backend/tools/export_openapi.py', '--out', tmpOpenapiPath],
-      { cwd: repoRoot, stdio: 'inherit' },
+      {
+        cwd: repoRoot,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          ENVIRONMENT: 'test',
+          DEBUG: 'false',
+          DATABASE_URL: 'sqlite+aiosqlite:///:memory:',
+          SECRET_KEY: 'openapi-export-secret-key-32-chars',
+          TELEGRAM_BOT_TOKEN: '0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+          TELEGRAM_WEBAPP_URL: 'https://test.example.com',
+        },
+      },
     )
     child.on('error', reject)
     child.on('exit', (code) => {

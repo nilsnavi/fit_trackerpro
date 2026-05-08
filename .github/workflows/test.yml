@@ -183,7 +183,7 @@ jobs:
         env:
           E2E_BASE_URL: http://127.0.0.1:3000
           VITE_API_URL: http://127.0.0.1:28000/api/v1
-          E2E_TELEGRAM_BOT_TOKEN: test_token_for_e2e
+          E2E_TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         run: npm run e2e:golden-path
 
       - name: Upload Playwright report on failure
@@ -707,7 +707,7 @@ jobs:
       DATABASE_URL_SYNC: postgresql://test:test@localhost:5432/test
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: test-secret-key-for-ci-only
-      TELEGRAM_BOT_TOKEN: test-token
+      TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
       TELEGRAM_WEBAPP_URL: https://test.example.com
       ENVIRONMENT: test
       DEBUG: true

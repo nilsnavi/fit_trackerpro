@@ -38,7 +38,7 @@ services:
       DATABASE_URL_SYNC: ${E2E_DATABASE_URL_SYNC:-postgresql+psycopg2://fittracker:fittracker_ci_password@postgres:5432/fittracker_test}
       REDIS_URL: ${E2E_REDIS_URL:-redis://redis:6379/0}
       SECRET_KEY: ${E2E_SECRET_KEY:-ci-test-secret-key-not-used-in-production-32chars}
-      TELEGRAM_BOT_TOKEN: ${E2E_TELEGRAM_BOT_TOKEN:-test_token_for_e2e}
+      TELEGRAM_BOT_TOKEN: ${E2E_TELEGRAM_BOT_TOKEN:-0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA}
       TELEGRAM_WEBAPP_URL: ${E2E_TELEGRAM_WEBAPP_URL:-https://test.example.com}
       TELEGRAM_BOT_ENABLED: ${E2E_TELEGRAM_BOT_ENABLED:-false}
       ALLOWED_ORIGINS: ${E2E_ALLOWED_ORIGINS:-http://127.0.0.1:3000,http://localhost:3000}
