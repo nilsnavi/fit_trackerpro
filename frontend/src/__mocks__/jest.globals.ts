@@ -4,8 +4,6 @@
  *
  * ts-jest emits CommonJS here; use synchronous `require` (not `import.meta` / ESM).
  */
-/* eslint-disable @typescript-eslint/no-var-requires -- setupFiles run as CJS before the test graph. */
-
 // Polyfill crypto.randomUUID (not available in jsdom 20).
 // Node.js 18+ has globalThis.crypto with randomUUID; jsdom overrides crypto but drops it.
 // We patch it back from Node's built-in crypto module.

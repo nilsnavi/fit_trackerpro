@@ -20,6 +20,7 @@ module.exports = {
         'react-hooks/purity': 'off',
         'react-hooks/immutability': 'off',
         '@typescript-eslint/no-explicit-any': 'warn',
+        '@typescript-eslint/no-require-imports': 'off',
         '@typescript-eslint/no-unused-vars': [
             'error',
             {

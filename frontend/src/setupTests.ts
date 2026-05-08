@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires -- setup runs under ts-jest CJS; sync require for node-fetch polyfill. */
 import '@testing-library/jest-dom'
 import { jest } from '@jest/globals'
 
