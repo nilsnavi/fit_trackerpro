@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-fittracker_test}
-      POSTGRES_USER: ${POSTGRES_USER:-fittracker}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fittracker_ci_password}
+      POSTGRES_DB: ${E2E_POSTGRES_DB:-fittracker_test}
+      POSTGRES_USER: ${E2E_POSTGRES_USER:-fittracker}
+      POSTGRES_PASSWORD: ${E2E_POSTGRES_PASSWORD:-fittracker_ci_password}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
@@ -28,43 +28,36 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      ENVIRONMENT: ${ENVIRONMENT:-test}
-      DEBUG: ${DEBUG:-false}
-      AUTO_CREATE_DB_SCHEMA: ${AUTO_CREATE_DB_SCHEMA:-true}
-      POSTGRES_DB: ${POSTGRES_DB:-fittracker_test}
-      POSTGRES_USER: ${POSTGRES_USER:-fittracker}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fittracker_ci_password}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fittracker:fittracker_ci_password@postgres:5432/fittracker_test}
-      DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fittracker:fittracker_ci_password@postgres:5432/fittracker_test}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      SECRET_KEY: ${SECRET_KEY:-ci-test-secret-key-not-used-in-production-32chars}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA}
-      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-https://test.example.com}
-      TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-false}
+      ENVIRONMENT: ${E2E_ENVIRONMENT:-test}
+      DEBUG: ${E2E_DEBUG:-false}
+      AUTO_CREATE_DB_SCHEMA: ${E2E_AUTO_CREATE_DB_SCHEMA:-true}
+      POSTGRES_DB: ${E2E_POSTGRES_DB:-fittracker_test}
+      POSTGRES_USER: ${E2E_POSTGRES_USER:-fittracker}
+      POSTGRES_PASSWORD: ${E2E_POSTGRES_PASSWORD:-fittracker_ci_password}
+      DATABASE_URL: ${E2E_DATABASE_URL:-postgresql+asyncpg://fittracker:fittracker_ci_password@postgres:5432/fittracker_test}
+      DATABASE_URL_SYNC: ${E2E_DATABASE_URL_SYNC:-postgresql+psycopg2://fittracker:fittracker_ci_password@postgres:5432/fittracker_test}
+      REDIS_URL: ${E2E_REDIS_URL:-redis://redis:6379/0}
+      SECRET_KEY: ${E2E_SECRET_KEY:-ci-test-secret-key-not-used-in-production-32chars}
+      TELEGRAM_BOT_TOKEN: ${E2E_TELEGRAM_BOT_TOKEN:-test_token_for_e2e}
+      TELEGRAM_WEBAPP_URL: ${E2E_TELEGRAM_WEBAPP_URL:-https://test.example.com}
+      TELEGRAM_BOT_ENABLED: ${E2E_TELEGRAM_BOT_ENABLED:-false}
+      ALLOWED_ORIGINS: ${E2E_ALLOWED_ORIGINS:-http://127.0.0.1:3000,http://localhost:3000}
     command:
-      - gunicorn
-      - -k
-      - uvicorn.workers.UvicornWorker
-      - -w
-      - "2"
-      - -b
-      - 0.0.0.0:28000
-      - --access-logfile
-      - "-"
-      - --error-logfile
-      - "-"
-      - --capture-output
-      - --enable-stdio-inheritance
-      - app.main:app
+      - sh
+      - -lc
+      - |
+        PYTHONPATH=/app alembic -c /app/embedded_migrations/alembic.ini upgrade head
+        PYTHONPATH=/app REFERENCE_DATA_DIR=reference_data python -m app.cli.seed_reference_data apply
+        exec gunicorn -k uvicorn.workers.UvicornWorker -w 2 -b 0.0.0.0:8000 --access-logfile - --error-logfile - --capture-output --enable-stdio-inheritance app.main:app
     ports:
-      - "28000:28000"
+      - "28000:8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:28000/api/v1/system/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/v1/system/health >/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 30
@@ -75,8 +68,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://127.0.0.1:28000/api/v1}
-      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-https://test.example.com}
+      VITE_API_URL: ${E2E_VITE_API_URL:-http://127.0.0.1:28000/api/v1}
+      TELEGRAM_WEBAPP_URL: ${E2E_TELEGRAM_WEBAPP_URL:-https://test.example.com}
     ports:
       - "3000:80"
     depends_on:

@@ -2,6 +2,7 @@
 import type React from 'react'
 import { render, waitFor } from '@testing-library/react'
 import App from '@/App'
+import { useAuthStore } from '@/stores/authStore'
 
 // Smoke tests should verify routing + mount stability, not the correctness of every feature page.
 // We mock lazy-loaded screens to avoid pulling real feature dependencies (API, offline queue, etc.)
@@ -123,6 +124,7 @@ async function expectNoCrashFallback() {
 
 describe('smoke: app routing', () => {
     beforeEach(() => {
+        useAuthStore.getState().clear()
         void (console.error as jest.Mock).mockClear?.()
         void (console.warn as jest.Mock).mockClear?.()
     })
@@ -135,8 +137,23 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
+    it('opens workouts as the authenticated start screen', async () => {
+        useAuthStore.getState().setTokens({ accessToken: 'test-token' })
+
+        renderAt('/')
+        await expectAppShellVisible()
+        await expectNoCrashFallback()
+
+        await waitFor(() => {
+            expect(window.location.pathname).toBe('/workouts')
+        })
+
+        expect(console.error).not.toHaveBeenCalled()
+    })
+
     it.each([
         '/',
+        '/home',
         '/workouts',
         '/workouts/templates',
         '/workouts/templates/new',
@@ -161,13 +178,14 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
-    it('redirects unknown route to home', async () => {
+    it('redirects unknown route through workouts auth gate', async () => {
         renderAt('/__unknown__')
         await expectAppShellVisible()
         await expectNoCrashFallback()
 
         await waitFor(() => {
-            expect(window.location.pathname).toBe('/')
+            expect(window.location.pathname).toBe('/login')
+            expect(window.location.search).toContain('from=%2Fworkouts')
         })
 
         expect(console.error).not.toHaveBeenCalled()

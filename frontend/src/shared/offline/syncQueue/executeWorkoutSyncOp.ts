@@ -7,6 +7,11 @@ import type {
 } from '@features/workouts/types/workouts'
 import { WORKOUT_SYNC_KINDS } from './workoutKinds'
 
+const LEGACY_WORKOUT_SYNC_KINDS = {
+    SESSION_UPDATE: 'WORKOUT_SESSION_UPDATE',
+    SESSION_COMPLETE: 'WORKOUT_SESSION_COMPLETE',
+} as const
+
 export async function executeWorkoutSyncOp(kind: string, payload: unknown): Promise<void> {
     switch (kind) {
         case WORKOUT_SYNC_KINDS.TEMPLATE_CREATE: {
@@ -27,7 +32,8 @@ export async function executeWorkoutSyncOp(kind: string, payload: unknown): Prom
             await workoutsApi.startWorkout(p)
             return
         }
-        case WORKOUT_SYNC_KINDS.SESSION_UPDATE: {
+        case WORKOUT_SYNC_KINDS.SESSION_UPDATE:
+        case LEGACY_WORKOUT_SYNC_KINDS.SESSION_UPDATE: {
             const { workoutId, body } = payload as {
                 workoutId: number
                 body: WorkoutSessionUpdateRequest
@@ -35,7 +41,9 @@ export async function executeWorkoutSyncOp(kind: string, payload: unknown): Prom
             await workoutsApi.updateWorkoutSession(workoutId, body)
             return
         }
-        case WORKOUT_SYNC_KINDS.COMPLETE: {
+        case WORKOUT_SYNC_KINDS.COMPLETE:
+        case WORKOUT_SYNC_KINDS.SESSION_COMPLETE:
+        case LEGACY_WORKOUT_SYNC_KINDS.SESSION_COMPLETE: {
             const { workoutId, body } = payload as {
                 workoutId: number
                 body: WorkoutCompleteRequest

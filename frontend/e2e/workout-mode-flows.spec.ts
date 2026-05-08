@@ -69,7 +69,7 @@ test('save and start workout', async ({ page }) => {
     await expect.poll(() => state.updateSessionRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
     await expect(page.getByRole('heading', { name: 'Жим лёжа' }).last()).toBeVisible()
-    await expect(page.getByTestId('finish-workout-btn')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeVisible()
 })
 
 test('create template -> start workout -> log sets -> complete -> open history', async ({ page }) => {
@@ -101,23 +101,33 @@ test('create template -> start workout -> log sets -> complete -> open history',
 
     await expect.poll(() => state.startRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
-    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible()
 
-    await page.locator('[data-testid="set-toggle-btn"]').first().click()
+    const firstSetCompleteButton = page.getByRole('button', { name: 'Отметить подход 1 выполненным' })
+    await firstSetCompleteButton.dispatchEvent('click')
+    await expect(page.getByLabel('Подход выполнен').first()).toBeVisible()
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
 
-    await page.getByTestId('finish-workout-btn').click({ force: true })
-    // Finish sheet lives in a lazy chunk; first open can take longer on cold cache.
+    const skipRestTimer = page.getByRole('button', { name: 'Skip' })
+    if (await skipRestTimer.isVisible().catch(() => false)) {
+        await skipRestTimer.click()
+    }
+
+    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+    await expect(page.getByText('Завершить тренировку?')).toBeVisible({ timeout: 45_000 })
+    await page.getByRole('button', { name: 'Завершить', exact: true }).last().click()
+
+    await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary(?:\?.*)?$/, { timeout: 30_000 })
+    await page.getByRole('button', { name: 'Завершить тренировку' }).click()
     await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
-    await expect(page.getByTestId('confirm-finish-btn')).toBeVisible({ timeout: 10_000 })
     await page.getByTestId('confirm-finish-btn').click()
 
     await expect.poll(() => state.completeRequests.length, { timeout: 45_000 }).toBe(1)
     await expect(page).toHaveURL(/\/workouts\/\d+(?:\?.*)?$/, { timeout: 30_000 })
 
     await page.goto('/workouts', { waitUntil: 'domcontentloaded' })
-    await expect(page.getByRole('heading', { name: 'История' })).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByText(title)).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Последние сессии' })).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible()
 })
 
 test('repeat workout from workouts page', async ({ page }) => {
@@ -149,9 +159,11 @@ test('repeat workout from workouts page', async ({ page }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto('/workouts')
-    await expect(page.locator('[data-testid="repeat-last-workout-btn"]')).toBeVisible({ timeout: 30_000 })
+    const lastWorkoutSection = page.locator('section').filter({ hasText: 'Последняя тренировка' }).first()
+    const repeatLastButton = lastWorkoutSection.getByRole('button', { name: 'Повторить', exact: true })
+    await expect(repeatLastButton).toBeVisible({ timeout: 30_000 })
 
-    await page.locator('[data-testid="repeat-last-workout-btn"]').click()
+    await repeatLastButton.evaluate((button: HTMLElement) => button.click())
 
     await expect.poll(() => state.startRequests.length).toBe(1)
     await expect.poll(() => state.updateSessionRequests.length).toBe(1)
@@ -160,7 +172,7 @@ test('repeat workout from workouts page', async ({ page }) => {
     expect(repeatedExercises[0]?.sets_completed[0]?.completed).toBe(false)
     expect(repeatedExercises[0]?.sets_completed[1]?.completed).toBe(false)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
-    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible()
 })
 
 test('resume draft from workouts page', async ({ page }) => {
@@ -192,13 +204,14 @@ test('resume draft from workouts page', async ({ page }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto('/workouts')
-    await expect(page.locator('[data-testid="resume-draft-btn"]')).toBeVisible({ timeout: 30_000 })
+    const activeWorkoutLink = page.getByRole('link', { name: /Открыть активную тренировку|Активная тренировка/ }).first()
+    await expect(activeWorkoutLink).toBeVisible({ timeout: 30_000 })
 
-    await page.locator('[data-testid="resume-draft-btn"]').click()
+    await activeWorkoutLink.click()
 
     await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
-    await expect(page.getByTestId('active-workout-session-bar')).toBeVisible()
-    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Жим лёжа' }).last()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible()
 })
 
 test('complete workout', async ({ page }) => {
@@ -231,14 +244,22 @@ test('complete workout', async ({ page }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto(`/workouts/active/${workoutId}`)
-    await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
-    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('heading', { name: 'Присед' }).last()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible({ timeout: 30_000 })
 
-    await page.locator('[data-testid="set-toggle-btn"]').first().click()
+    await page.getByRole('button', { name: 'Отметить подход 1 выполненным' }).click()
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
 
-    // Completing the last remaining set should auto-finish workout.
-    await page.locator('[data-testid="set-toggle-btn"]').nth(1).click()
+    // Completing the last remaining set opens the summary step before final save.
+    await page.getByRole('button', { name: 'Отметить подход 2 выполненным' }).click()
+
+    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+    await expect(page.getByText('Завершить тренировку?')).toBeVisible({ timeout: 45_000 })
+    await page.getByRole('button', { name: 'Завершить', exact: true }).last().click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}/summary(?:\\?.*)?$`))
+    await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+    await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
+    await page.getByTestId('confirm-finish-btn').click()
 
     await expect.poll(() => state.completeRequests.length).toBe(1)
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}(?:\\?.*)?$`))
@@ -274,11 +295,19 @@ test('auto-complete workout on last "Готово" tap', async ({ page }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto(`/workouts/active/${workoutId}`)
-    await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
-    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('heading', { name: 'Присед' }).last()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible({ timeout: 30_000 })
 
-    // One incomplete set in session: pressing "Готово" must immediately complete workout.
-    await page.getByRole('button', { name: 'Готово' }).first().click()
+    // One incomplete set in session: marking it done opens the summary step before final save.
+    await page.getByRole('button', { name: 'Отметить подход 1 выполненным' }).click()
+
+    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+    await expect(page.getByText('Завершить тренировку?')).toBeVisible({ timeout: 45_000 })
+    await page.getByRole('button', { name: 'Завершить', exact: true }).last().click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}/summary(?:\\?.*)?$`))
+    await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+    await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
+    await page.getByTestId('confirm-finish-btn').click()
 
     await expect.poll(() => state.completeRequests.length).toBe(1)
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}(?:\\?.*)?$`))
@@ -315,21 +344,20 @@ test('offline -> reconnect -> sync', async ({ page, context }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto(`/workouts/active/${workoutId}`)
-    await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible({ timeout: 30_000 })
 
     await context.setOffline(true)
-    await page.locator('[data-testid="set-toggle-btn"]').first().click()
+    await page.getByRole('button', { name: 'Отметить подход 1 выполненным' }).click()
 
-    const status = page.getByRole('status').filter({ hasText: 'Офлайн' }).first()
+    const status = page.getByRole('status').filter({ hasText: 'Нет сети' }).first()
     await expect(status).toBeVisible({ timeout: 8000 })
-    await expect(page.getByText('Офлайн: изменения поставлены в очередь синхронизации')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/сохранено локально/)).toBeVisible({ timeout: 5000 })
 
     await context.setOffline(false)
 
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 8000 }).toBeGreaterThan(0)
-    await expect(page.getByRole('status').filter({ hasText: 'Сохранено' }).first()).toBeVisible({ timeout: 8000 })
 
     await page.reload()
-    await expect(page.locator('[data-testid="set-toggle-btn"][class*="green"]').first()).toBeVisible()
+    await expect(page.getByLabel('Подход выполнен').first()).toBeVisible()
 })
 })

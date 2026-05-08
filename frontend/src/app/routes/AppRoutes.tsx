@@ -19,8 +19,9 @@ export function AppRoutes() {
         <Suspense fallback={<RouteFallbackSpinner />}>
             <Routes>
                 <Route element={<AppShell />}>
+                    <Route path="/" element={<Navigate to="/workouts" replace />} />
                     <Route
-                        path="/"
+                        path="/home"
                         element={
                             <RouteGuard screenTitle="Главная" isPublic>
                                 <Home />
@@ -38,7 +39,7 @@ export function AppRoutes() {
                     {workoutRoutes()}
                     {analyticsRoutes()}
                     {profileRoutes()}
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<Navigate to="/workouts" replace />} />
                 </Route>
             </Routes>
         </Suspense>

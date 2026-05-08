@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -74,7 +75,14 @@ class AuthService:
                 },
                 settings={"theme": "telegram", "notifications": True, "units": "metric"},
             )
-            return await self.repository.insert_user(user), True
+            try:
+                return await self.repository.insert_user(user), True
+            except IntegrityError:
+                await self.repository.rollback()
+                existing = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
+                if existing is None:
+                    raise
+                return existing, False
 
         user.username = telegram_user_data.get("username") or user.username
         user.first_name = telegram_user_data.get("first_name") or user.first_name

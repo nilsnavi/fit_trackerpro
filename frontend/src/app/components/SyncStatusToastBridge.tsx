@@ -33,7 +33,20 @@ export function SyncStatusToastBridge() {
                 failedCount,
                 onRetryNow: () => {
                     const engine = getSyncQueueEngine()
-                    void engine.flush()
+                    const failedItems = engine
+                        .getAllItems()
+                        .filter((item) => item.status === 'failed')
+
+                    if (failedItems.length === 0) {
+                        void engine.flush()
+                        return
+                    }
+
+                    void (async () => {
+                        for (const item of failedItems) {
+                            await engine.retryItem(item.id)
+                        }
+                    })()
                 },
             })
             prevStateRef.current = 'failed'

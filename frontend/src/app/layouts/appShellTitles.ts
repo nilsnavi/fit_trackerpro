@@ -2,7 +2,7 @@
  * Заголовки верхней панели App Shell по пути (Telegram WebApp / браузер).
  */
 const TITLE_RULES: { test: (path: string) => boolean; title: string }[] = [
-    { test: (p) => p === '/' || p === '', title: 'Главная' },
+    { test: (p) => p === '/home', title: 'Главная' },
     { test: (p) => p === '/exercises', title: 'Каталог' },
     { test: (p) => p.startsWith('/exercises/add'), title: 'Новое упражнение' },
     { test: (p) => p === '/workouts', title: 'Тренировки' },
