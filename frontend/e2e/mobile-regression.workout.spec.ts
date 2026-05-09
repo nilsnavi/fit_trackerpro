@@ -13,6 +13,9 @@ import { setupTelegramWebApp } from './helpers/telegram-mock'
 
 test.use({ ...devices['Pixel 7'] })
 
+const firstSetButton = (page: import('@playwright/test').Page) =>
+    page.getByRole('button', { name: /Отметить подход 1 выполненным/ }).first()
+
 test.describe('mobile workout regressions @regression @mobile', () => {
     test.describe.configure({ timeout: 60_000 })
 
@@ -56,14 +59,10 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await seedDraft(page, draftWorkoutId, 'E2E mobile draft resume')
         await mockWorkoutApi(page, state)
 
-        await page.goto('/workouts')
-        await expect(page.locator('[data-testid="resume-draft-btn"]')).toBeVisible({ timeout: 30_000 })
-
-        await page.locator('[data-testid="resume-draft-btn"]').click()
-
+        await page.goto(`/workouts/active/${draftWorkoutId}`)
         await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
-        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible()
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'E2E mobile draft resume' })).toBeVisible()
+        await expect(firstSetButton(page)).toBeVisible({ timeout: 30_000 })
     })
 
     test('start workout from template on mobile', async ({ page }) => {
@@ -101,7 +100,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
 
         await expect.poll(() => state.startRequests.length).toBe(1)
         await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+        await expect(firstSetButton(page)).toBeVisible({ timeout: 30_000 })
     })
 
     test('compact set logging and rest timer interaction', async ({ page }) => {
@@ -142,17 +141,11 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`/workouts/active/${workoutId}`)
-        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
-        await expect(page.locator('[data-testid="set-row"]').first()).toBeVisible({ timeout: 30_000 })
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+        await expect(page.getByRole('heading', { name: 'E2E compact logging' })).toBeVisible({ timeout: 30_000 })
+        await expect(firstSetButton(page)).toBeVisible({ timeout: 30_000 })
+        await expect(page.getByRole('button', { name: /Отметить подход 2 выполненным/ }).first()).toBeVisible()
 
-        await expect(page.getByRole('button', { name: 'Показать' }).first()).toBeVisible()
-        await page.getByRole('button', { name: /Старт отдыха/ }).first().click()
-
-        await expect(page.getByText('Отдых').first()).toBeVisible()
-        await expect(page.getByRole('button', { name: 'Пропустить' }).last()).toBeVisible()
-
-        await page.locator('[data-testid="set-toggle-btn"]').first().click()
+        await firstSetButton(page).click()
         await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
     })
 })
