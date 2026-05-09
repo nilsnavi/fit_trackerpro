@@ -4,6 +4,7 @@ from httpx import ASGITransport, AsyncClient
 from app.application.health_check_service import HealthCheckService
 from app.main import app
 from app.schemas.system import ReadinessChecks, ReadinessResponse
+from app.settings import settings
 
 
 @pytest.mark.unit
@@ -144,7 +145,7 @@ async def test_root_redirects_document_navigation_to_telegram_webapp(client: Asy
         },
     )
     assert response.status_code == 302
-    assert response.headers.get("location") == "https://example.com/webapp"
+    assert response.headers.get("location") == settings.TELEGRAM_WEBAPP_URL
 
 
 @pytest.mark.unit
@@ -154,7 +155,7 @@ async def test_root_redirects_telegram_user_agent_to_webapp(client: AsyncClient)
         headers={"User-Agent": "Mozilla/5.0 Telegram-iOS"},
     )
     assert response.status_code == 302
-    assert response.headers.get("location") == "https://example.com/webapp"
+    assert response.headers.get("location") == settings.TELEGRAM_WEBAPP_URL
 
 
 @pytest.mark.unit
@@ -164,7 +165,7 @@ async def test_root_redirects_sec_fetch_dest_document(client: AsyncClient):
         headers={"Sec-Fetch-Dest": "document"},
     )
     assert response.status_code == 302
-    assert response.headers.get("location") == "https://example.com/webapp"
+    assert response.headers.get("location") == settings.TELEGRAM_WEBAPP_URL
 
 
 @pytest.mark.unit
