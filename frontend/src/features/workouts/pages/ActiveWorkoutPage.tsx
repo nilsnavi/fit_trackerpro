@@ -63,7 +63,6 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useWorkoutSync } from '@/hooks/useWorkoutSync'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
 
-import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { ActiveWorkoutSummarySection } from '@features/workouts/active/containers/ActiveWorkoutSummarySection'
 import { ActiveWorkoutExerciseSection } from '@features/workouts/active/containers/ActiveWorkoutExerciseSection'
 import { ActiveWorkoutBottomActions } from '@features/workouts/active/containers/ActiveWorkoutBottomActions'
@@ -85,7 +84,7 @@ export function ActiveWorkoutPage() {
     const tg = useTelegramWebApp()
     const { isOnline } = useNetworkStatus()
     const [reconnectBanner, setReconnectBanner] = useState<'hidden' | 'syncing' | 'saved'>('hidden')
-    const [finishSessionConfirmOpen, setFinishSessionConfirmOpen] = useState(false)
+    const [finishWarning, setFinishWarning] = useState<string | null>(null)
     const [isInlineSetSaving, setIsInlineSetSaving] = useState(false)
     const prevOnlineRef = useRef(isOnline)
 
@@ -93,6 +92,7 @@ export function ActiveWorkoutPage() {
     const openExerciseModal = useWorkoutSessionUiStore((s) => s.openExerciseModal)
     const closeExerciseModal = useWorkoutSessionUiStore((s) => s.closeExerciseModal)
     const startSessionRestTimer = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
+    const skipSessionRestTimer = useWorkoutSessionUiStore((s) => s.skipSessionRestTimer)
 
     const workoutId: number = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId: boolean = Number.isFinite(workoutId)
@@ -350,6 +350,7 @@ export function ActiveWorkoutPage() {
         data: weightRecommendation,
         isLoading: isWeightRecLoading,
         isError: isWeightRecError,
+        refetch: refetchWeightRecommendation,
     } = useWeightRecommendation(
         workoutId,
         recommendationExercise?.exercise_id ?? 0,
@@ -531,6 +532,7 @@ export function ActiveWorkoutPage() {
     }, [exerciseActions, notifySetCompleted, restDefaultSeconds, startRestTimer])
 
     const handleInlineSetChanged = useCallback(() => {
+        setFinishWarning(null)
         setIsInlineSetSaving(true)
         notifySetCompleted()
         void queryClient.invalidateQueries({
@@ -554,25 +556,89 @@ export function ActiveWorkoutPage() {
         [workout, currentExerciseIndex, currentSetIndex, setCurrentPosition, openExerciseModal],
     )
 
-    const handleNavigateToSummaryAfterConfirm = useCallback(() => {
-        if (!workout) return
-        void flushWorkoutSync().then(() => {
-            const metrics = computeWorkoutSessionSummaryMetrics(
-                workout,
-                elapsedSeconds,
-                currentExerciseIndex,
-                currentSetIndex,
-            )
-            navigate(`/workouts/active/${workoutId}/summary`, { state: metrics })
-            setFinishSessionConfirmOpen(false)
-        })
-    }, [workout, flushWorkoutSync, elapsedSeconds, currentExerciseIndex, currentSetIndex, navigate, workoutId])
+    const handleFinishWorkoutDirect = useCallback(async () => {
+        if (!workout || completeMutation.isPending) return
+
+        setFinishWarning(null)
+        await flushWorkoutSync()
+
+        const current = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey) ?? workout
+        const hasCompletedSet = current.exercises.some((exercise) =>
+            exercise.sets_completed.some((set) => set.completed),
+        )
+
+        if (!hasCompletedSet) {
+            setFinishWarning('Сначала завершите хотя бы один подход')
+            return
+        }
+
+        const metrics = computeWorkoutSessionSummaryMetrics(
+            current,
+            elapsedSeconds,
+            currentExerciseIndex,
+            currentSetIndex,
+        )
+        const durationMinutes = Math.max(1, Math.round(metrics.totalDurationSeconds / 60))
+
+        try {
+            const data = await completeMutation.mutateAsync({
+                workoutId,
+                payload: {
+                    duration: durationMinutes,
+                    exercises: current.exercises,
+                    comments: current.comments,
+                    tags: current.tags ?? [],
+                    glucose_before: current.glucose_before,
+                    glucose_after: current.glucose_after,
+                },
+            })
+
+            clearActiveWorkoutDraft()
+            clearWorkoutSessionDraft()
+            abandonWorkoutSessionDraft()
+            skipRestTimer()
+            skipSessionRestTimer()
+            resetActiveWorkoutState()
+            navigate(`/workouts/active/${data.id}/summary`, {
+                replace: true,
+                state: {
+                    ...metrics,
+                    workoutTitle,
+                    durationMinutes,
+                    finishedAt: data.completed_at,
+                },
+            })
+        } catch (error) {
+            setFinishWarning(`Не удалось завершить тренировку: ${getErrorMessage(error)}`)
+        }
+    }, [
+        abandonWorkoutSessionDraft,
+        clearActiveWorkoutDraft,
+        clearWorkoutSessionDraft,
+        completeMutation,
+        currentExerciseIndex,
+        currentSetIndex,
+        detailQueryKey,
+        elapsedSeconds,
+        flushWorkoutSync,
+        navigate,
+        queryClient,
+        resetActiveWorkoutState,
+        skipRestTimer,
+        skipSessionRestTimer,
+        workout,
+        workoutId,
+        workoutTitle,
+    ])
 
     const handleModalUpdateRpe = useCallback(
         (exerciseIndex: number, setNumber: number, rpe: number) => {
             updateSet(exerciseIndex, setNumber, { rpe })
+            if (exerciseIndex === currentExerciseIndex) {
+                void refetchWeightRecommendation()
+            }
         },
-        [updateSet],
+        [currentExerciseIndex, refetchWeightRecommendation, updateSet],
     )
 
     const modalExercise = useMemo(() => {
@@ -848,19 +914,22 @@ export function ActiveWorkoutPage() {
                         workoutTitle={workoutTitle}
                         elapsedSeconds={elapsedSeconds}
                         currentExerciseIndex={currentExerciseIndex}
+                        currentSetIndex={currentSetIndex}
                         previousBestByExercise={previousBestByExercise}
                         weightRecommendation={weightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
-                        isSavingSet={isInlineSetSaving || updateSessionMutation.isPending}
+                        isSavingSet={isInlineSetSaving || updateSessionMutation.isPending || completeMutation.isPending}
+                        finishWarning={finishWarning}
                         onBack={() => guardedAction(() => navigate(-1))}
                         onSelectExercise={handleSelectExerciseIndex}
                         onPatchWorkout={patchItem}
                         onUpdateSet={updateSet}
+                        onSetCurrentPosition={setCurrentPosition}
                         onNotifySetCompleted={handleInlineSetChanged}
                         onSetLastCompletedSet={setLastCompletedSet}
                         onAddExercise={() => exerciseActions.resetAddItemForm('exercise')}
-                        onFinishWorkout={() => setFinishSessionConfirmOpen(true)}
+                        onFinishWorkout={handleFinishWorkoutDirect}
                     />
 
                     {renderLegacyActiveWorkoutDebug ? (
@@ -929,7 +998,7 @@ export function ActiveWorkoutPage() {
                             'w-full touch-manipulation border-2',
                             allExercisesDone && 'border-danger/50 text-danger hover:bg-danger/10',
                         )}
-                        onClick={() => setFinishSessionConfirmOpen(true)}
+                        onClick={handleFinishWorkoutDirect}
                         disabled={completeMutation.isPending}
                     >
                         Завершить тренировку
@@ -1022,16 +1091,6 @@ export function ActiveWorkoutPage() {
                         </>
                     ) : null}
 
-                    <WorkoutConfirmModal
-                        isOpen={finishSessionConfirmOpen}
-                        title="Завершить тренировку?"
-                        description={`Выполнено ${exercisesDoneCount} из ${exerciseCount} упражнений`}
-                        confirmLabel="Завершить"
-                        cancelLabel="Продолжить"
-                        confirmVariant="emergency"
-                        onClose={() => setFinishSessionConfirmOpen(false)}
-                        onConfirm={handleNavigateToSummaryAfterConfirm}
-                    />
                 </>
             ) : null}
 

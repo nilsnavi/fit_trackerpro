@@ -667,6 +667,70 @@ class TestWorkoutStartComplete:
         assert len(detail_json.get("exercises") or []) == 2
         assert detail_json.get("comments") == update_payload["comments"]
 
+    async def test_create_session_endpoint_supports_all_start_sources(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        quick = await authenticated_client.post(
+            "/api/v1/workouts/sessions",
+            json={"source_type": "quick_start", "name": "Quick start"},
+        )
+        assert quick.status_code == 201, quick.text
+        assert quick.json()["source_type"] == "quick_start"
+        assert quick.json()["source_id"] is None
+
+        template_payload = {
+            "name": "Session Source Template",
+            "type": "strength",
+            "exercises": [
+                {
+                    "exercise_id": 1,
+                    "name": "Push-ups",
+                    "sets": 2,
+                    "reps": 10,
+                    "rest_seconds": 60,
+                }
+            ],
+            "is_public": False,
+        }
+        created_template = await authenticated_client.post(
+            "/api/v1/workouts/templates",
+            json=template_payload,
+        )
+        assert created_template.status_code in (200, 201), created_template.text
+        template_id = created_template.json()["id"]
+
+        from_template = await authenticated_client.post(
+            "/api/v1/workouts/sessions",
+            json={"source_type": "personal_template", "source_id": template_id},
+        )
+        assert from_template.status_code == 201, from_template.text
+        from_template_json = from_template.json()
+        assert from_template_json["template_id"] == template_id
+        assert from_template_json["source_type"] == "personal_template"
+        assert from_template_json["source_id"] == template_id
+
+        previous = await authenticated_client.post(
+            "/api/v1/workouts/sessions",
+            json={
+                "source_type": "previous_session",
+                "source_id": from_template_json["id"],
+                "name": "Repeat previous",
+            },
+        )
+        assert previous.status_code == 201, previous.text
+        previous_json = previous.json()
+        assert previous_json["source_type"] == "previous_session"
+        assert previous_json["source_id"] == from_template_json["id"]
+
+        program_day = await authenticated_client.post(
+            "/api/v1/workouts/sessions",
+            json={"source_type": "program_day", "source_id": 123, "name": "Program day"},
+        )
+        assert program_day.status_code == 201, program_day.text
+        assert program_day.json()["source_type"] == "program_day"
+        assert program_day.json()["source_id"] == 123
+
     async def test_update_active_workout_conflict_returns_409_details(
         self,
         authenticated_client: AsyncClient,

@@ -8,9 +8,14 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from app.schemas.enums import WorkoutSessionType, WorkoutSetType, WorkoutTemplateType
+from app.schemas.enums import (
+    WorkoutSessionSourceType,
+    WorkoutSessionType,
+    WorkoutSetType,
+    WorkoutTemplateType,
+)
 
 
 class ExerciseInTemplate(BaseModel):
@@ -289,6 +294,31 @@ class WorkoutStartFromTemplateRequest(BaseModel):
     overrides: Optional[StartWorkoutTemplateOverrides] = None
 
 
+class WorkoutSessionCreateRequest(BaseModel):
+    """Canonical request for creating a WorkoutSession from any start source."""
+
+    source_type: WorkoutSessionSourceType = Field(
+        default=WorkoutSessionSourceType.QUICK_START,
+        description="Canonical start source for the workout session.",
+    )
+    source_id: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Source entity ID. Required for all sources except quick_start.",
+    )
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    type: WorkoutSessionType = Field(default=WorkoutSessionType.CUSTOM)
+    overrides: Optional[StartWorkoutTemplateOverrides] = None
+
+    @model_validator(mode="after")
+    def validate_source_id(self) -> "WorkoutSessionCreateRequest":
+        if self.source_type == WorkoutSessionSourceType.QUICK_START:
+            return self
+        if self.source_id is None:
+            raise ValueError("source_id is required for this source_type")
+        return self
+
+
 class WorkoutTemplateFromWorkoutCreate(BaseModel):
     """Create template from completed workout session."""
 
@@ -326,6 +356,8 @@ class WorkoutStartResponse(BaseModel):
     id: int
     user_id: int
     template_id: Optional[int]
+    source_type: WorkoutSessionSourceType = WorkoutSessionSourceType.QUICK_START
+    source_id: Optional[int] = None
     date: date
     start_time: datetime
     status: str = "in_progress"
@@ -429,6 +461,8 @@ class WorkoutCompleteResponse(BaseModel):
     id: int
     user_id: int
     template_id: Optional[int]
+    source_type: WorkoutSessionSourceType = WorkoutSessionSourceType.QUICK_START
+    source_id: Optional[int] = None
     date: date
     duration: int
     exercises: List[CompletedExercise]
@@ -449,6 +483,9 @@ class WorkoutHistoryItem(BaseModel):
     """Single workout history entry"""
 
     id: int
+    template_id: Optional[int] = None
+    source_type: WorkoutSessionSourceType = WorkoutSessionSourceType.QUICK_START
+    source_id: Optional[int] = None
     date: date
     duration: Optional[int]
     exercises: List[CompletedExercise]

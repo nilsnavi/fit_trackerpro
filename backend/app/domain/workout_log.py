@@ -68,6 +68,18 @@ class WorkoutLog(Base):
         server_default="1",
         comment="Optimistic locking version for in-progress updates",
     )
+    source_type: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+        index=True,
+        comment="Workout session start source type",
+    )
+    source_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        index=True,
+        comment="Source entity id for template/program/previous session starts",
+    )
 
     # Completed exercises stored as JSONB
     exercises: Mapped[list[dict]] = mapped_column(
@@ -163,6 +175,10 @@ class WorkoutLog(Base):
             name="ck_workout_logs_version_positive",
         ),
         CheckConstraint(
+            "source_type IS NULL OR source_type IN ('quick_start','personal_template','system_template','community_template','program_day','previous_session')",
+            name="ck_workout_logs_source_type_allowed",
+        ),
+        CheckConstraint(
             "glucose_before IS NULL OR (glucose_before >= 2 AND glucose_before <= 30)",
             name="ck_workout_logs_glucose_before_range",
         ),
@@ -178,6 +194,7 @@ class WorkoutLog(Base):
         ),
         Index('ix_workout_logs_user_date', 'user_id', 'date'),
         Index('ix_workout_logs_user_id_id_version', 'user_id', 'id', 'version'),
+        Index('ix_workout_logs_user_source', 'user_id', 'source_type', 'source_id'),
     )
 
     def __repr__(self) -> str:

@@ -28,6 +28,7 @@ interface WorkoutSessionUiState {
     sessionRestTimer: SessionRestTimerState | null
     startSessionRestTimer: (payload: Omit<SessionRestTimerState, 'active' | 'remaining'>) => void
     tickSessionRestTimer: () => void
+    restartSessionRestTimer: () => void
     skipSessionRestTimer: () => void
 }
 
@@ -55,6 +56,18 @@ export const useWorkoutSessionUiStore = create<WorkoutSessionUiState>((set) => (
                     ...t,
                     remaining,
                     active: remaining > 0,
+                },
+            }
+        }),
+    restartSessionRestTimer: () =>
+        set((s) => {
+            const t = s.sessionRestTimer
+            if (!t) return s
+            return {
+                sessionRestTimer: {
+                    ...t,
+                    active: t.total > 0,
+                    remaining: t.total,
                 },
             }
         }),

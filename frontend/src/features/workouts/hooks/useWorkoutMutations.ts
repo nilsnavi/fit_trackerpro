@@ -33,6 +33,7 @@ import {
     calendarEntryFromStartResponse,
     completedExercisesFromTemplate,
     findTemplateInCaches,
+    getStartTemplateId,
     historyItemFromCompleteResponse,
     historyItemFromStartResponse,
     nextOptimisticNegativeId,
@@ -400,13 +401,14 @@ export function useStartWorkoutMutation() {
             const cal = calendarEntryFromStartResponse(data, variables)
             replaceCalendarWorkoutId(queryClient, ctx.tempId, cal)
             let item = historyItemFromStartResponse(data, variables)
-            if (variables.template_id != null) {
-                let template = findTemplateInCaches(queryClient, variables.template_id)
+            const startTemplateId = getStartTemplateId(variables)
+            if (startTemplateId != null) {
+                let template = findTemplateInCaches(queryClient, startTemplateId)
                 if (!template) {
                     try {
                         template = await queryClient.fetchQuery({
-                            queryKey: queryKeys.workouts.templatesDetail(variables.template_id),
-                            queryFn: () => workoutsApi.getTemplate(variables.template_id!),
+                            queryKey: queryKeys.workouts.templatesDetail(startTemplateId),
+                            queryFn: () => workoutsApi.getTemplate(startTemplateId),
                             ...offlineListQueryDefaults,
                             staleTime: 60_000,
                         })
@@ -422,7 +424,9 @@ export function useStartWorkoutMutation() {
             replaceHistoryListTemporalId(queryClient, ctx.tempId, item)
             trackBusinessMetric('started_workout', {
                 workout_id: data.id,
-                template_id: variables.template_id ?? null,
+                template_id: startTemplateId ?? null,
+                source_type: variables.source_type ?? data.source_type ?? null,
+                source_id: variables.source_id ?? data.source_id ?? null,
                 type: variables.type ?? null,
             })
         },

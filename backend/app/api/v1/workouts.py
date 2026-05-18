@@ -23,6 +23,7 @@ from app.schemas.workouts import (
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
+    WorkoutSessionCreateRequest,
     WorkoutSessionUpdateRequest,
     WorkoutSetPatchRequest,
     WorkoutSetResponse,
@@ -256,6 +257,21 @@ async def start_workout(
     return await service.start_workout(
         user_id=current_user.id,
         data=start_data,
+        client_ip=get_client_ip(request),
+    )
+
+
+@router.post("/sessions", response_model=WorkoutStartResponse, status_code=status.HTTP_201_CREATED)
+async def create_workout_session(
+    session_data: WorkoutSessionCreateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = WorkoutsService(db)
+    return await service.create_workout_session(
+        user_id=current_user.id,
+        data=session_data,
         client_ip=get_client_ip(request),
     )
 

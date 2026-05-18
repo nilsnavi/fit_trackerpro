@@ -6,7 +6,7 @@ import { useTelegramContext } from '../providers/TelegramProvider'
 import { useWorkoutSessionDraftCloudSync } from '@shared/hooks/useWorkoutSessionDraftCloudSync'
 import { cn } from '@shared/lib/cn'
 import { AppShellHeader } from './AppShellHeader'
-import { AppShellLayoutProvider } from './AppShellLayoutContext'
+import { AppShellLayoutProvider, useAppShellLayoutContext } from './AppShellLayoutContext'
 
 export function AppShell() {
     const { isTelegram } = useTelegramContext()
@@ -23,19 +23,35 @@ export function AppShell() {
                 data-app-shell
                 data-telegram={isTelegram ? 'true' : 'false'}
             >
-                <AppShellHeader />
-                <ConnectivitySyncBar />
-                <main
-                    className={cn(
-                        'app-shell-main min-h-0 flex-1 overflow-x-hidden overflow-y-auto',
-                        'pb-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px)+var(--active-workout-banner-h))]',
-                    )}
-                >
-                    <Outlet />
-                </main>
-                <ActiveWorkoutBanner />
-                <Navigation />
+                <AppShellContent />
             </div>
         </AppShellLayoutProvider>
+    )
+}
+
+function AppShellContent() {
+    const { hideNavigation } = useAppShellLayoutContext()
+
+    return (
+        <>
+            <AppShellHeader />
+            <ConnectivitySyncBar />
+            <main
+                className={cn(
+                    'app-shell-main min-h-0 flex-1 overflow-x-hidden overflow-y-auto',
+                    hideNavigation
+                        ? 'pb-0'
+                        : 'pb-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px)+var(--active-workout-banner-h))]',
+                )}
+            >
+                <Outlet />
+            </main>
+            {hideNavigation ? null : (
+                <>
+                    <ActiveWorkoutBanner />
+                    <Navigation />
+                </>
+            )}
+        </>
     )
 }

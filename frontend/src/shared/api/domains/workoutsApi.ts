@@ -38,6 +38,23 @@ function normalizeWorkoutStartResponse(response: WorkoutStartResponse): WorkoutS
     }
 }
 
+function toWorkoutSessionCreatePayload(payload: WorkoutStartRequest): WorkoutStartRequest {
+    if (payload.source_type) {
+        return payload
+    }
+    if (payload.template_id != null) {
+        return {
+            ...payload,
+            source_type: 'personal_template',
+            source_id: payload.template_id,
+        }
+    }
+    return {
+        ...payload,
+        source_type: 'quick_start',
+    }
+}
+
 function normalizeWorkoutHistoryItem(response: WorkoutHistoryItem): WorkoutHistoryItem {
     const normalizedId =
         typeof response.id === 'number'
@@ -152,7 +169,13 @@ export const workoutsApi = {
 
     startWorkout(payload: WorkoutStartRequest): Promise<WorkoutStartResponse> {
         return api
-            .post<WorkoutStartResponse>('/workouts/start', payload)
+            .post<WorkoutStartResponse>('/workouts/sessions', toWorkoutSessionCreatePayload(payload))
+            .then(normalizeWorkoutStartResponse)
+    },
+
+    createWorkoutSession(payload: WorkoutStartRequest): Promise<WorkoutStartResponse> {
+        return api
+            .post<WorkoutStartResponse>('/workouts/sessions', toWorkoutSessionCreatePayload(payload))
             .then(normalizeWorkoutStartResponse)
     },
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
+import { useWorkoutSessionUiStore } from '@/state/local'
 
 interface UseRestTimerParams {
     isRunning: boolean
@@ -69,17 +70,21 @@ function createCompletionSound(): void {
  * Advanced rest timer hook with sound, vibration, and visual feedback.
  * Provides automatic notifications when timer completes.
  */
-export function useRestTimer({ 
-    isRunning, 
-    isPaused,
-    remainingSeconds, 
-    durationSeconds,
-    tick, 
-    onComplete,
-    soundEnabled = true,
-    vibrationEnabled = true,
-}: UseRestTimerParams) {
+export function useRestTimer(params?: UseRestTimerParams) {
     const tg = useTelegramWebApp()
+    const timer = useWorkoutSessionUiStore((s) => s.sessionRestTimer)
+    const tickSessionRestTimer = useWorkoutSessionUiStore((s) => s.tickSessionRestTimer)
+    const skip = useWorkoutSessionUiStore((s) => s.skipSessionRestTimer)
+    const reset = useWorkoutSessionUiStore((s) => s.restartSessionRestTimer)
+    const start = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
+    const isRunning = params?.isRunning ?? Boolean(timer?.active && timer.remaining > 0)
+    const isPaused = params?.isPaused ?? false
+    const remainingSeconds = params?.remainingSeconds ?? timer?.remaining ?? 0
+    const durationSeconds = params?.durationSeconds ?? timer?.total ?? 0
+    const tick = params?.tick ?? tickSessionRestTimer
+    const onComplete = params?.onComplete
+    const soundEnabled = params?.soundEnabled ?? true
+    const vibrationEnabled = params?.vibrationEnabled ?? true
     const previousRemainingRef = useRef<number>(remainingSeconds)
     const hasNotifiedRef = useRef<boolean>(false)
     
@@ -153,5 +158,15 @@ export function useRestTimer({
     
     return {
         formatRestTime,
+        timer,
+        isVisible: timer != null,
+        isRunning,
+        remainingLabel: formatRestTime(timer?.remaining ?? 0),
+        progressPercent: timer && timer.total > 0
+            ? Math.max(0, Math.min(100, (timer.remaining / timer.total) * 100))
+            : 0,
+        start,
+        skip,
+        reset,
     }
 }

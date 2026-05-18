@@ -136,7 +136,7 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
-    it('opens workouts as the authenticated start screen', async () => {
+    it('opens home as the authenticated start screen', async () => {
         useAuthStore.getState().setTokens({ accessToken: 'test-token' })
 
         renderAt('/')
@@ -144,7 +144,7 @@ describe('smoke: app routing', () => {
         await expectNoCrashFallback()
 
         await waitFor(() => {
-            expect(window.location.pathname).toBe('/workouts')
+            expect(window.location.pathname).toBe('/home')
         })
 
         expect(console.error).not.toHaveBeenCalled()
@@ -177,14 +177,13 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
-    it('redirects unknown route through workouts auth gate', async () => {
+    it('redirects unknown route to the home screen', async () => {
         renderAt('/__unknown__')
         await expectAppShellVisible()
         await expectNoCrashFallback()
 
         await waitFor(() => {
-            expect(window.location.pathname).toBe('/login')
-            expect(window.location.search).toContain('from=%2Fworkouts')
+            expect(window.location.pathname).toBe('/home')
         })
 
         expect(console.error).not.toHaveBeenCalled()

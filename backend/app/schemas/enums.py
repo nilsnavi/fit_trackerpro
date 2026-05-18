@@ -44,6 +44,15 @@ class WorkoutSessionType(StrEnum):
     CUSTOM = "custom"
 
 
+class WorkoutSessionSourceType(StrEnum):
+    QUICK_START = "quick_start"
+    PERSONAL_TEMPLATE = "personal_template"
+    SYSTEM_TEMPLATE = "system_template"
+    COMMUNITY_TEMPLATE = "community_template"
+    PROGRAM_DAY = "program_day"
+    PREVIOUS_SESSION = "previous_session"
+
+
 class WorkoutSetType(StrEnum):
     WARMUP = "warmup"
     WORKING = "working"

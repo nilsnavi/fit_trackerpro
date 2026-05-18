@@ -1,4 +1,23 @@
 services:
+  backend:
+    command:
+      [
+        "gunicorn",
+        "-k",
+        "uvicorn.workers.UvicornWorker",
+        "-w",
+        "1",
+        "-b",
+        "0.0.0.0:8000",
+        "--access-logfile",
+        "-",
+        "--error-logfile",
+        "-",
+        "--capture-output",
+        "--enable-stdio-inheritance",
+        "app.main:app",
+      ]
+
   # Single public entrypoint (routes / -> frontend, /api -> backend)
   edge:
     image: caddy:2-alpine
@@ -19,25 +38,30 @@ services:
     networks:
       - fittracker-network
 
-  # Public HTTPS URLs for Telegram Mini App and API via ngrok
+  # Public HTTPS URL for Telegram Mini App and API via Cloudflare Tunnel.
+  # Cloudflare dashboard public hostname must route https://fittrackpro.ru -> http://edge:80.
   tunnel:
-    image: ngrok/ngrok:latest
-    container_name: fittracker-ngrok
+    image: cloudflare/cloudflared:latest
+    container_name: fittracker-cloudflared
     restart: unless-stopped
-    command: start --all --config /etc/ngrok.yml
-    ports:
-      - "4040:4040"
+    command:
+      [
+        "tunnel",
+        "--no-autoupdate",
+        "--protocol",
+        "http2",
+        "run",
+        "--token",
+        "${CF_TUNNEL_TOKEN:?CF_TUNNEL_TOKEN is required}",
+      ]
     environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
       - http_proxy=
       - https_proxy=
       - HTTP_PROXY=
       - HTTPS_PROXY=
       - ALL_PROXY=
-      - NO_PROXY=localhost,127.0.0.1,backend,frontend,.ngrok.io,.ngrok-free.app,.ngrok.com,tunnel.ngrok.com
-      - no_proxy=localhost,127.0.0.1,backend,frontend,.ngrok.io,.ngrok-free.app,.ngrok.com,tunnel.ngrok.com
-    volumes:
-      - ./ngrok.fittracker.yml:/etc/ngrok.yml:ro
+      - NO_PROXY=localhost,127.0.0.1,backend,frontend,postgres,redis,edge
+      - no_proxy=localhost,127.0.0.1,backend,frontend,postgres,redis,edge
     depends_on:
       - edge
     networks:

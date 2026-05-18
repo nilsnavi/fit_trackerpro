@@ -137,6 +137,18 @@ class WorkoutsRepository(SQLAlchemyRepository):
         )
         return result.scalar_one_or_none()
 
+    async def get_public_template(self, template_id: int) -> Optional[WorkoutTemplate]:
+        result = await self.db.execute(
+            select(WorkoutTemplate).where(
+                and_(
+                    WorkoutTemplate.id == template_id,
+                    WorkoutTemplate.is_public.is_(True),
+                    WorkoutTemplate.is_archived.is_(False),
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def update_template_with_expected_version(
         self,
         *,

@@ -5,6 +5,7 @@ import type {
     WorkoutStartResponse,
 } from '@features/workouts/types/workouts'
 import { useUpdateWorkoutSessionMutation, useStartWorkoutMutation } from './useWorkoutMutations'
+import { getStartTemplateId } from '@features/workouts/lib/workoutQueryOptimistic'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { isOfflineMutationQueuedError } from '@shared/offline/syncQueue'
 import { toast } from '@shared/stores/toastStore'
@@ -23,6 +24,7 @@ export function useWorkoutSessionStarter() {
     const startWorkoutMutation = useStartWorkoutMutation()
     const updateWorkoutSessionMutation = useUpdateWorkoutSessionMutation()
     const setWorkoutSessionDraft = useWorkoutSessionDraftStore((s) => s.setDraft)
+    const setActiveSession = useWorkoutSessionDraftStore((s) => s.setActiveSession)
 
     const startWorkoutSession = useCallback(
         async (params: StartWorkoutSessionParams): Promise<WorkoutStartResponse | null> => {
@@ -40,9 +42,21 @@ export function useWorkoutSessionStarter() {
                 const fallbackTitle = startPayload.name?.trim() || `Тренировка #${started.id}`
                 const draftTitle = draft?.title?.trim() || fallbackTitle
                 const draftTemplateId =
-                    started.template_id ?? draft?.templateId ?? startPayload.template_id ?? null
+                    started.template_id ?? draft?.templateId ?? getStartTemplateId(startPayload) ?? null
+                const sourceType =
+                    started.source_type ??
+                    startPayload.source_type ??
+                    (getStartTemplateId(startPayload) != null ? 'personal_template' : 'quick_start')
 
                 setWorkoutSessionDraft(started.id, draftTitle, draftTemplateId)
+                setActiveSession({
+                    id: started.id,
+                    title: draftTitle,
+                    templateId: draftTemplateId,
+                    sourceType,
+                    sourceId: started.source_id ?? startPayload.source_id ?? getStartTemplateId(startPayload) ?? null,
+                    startedAt: Date.now(),
+                })
                 return started
             } catch (err) {
                 if (isOfflineMutationQueuedError(err)) {
@@ -55,6 +69,7 @@ export function useWorkoutSessionStarter() {
         },
         [
             setWorkoutSessionDraft,
+            setActiveSession,
             startWorkoutMutation,
             updateWorkoutSessionMutation,
         ],

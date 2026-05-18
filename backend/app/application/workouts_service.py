@@ -31,7 +31,7 @@ from app.domain.workout_template import WorkoutTemplate
 from app.infrastructure.cache import invalidate_user_analytics_cache
 from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
-from app.schemas.enums import WorkoutSessionType, WorkoutSetType
+from app.schemas.enums import WorkoutSessionSourceType, WorkoutSessionType, WorkoutSetType
 from app.schemas.workouts import (
     CompletedExercise,
     ExerciseInTemplate,
@@ -40,6 +40,7 @@ from app.schemas.workouts import (
     WorkoutCompleteResponse,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
+    WorkoutSessionCreateRequest,
     WorkoutSessionMetrics,
     WorkoutSessionUpdateRequest,
     WorkoutSetPatchRequest,
@@ -349,6 +350,87 @@ class WorkoutsService:
         comments = overrides.comments if overrides else None
         tags = list(overrides.tags) if overrides else []
         return initial_exercises, comments, tags
+
+    @staticmethod
+    def _infer_source_type(workout: WorkoutLog) -> WorkoutSessionSourceType:
+        if workout.source_type:
+            return WorkoutSessionSourceType(workout.source_type)
+        if workout.template_id is not None:
+            return WorkoutSessionSourceType.PERSONAL_TEMPLATE
+        return WorkoutSessionSourceType.QUICK_START
+
+    @staticmethod
+    def _infer_source_id(workout: WorkoutLog) -> Optional[int]:
+        if workout.source_id is not None:
+            return int(workout.source_id)
+        if workout.template_id is not None:
+            return int(workout.template_id)
+        return None
+
+    @staticmethod
+    def _exercise_session_to_workout_draft(ex: dict, index: int) -> dict:
+        sets_payload = ex.get("sets_completed") if isinstance(ex, dict) else None
+        if not isinstance(sets_payload, list) or not sets_payload:
+            sets_payload = [{"set_number": 1}]
+        sets_completed: list[dict] = []
+        for set_idx, raw_set in enumerate(sets_payload):
+            if not isinstance(raw_set, dict):
+                raw_set = {}
+            sets_completed.append(
+                {
+                    "set_number": int(raw_set.get("set_number") or set_idx + 1),
+                    "set_type": WorkoutsService._normalize_set_type(raw_set.get("set_type")),
+                    "reps": raw_set.get("reps"),
+                    "weight": raw_set.get("weight"),
+                    "planned_rest_seconds": raw_set.get("planned_rest_seconds")
+                    or raw_set.get("rest_seconds")
+                    or raw_set.get("actual_rest_seconds"),
+                    "duration": raw_set.get("duration"),
+                    "speed_kmh": raw_set.get("speed_kmh"),
+                    "incline_pct": raw_set.get("incline_pct"),
+                    "completed": False,
+                }
+            )
+        return {
+            "exercise_id": ex.get("exercise_id"),
+            "name": ex.get("name") or f"Exercise #{index + 1}",
+            "notes": ex.get("notes"),
+            "sets_completed": sets_completed,
+        }
+
+    async def _resolve_session_start_source(
+        self,
+        user_id: int,
+        data: WorkoutSessionCreateRequest,
+    ) -> tuple[Optional[WorkoutTemplate], Optional[WorkoutLog], Optional[int]]:
+        if data.source_type == WorkoutSessionSourceType.QUICK_START:
+            return None, None, None
+
+        if data.source_type == WorkoutSessionSourceType.PREVIOUS_SESSION:
+            if data.source_id is None:
+                raise WorkoutNotFoundError("Workout session source not found")
+            source_session = await self.repository.get_workout(user_id=user_id, workout_id=data.source_id)
+            if not source_session:
+                raise WorkoutNotFoundError("Workout session source not found")
+            return None, source_session, None
+
+        if data.source_type == WorkoutSessionSourceType.PROGRAM_DAY:
+            return None, None, None
+
+        if data.source_id is None:
+            raise WorkoutNotFoundError("Template source not found")
+
+        if data.source_type == WorkoutSessionSourceType.PERSONAL_TEMPLATE:
+            template = await self.repository.get_template(user_id=user_id, template_id=data.source_id)
+            if not template or template.is_archived:
+                raise WorkoutNotFoundError("Template not found")
+            return template, None, template.id
+
+        template = await self.repository.get_public_template(template_id=data.source_id)
+        if not template:
+            raise WorkoutNotFoundError("Template not found")
+        template_id_for_session = template.id if template.user_id == user_id else None
+        return template, None, template_id_for_session
 
     async def get_templates(
         self,
@@ -698,8 +780,13 @@ class WorkoutsService:
             date_to=date_to,
         )
         return WorkoutHistoryResponse(
-            items=[WorkoutHistoryItem.model_validate(
-                w, from_attributes=True) for w in workouts],
+            items=[
+                self._workout_log_to_history_item(
+                    w,
+                    [CompletedExercise.model_validate(ex) for ex in (w.exercises or [])],
+                )
+                for w in workouts
+            ],
             total=total,
             page=page,
             page_size=page_size,
@@ -707,89 +794,50 @@ class WorkoutsService:
             date_to=date_to,
         )
 
-    async def start_workout(
+    async def create_workout_session(
         self,
         user_id: int,
-        data: WorkoutStartRequest,
+        data: WorkoutSessionCreateRequest,
         client_ip: str | None = None,
     ) -> WorkoutStartResponse:
-        template = None
-        if data.template_id:
-            template = await self.repository.get_template(user_id=user_id, template_id=data.template_id)
-            if not template or template.is_archived:
-                raise WorkoutNotFoundError("Template not found")
+        template, source_session, template_id_for_session = await self._resolve_session_start_source(
+            user_id=user_id,
+            data=data,
+        )
 
-        initial_exercises = []
         if template is not None:
+            initial_exercises, override_comments, override_tags = self._resolve_start_overrides(
+                template_exercises=template.exercises or [],
+                overrides=data.overrides,
+            )
+            default_name = template.name
+            source_version = template.version
+        elif source_session is not None:
             initial_exercises = [
-                self._exercise_template_to_workout_draft(ex, idx)
-                for idx, ex in enumerate(template.exercises or [])
+                self._exercise_session_to_workout_draft(ex, idx)
+                for idx, ex in enumerate(source_session.exercises or [])
+                if isinstance(ex, dict)
             ]
+            override_comments = data.overrides.comments if data.overrides else None
+            override_tags = list(data.overrides.tags) if data.overrides else []
+            default_name = source_session.comments or f"Workout #{source_session.id}"
+            source_version = source_session.version
+        else:
+            initial_exercises = []
+            override_comments = data.overrides.comments if data.overrides else None
+            override_tags = list(data.overrides.tags) if data.overrides else []
+            default_name = None
+            source_version = None
 
         workout = WorkoutLog(
             user_id=user_id,
-            template_id=data.template_id,
+            template_id=template_id_for_session,
+            source_type=data.source_type.value,
+            source_id=data.source_id,
             date=date.today(),
             exercises=initial_exercises,
             session_metrics=compute_session_metrics(initial_exercises, None),
-            comments=data.name or (template.name if template else None),
-            tags=([data.type.value] if data.type !=
-                  WorkoutSessionType.CUSTOM else []),
-        )
-        workout = await self.repository.create_workout_log(workout)
-        await self.repository.replace_session_snapshot(
-            user_id=user_id,
-            workout_session_id=workout.id,
-            session_exercises=self._build_session_snapshot_rows(
-                user_id=user_id,
-                workout_session_id=workout.id,
-                exercises_payload=initial_exercises,
-            ),
-        )
-        await invalidate_user_analytics_cache(user_id)
-
-        audit_log(
-            action=WORKOUT_START,
-            user_db_id=user_id,
-            resource_type="workout_log",
-            resource_id=workout.id,
-            client_ip=client_ip,
-            meta={"template_id": data.template_id},
-        )
-
-        return WorkoutStartResponse(
-            id=workout.id,
-            user_id=workout.user_id,
-            template_id=workout.template_id,
-            date=workout.date,
-            start_time=workout.created_at,
-            status="in_progress",
-            message="Workout started successfully",
-        )
-
-    async def start_workout_from_template_with_overrides(
-        self,
-        user_id: int,
-        template_id: int,
-        data: WorkoutStartFromTemplateRequest,
-        client_ip: str | None = None,
-    ) -> WorkoutStartResponse:
-        template = await self.repository.get_template(user_id=user_id, template_id=template_id)
-        if not template or template.is_archived:
-            raise WorkoutNotFoundError("Template not found")
-
-        initial_exercises, override_comments, override_tags = self._resolve_start_overrides(
-            template_exercises=template.exercises or [],
-            overrides=data.overrides,
-        )
-
-        workout = WorkoutLog(
-            user_id=user_id,
-            template_id=template_id,
-            date=date.today(),
-            exercises=initial_exercises,
-            session_metrics=compute_session_metrics(initial_exercises, None),
-            comments=data.name or override_comments or template.name,
+            comments=data.name or override_comments or default_name,
             tags=override_tags or (
                 [data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
         )
@@ -812,8 +860,10 @@ class WorkoutsService:
             resource_id=workout.id,
             client_ip=client_ip,
             meta={
-                "template_id": template_id,
-                "template_version": template.version,
+                "source_type": data.source_type.value,
+                "source_id": data.source_id,
+                "template_id": template_id_for_session,
+                "source_version": source_version,
                 "has_overrides": bool(data.overrides),
             },
         )
@@ -822,10 +872,53 @@ class WorkoutsService:
             id=workout.id,
             user_id=workout.user_id,
             template_id=workout.template_id,
+            source_type=self._infer_source_type(workout),
+            source_id=self._infer_source_id(workout),
             date=workout.date,
             start_time=workout.created_at,
             status="in_progress",
-            message="Workout started from template with overrides",
+            message="Workout session created successfully",
+        )
+
+    async def start_workout(
+        self,
+        user_id: int,
+        data: WorkoutStartRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutStartResponse:
+        source_type = (
+            WorkoutSessionSourceType.PERSONAL_TEMPLATE
+            if data.template_id
+            else WorkoutSessionSourceType.QUICK_START
+        )
+        return await self.create_workout_session(
+            user_id=user_id,
+            data=WorkoutSessionCreateRequest(
+                source_type=source_type,
+                source_id=data.template_id,
+                name=data.name,
+                type=data.type,
+            ),
+            client_ip=client_ip,
+        )
+
+    async def start_workout_from_template_with_overrides(
+        self,
+        user_id: int,
+        template_id: int,
+        data: WorkoutStartFromTemplateRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutStartResponse:
+        return await self.create_workout_session(
+            user_id=user_id,
+            data=WorkoutSessionCreateRequest(
+                source_type=WorkoutSessionSourceType.PERSONAL_TEMPLATE,
+                source_id=template_id,
+                name=data.name,
+                type=data.type,
+                overrides=data.overrides,
+            ),
+            client_ip=client_ip,
         )
 
     async def _upsert_training_load_daily(self, user_id: int, target_date: date) -> None:
@@ -962,6 +1055,8 @@ class WorkoutsService:
             id=workout.id,
             user_id=workout.user_id,
             template_id=workout.template_id,
+            source_type=self._infer_source_type(workout),
+            source_id=self._infer_source_id(workout),
             date=workout.date,
             duration=workout.duration or 0,
             exercises=exercises,
@@ -987,6 +1082,9 @@ class WorkoutsService:
     ) -> WorkoutHistoryItem:
         return WorkoutHistoryItem(
             id=workout.id,
+            template_id=workout.template_id,
+            source_type=self._infer_source_type(workout),
+            source_id=self._infer_source_id(workout),
             date=workout.date,
             duration=workout.duration,
             exercises=exercises,
@@ -1165,6 +1263,8 @@ class WorkoutsService:
             id=workout.id,
             user_id=workout.user_id,
             template_id=workout.template_id,
+            source_type=self._infer_source_type(workout),
+            source_id=self._infer_source_id(workout),
             date=workout.date,
             duration=workout.duration,
             exercises=data.exercises,

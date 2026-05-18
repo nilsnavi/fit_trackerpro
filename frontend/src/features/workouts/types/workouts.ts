@@ -2,6 +2,13 @@ import type { WorkoutType } from '@shared/types'
 
 export type BackendWorkoutType = 'cardio' | 'strength' | 'flexibility' | 'mixed'
 export type WorkoutStartType = BackendWorkoutType | 'custom'
+export type WorkoutSessionSourceType =
+    | 'quick_start'
+    | 'personal_template'
+    | 'system_template'
+    | 'community_template'
+    | 'program_day'
+    | 'previous_session'
 
 export interface ExerciseInTemplate {
     exercise_id: number
@@ -154,9 +161,13 @@ export interface WorkoutSessionMetrics {
 }
 
 export interface WorkoutStartRequest {
+    /** Legacy shortcut. New code should prefer source_type/source_id. */
     template_id?: number
+    source_type?: WorkoutSessionSourceType
+    source_id?: number
     name?: string
     type?: WorkoutStartType
+    overrides?: WorkoutStartTemplateOverrides
 }
 
 export interface WorkoutStartTemplateOverrides {
@@ -177,6 +188,8 @@ export interface WorkoutStartResponse {
     workout_id?: number
     user_id: number
     template_id?: number
+    source_type?: WorkoutSessionSourceType
+    source_id?: number
     date: string
     start_time: string
     status: string
@@ -204,6 +217,8 @@ export interface WorkoutCompleteResponse {
     id: number
     user_id: number
     template_id?: number
+    source_type?: WorkoutSessionSourceType
+    source_id?: number
     date: string
     duration: number
     exercises: CompletedExercise[]
@@ -222,6 +237,8 @@ export interface WorkoutHistoryItem {
     /** Legacy compatibility: some deployments may still return workout_id instead of id. */
     workout_id?: number
     template_id?: number
+    source_type?: WorkoutSessionSourceType
+    source_id?: number
     date: string
     duration?: number
     exercises: CompletedExercise[]
