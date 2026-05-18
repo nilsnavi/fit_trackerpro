@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Dumbbell } from 'lucide-react'
+import { CheckCircle2, Clock3, Dumbbell, Plus } from 'lucide-react'
 
 import { Button } from '@shared/ui/Button'
 import { ActiveWorkoutSessionDetailsCollapsible } from '@features/workouts/active/components/ActiveWorkoutSessionDetailsCollapsible'
@@ -915,189 +915,207 @@ export function ActiveWorkoutPage() {
 
             {!isLoading && !errorMessage && workout && isActiveDraft ? (
                 <>
-                    <ActiveWorkoutScreen
-                        workoutId={workoutId}
-                        workout={workout}
-                        workoutTitle={workoutTitle}
-                        elapsedSeconds={elapsedSeconds}
-                        currentExerciseIndex={currentExerciseIndex}
-                        currentSetIndex={currentSetIndex}
-                        previousBestByExercise={previousBestByExercise}
-                        weightRecommendation={weightRecommendation}
-                        isWeightRecLoading={isWeightRecLoading}
-                        isWeightRecError={isWeightRecError}
-                        isSavingSet={isInlineSetSaving || updateSessionMutation.isPending || completeMutation.isPending}
-                        finishWarning={finishWarning}
-                        onBack={() => guardedAction(() => navigate(-1))}
-                        onSelectExercise={handleSelectExerciseIndex}
-                        onPatchWorkout={patchItem}
-                        onUpdateSet={updateSet}
-                        onSetCurrentPosition={setCurrentPosition}
-                        onNotifySetCompleted={handleInlineSetChanged}
-                        onSetLastCompletedSet={setLastCompletedSet}
-                        onAddExercise={() => exerciseActions.resetAddItemForm('exercise')}
-                        onFinishWorkout={handleFinishWorkoutDirect}
-                    />
-
-                    {renderLegacyActiveWorkoutDebug ? (
+                    {workout.exercises.length === 0 ? (
+                        <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-8 text-center">
+                            <Dumbbell className="mx-auto h-16 w-16 text-primary/40" />
+                            <h3 className="mt-4 text-lg font-semibold text-telegram-text">Добавь первое упражнение</h3>
+                            <p className="mt-2 text-sm text-telegram-hint">
+                                Начни с добавления упражнения, чтобы отслеживать подходы и прогресс
+                            </p>
+                            <Button
+                                type="button"
+                                className="mt-6"
+                                onClick={() => exerciseActions.resetAddItemForm('exercise')}
+                                leftIcon={<Plus className="h-5 w-5" />}
+                            >
+                                Добавить упражнение
+                            </Button>
+                        </div>
+                    ) : (
                         <>
-                    <div className="rounded-2xl border border-border bg-telegram-secondary-bg/80 p-3 shadow-sm">
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="rounded-xl bg-telegram-bg/80 p-3">
-                                <Dumbbell className="h-4 w-4 text-primary" />
-                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exerciseCount}</p>
-                                <p className="text-[11px] leading-tight text-telegram-hint">упражнений</p>
-                            </div>
-                            <div className="rounded-xl bg-telegram-bg/80 p-3">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exercisesDoneCount}</p>
-                                <p className="text-[11px] leading-tight text-telegram-hint">выполнено</p>
-                            </div>
-                            <div className="rounded-xl bg-telegram-bg/80 p-3">
-                                <Clock3 className="h-4 w-4 text-primary" />
-                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{elapsedLabel}</p>
-                                <p className="text-[11px] leading-tight text-telegram-hint">время</p>
-                            </div>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between text-xs">
-                            <span className="font-medium text-telegram-hint">Общий прогресс</span>
-                            <span className="font-semibold text-telegram-text">
-                                {completedSetCount}/{totalSetCount} подходов
-                            </span>
-                        </div>
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-telegram-bg">
-                            <div
-                                className="h-full rounded-full bg-primary transition-[width] duration-300"
-                                style={{ width: `${Math.min(100, Math.max(0, activeSessionProgressPercent))}%` }}
-                            />
-                        </div>
-                    </div>
-
-                    <ActiveCurrentSetPanel
-                        exercise={currentExercise}
-                        set={currentSet}
-                        exerciseIndex={currentExerciseIndex}
-                        setIndex={normalizedCurrentSetIndex}
-                        exerciseCount={exerciseCount}
-                        completedSetCount={completedSetCount}
-                        totalSetCount={totalSetCount}
-                        elapsedLabel={elapsedLabel}
-                        restDefaultSeconds={restDefaultSeconds}
-                        hasPrevExercise={hasPrevExercise}
-                        hasNextExercise={hasNextExercise}
-                        weightRecommendation={legacyWeightRecommendation}
-                        isWeightRecLoading={isWeightRecLoading}
-                        isWeightRecError={isWeightRecError}
-                        onUpdateSet={updateSet}
-                        onCompleteSet={handleCompleteCurrentSetQuick}
-                        onSkipSet={handleSkipCurrentSetQuick}
-                        onAddSet={handleAddSetWithRest}
-                        onStartRest={handleStartQuickRest}
-                        onGoToPreviousExercise={goToPreviousExercise}
-                        onGoToNextExercise={goToNextExercise}
-                    />
-
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        data-testid="finish-workout-btn"
-                        className={cn(
-                            'w-full touch-manipulation border-2',
-                            allExercisesDone && 'border-danger/50 text-danger hover:bg-danger/10',
-                        )}
-                        onClick={handleFinishWorkoutDirect}
-                        disabled={completeMutation.isPending}
-                    >
-                        Завершить тренировку
-                    </Button>
-
-                    <div className="flex items-center justify-between gap-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">План тренировки</p>
-                        <span className="text-xs font-medium text-telegram-hint">
-                            {currentExerciseIndex + 1}/{exerciseCount}
-                        </span>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                        {workout!.exercises.map((exercise, index) => (
-                            <WorkoutExerciseCard
-                                key={`${exercise.exercise_id}-${index}`}
-                                exercise={exercise}
-                                exerciseIndex={index}
+                            <ActiveWorkoutScreen
+                                workoutId={workoutId}
+                                workout={workout}
+                                workoutTitle={workoutTitle}
+                                elapsedSeconds={elapsedSeconds}
                                 currentExerciseIndex={currentExerciseIndex}
                                 currentSetIndex={currentSetIndex}
-                                onOpen={() => handleExerciseCardOpen(index)}
+                                previousBestByExercise={previousBestByExercise}
+                                weightRecommendation={weightRecommendation}
+                                isWeightRecLoading={isWeightRecLoading}
+                                isWeightRecError={isWeightRecError}
+                                isSavingSet={isInlineSetSaving || updateSessionMutation.isPending || completeMutation.isPending}
+                                finishWarning={finishWarning}
+                                onBack={() => guardedAction(() => navigate(-1))}
+                                onSelectExercise={handleSelectExerciseIndex}
+                                onPatchWorkout={patchItem}
+                                onUpdateSet={updateSet}
+                                onSetCurrentPosition={setCurrentPosition}
+                                onNotifySetCompleted={handleInlineSetChanged}
+                                onSetLastCompletedSet={setLastCompletedSet}
+                                onAddExercise={() => exerciseActions.resetAddItemForm('exercise')}
+                                onFinishWorkout={handleFinishWorkoutDirect}
                             />
-                        ))}
-                    </div>
 
-                    <div className="rounded-2xl border border-warning/35 bg-warning/10 p-3 space-y-2">
-                        <p className="text-sm leading-relaxed text-telegram-text">
-                            Черновик сохраняется автоматически до завершения сессии.
-                        </p>
-                    </div>
+                            {renderLegacyActiveWorkoutDebug ? (
+                                <>
+                                    <div className="rounded-2xl border border-border bg-telegram-secondary-bg/80 p-3 shadow-sm">
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                                <Dumbbell className="h-4 w-4 text-primary" />
+                                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exerciseCount}</p>
+                                                <p className="text-[11px] leading-tight text-telegram-hint">упражнений</p>
+                                            </div>
+                                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exercisesDoneCount}</p>
+                                                <p className="text-[11px] leading-tight text-telegram-hint">выполнено</p>
+                                            </div>
+                                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                                <Clock3 className="h-4 w-4 text-primary" />
+                                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{elapsedLabel}</p>
+                                                <p className="text-[11px] leading-tight text-telegram-hint">время</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 flex items-center justify-between text-xs">
+                                            <span className="font-medium text-telegram-hint">Общий прогресс</span>
+                                            <span className="font-semibold text-telegram-text">
+                                                {completedSetCount}/{totalSetCount} подходов
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-telegram-bg">
+                                            <div
+                                                className="h-full rounded-full bg-primary transition-[width] duration-300"
+                                                style={{ width: `${Math.min(100, Math.max(0, activeSessionProgressPercent))}%` }}
+                                            />
+                                        </div>
+                                    </div>
 
-                    {completion.sessionError ? <p className="text-sm text-danger">{completion.sessionError}</p> : null}
-                    {completeMutation.isError ? (
-                        <p className="text-sm text-danger">{getErrorMessage(completeMutation.error)}</p>
-                    ) : null}
-                    {updateSessionMutation.isError ? (
-                        <p className="text-sm text-danger">{getErrorMessage(updateSessionMutation.error)}</p>
-                    ) : null}
+                                    <ActiveCurrentSetPanel
+                                        exercise={currentExercise}
+                                        set={currentSet}
+                                        exerciseIndex={currentExerciseIndex}
+                                        setIndex={normalizedCurrentSetIndex}
+                                        exerciseCount={exerciseCount}
+                                        completedSetCount={completedSetCount}
+                                        totalSetCount={totalSetCount}
+                                        elapsedLabel={elapsedLabel}
+                                        restDefaultSeconds={restDefaultSeconds}
+                                        hasPrevExercise={hasPrevExercise}
+                                        hasNextExercise={hasNextExercise}
+                                        weightRecommendation={legacyWeightRecommendation}
+                                        isWeightRecLoading={isWeightRecLoading}
+                                        isWeightRecError={isWeightRecError}
+                                        onUpdateSet={updateSet}
+                                        onCompleteSet={handleCompleteCurrentSetQuick}
+                                        onSkipSet={handleSkipCurrentSetQuick}
+                                        onAddSet={handleAddSetWithRest}
+                                        onStartRest={handleStartQuickRest}
+                                        onGoToPreviousExercise={goToPreviousExercise}
+                                        onGoToNextExercise={goToNextExercise}
+                                    />
 
-                    {syncState === 'error' || syncRetryExhausted ? (
-                        <div className="flex flex-col gap-2 rounded-lg border border-danger/25 bg-danger/5 p-3 sm:flex-row sm:flex-wrap">
-                            <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={retrySessionSyncNow}>
-                                Повторить
-                            </Button>
-                            {syncRetryExhausted ? (
-                                <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={handleSaveSessionLocalFinish}>
-                                    Сохранить локально и завершить
-                                </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        data-testid="finish-workout-btn"
+                                        className={cn(
+                                            'w-full touch-manipulation border-2',
+                                            allExercisesDone && 'border-danger/50 text-danger hover:bg-danger/10',
+                                        )}
+                                        onClick={handleFinishWorkoutDirect}
+                                        disabled={completeMutation.isPending}
+                                    >
+                                        Завершить тренировку
+                                    </Button>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">План тренировки</p>
+                                        <span className="text-xs font-medium text-telegram-hint">
+                                            {currentExerciseIndex + 1}/{exerciseCount}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        {workout!.exercises.map((exercise, index) => (
+                                            <WorkoutExerciseCard
+                                                key={`${exercise.exercise_id}-${index}`}
+                                                exercise={exercise}
+                                                exerciseIndex={index}
+                                                currentExerciseIndex={currentExerciseIndex}
+                                                currentSetIndex={currentSetIndex}
+                                                onOpen={() => handleExerciseCardOpen(index)}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <div className="rounded-2xl border border-warning/35 bg-warning/10 p-3 space-y-2">
+                                        <p className="text-sm leading-relaxed text-telegram-text">
+                                            Черновик сохраняется автоматически до завершения сессии.
+                                        </p>
+                                    </div>
+
+                                    {completion.sessionError ? <p className="text-sm text-danger">{completion.sessionError}</p> : null}
+                                    {completeMutation.isError ? (
+                                        <p className="text-sm text-danger">{getErrorMessage(completeMutation.error)}</p>
+                                    ) : null}
+                                    {updateSessionMutation.isError ? (
+                                        <p className="text-sm text-danger">{getErrorMessage(updateSessionMutation.error)}</p>
+                                    ) : null}
+
+                                    {syncState === 'error' || syncRetryExhausted ? (
+                                        <div className="flex flex-col gap-2 rounded-lg border border-danger/25 bg-danger/5 p-3 sm:flex-row sm:flex-wrap">
+                                            <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={retrySessionSyncNow}>
+                                                Повторить
+                                            </Button>
+                                            {syncRetryExhausted ? (
+                                                <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={handleSaveSessionLocalFinish}>
+                                                    Сохранить локально и завершить
+                                                </Button>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
+
+                                    <ActiveWorkoutSessionDetailsCollapsible
+                                        workout={workout!}
+                                        workoutTitle={workoutTitle}
+                                        elapsedLabel={elapsedLabel}
+                                        isActiveDraft={isActiveDraft}
+                                        durationMinutes={completion.durationMinutes}
+                                        exerciseCount={exerciseCount}
+                                        completedSetCount={completedSetCount}
+                                        onDurationChange={completion.setDurationMinutes}
+                                        onCommentsChange={(value) => updateSessionFields({ comments: value || undefined })}
+                                        onOpenRestPresets={openRestPresets}
+                                    />
+
+                                    {modalExercise && modalExerciseIndex != null ? (
+                                        <ExerciseSessionBottomSheet
+                                            isOpen
+                                            onClose={closeExerciseModal}
+                                            exercise={modalExercise!}
+                                            exerciseIndex={modalExerciseIndex!}
+                                            readOnly={modalSessionStatus === 'done'}
+                                            sessionStatus={modalSessionStatus}
+                                            currentExerciseIndex={currentExerciseIndex}
+                                            currentSetIndex={currentSetIndex}
+                                            normalizedCurrentSetIndex={modalNormalizedSetIndex}
+                                            isTreadmill={isModalTreadmill}
+                                            defaultRestSeconds={restDefaultSeconds}
+                                            onUpdateSet={updateSet}
+                                            onFocusPosition={setCurrentPosition}
+                                            onCompleteSet={handleSheetComplete}
+                                            onSkipSet={handleSheetSkip}
+                                            onUpdateSetRpe={handleModalUpdateRpe}
+                                            weightRecommendation={modalExerciseIndex === currentExerciseIndex ? legacyWeightRecommendation : undefined}
+                                            isWeightRecLoading={modalExerciseIndex === currentExerciseIndex ? isWeightRecLoading : false}
+                                            isWeightRecError={modalExerciseIndex === currentExerciseIndex ? isWeightRecError : false}
+                                        />
+                                    ) : null}
+                                </>
                             ) : null}
-                        </div>
-                    ) : null}
-
-                    <ActiveWorkoutSessionDetailsCollapsible
-                        workout={workout!}
-                        workoutTitle={workoutTitle}
-                        elapsedLabel={elapsedLabel}
-                        isActiveDraft={isActiveDraft}
-                        durationMinutes={completion.durationMinutes}
-                        exerciseCount={exerciseCount}
-                        completedSetCount={completedSetCount}
-                        onDurationChange={completion.setDurationMinutes}
-                        onCommentsChange={(value) => updateSessionFields({ comments: value || undefined })}
-                        onOpenRestPresets={openRestPresets}
-                    />
-
-                    {modalExercise && modalExerciseIndex != null ? (
-                        <ExerciseSessionBottomSheet
-                            isOpen
-                            onClose={closeExerciseModal}
-                            exercise={modalExercise!}
-                            exerciseIndex={modalExerciseIndex!}
-                            readOnly={modalSessionStatus === 'done'}
-                            sessionStatus={modalSessionStatus}
-                            currentExerciseIndex={currentExerciseIndex}
-                            currentSetIndex={currentSetIndex}
-                            normalizedCurrentSetIndex={modalNormalizedSetIndex}
-                            isTreadmill={isModalTreadmill}
-                            defaultRestSeconds={restDefaultSeconds}
-                            onUpdateSet={updateSet}
-                            onFocusPosition={setCurrentPosition}
-                            onCompleteSet={handleSheetComplete}
-                            onSkipSet={handleSheetSkip}
-                            onUpdateSetRpe={handleModalUpdateRpe}
-                            weightRecommendation={modalExerciseIndex === currentExerciseIndex ? legacyWeightRecommendation : undefined}
-                            isWeightRecLoading={modalExerciseIndex === currentExerciseIndex ? isWeightRecLoading : false}
-                            isWeightRecError={modalExerciseIndex === currentExerciseIndex ? isWeightRecError : false}
-                        />
-                    ) : null}
-
                         </>
-                    ) : null}
-
+                    )}
                 </>
             ) : null}
 
@@ -1181,9 +1199,3 @@ export function ActiveWorkoutPage() {
                     />
                 </>
             )}
-        </div>
-    )
-}
-
-export { ActiveWorkoutPage as WorkoutSessionScreen }
-

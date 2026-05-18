@@ -7,13 +7,15 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Dumbbell, History, TrendingUp } from 'lucide-react'
+import { Dumbbell, History, TrendingUp, Zap } from 'lucide-react'
 import { StartWorkoutSheet } from '../components/StartWorkoutSheet'
+import { useQuickStartWorkout } from '../hooks/useQuickStartWorkout'
 import type { WorkoutType } from '@shared/types'
 
 export function WorkoutDashboardPage() {
     const navigate = useNavigate()
     const [isStartSheetOpen, setIsStartSheetOpen] = useState(false)
+    const { quickStart, isLoading } = useQuickStartWorkout()
 
     const handleStartWorkout = (type: WorkoutType) => {
         // Навигация к началу тренировки выбранного типа
@@ -32,6 +34,25 @@ export function WorkoutDashboardPage() {
 
             {/* Быстрые действия */}
             <section className="grid grid-cols-1 gap-3">
+                {/* Quick Start - быстрый старт без шаблона */}
+                <button
+                    type="button"
+                    onClick={quickStart}
+                    disabled={isLoading}
+                    className="flex items-center gap-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 p-5 text-left transition-all hover:from-orange-600 hover:to-red-600 active:scale-[0.98] disabled:opacity-50"
+                >
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20">
+                        <Zap className="h-7 w-7 text-white" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-lg font-semibold text-white">Быстрый старт</h2>
+                        <p className="mt-0.5 text-sm text-white/80">
+                            Начать тренировку без шаблона
+                        </p>
+                    </div>
+                </button>
+
+                {/* Обычный старт с выбором типа */}
                 <button
                     type="button"
                     onClick={() => setIsStartSheetOpen(true)}
