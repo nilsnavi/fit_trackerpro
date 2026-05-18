@@ -1,5 +1,4 @@
 import { WorkoutModal } from './WorkoutModal'
-import { Button } from '@shared/ui/Button'
 import type { CompletedExercise } from '@features/workouts/types/workouts'
 import type { ActiveWorkoutSyncState } from '@/state/local'
 
@@ -12,9 +11,6 @@ interface FinishWorkoutSheetProps {
     isPending: boolean
     errorMessage?: string | null
     syncState?: ActiveWorkoutSyncState
-    isOnline?: boolean
-    onRetryFinish?: () => void
-    onSaveLocalFinish?: () => void
     onClose: () => void
     onConfirm: () => void
     onChangeTagsDraft: (value: string) => void
@@ -29,9 +25,6 @@ export function FinishWorkoutSheet({
     isPending,
     errorMessage,
     syncState,
-    isOnline = true,
-    onRetryFinish,
-    onSaveLocalFinish,
     onClose,
     onConfirm,
     onChangeTagsDraft,
@@ -97,9 +90,9 @@ export function FinishWorkoutSheet({
                     />
                 </label>
 
-                {(syncState === 'offline-queued' || syncState === 'saved-locally' || !isOnline) && (
+                {(syncState === 'offline-queued' || syncState === 'saved-locally') && (
                     <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-telegram-text">
-                        Тренировка будет синхронизирована при восстановлении сети
+                        Вы офлайн — результат будет отправлен при восстановлении сети
                     </div>
                 )}
                 {syncState === 'error' && (
@@ -110,19 +103,6 @@ export function FinishWorkoutSheet({
 
                 {errorMessage && (
                     <p className="text-sm text-danger">{errorMessage}</p>
-                )}
-
-                {errorMessage && onRetryFinish && (
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button type="button" variant="secondary" className="flex-1" disabled={isPending} onClick={onRetryFinish}>
-                            Повторить
-                        </Button>
-                        {onSaveLocalFinish ? (
-                            <Button type="button" variant="secondary" className="flex-1" disabled={isPending} onClick={onSaveLocalFinish}>
-                                Сохранить локально и завершить
-                            </Button>
-                        ) : null}
-                    </div>
                 )}
 
         </WorkoutModal>

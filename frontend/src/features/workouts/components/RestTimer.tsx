@@ -37,7 +37,10 @@ export function RestTimer({ initialSeconds = 90, onComplete, className }: RestTi
     }
 
     return (
-        <div className={cn('rounded-xl bg-telegram-secondary-bg p-4', className)}>
+        <div 
+            className={cn('rounded-xl bg-telegram-secondary-bg p-4', className)}
+            data-testid="rest-timer"
+        >
             {/* Заголовок */}
             <div className="mb-3 flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
@@ -86,6 +89,7 @@ export function RestTimer({ initialSeconds = 90, onComplete, className }: RestTi
                         <button
                             type="button"
                             onClick={handleSkip}
+                            data-testid="skip-timer-button"
                             className="flex items-center gap-2 rounded-lg bg-telegram-bg px-4 py-2 text-sm font-medium text-telegram-text transition-colors hover:bg-telegram-secondary-bg"
                         >
                             <SkipForward className="h-4 w-4" />

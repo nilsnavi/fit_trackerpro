@@ -14,9 +14,17 @@ export interface EmptyWorkoutStateProps {
  */
 export const EmptyWorkoutState = memo(function EmptyWorkoutState({ onAddExercise }: EmptyWorkoutStateProps) {
     return (
-        <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-8 text-center">
+        <div 
+            className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-8 text-center"
+            data-testid="empty-workout-state"
+        >
             <Dumbbell className="mx-auto h-16 w-16 text-primary/40" />
-            <h3 className="mt-4 text-lg font-semibold text-telegram-text">Добавь первое упражнение</h3>
+            <h3 
+                className="mt-4 text-lg font-semibold text-telegram-text"
+                data-testid="empty-state-text"
+            >
+                Добавь первое упражнение
+            </h3>
             <p className="mt-2 text-sm text-telegram-hint">
                 Начни с добавления упражнения, чтобы отслеживать подходы и прогресс
             </p>
@@ -25,6 +33,7 @@ export const EmptyWorkoutState = memo(function EmptyWorkoutState({ onAddExercise
                 className="mt-6"
                 onClick={onAddExercise}
                 leftIcon={<Plus className="h-5 w-5" />}
+                data-testid="add-exercise-button"
             >
                 Добавить упражнение
             </Button>

@@ -120,6 +120,7 @@ export function EditSetSheet({
                         onChange={(e) => setReps(e.target.value)}
                         disabled={patchSetMutation.isPending}
                         haptic={false}
+                        data-testid="set-reps-input"
                     />
                 </div>
 
@@ -137,6 +138,7 @@ export function EditSetSheet({
                         onChange={(e) => setWeight(e.target.value)}
                         disabled={patchSetMutation.isPending}
                         haptic={false}
+                        data-testid="set-weight-input"
                     />
                 </div>
 
