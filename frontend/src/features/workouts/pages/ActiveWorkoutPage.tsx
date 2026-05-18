@@ -560,6 +560,13 @@ export function ActiveWorkoutPage() {
         if (!workout || completeMutation.isPending) return
 
         setFinishWarning(null)
+        
+        // Проверка онлайн статуса перед завершением
+        if (!isOnline) {
+            setFinishWarning('Завершение тренировки требует подключения к интернету')
+            return
+        }
+
         await flushWorkoutSync()
 
         const current = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey) ?? workout
