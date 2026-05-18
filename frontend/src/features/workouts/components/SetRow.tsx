@@ -2,11 +2,12 @@
  * SetRow Component
  * 
  * Строка подхода в таблице подходов.
- * Pure UI component.
+ * Pure UI component с haptic feedback.
  */
 
 import { Check, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
+import { hapticSelection, hapticSetCompleted, hapticSetError } from '@features/telegram'
 import type { CompletedSet } from '@features/workouts/types/workouts'
 
 interface SetRowProps {
@@ -20,6 +21,23 @@ interface SetRowProps {
 export function SetRow({ set, index, onToggle, onEdit, className }: SetRowProps) {
     const isCompleted = set.completed === true
     
+    const handleToggle = () => {
+        // Haptic feedback при переключении состояния
+        hapticSelection()
+        
+        // Вызываем callback
+        onToggle?.()
+        
+        // Дополнительный feedback после успешного завершения (если есть валидация)
+        if (!isCompleted && set.weight !== null && set.reps !== null) {
+            // Успешное завершение подхода с заполненными данными
+            setTimeout(() => hapticSetCompleted(), 50)
+        } else if (!set.weight || !set.reps) {
+            // Ошибка валидации - пустые поля
+            setTimeout(() => hapticSetError(), 50)
+        }
+    }
+    
     return (
         <div
             className={cn(
@@ -28,7 +46,7 @@ export function SetRow({ set, index, onToggle, onEdit, className }: SetRowProps)
                 onToggle && 'cursor-pointer hover:bg-telegram-secondary-bg',
                 className,
             )}
-            onClick={onToggle}
+            onClick={handleToggle}
         >
             {/* Номер подхода */}
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-telegram-secondary-bg text-xs font-semibold text-telegram-text">
@@ -56,7 +74,7 @@ export function SetRow({ set, index, onToggle, onEdit, className }: SetRowProps)
                 type="button"
                 onClick={(e) => {
                     e.stopPropagation()
-                    onToggle?.()
+                    handleToggle()
                 }}
                 className={cn(
                     'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
@@ -74,6 +92,7 @@ export function SetRow({ set, index, onToggle, onEdit, className }: SetRowProps)
                     type="button"
                     onClick={(e) => {
                         e.stopPropagation()
+                        hapticSelection()
                         onEdit()
                     }}
                     className="rounded p-1 text-telegram-hint hover:bg-telegram-secondary-bg hover:text-telegram-text"

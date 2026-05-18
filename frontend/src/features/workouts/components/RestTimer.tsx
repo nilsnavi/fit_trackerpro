@@ -7,6 +7,7 @@
 
 import { Clock, SkipForward, Play, Pause, RotateCcw } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
+import { hapticTimerSkip, hapticButtonLight } from '@features/telegram'
 import { useRestTimer } from '../hooks/useRestTimer'
 import React from 'react'
 
@@ -22,6 +23,18 @@ export function RestTimer({ initialSeconds = 90, onComplete, className }: RestTi
             initialSeconds,
             onComplete,
         })
+
+    const handleSkip = () => {
+        // Light impact при пропуске таймера
+        hapticTimerSkip()
+        skip()
+    }
+
+    const handleStart = () => {
+        // Light impact при старте таймера
+        hapticButtonLight()
+        start()
+    }
 
     return (
         <div className={cn('rounded-xl bg-telegram-secondary-bg p-4', className)}>
@@ -54,7 +67,7 @@ export function RestTimer({ initialSeconds = 90, onComplete, className }: RestTi
                 {!isActive ? (
                     <button
                         type="button"
-                        onClick={() => start()}
+                        onClick={handleStart}
                         className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
                     >
                         <Play className="h-4 w-4" />
@@ -72,7 +85,7 @@ export function RestTimer({ initialSeconds = 90, onComplete, className }: RestTi
                         </button>
                         <button
                             type="button"
-                            onClick={skip}
+                            onClick={handleSkip}
                             className="flex items-center gap-2 rounded-lg bg-telegram-bg px-4 py-2 text-sm font-medium text-telegram-text transition-colors hover:bg-telegram-secondary-bg"
                         >
                             <SkipForward className="h-4 w-4" />
@@ -97,7 +110,10 @@ export function RestTimer({ initialSeconds = 90, onComplete, className }: RestTi
                     <button
                         key={secs}
                         type="button"
-                        onClick={() => reset(secs)}
+                        onClick={() => {
+                            hapticButtonLight()
+                            reset(secs)
+                        }}
                         className={cn(
                             'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                             seconds === secs && !isActive

@@ -1,12 +1,13 @@
 /**
  * StartWorkoutSheet Component
  * 
- * Bottom sheet для начала новой тренировки.
+ * Bottom sheet для начала новой тренировки с haptic feedback.
  * Pure UI component.
  */
 
 import { X, Dumbbell, Clock } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
+import { hapticButtonLight } from '@features/telegram'
 import type { WorkoutType } from '@shared/types'
 
 interface WorkoutOption {
@@ -61,6 +62,15 @@ export function StartWorkoutSheet({
         },
     ]
 
+    const handleSelectWorkout = (type: WorkoutType) => {
+        // Light impact при выборе варианта старта
+        hapticButtonLight()
+        
+        // Вызываем callback и закрываем sheet
+        onSelectWorkout(type)
+        onClose()
+    }
+
     return (
         <>
             {/* Backdrop */}
@@ -103,10 +113,7 @@ export function StartWorkoutSheet({
                                 <button
                                     key={option.type}
                                     type="button"
-                                    onClick={() => {
-                                        onSelectWorkout(option.type)
-                                        onClose()
-                                    }}
+                                    onClick={() => handleSelectWorkout(option.type)}
                                     className="flex items-start gap-3 rounded-xl bg-telegram-secondary-bg p-4 text-left transition-colors hover:bg-telegram-bg"
                                 >
                                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -119,6 +126,7 @@ export function StartWorkoutSheet({
                                         <p className="mt-0.5 text-xs text-telegram-hint">
                                             {option.description}
                                         </p>
+
                                     </div>
                                 </button>
                             ))}

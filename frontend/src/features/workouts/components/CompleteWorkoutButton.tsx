@@ -1,12 +1,13 @@
 /**
  * CompleteWorkoutButton Component
  * 
- * Кнопка завершения тренировки с подтверждением.
+ * Кнопка завершения тренировки с подтверждением и haptic feedback.
  * Pure UI component.
  */
 
 import { CheckCircle2, AlertTriangle } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
+import { hapticButtonHeavy } from '@features/telegram'
 
 interface CompleteWorkoutButtonProps {
     totalSetsCompleted: number
@@ -33,6 +34,18 @@ export function CompleteWorkoutButton({
             return `${hours}ч ${minutes}м`
         }
         return `${minutes} мин`
+    }
+
+    const handleComplete = () => {
+        // Heavy impact при нажатии кнопки завершения
+        hapticButtonHeavy()
+        
+        // Вызываем callback
+        onComplete()
+        
+        // Success notification после успешного завершения (в callback)
+        // Примечание: в реальном использовании вызовите hapticWorkoutComplete() 
+        // после успешной мутации в родительском компоненте
     }
 
     return (
@@ -73,7 +86,7 @@ export function CompleteWorkoutButton({
             {/* Кнопка завершения */}
             <button
                 type="button"
-                onClick={onComplete}
+                onClick={handleComplete}
                 disabled={isCompleting}
                 className={cn(
                     'flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all',
