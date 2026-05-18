@@ -1,7 +1,7 @@
 # FastAPI and Web Framework
 fastapi==0.136.1
-uvicorn[standard]==0.46.0
-python-multipart==0.0.28
+uvicorn[standard]==0.47.0
+python-multipart==0.0.29
 gunicorn==25.3.0
 
 # Database
@@ -32,5 +32,5 @@ slowapi==0.1.9
 
 # Logging and Monitoring
 structlog==25.5.0
-sentry-sdk==2.59.0
+sentry-sdk==2.60.0
 prometheus-fastapi-instrumentator==7.1.0
