@@ -11,10 +11,6 @@ jest.mock('@shared/lib/businessMetrics', () => ({
     trackBusinessMetric: jest.fn(),
 }))
 
-jest.mock('@shared/lib/withWorkoutNetworkRetries', () => ({
-    withWorkoutNetworkRetries: <T,>(fn: () => Promise<T>) => fn(),
-}))
-
 jest.mock('@shared/api/domains/workoutsApi', () => {
     return {
         workoutsApi: {

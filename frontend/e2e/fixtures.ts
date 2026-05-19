@@ -31,14 +31,14 @@ export type TestFixtures = {
  * Provides a page with Telegram WebApp mock and auth token pre-seeded.
  */
 export const test = base.extend<TestFixtures>({
-    authenticatedPage: async ({ page }, provide) => {
+    authenticatedPage: async ({ page }, use) => {
         // Setup Telegram WebApp context
         await setupTelegramWebApp(page)
 
         // Seed auth token
         await seedAuth(page)
 
-        await provide(page)
+        await use(page)
     },
 
     /**
@@ -46,13 +46,13 @@ export const test = base.extend<TestFixtures>({
      * Provides a page with workout API mocking enabled.
      * Uses its own state that can be accessed via the workoutState fixture.
      */
-    workoutPage: async ({ page }, provide) => {
+    workoutPage: async ({ page }, use) => {
         const state = buildWorkoutState()
 
         // Mock all workout API endpoints
         await mockWorkoutApi(page, state)
 
-        await provide(page)
+        await use(page)
     },
 
     /**
@@ -62,9 +62,9 @@ export const test = base.extend<TestFixtures>({
      */
     // Playwright: fixture без зависимостей (пустой объект параметров)
     // eslint-disable-next-line no-empty-pattern -- синтаксис Playwright для fixture без deps
-    workoutState: async ({}, provide) => {
+    workoutState: async ({}, use) => {
         const state = buildWorkoutState()
-        await provide(state)
+        await use(state)
     },
 
     /**
@@ -72,7 +72,7 @@ export const test = base.extend<TestFixtures>({
      * Combined fixture with both Telegram auth and workout API mocking.
      * This is the most common setup for workout tests.
      */
-    workoutAuthPage: async ({ page }, provide) => {
+    workoutAuthPage: async ({ page }, use) => {
         // Setup Telegram WebApp
         await setupTelegramWebApp(page)
 
@@ -85,7 +85,7 @@ export const test = base.extend<TestFixtures>({
 
         // Provide both page and state to test
         // Note: To access state in test, you still need to pass workoutState fixture
-        await provide(page)
+        await use(page)
     },
 })
 

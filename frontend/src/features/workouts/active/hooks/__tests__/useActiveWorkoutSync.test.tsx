@@ -100,7 +100,6 @@ describe('useActiveWorkoutSync', () => {
             (workout: WorkoutHistoryItem) =>
                 useActiveWorkoutSync({
                     workoutId: workout.id,
-                    draftStorageUserId: 1,
                     workout,
                     draftWorkoutId: workout.id,
                     isActiveDraft: true,
@@ -166,7 +165,6 @@ describe('useActiveWorkoutSync', () => {
             (workout: WorkoutHistoryItem) =>
                 useActiveWorkoutSync({
                     workoutId: workout.id,
-                    draftStorageUserId: 1,
                     workout,
                     draftWorkoutId: workout.id,
                     isActiveDraft: true,
@@ -232,7 +230,6 @@ describe('useActiveWorkoutSync', () => {
             (workout: WorkoutHistoryItem) =>
                 useActiveWorkoutSync({
                     workoutId: workout.id,
-                    draftStorageUserId: 1,
                     workout,
                     draftWorkoutId: workout.id,
                     isActiveDraft: true,
@@ -265,7 +262,7 @@ describe('useActiveWorkoutSync', () => {
         expect(toast.retry).toHaveBeenCalledTimes(1)
 
         act(() => {
-            jest.advanceTimersByTime(1_000)
+            jest.advanceTimersByTime(3_000)
         })
 
         await waitFor(() => {
@@ -290,7 +287,6 @@ describe('useActiveWorkoutSync', () => {
             (workout: WorkoutHistoryItem) =>
                 useActiveWorkoutSync({
                     workoutId: workout.id,
-                    draftStorageUserId: 1,
                     workout,
                     draftWorkoutId: workout.id,
                     isActiveDraft: true,
@@ -361,7 +357,6 @@ describe('useActiveWorkoutSync', () => {
             (workout: WorkoutHistoryItem) =>
                 useActiveWorkoutSync({
                     workoutId: workout.id,
-                    draftStorageUserId: 1,
                     workout,
                     draftWorkoutId: workout.id,
                     isActiveDraft: true,
@@ -413,7 +408,6 @@ describe('useActiveWorkoutSync', () => {
             (workout: WorkoutHistoryItem) =>
                 useActiveWorkoutSync({
                     workoutId: workout.id,
-                    draftStorageUserId: 1,
                     workout,
                     draftWorkoutId: workout.id,
                     isActiveDraft: true,

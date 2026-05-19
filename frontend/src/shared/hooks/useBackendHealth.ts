@@ -1,15 +1,24 @@
 /**
  * useBackendHealth: Hook to check backend readiness
- *
+ * 
  * Periodically checks if the backend is ready to serve traffic.
  * Used to display a maintenance screen if backend dependencies are unhealthy.
  */
 
 import { useEffect, useState } from 'react';
 
-import type { components } from '@shared/api/generated/openapi';
+interface DependencyStatus {
+  name: string;
+  healthy: boolean;
+  response_time_ms?: number | null;
+  message?: string | null;
+}
 
-type ReadinessResponse = components['schemas']['ReadinessResponse'];
+interface ReadinessResponse {
+  status: 'ready' | 'not_ready';
+  timestamp: string;
+  dependencies: Record<string, DependencyStatus>;
+}
 
 interface BackendHealth {
   /** Is backend ready to serve traffic */
@@ -24,11 +33,11 @@ interface BackendHealth {
 
 /**
  * Hook to check backend readiness status
- *
+ * 
  * @param checkIntervalMs - How often to check (default: 5000ms)
  * @param initialCheckDelayMs - Delay before first check (default: 1000ms)
  * @returns Backend health status
- *
+ * 
  * @example
  * const { isReady, isLoading, error } = useBackendHealth();
  * if (!isReady && !isLoading) {
@@ -49,19 +58,12 @@ export function useBackendHealth(
     let timeoutId: NodeJS.Timeout | null = null;
     let intervalId: NodeJS.Timeout | null = null;
 
-    /**
-     * Background polls must not set `isLoading`, otherwise HealthCheckGate unmounts
-     * the whole app every interval — feels like constant reconnect / flicker in Telegram.
-     */
-    const checkBackendHealth = async (options: { showLoading?: boolean } = {}) => {
-      const showLoading = options.showLoading ?? false;
+    const checkBackendHealth = async () => {
       try {
-        if (showLoading) {
-          setIsLoading(true);
-        }
+        setIsLoading(true);
         const response = await fetch('/health/ready', {
           method: 'GET',
-          headers: { Accept: 'application/json' },
+          headers: { 'Accept': 'application/json' },
           // Don't add auth headers for health checks
         });
 
@@ -70,9 +72,9 @@ export function useBackendHealth(
         }
 
         const data = (await response.json()) as ReadinessResponse;
-
+        
         if (!mounted) return;
-
+        
         setReadinessData(data);
         setIsReady(data.status === 'ready');
         setError(undefined);
@@ -84,20 +86,18 @@ export function useBackendHealth(
         setError(
           err instanceof Error
             ? err.message
-            : 'Backend is not responding. Please try again shortly.',
+            : 'Backend is not responding. Please try again shortly.'
         );
         setReadinessData(undefined);
         setIsLoading(false);
       }
     };
 
-    // Initial check after delay (full-screen loading). Later polls are silent.
+    // Initial check after delay
     timeoutId = setTimeout(() => {
-      void checkBackendHealth({ showLoading: true });
-      intervalId = setInterval(
-        () => void checkBackendHealth({ showLoading: false }),
-        checkIntervalMs,
-      );
+      checkBackendHealth();
+      // Then check periodically
+      intervalId = setInterval(checkBackendHealth, checkIntervalMs);
     }, initialCheckDelayMs);
 
     return () => {

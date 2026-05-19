@@ -4,7 +4,7 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
     test('shows fallback screen when Telegram context is missing', async ({ page }) => {
         await page.goto('/')
 
-        await expect(page.getByRole('heading', { name: 'Откройте приложение в Telegram' })).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'Откройте Mini App в Telegram' })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Проверить снова' })).toBeVisible()
     })
 
@@ -45,7 +45,7 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
                 return route.fulfill({ status: 204, headers: corsHeaders, body: '' })
             }
 
-            if (method === 'GET' && path.includes('/users/auth/me')) {
+            if (method === 'GET' && path.includes('/auth/me')) {
                 profileCalls += 1
                 return json(200, {
                     id: 1,
@@ -65,7 +65,7 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
                 })
             }
 
-            if (method === 'POST' && path.includes('/users/auth/onboarding')) {
+            if (method === 'POST' && path.includes('/auth/onboarding')) {
                 onboardingBody = request.postDataJSON() as Record<string, unknown>
                 return json(200, {
                     success: true,

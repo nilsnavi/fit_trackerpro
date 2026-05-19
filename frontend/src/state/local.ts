@@ -21,4 +21,3 @@ export {
     useActiveWorkoutStateSlice,
     useActiveWorkoutActions,
 } from '../stores/activeWorkoutStore'
-export { useWorkoutSessionUiStore } from '../stores/workoutSessionUiStore'

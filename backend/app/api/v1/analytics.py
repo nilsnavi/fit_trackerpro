@@ -14,7 +14,6 @@ from app.application.analytics_service import AnalyticsService
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.analytics import (
-    AnalyticsDashboardResponse,
     AnalyticsPerformanceOverviewResponse,
     AnalyticsSummaryResponse,
     DataExportRequest,
@@ -34,27 +33,6 @@ from app.schemas.analytics import (
 from app.settings import settings
 
 router = APIRouter()
-
-
-@router.get("/", response_model=AnalyticsDashboardResponse)
-async def get_analytics_dashboard(
-    period: str = Query("week", pattern="^(week|month|all)$"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db),
-):
-    service = AnalyticsService(db)
-    return await service.get_analytics_dashboard(user_id=current_user.id, period=period)
-
-
-@router.get("/workouts", response_model=AnalyticsDashboardResponse)
-async def get_analytics_workouts(
-    period: str = Query("week", pattern="^(week|month|all)$"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db),
-):
-    """Сводка тренировок для аналитики (тот же payload, что и GET /analytics/)."""
-    service = AnalyticsService(db)
-    return await service.get_analytics_dashboard(user_id=current_user.id, period=period)
 
 
 @router.get("/training-load/daily", response_model=List[TrainingLoadDailyEntry])
