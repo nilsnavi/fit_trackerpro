@@ -1170,8 +1170,10 @@ class WorkoutsService:
                 exercises_payload=workout.exercises or [],
             ),
         )
-        response_item = self._workout_log_to_history_item(
-            workout, data.exercises)
+        response_item = await self.get_workout_detail(
+            user_id=user_id,
+            workout_id=workout.id,
+        )
 
         if data.idempotency_key:
             await self.repository.create_idempotency_record(
@@ -1353,20 +1355,21 @@ class WorkoutsService:
             workout_session_id=workout_id,
         )
 
-        # Build a map: (exercise_id, set_number) -> (id, notes)
+        # Build a map: (exercise order, set_number) -> (id, notes). The same
+        # exercise can appear multiple times in one workout, so exercise_id is
+        # not unique enough for set metadata.
         set_metadata: dict[tuple[int, int], dict] = {}
         for s in sets_from_db:
             if s.session_exercise:
-                key = (int(s.session_exercise.exercise_id), s.set_number)
+                key = (int(s.session_exercise.order_index), s.set_number)
                 set_metadata[key] = {"id": s.id, "notes": s.notes}
 
         # Enrich raw_exercises with IDs and notes from DB
         enriched_exercises = []
-        for ex in raw_exercises:
+        for exercise_index, ex in enumerate(raw_exercises):
             if not isinstance(ex, dict):
                 enriched_exercises.append(ex)
                 continue
-            exercise_id = int(ex.get("exercise_id") or 0)
             sets_completed = ex.get("sets_completed", [])
             if isinstance(sets_completed, list):
                 enriched_sets = []
@@ -1375,7 +1378,7 @@ class WorkoutsService:
                         enriched_sets.append(s)
                         continue
                     set_number = int(s.get("set_number") or 0)
-                    key = (exercise_id, set_number)
+                    key = (exercise_index, set_number)
                     meta = set_metadata.get(key, {})
                     enriched_set = {
                         **s, "id": meta.get("id"), "notes": meta.get("notes") or s.get("notes")}
@@ -1408,15 +1411,15 @@ class WorkoutsService:
         if not db_set or not db_set.session_exercise:
             raise WorkoutNotFoundError("Set not found")
 
-        exercise_id = int(db_set.session_exercise.exercise_id)
+        target_exercise_index = int(db_set.session_exercise.order_index)
         target_set_number = int(db_set.set_number)
 
         exercises = list(workout.exercises or [])
         updated_set: dict | None = None
-        for ex in exercises:
+        for exercise_index, ex in enumerate(exercises):
             if not isinstance(ex, dict):
                 continue
-            if int(ex.get("exercise_id") or 0) != exercise_id:
+            if exercise_index != target_exercise_index:
                 continue
             sets = ex.get("sets_completed")
             if not isinstance(sets, list):
@@ -1428,18 +1431,25 @@ class WorkoutsService:
                     continue
                 if data.reps is not None:
                     set_item["reps"] = int(data.reps)
+                    db_set.reps = int(data.reps)
                 if data.weight is not None:
                     set_item["weight"] = float(data.weight)
+                    db_set.weight = float(data.weight)
                 if data.rpe is not None:
                     set_item["rpe"] = float(data.rpe)
+                    db_set.rpe = float(data.rpe)
                 if data.rest_seconds is not None:
                     set_item["rest_seconds"] = data.rest_seconds
                     # keep legacy field in sync for existing analytics/clients
                     set_item["actual_rest_seconds"] = data.rest_seconds
+                    db_set.rest_seconds = data.rest_seconds
+                    db_set.actual_rest_seconds = data.rest_seconds
                 if data.completed is not None:
                     set_item["completed"] = data.completed
+                    db_set.completed = data.completed
                 if data.notes is not None:
                     set_item["notes"] = data.notes
+                    db_set.notes = data.notes
                 updated_set = set_item
                 break
             break
@@ -1453,15 +1463,6 @@ class WorkoutsService:
         workout.version += 1
 
         workout = await self.repository.commit_workout_update(workout)
-        await self.repository.replace_session_snapshot(
-            user_id=user_id,
-            workout_session_id=workout.id,
-            session_exercises=self._build_session_snapshot_rows(
-                user_id=user_id,
-                workout_session_id=workout.id,
-                exercises_payload=workout.exercises or [],
-            ),
-        )
 
         audit_log(
             action=WORKOUT_UPDATE,
@@ -1475,7 +1476,7 @@ class WorkoutsService:
         return WorkoutSetResponse(
             id=set_id,
             workout_id=workout_id,
-            exercise_id=exercise_id,
+            exercise_id=int(db_set.session_exercise.exercise_id),
             set_number=target_set_number,
             reps=updated_set.get("reps"),
             weight=updated_set.get("weight"),

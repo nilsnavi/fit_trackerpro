@@ -784,7 +784,8 @@ class TestWorkoutStartComplete:
                     "exercise_id": 201,
                     "name": "Pull-ups",
                     "sets_completed": [
-                        {"set_number": 1, "completed": False, "reps": 8, "weight": None, "duration": None}
+                        {"set_number": 1, "completed": False, "reps": 8, "weight": None, "duration": None},
+                        {"set_number": 2, "completed": False, "reps": 8, "weight": None, "duration": None},
                     ],
                 }
             ],
@@ -796,6 +797,13 @@ class TestWorkoutStartComplete:
         assert r1.status_code == 200, r1.text
         body1 = r1.json()
         assert body1.get("version") == 2
+        first_set_id = body1["exercises"][0]["sets_completed"][0].get("id")
+        second_set_id = body1["exercises"][0]["sets_completed"][1].get("id")
+        assert isinstance(first_set_id, int)
+        assert first_set_id > 0
+        assert isinstance(second_set_id, int)
+        assert second_set_id > 0
+        assert second_set_id != first_set_id
 
         # Replay with same payload + same key should return cached version=2.
         r2 = await authenticated_client.patch(f"/api/v1/workouts/history/{workout_id}", json=first_payload)
@@ -803,6 +811,23 @@ class TestWorkoutStartComplete:
         body2 = r2.json()
         assert body2.get("version") == 2
         assert body2.get("comments") == "first"
+        assert body2["exercises"][0]["sets_completed"][0].get("id") == first_set_id
+        assert body2["exercises"][0]["sets_completed"][1].get("id") == second_set_id
+
+        # Completing one set must not recreate all set rows and stale the next set id.
+        p1 = await authenticated_client.patch(
+            f"/api/v1/workouts/{workout_id}/sets/{first_set_id}",
+            json={"completed": True, "reps": 8, "weight": 50},
+        )
+        assert p1.status_code == 200, p1.text
+        assert p1.json().get("id") == first_set_id
+
+        p2 = await authenticated_client.patch(
+            f"/api/v1/workouts/{workout_id}/sets/{second_set_id}",
+            json={"completed": True, "reps": 8, "weight": 50},
+        )
+        assert p2.status_code == 200, p2.text
+        assert p2.json().get("id") == second_set_id
 
         # Same key but different payload must return conflict.
         changed_payload = {
