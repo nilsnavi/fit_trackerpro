@@ -42,7 +42,7 @@ export interface ActiveWorkoutModalsProps {
 
     addItemKind: 'exercise' | 'timer' | null
     isCatalogLoading: boolean
-    catalogFilter: 'all' | 'strength' | 'cardio' | 'flexibility'
+    catalogFilter: 'all' | 'strength' | 'cardio' | 'flexibility' | 'custom'
     searchQuery: string
     selectedExercise: CatalogExercise | null
     filteredCatalogExercises: CatalogExercise[]
@@ -54,8 +54,11 @@ export interface ActiveWorkoutModalsProps {
     weight: string
     duration: string
     notes: string
+    rpe?: string
+    restSeconds?: string
+    saveAsTemplate?: boolean
     onCloseAddItem: () => void
-    onChangeFilter: (value: 'all' | 'strength' | 'cardio' | 'flexibility') => void
+    onChangeFilter: (value: 'all' | 'strength' | 'cardio' | 'flexibility' | 'custom') => void
     onChangeSearch: (value: string) => void
     onSelectExercise: (value: CatalogExercise | null) => void
     onChangeSets: (value: string) => void
@@ -63,6 +66,9 @@ export interface ActiveWorkoutModalsProps {
     onChangeWeight: (value: string) => void
     onChangeDuration: (value: string) => void
     onChangeNotes: (value: string) => void
+    onChangeRpe?: (value: string) => void
+    onChangeRestSeconds?: (value: string) => void
+    onChangeSaveAsTemplate?: (value: boolean) => void
     onSubmitCreateItem: () => void
     addTimerName: string
     onChangeTimerName: (value: string) => void
@@ -142,6 +148,9 @@ export function ActiveWorkoutModals(props: ActiveWorkoutModalsProps) {
                     weight={props.weight}
                     duration={props.duration}
                     notes={props.notes}
+                    rpe={props.rpe}
+                    restSeconds={props.restSeconds}
+                    saveAsTemplate={props.saveAsTemplate}
                     onClose={props.onCloseAddItem}
                     onChangeFilter={props.onChangeFilter}
                     onChangeSearch={props.onChangeSearch}
@@ -151,6 +160,9 @@ export function ActiveWorkoutModals(props: ActiveWorkoutModalsProps) {
                     onChangeWeight={props.onChangeWeight}
                     onChangeDuration={props.onChangeDuration}
                     onChangeNotes={props.onChangeNotes}
+                    onChangeRpe={props.onChangeRpe}
+                    onChangeRestSeconds={props.onChangeRestSeconds}
+                    onChangeSaveAsTemplate={props.onChangeSaveAsTemplate}
                     onSubmit={props.onSubmitCreateItem}
                 />
             )}

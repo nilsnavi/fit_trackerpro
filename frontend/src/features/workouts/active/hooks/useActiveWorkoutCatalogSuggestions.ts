@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { Exercise as CatalogExercise } from '@features/exercises/types/catalogUi'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
-export type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility'
+export type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility' | 'custom'
 
 export interface UseActiveWorkoutCatalogSuggestionsParams {
     catalogExercises: CatalogExercise[]

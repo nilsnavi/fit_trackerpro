@@ -5,7 +5,7 @@ import type {
     WorkoutSessionUpdateRequest,
 } from '@features/workouts/types/workouts'
 
-export type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility'
+export type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility' | 'custom'
 
 export type AddItemKind = 'exercise' | 'timer'
 
