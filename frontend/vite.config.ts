@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -68,14 +67,6 @@ function bundleStatsPlugin(): Plugin {
 }
 
 export default defineConfig({
-    test: {
-        environment: 'jsdom',
-        globals: false,
-        setupFiles: [path.join(srcDir, 'vitest.setup.ts')],
-        /** Только `*.vitest.*`; остальные юнит-тесты пока в Jest (`npm test`). */
-        include: ['src/**/*.vitest.{ts,tsx}'],
-        passWithNoTests: true,
-    },
     plugins: [
         react(),
         ...(process.env.BUNDLE_STATS ? [bundleStatsPlugin()] : []),
@@ -193,19 +184,10 @@ export default defineConfig({
         sourcemap: true,
         rollupOptions: {
             output: {
-                manualChunks(id) {
-                    if (!id.includes('node_modules')) return
-
-                    if (id.includes('@telegram-apps/sdk-react') || id.includes('@telegram-apps/sdk')) {
-                        return 'telegram-sdk'
-                    }
-                    if (
-                        id.includes('/node_modules/react/') ||
-                        id.includes('/node_modules/react-dom/') ||
-                        id.includes('/node_modules/react-router-dom/')
-                    ) {
-                        return 'react-vendor'
-                    }
+                manualChunks: {
+                    'telegram-sdk': ['@telegram-apps/sdk-react', '@telegram-apps/sdk'],
+                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+                    'charts': ['recharts'],
                 },
             },
         },

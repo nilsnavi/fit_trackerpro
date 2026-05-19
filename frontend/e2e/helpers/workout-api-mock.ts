@@ -33,9 +33,8 @@ export type ExerciseApiItem = {
 
 export type CompletedSet = {
     set_number: number
-    reps?: number
+    reps: number
     weight?: number
-    duration?: number
     completed: boolean
 }
 
@@ -208,10 +207,8 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             body: JSON.stringify({
                 status: 'ready',
                 timestamp: isoNow(),
-                checks: {
-                    database: { status: 'ok', latency_ms: 1 },
-                    redis: { status: 'ok', latency_ms: 1 },
-                    migrations: { status: 'ok', current: 'test', head: 'test' },
+                dependencies: {
+                    database: { name: 'database', healthy: true },
                 },
             }),
         })
@@ -247,36 +244,14 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, {
                 status: 'ready',
                 timestamp: isoNow(),
-                checks: {
-                    database: { status: 'ok', latency_ms: 1 },
-                    redis: { status: 'ok', latency_ms: 1 },
-                    migrations: { status: 'ok', current: 'test', head: 'test' },
+                dependencies: {
+                    database: { name: 'database', healthy: true },
                 },
             })
         }
 
-        if (method === 'GET' && normalizedPath.endsWith('/users/auth/me')) {
+        if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me'))) {
             return respond(200, buildUserProfile())
-        }
-
-        if (method === 'POST' && normalizedPath.endsWith('/users/auth/lookup')) {
-            return respond(200, { registered: true })
-        }
-
-        if (
-            method === 'POST' &&
-            (normalizedPath.endsWith('/users/auth/telegram') ||
-                normalizedPath.endsWith('/users/auth/register') ||
-                normalizedPath.endsWith('/users/auth/refresh'))
-        ) {
-            return respond(200, {
-                access_token: 'e2e-token',
-                refresh_token: 'e2e-refresh-token',
-                token_type: 'bearer',
-                user: buildUserProfile(),
-                onboarding_required: false,
-                is_new_user: false,
-            })
         }
 
         if (method === 'GET' && /\/users\/stats$/.test(normalizedPath)) {

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -19,7 +18,7 @@ from app.core.security import create_access_token, create_refresh_token, verify_
 from app.domain.exceptions import AuthenticationError
 from app.domain.user import User
 from app.infrastructure.repositories.auth_repository import AuthRepository
-from app.infrastructure.telegram_auth import INIT_DATA_MAX_AGE_SECONDS, validate_and_get_user
+from app.infrastructure.telegram_auth import validate_and_get_user
 from app.schemas.auth import (
     AuthResponse,
     LogoutResponse,
@@ -28,7 +27,6 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
-    TelegramLookupResponse,
     TelegramUserData,
     UserProfileData,
     UserProfileResponse,
@@ -75,14 +73,7 @@ class AuthService:
                 },
                 settings={"theme": "telegram", "notifications": True, "units": "metric"},
             )
-            try:
-                return await self.repository.insert_user(user), True
-            except IntegrityError:
-                await self.repository.rollback()
-                existing = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
-                if existing is None:
-                    raise
-                return existing, False
+            return await self.repository.insert_user(user), True
 
         user.username = telegram_user_data.get("username") or user.username
         user.first_name = telegram_user_data.get("first_name") or user.first_name
@@ -93,23 +84,6 @@ class AuthService:
         await self.repository.commit_user_fields()
         return user, False
 
-    async def lookup_telegram_registration(
-        self,
-        auth_request: TelegramAuthRequest,
-    ) -> TelegramLookupResponse:
-        """Validate initData and report whether a user already exists (does not create a row)."""
-        is_valid, user_data, error = validate_and_get_user(
-            init_data=auth_request.init_data,
-            bot_token=settings.TELEGRAM_BOT_TOKEN,
-            max_age_seconds=INIT_DATA_MAX_AGE_SECONDS,
-        )
-        if not is_valid:
-            raise AuthenticationError(error or "Не удалось подтвердить вход через Telegram.")
-
-        telegram_id = user_data["id"]
-        user = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
-        return TelegramLookupResponse(registered=user is not None)
-
     async def authenticate_telegram(
         self,
         auth_request: TelegramAuthRequest,
@@ -118,10 +92,10 @@ class AuthService:
         is_valid, user_data, error = validate_and_get_user(
             init_data=auth_request.init_data,
             bot_token=settings.TELEGRAM_BOT_TOKEN,
-            max_age_seconds=INIT_DATA_MAX_AGE_SECONDS,
+            max_age_seconds=300,
         )
         if not is_valid:
-            raise AuthenticationError(error or "Не удалось подтвердить вход через Telegram.")
+            raise AuthenticationError(f"Authentication failed: {error}")
 
         user, created = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
@@ -150,7 +124,6 @@ class AuthService:
             success=True,
             message="Authentication successful",
             user=user_response,
-            token=access_token,
             access_token=access_token,
             refresh_token=refresh_token,
             is_new_user=created,
