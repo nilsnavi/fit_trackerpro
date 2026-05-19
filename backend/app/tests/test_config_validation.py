@@ -8,7 +8,7 @@ def _valid_settings_payload() -> dict:
     return {
         "DATABASE_URL": "sqlite+aiosqlite:///:memory:",
         "SECRET_KEY": "test-secret-key-1234567890",
-        "TELEGRAM_BOT_TOKEN": "123456:ABCDEF_test_token",
+        "TELEGRAM_BOT_TOKEN": "123456:ABCDEF_test_token_value_long_enough",
         "TELEGRAM_WEBAPP_URL": "https://localhost:3000",
     }
 
@@ -128,6 +128,9 @@ def test_telegram_bot_token_valid_formats_accepted(token: str):
         "",              # empty
         "   ",           # whitespace only
         "your_telegram_bot_token_here",  # placeholder
+        "=123456789:AAHproduction_token_not_equal_to_dev_default",
+        "123456789",
+        "not-a-token",
     ],
 )
 def test_telegram_bot_token_invalid_values_rejected(token: str):

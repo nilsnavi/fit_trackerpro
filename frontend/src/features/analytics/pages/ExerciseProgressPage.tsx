@@ -8,13 +8,13 @@ import {
     ExerciseWeightChart,
     ExerciseVolumeChart,
     ExerciseSetHistory,
-} from './components/exercise-progress'
+} from '@features/analytics/components/exercise-progress'
 import { useExerciseProgress, useExercisesList } from '@features/analytics/hooks/useExerciseProgress'
 import { ProgressPeriodFilter } from '@features/analytics/components/ProgressPeriodFilter'
 import type { ProgressPeriod } from '@features/analytics/lib/progressDateRange'
 import { getAnalyticsDateRange } from '@features/analytics/lib/progressDateRange'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
-import { ExerciseProgressSkeleton } from './components/exercise-progress/ExerciseProgressSkeleton'
+import { ExerciseProgressSkeleton } from '@features/analytics/components/exercise-progress/ExerciseProgressSkeleton'
 
 type DatePreset = '7d' | '30d' | '90d' | 'all'
 

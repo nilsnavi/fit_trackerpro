@@ -20,11 +20,11 @@ ENV NODE_ENV=development
 
 # NODE_ENV must not be production during install (devDependencies include Vite).
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 COPY . .
 
-RUN npm run build
+RUN npm run build-only
 
 # -----------------------------------------------------------------------------
 # Stage 2 — runtime (nginx serves prebuilt dist only; no Node in final image)

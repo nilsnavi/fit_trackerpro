@@ -16,6 +16,7 @@ below exist only for local development and automated tests — they are rejected
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated, Final, List, Self
 
@@ -35,6 +36,7 @@ _DEV_TELEGRAM_BOT_TOKEN: Final[str] = (
     "000000000:AAHdev_local_only_replace_for_production_bot_token"
 )
 _DEV_TELEGRAM_WEBAPP_URL: Final[str] = "http://localhost:5173"
+_TELEGRAM_BOT_TOKEN_RE: Final[re.Pattern[str]] = re.compile(r"^\d+:[A-Za-z0-9_-]{20,}$")
 
 
 class Settings(BaseSettings):
@@ -327,6 +329,11 @@ class Settings(BaseSettings):
         normalized = value.strip()
         if normalized.lower() in {"your_telegram_bot_token_here", "changeme", "your_token_here"}:
             raise ValueError("TELEGRAM_BOT_TOKEN contains a placeholder value")
+        if not _TELEGRAM_BOT_TOKEN_RE.fullmatch(normalized):
+            raise ValueError(
+                "TELEGRAM_BOT_TOKEN must match Telegram Bot API format "
+                "'<bot_id>:<secret>'; check for extra '=' in .env"
+            )
         return normalized
 
     @field_validator("TELEGRAM_WEBAPP_URL")
