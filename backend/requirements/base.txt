@@ -33,4 +33,4 @@ slowapi==0.1.9
 # Logging and Monitoring
 structlog==25.5.0
 sentry-sdk==2.61.1
-prometheus-fastapi-instrumentator==7.1.0
+prometheus-fastapi-instrumentator==8.0.0
