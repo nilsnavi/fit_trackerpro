@@ -1,5 +1,5 @@
 # FastAPI and Web Framework
-fastapi==0.136.3
+fastapi==0.137.0
 uvicorn[standard]==0.49.0
 python-multipart==0.0.32
 gunicorn==25.3.0
@@ -18,7 +18,7 @@ email-validator==2.3.0
 # Authentication and Security
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-python-telegram-bot==22.7
+python-telegram-bot==22.8
 
 # HTTP Client
 httpx==0.28.1
@@ -28,9 +28,9 @@ aiohttp==3.14.1
 python-dotenv==1.2.2
 orjson==3.11.9
 redis==7.4.0
-slowapi==0.1.9
+slowapi==0.1.10
 
 # Logging and Monitoring
 structlog==25.5.0
-sentry-sdk==2.61.1
+sentry-sdk==2.62.0
 prometheus-fastapi-instrumentator==7.1.0
