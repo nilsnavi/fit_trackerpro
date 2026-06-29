@@ -1,12 +1,12 @@
 # FastAPI and Web Framework
-fastapi==0.138.0
+fastapi==0.138.1
 uvicorn[standard]==0.49.0
 python-multipart==0.0.32
 gunicorn==25.3.0
 
 # Database
 sqlalchemy==2.0.51
-alembic==1.18.4
+alembic==1.18.5
 asyncpg==0.31.0
 psycopg[binary]==3.3.4
 
