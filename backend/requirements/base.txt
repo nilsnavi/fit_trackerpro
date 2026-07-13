@@ -31,6 +31,6 @@ redis==7.4.0
 slowapi==0.1.10
 
 # Logging and Monitoring
-structlog==25.5.0
+structlog==26.1.0
 sentry-sdk==2.64.0
 prometheus-fastapi-instrumentator==7.1.0
