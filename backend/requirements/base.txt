@@ -1,6 +1,6 @@
 # FastAPI and Web Framework
 fastapi==0.139.0
-uvicorn[standard]==0.50.0
+uvicorn[standard]==0.51.0
 python-multipart==0.0.32
 gunicorn==25.3.0
 
