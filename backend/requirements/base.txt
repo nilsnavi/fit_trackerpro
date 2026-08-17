@@ -1,18 +1,18 @@
 # FastAPI and Web Framework
 fastapi==0.141.1
-uvicorn[standard]==0.52.1
+uvicorn[standard]==0.52.3
 python-multipart==0.0.32
 gunicorn==25.3.0
 
 # Database
-sqlalchemy==2.0.51
-alembic==1.19.0
+sqlalchemy==2.0.52
+alembic==1.19.1
 asyncpg==0.31.0
 psycopg[binary]==3.3.4
 
 # Pydantic and Validation
 pydantic==2.13.4
-pydantic-settings==2.14.2
+pydantic-settings==2.15.0
 email-validator==2.3.0
 
 # Authentication and Security
@@ -32,5 +32,5 @@ slowapi==0.1.10
 
 # Logging and Monitoring
 structlog==25.5.0
-sentry-sdk==2.66.1
+sentry-sdk==2.68.0
 prometheus-fastapi-instrumentator==7.1.0
