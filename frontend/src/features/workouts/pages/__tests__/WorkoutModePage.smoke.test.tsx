@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * Smoke test for WorkoutModePage.
  *
@@ -6,6 +7,7 @@
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // ── Dependency mocks ──────────────────────────────────────────────────────────
 
@@ -28,10 +30,6 @@ jest.mock('@features/workouts/hooks/useWorkoutHistoryQuery', () => ({
 
 jest.mock('@features/exercises/hooks/useExercisesCatalogQuery', () => ({
     useExercisesCatalogQuery: () => ({ data: [], isLoading: false, isError: false }),
-}))
-
-jest.mock('@features/workouts/config/usePersonalizedConfig', () => ({
-    usePersonalizedConfig: (config: unknown) => config,
 }))
 
 // Zustand store — real implementation, reset between tests
@@ -80,21 +78,26 @@ function NavigateAwayButton() {
 }
 
 function renderPage(mode = 'strength') {
+    const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
     return render(
-        <MemoryRouter initialEntries={[`/workouts/mode/${mode}`]}>
-            <Routes>
-                <Route
-                    path="/workouts/mode/:mode"
-                    element={(
-                        <>
-                            <WorkoutModePage />
-                            <NavigateAwayButton />
-                        </>
-                    )}
-                />
-                <Route path="/workouts" element={<div>Workouts list</div>} />
-            </Routes>
-        </MemoryRouter>,
+        <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={[`/workouts/mode/${mode}`]}>
+                <Routes>
+                    <Route
+                        path="/workouts/mode/:mode"
+                        element={(
+                            <>
+                                <WorkoutModePage />
+                                <NavigateAwayButton />
+                            </>
+                        )}
+                    />
+                    <Route path="/workouts" element={<div>Workouts list</div>} />
+                </Routes>
+            </MemoryRouter>
+        </QueryClientProvider>,
     )
 }
 

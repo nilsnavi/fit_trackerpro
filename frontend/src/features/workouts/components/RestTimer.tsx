@@ -9,9 +9,8 @@ import { Clock, SkipForward, Play, Pause, RotateCcw } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { hapticTimerSkip, hapticButtonLight } from '@features/telegram'
 import { useRestTimer } from '../hooks/useRestTimer'
-import React from 'react'
 
-interface RestTimerProps {
+export interface RestTimerProps {
     initialSeconds?: number
     onComplete?: () => void
     className?: string

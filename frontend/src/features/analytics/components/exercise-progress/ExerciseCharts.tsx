@@ -14,20 +14,6 @@ import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { cn } from '@shared/lib/cn'
 
-interface ChartDataPoint {
-    date: string
-    formattedDate: string
-    weight: number | null
-    volume: number | null
-}
-
-interface ExerciseChartsProps {
-    dates: string[]
-    weights: (number | null)[]
-    volumes: (number | null)[]
-    className?: string
-}
-
 function WeightTooltip({ active, payload, label }: { 
     active?: boolean
     payload?: Array<{ value: number | null; name?: string }>

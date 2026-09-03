@@ -120,7 +120,7 @@ test.describe('Quick Start Flow', () => {
         await setRow.locator('[data-testid="set-reps-input"]').fill('8')
         
         // Track haptic calls (mocked in telegram-mock.ts)
-        const hapticCalls: any[] = []
+        const hapticCalls: Array<{ type: string; style?: string }> = []
         await page.exposeFunction('trackHaptic', (type: string, style?: string) => {
             hapticCalls.push({ type, style })
         })

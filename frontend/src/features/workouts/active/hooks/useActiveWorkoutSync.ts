@@ -7,9 +7,19 @@ import type {
     WorkoutSessionUpdateRequest,
 } from '@features/workouts/types/workouts'
 import { toast } from '@shared/stores/toastStore'
+import {
+    emitWorkoutSyncTelemetry,
+    syncErrorTelemetryFields,
+} from '@shared/offline/observability/workoutSyncTelemetry'
+import { isRecoverableSyncError } from '@shared/offline/syncQueue'
+import {
+    clearWorkoutDraftFromLocalStorage,
+    writeWorkoutDraftToLocalStorage,
+} from '@features/workouts/active/lib/workoutDraftLocalStorage'
 
 // Aggressive debounce causes redundant requests; use a wider window instead.
 const DEBOUNCE_MS = 2000
+/** Паузы между повторами: 1 с, 2 с, 4 с. */
 const RETRY_BASE_DELAY_MS = 3000
 const RETRY_MAX_DELAY_MS = 15000
 const MAX_RETRY_ATTEMPTS = 3
@@ -19,7 +29,7 @@ type UpdateSessionMutation = {
         variables: { workoutId: number; payload: WorkoutSessionUpdateRequest },
         options: {
             onSuccess: (data: WorkoutHistoryItem) => void
-            onError: () => void
+            onError?: (error: unknown) => void
         },
     ) => void
 }
@@ -28,6 +38,8 @@ type BuildSyncPayload = (workout: WorkoutHistoryItem) => WorkoutSessionUpdateReq
 
 interface UseActiveWorkoutSyncParams {
     workoutId: number
+    /** Ключ localStorage `workout_draft_${userId}_${workoutId}` */
+    draftStorageUserId: string | number
     workout: WorkoutHistoryItem | undefined
     draftWorkoutId: number | null
     isActiveDraft: boolean
@@ -46,6 +58,8 @@ interface UseActiveWorkoutSyncParams {
     clearWorkoutSessionDraft: () => void
     updateSessionMutation: UpdateSessionMutation
     buildSyncPayload: BuildSyncPayload
+    /** Перед повторной отправкой сессии после события `online` (например, сброс localStorage-очереди подходов). */
+    onBeforeOnlineSync?: () => Promise<void>
 }
 
 interface UseActiveWorkoutSyncResult {
@@ -56,10 +70,17 @@ interface UseActiveWorkoutSyncResult {
     pendingPayload: WorkoutSessionUpdateRequest | null
     isOffline: boolean
     hasPendingChanges: boolean
+    /** Исчерпаны автоматические повторы синхронизации сессии */
+    syncRetryExhausted: boolean
+    /** Сбросить счётчик повторов и отправить снова (кнопка «Повторить») */
+    retrySessionSyncNow: () => void
+    /** Принять локальное состояние без блокировки UI (данные останутся в кэше / очереди) */
+    dismissSessionSyncFailure: () => void
 }
 
 export function useActiveWorkoutSync({
     workoutId,
+    draftStorageUserId,
     workout,
     draftWorkoutId,
     isActiveDraft,
@@ -74,6 +95,7 @@ export function useActiveWorkoutSync({
     clearWorkoutSessionDraft,
     updateSessionMutation,
     buildSyncPayload,
+    onBeforeOnlineSync,
 }: UseActiveWorkoutSyncParams): UseActiveWorkoutSyncResult {
     const detailQueryKey = queryKeys.workouts.historyItem(workoutId)
     const getIsOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine)
@@ -82,6 +104,7 @@ export function useActiveWorkoutSync({
     const [lastSyncedPayload, setLastSyncedPayload] = useState<WorkoutSessionUpdateRequest | null>(null)
     const [pendingPayload, setPendingPayload] = useState<WorkoutSessionUpdateRequest | null>(null)
     const [isOffline, setIsOffline] = useState<boolean>(() => !getIsOnline())
+    const [syncRetryExhausted, setSyncRetryExhausted] = useState(false)
 
     // ── Snapshot tracking ──────────────────────────────────────────────────
     const lastPersistedSnapshotRef = useRef<string | null>(null)
@@ -116,6 +139,10 @@ export function useActiveWorkoutSync({
     workoutIdRef.current = workoutId
     const detailQueryKeyRef = useRef(detailQueryKey)
     detailQueryKeyRef.current = detailQueryKey
+    const draftStorageUserIdRef = useRef(draftStorageUserId)
+    draftStorageUserIdRef.current = draftStorageUserId
+    const onBeforeOnlineSyncRef = useRef(onBeforeOnlineSync)
+    onBeforeOnlineSyncRef.current = onBeforeOnlineSync
 
     // Indirection refs so executeSync / scheduleDebounced can reference each
     // other without circular useCallback dependencies.
@@ -187,7 +214,13 @@ export function useActiveWorkoutSync({
         // Offline: mark as queued; the 'online' listener will retry.
         if (!getIsOnline()) {
             setIsOffline(true)
+            writeWorkoutDraftToLocalStorage(draftStorageUserIdRef.current, workoutIdRef.current, payload)
             updateSyncStateRef.current('offline-queued')
+            emitWorkoutSyncTelemetry('local_update_queued', {
+                channel: 'active_session',
+                workout_id: workoutIdRef.current,
+                reason: 'flush_blocked_offline',
+            })
             if (!hasShownOfflineToastRef.current) {
                 toast.info('Офлайн: изменения поставлены в очередь синхронизации')
                 hasShownOfflineToastRef.current = true
@@ -199,18 +232,35 @@ export function useActiveWorkoutSync({
 
         inFlightRef.current = true
         updateSyncStateRef.current('syncing')
+        emitWorkoutSyncTelemetry('sync_started', {
+            channel: 'active_session',
+            workout_id: workoutIdRef.current,
+        })
 
         updateSessionMutationRef.current.mutate(
             { workoutId: workoutIdRef.current, payload },
             {
                 onSuccess: (data) => {
+                    const succeededAfterRetries = retryAttemptRef.current > 0
                     inFlightRef.current = false
                     setIsOffline(false)
+                    setSyncRetryExhausted(false)
                     lastPersistedSnapshotRef.current = snapshot
                     retryAttemptRef.current = 0
                     setLastSyncedPayload(payload)
+                    clearWorkoutDraftFromLocalStorage(draftStorageUserIdRef.current, workoutIdRef.current)
                     queryClientRef.current.setQueryData(detailQueryKeyRef.current, data)
                     updateSyncStateRef.current('synced')
+                    emitWorkoutSyncTelemetry('sync_succeeded', {
+                        channel: 'active_session',
+                        workout_id: workoutIdRef.current,
+                    })
+                    if (succeededAfterRetries) {
+                        emitWorkoutSyncTelemetry('retry_succeeded', {
+                            channel: 'active_session',
+                            workout_id: workoutIdRef.current,
+                        })
+                    }
                     if (hadSyncIssueRef.current) {
                         toast.success('Синхронизация восстановлена, изменения сохранены')
                     }
@@ -232,18 +282,36 @@ export function useActiveWorkoutSync({
                     setPendingPayload(null)
                     resolveFlushWaiters()
                 },
-                onError: () => {
+                onError: (error: unknown) => {
                     inFlightRef.current = false
+                    if (isRecoverableSyncError(error)) {
+                        writeWorkoutDraftToLocalStorage(
+                            draftStorageUserIdRef.current,
+                            workoutIdRef.current,
+                            payload,
+                        )
+                    }
                     updateSyncStateRef.current('error')
                     hadSyncIssueRef.current = true
+                    emitWorkoutSyncTelemetry('sync_failed', {
+                        channel: 'active_session',
+                        workout_id: workoutIdRef.current,
+                        outcome: 'mutation_error',
+                        ...syncErrorTelemetryFields(error),
+                    })
                     toast.retry('Ошибка синхронизации. Повторим автоматически', () => {
                         if (retryTimerRef.current !== null) {
                             window.clearTimeout(retryTimerRef.current)
                             retryTimerRef.current = null
                         }
+                        setSyncRetryExhausted(false)
+                        retryAttemptRef.current = 0
                         executeSyncRef.current()
                     })
                     scheduleRetry()
+                    if (retryAttemptRef.current >= MAX_RETRY_ATTEMPTS && retryTimerRef.current === null) {
+                        setSyncRetryExhausted(true)
+                    }
                     resolveFlushWaiters()
                 },
             },
@@ -263,6 +331,7 @@ export function useActiveWorkoutSync({
             retryTimerRef.current = null
         }
         retryAttemptRef.current = 0
+        setSyncRetryExhausted(false)
         debounceTimerRef.current = window.setTimeout(() => {
             debounceTimerRef.current = null
             executeSyncRef.current()
@@ -285,6 +354,7 @@ export function useActiveWorkoutSync({
                 retryTimerRef.current = null
             }
             retryAttemptRef.current = 0
+            setSyncRetryExhausted(false)
 
             const currentWorkout = workoutRef.current
             const hasUnsyncedChanges =
@@ -332,10 +402,31 @@ export function useActiveWorkoutSync({
         lastPersistedSnapshotRef.current = null
         inFlightRef.current = false
         retryAttemptRef.current = 0
+        setSyncRetryExhausted(false)
         setLastSyncedPayload(null)
         setPendingPayload(null)
         updateSyncStateRef.current('idle')
     }, [workoutId])
+
+    const retrySessionSyncNow = useCallback(() => {
+        setSyncRetryExhausted(false)
+        if (retryTimerRef.current !== null) {
+            window.clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = null
+        }
+        retryAttemptRef.current = 0
+        executeSyncRef.current()
+    }, [])
+
+    const dismissSessionSyncFailure = useCallback(() => {
+        setSyncRetryExhausted(false)
+        if (retryTimerRef.current !== null) {
+            window.clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = null
+        }
+        retryAttemptRef.current = 0
+        updateSyncStateRef.current('saved-locally')
+    }, [])
 
     // ── Session housekeeping (unchanged from original) ────────────────────
 
@@ -431,6 +522,11 @@ export function useActiveWorkoutSync({
         // Мгновенный фидбэк: пользователь видит что изменение захвачено локально,
         // до того как debounce отправит его на сервер.
         updateSyncStateRef.current('saved-locally')
+        emitWorkoutSyncTelemetry('local_update_queued', {
+            channel: 'active_session',
+            workout_id: workoutIdRef.current,
+            reason: 'debounced_local_edit',
+        })
     }, [activeSessionPayload, activeSessionSnapshot, isActiveDraft, scheduleDebounced])
 
     // ── Flush triggers: blur / hidden tab / page unload ───────────────────
@@ -473,19 +569,31 @@ export function useActiveWorkoutSync({
                 window.clearTimeout(debounceTimerRef.current)
                 debounceTimerRef.current = null
             }
-            // Always attempt a flush — executeSync guards via inFlightRef and
-            // snapshot comparison, so calling it unconditionally is safe.
-            // This also handles Bug 5: when lastPersistedSnapshotRef is still null
-            // (app opened offline before first baseline was established).
-            if (isActiveDraftRef.current) {
-                executeSyncRef.current()
-            }
+            void (async () => {
+                try {
+                    await onBeforeOnlineSyncRef.current?.()
+                } catch {
+                    // Не блокируем основной sync — локальное состояние и так в кэше.
+                }
+                // Always attempt a flush — executeSync guards via inFlightRef and
+                // snapshot comparison, so calling it unconditionally is safe.
+                // This also handles Bug 5: when lastPersistedSnapshotRef is still null
+                // (app opened offline before first baseline was established).
+                if (isActiveDraftRef.current) {
+                    executeSyncRef.current()
+                }
+            })()
         }
 
         const handleOffline = () => {
             setIsOffline(true)
             if (hasUnsyncedChanges()) {
                 updateSyncStateRef.current('offline-queued')
+                emitWorkoutSyncTelemetry('local_update_queued', {
+                    channel: 'active_session',
+                    workout_id: workoutIdRef.current,
+                    reason: 'navigator_offline_unsynced',
+                })
             }
         }
 
@@ -506,5 +614,8 @@ export function useActiveWorkoutSync({
         pendingPayload,
         isOffline,
         hasPendingChanges,
+        syncRetryExhausted,
+        retrySessionSyncNow,
+        dismissSessionSyncFailure,
     }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires -- intentional CommonJS polyfills for jest setupFiles */
 /**
  * Jest global polyfills — executed via jest.config.js `setupFiles` BEFORE the test framework.
  * This file runs in Node.js scope and patches globals that jsdom 20 does not expose.

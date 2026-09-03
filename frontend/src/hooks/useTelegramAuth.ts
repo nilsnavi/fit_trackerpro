@@ -6,7 +6,7 @@ import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, clientErrorFromFetchResponse } from '@shared/errors'
 
 export function pickAccessTokenFromAuthResponse(r: TelegramAuthResponse): string {
-    const raw = r.token ?? r.access_token
+    const raw = r.access_token
     if (!raw) {
         throw new Error('Не получен JWT от сервера')
     }
