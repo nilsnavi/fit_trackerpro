@@ -19,6 +19,12 @@ jest.mock('@shared/api/domains/workoutsApi', () => {
     }
 })
 
+// Ретраи сетевых запросов используют реальные задержки (1s/2s/4s) — для этого теста
+// важна только ветка офлайн-enqueue, поэтому обёртку убираем (передаём вызов напрямую).
+jest.mock('@shared/lib/withWorkoutNetworkRetries', () => ({
+    withWorkoutNetworkRetries: <T,>(fn: () => Promise<T>): Promise<T> => fn(),
+}))
+
 describe('useCompleteWorkoutMutation (offline / recoverable)', () => {
     it('enqueues offline complete when mutation is queued', async () => {
         const { workoutsApi } = await import('@shared/api/domains/workoutsApi')

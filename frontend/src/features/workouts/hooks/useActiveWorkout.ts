@@ -10,7 +10,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
 import { workoutsApi } from '../api/workouts.api'
 import { useWorkoutSessionStore } from '../store/workoutSession.store'
-import type { WorkoutCompleteRequest, WorkoutSessionUpdateRequest } from '@features/workouts/types/workouts'
+import type {
+    CompletedSet,
+    WorkoutCompleteRequest,
+    WorkoutSessionUpdateRequest,
+} from '@features/workouts/types/workouts'
 
 interface UseActiveWorkoutParams {
     workoutId: number
@@ -67,7 +71,7 @@ export function useActiveWorkout({ workoutId }: UseActiveWorkoutParams) {
 
     // Обновление подходов упражнения
     const updateSets = useCallback(
-        (exerciseIndex: number, sets: any[]) => {
+        (exerciseIndex: number, sets: CompletedSet[]) => {
             updateExerciseSets(exerciseIndex, sets)
             
             // Отправляем обновление на сервер (debounced)

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires -- intentional CommonJS polyfills for jsdom test env */
 import '@testing-library/jest-dom'
 import { jest } from '@jest/globals'
 

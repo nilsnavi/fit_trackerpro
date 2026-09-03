@@ -826,15 +826,6 @@ export function ActiveWorkoutPage() {
                         isFinishPending={completeMutation.isPending}
                         finishErrorMessage={completion.sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
                         syncState={syncState}
-                        isOnline={isOnline}
-                        onRetryFinish={() => {
-                            completeMutation.reset()
-                            completion.handleConfirmFinishFromSheet()
-                        }}
-                        onSaveLocalFinish={() => {
-                            completeMutation.reset()
-                            completion.saveCompleteLocallyAndExit()
-                        }}
                         onCloseFinish={completion.closeFinishSheet}
                         onConfirmFinish={completion.handleConfirmFinishFromSheet}
                         onChangeTagsDraft={completion.setFinishTagsDraft}

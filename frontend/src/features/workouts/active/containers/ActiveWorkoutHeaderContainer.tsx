@@ -1,6 +1,8 @@
 import { memo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
+import type { WorkoutSyncIndicatorState } from '@features/workouts/active/components/WorkoutSyncIndicator'
+import type { ActiveWorkoutSyncState } from '@/state/local'
 
 export interface ActiveWorkoutHeaderContainerProps {
     syncState: string
@@ -26,7 +28,7 @@ export const ActiveWorkoutHeaderContainer = memo(function ActiveWorkoutHeaderCon
     return (
         <ActiveWorkoutHeader
             onBack={handleBack}
-            syncState={syncState as any}
+            syncState={syncState as ActiveWorkoutSyncState | WorkoutSyncIndicatorState}
             pendingCount={pendingCount}
         />
     )

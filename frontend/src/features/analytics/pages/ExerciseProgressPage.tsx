@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Dumbbell } from 'lucide-react'
 import { format, subDays } from 'date-fns'
 import {
     ExerciseSelector,
@@ -11,24 +11,14 @@ import {
 } from '@features/analytics/components/exercise-progress'
 import { useExerciseProgress, useExercisesList } from '@features/analytics/hooks/useExerciseProgress'
 import { ProgressPeriodFilter } from '@features/analytics/components/ProgressPeriodFilter'
-import type { ProgressPeriod } from '@features/analytics/lib/progressDateRange'
-import { getAnalyticsDateRange } from '@features/analytics/lib/progressDateRange'
+import { PROGRESS_PERIODS } from '@features/analytics/lib/progressDateRange'
 import { SectionEmptyState } from '@shared/ui/SectionEmptyState'
 import { ExerciseProgressSkeleton } from '@features/analytics/components/exercise-progress/ExerciseProgressSkeleton'
-
-type DatePreset = '7d' | '30d' | '90d' | 'all'
-
-const DATE_PRESETS: Array<{ id: DatePreset; label: string }> = [
-    { id: '7d', label: '7д' },
-    { id: '30d', label: '30д' },
-    { id: '90d', label: '90д' },
-    { id: 'all', label: 'Все' },
-]
 
 export function ExerciseProgressPage() {
     const navigate = useNavigate()
     const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null)
-    const [datePreset, setDatePreset] = useState<DatePreset>('30d')
+    const [datePreset, setDatePreset] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
 
     // Вычисляем диапазон дат
     const dateRange = useMemo(() => {
@@ -51,11 +41,26 @@ export function ExerciseProgressPage() {
     )
 
     // Получаем прогресс по выбранному упражнению
-    const progressData = useExerciseProgress({
+    const {
+        data: progressData,
+        isLoading: isProgressLoading,
+    } = useExerciseProgress({
         exerciseId: selectedExerciseId,
         dateFrom: dateRange.dateFrom,
         dateTo: dateRange.dateTo,
     })
+
+    // Формируем историю подходов для отображения
+    const setHistory = useMemo(() => {
+        if (!progressData || !progressData.dates.length) return []
+
+        return progressData.dates.map((date, index) => ({
+            date,
+            weight: progressData.weights[index],
+            reps: progressData.reps[index],
+            sets: progressData.sets[index],
+        }))
+    }, [progressData])
 
     // Показываем skeleton при загрузке списка упражнений
     if (isLoadingExercises) {
@@ -67,6 +72,7 @@ export function ExerciseProgressPage() {
         return (
             <div className="p-4">
                 <SectionEmptyState
+                    icon={Dumbbell}
                     title="Нет данных"
                     description="У вас пока нет завершённых тренировок с упражнениями. Начните тренироваться, чтобы увидеть прогресс!"
                     primaryAction={{
@@ -84,18 +90,6 @@ export function ExerciseProgressPage() {
         return <ExerciseProgressSkeleton />
     }
 
-    // Формируем историю подходов для отображения
-    const setHistory = useMemo(() => {
-        if (!progressData || !progressData.dates.length) return []
-
-        return progressData.dates.map((date, index) => ({
-            date,
-            weight: progressData.weights[index],
-            reps: progressData.reps[index],
-            sets: progressData.sets[index],
-        }))
-    }, [progressData])
-
     return (
         <div className="space-y-4 p-4 pb-24">
             {/* Заголовок и кнопка назад */}
@@ -112,9 +106,9 @@ export function ExerciseProgressPage() {
 
             {/* Фильтр по периоду */}
             <ProgressPeriodFilter
-                selectedPeriod={datePreset as ProgressPeriod}
-                onPeriodChange={(period) => setDatePreset(period as DatePreset)}
-                periods={DATE_PRESETS}
+                value={datePreset}
+                onChange={setDatePreset}
+                options={PROGRESS_PERIODS}
             />
 
             {/* Выбор упражнения */}
@@ -122,7 +116,7 @@ export function ExerciseProgressPage() {
                 exercises={exercises}
                 selectedExerciseId={selectedExerciseId}
                 onSelect={setSelectedExerciseId}
-                isLoading={progressData.isLoading}
+                isLoading={isProgressLoading}
             />
 
             {/* Ключевые метрики */}
@@ -157,6 +151,7 @@ export function ExerciseProgressPage() {
             {/* Empty state если нет данных */}
             {progressData && progressData.dates.length === 0 && (
                 <SectionEmptyState
+                    icon={Dumbbell}
                     title="Нет данных"
                     description="Для этого упражнения пока нет завершённых подходов в выбранном периоде."
                 />

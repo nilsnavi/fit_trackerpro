@@ -10,7 +10,9 @@ import {
 
 const AnalyticsDashboardPage = lazy(() => import('@features/analytics/pages/AnalyticsDashboardPage'))
 const ProgressOverviewPage = lazy(() => import('@features/analytics/pages/ProgressOverviewPage'))
-const ExerciseProgressPage = lazy(() => import('@features/analytics/pages/ExerciseProgressPage'))
+const ExerciseProgressPage = lazy(() =>
+    import('@features/analytics/pages/ExerciseProgressPage').then((m) => ({ default: m.ExerciseProgressPage })),
+)
 const RecoveryPage = lazy(() => import('@features/analytics/pages/RecoveryPage'))
 
 export function analyticsRoutes() {

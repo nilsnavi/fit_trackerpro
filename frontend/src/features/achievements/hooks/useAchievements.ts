@@ -27,7 +27,6 @@ export interface UseAchievementsReturn {
     fetchAchievements: (category?: AchievementCategory) => void
     fetchUserStats: () => Promise<void>
     claimAchievement: (achievementId: number) => Promise<AchievementUnlockData | null>
-    checkProgress: () => Promise<void>
     getAchievementById: (id: number) => Achievement | undefined
     getUserAchievement: (achievementId: number) => UserAchievement | undefined
     onAchievementUnlocked: (callback: (data: AchievementUnlockData) => void) => () => void
@@ -89,13 +88,6 @@ export function useAchievements(): UseAchievementsReturn {
         },
     })
 
-    const checkProgressMutation = useMutation({
-        mutationFn: () => achievementsApi.checkProgress(),
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
-        },
-    })
-
     const achievements = useMemo(() => achievementsQuery.data?.items ?? [], [achievementsQuery.data?.items])
     const userStats = userStatsQuery.data ?? null
 
@@ -118,14 +110,6 @@ export function useAchievements(): UseAchievementsReturn {
         },
         [claimMutation],
     )
-
-    const checkProgress = useCallback(async () => {
-        try {
-            await checkProgressMutation.mutateAsync()
-        } catch (err) {
-            console.error('Failed to check progress:', err)
-        }
-    }, [checkProgressMutation])
 
     const getAchievementById = useCallback(
         (id: number): Achievement | undefined => achievements.find((a) => a.id === id),
@@ -162,7 +146,6 @@ export function useAchievements(): UseAchievementsReturn {
         fetchAchievements,
         fetchUserStats,
         claimAchievement,
-        checkProgress,
         getAchievementById,
         getUserAchievement,
         onAchievementUnlocked,
