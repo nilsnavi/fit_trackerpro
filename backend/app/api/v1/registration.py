@@ -5,8 +5,7 @@ and explicit legacy alias mounts for backward compatibility.
 Prefixes here are the *suffix* after ``/api/v1`` (no version string in each line).
 
 Auth boundary:
-  * **Public / system** — no ``Authorization`` header (``/system/*``, auth login/refresh,
-    user create, public user by id).
+  * **Public / system** — no ``Authorization`` header (``/system/*`` and auth login/refresh).
   * **Authenticated** — valid Bearer access token; enforced at mount via
     ``ROUTER_DEPENDENCIES_AUTHENTICATED`` plus per-route ``Depends(get_current_user)`` where
     handlers need the ``User`` model.
@@ -36,7 +35,7 @@ from app.api.v1.openapi_tags import (
     TAG_WORKOUTS,
 )
 from app.api.v1.system import router as system_router
-from app.api.v1.users import protected_users_router, public_users_router
+from app.api.v1.users import protected_users_router
 from app.api.v1.workouts import router as workouts_router
 
 # Public so tests, docs, or tooling can assert the mounted API version prefix.
@@ -65,8 +64,6 @@ def register_v1_routes(app: FastAPI) -> None:
         tags=[TAG_USERS],
         **auth_mount_kw,
     )
-    # After ``/users/me`` so ``GET /users/{user_id}`` does not consume the ``me`` segment (422).
-    api_v1.include_router(public_users_router, prefix="/users", tags=[TAG_USERS])
     api_v1.include_router(workouts_router, prefix="/workouts", tags=[TAG_WORKOUTS], **auth_mount_kw)
     api_v1.include_router(exercises_router, prefix="/exercises", tags=[TAG_EXERCISES], **auth_mount_kw)
     api_v1.include_router(

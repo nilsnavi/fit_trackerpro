@@ -61,9 +61,9 @@ async def test_get_user_stats(authenticated_client: AsyncClient):
 
 @pytest.mark.unit
 async def test_list_users_admin_only(client: AsyncClient):
-    """No public GET /users list — 405 or auth-related codes."""
+    """No public GET /users list."""
     response = await client.get("/api/v1/users/")
-    assert response.status_code in (401, 403, 405)
+    assert response.status_code == 404
 
 
 @pytest.mark.integration
@@ -98,8 +98,8 @@ async def test_delete_user_account(authenticated_client: AsyncClient):
 
 
 @pytest.mark.integration
-async def test_public_create_user_upsert_and_get_by_id(client: AsyncClient):
-    created = await client.post(
+async def test_anonymous_user_create_and_lookup_are_not_exposed(client: AsyncClient):
+    create_response = await client.post(
         "/api/v1/users/",
         json={
             "telegram_id": 777001,
@@ -108,35 +108,10 @@ async def test_public_create_user_upsert_and_get_by_id(client: AsyncClient):
             "last_name": "IgnoredByDomain",
         },
     )
-    assert created.status_code == 200, created.text
-    created_data = created.json()
-    assert created_data["telegram_id"] == 777001
-    assert created_data["username"] == "upsert_user"
+    assert create_response.status_code == 404
 
-    updated = await client.post(
-        "/api/v1/users/",
-        json={
-            "telegram_id": 777001,
-            "username": "upsert_user_v2",
-            "first_name": "Second",
-        },
-    )
-    assert updated.status_code == 200, updated.text
-    updated_data = updated.json()
-    assert updated_data["id"] == created_data["id"]
-    assert updated_data["username"] == "upsert_user_v2"
-    assert updated_data["first_name"] == "Second"
-
-    fetched = await client.get(f"/api/v1/users/{created_data['id']}")
-    assert fetched.status_code == 200, fetched.text
-    assert fetched.json()["username"] == "upsert_user_v2"
-
-
-@pytest.mark.integration
-async def test_get_user_by_id_returns_404_for_missing_user(client: AsyncClient):
-    response = await client.get("/api/v1/users/999999")
-    assert response.status_code == 404
-    assert response.json().get("error", {}).get("code") == "user_not_found"
+    lookup_response = await client.get("/api/v1/users/1")
+    assert lookup_response.status_code == 404
 
 
 @pytest.mark.integration

@@ -1346,11 +1346,15 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * Readiness probe (PostgreSQL, Redis)
+         * Readiness probe (dependencies are healthy)
          * @description Readiness probe for load balancers and orchestrators.
-         *     Проверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).
+         *     Checks all critical dependencies:
+         *     - Database connectivity
+         *     - Redis availability (if configured)
+         *     - External services (if configured)
          *
-         *     HTTP 200 только при ``status == "ready"``; иначе 503 с ``status == "degraded"`` и телом проверок.
+         *     Returns 200 only if the application is ready to serve traffic.
+         *     Used by load balancers to route traffic only to ready instances.
          */
         get: operations["readiness_probe"];
         put?: never;
@@ -1372,26 +1376,6 @@ export type paths = {
         get: operations["system_version"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create User
-         * @description Create or update user from Telegram data
-         */
-        post: operations["create_user_api_v1_users__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1677,26 +1661,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get User
-         * @description Get user by ID
-         */
-        get: operations["get_user_api_v1_users__user_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/workouts/calendar": {
         parameters: {
             query?: never;
@@ -1769,6 +1733,23 @@ export type paths = {
         head?: never;
         /** Update Active Workout */
         patch: operations["update_active_workout_api_v1_workouts_history__workout_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workouts/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Workout Session */
+        post: operations["create_workout_session_api_v1_workouts_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/workouts/sessions/{session_id}/exercises/{exercise_id}/weight-recommendation": {
@@ -4685,29 +4666,6 @@ export type components = {
             /** User Id */
             user_id: number;
         };
-        /** UserCreate */
-        UserCreate: {
-            /**
-             * First Name
-             * @description Given name.
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Family name.
-             */
-            last_name?: string | null;
-            /**
-             * Telegram Id
-             * @description Telegram user ID (positive integer).
-             */
-            telegram_id: number;
-            /**
-             * Username
-             * @description Telegram @username without the leading @.
-             */
-            username?: string | null;
-        };
         /**
          * UserProfileData
          * @description User profile JSON (equipment, limitations, goals).
@@ -4863,29 +4821,6 @@ export type components = {
             profile?: components["schemas"]["UserProfilePatch"] | null;
             /** @description User settings: theme, notifications, units */
             settings?: components["schemas"]["UserSettingsPatch"] | null;
-        };
-        /** UserResponse */
-        UserResponse: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** First Name */
-            first_name: string | null;
-            /** Id */
-            id: number;
-            /** Last Name */
-            last_name: string | null;
-            /** Telegram Id */
-            telegram_id: number;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /** Username */
-            username: string | null;
         };
         /**
          * UserSettingsData
@@ -5291,6 +5226,10 @@ export type components = {
              */
             message: string;
             session_metrics?: components["schemas"]["WorkoutSessionMetrics"] | null;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /** Tags */
             tags: string[];
             /** Template Id */
@@ -5328,8 +5267,14 @@ export type components = {
             /** Id */
             id: number;
             session_metrics?: components["schemas"]["WorkoutSessionMetrics"] | null;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /** Tags */
             tags: string[];
+            /** Template Id */
+            template_id?: number | null;
             /** Version */
             version: number;
         };
@@ -5382,6 +5327,27 @@ export type components = {
             /** Workout Id */
             workout_id: number;
         };
+        /**
+         * WorkoutSessionCreateRequest
+         * @description Canonical request for creating a WorkoutSession from any start source.
+         */
+        WorkoutSessionCreateRequest: {
+            /** Name */
+            name?: string | null;
+            overrides?: components["schemas"]["StartWorkoutTemplateOverrides"] | null;
+            /**
+             * Source Id
+             * @description Source entity ID. Required for all sources except quick_start.
+             */
+            source_id?: number | null;
+            /**
+             * @description Canonical start source for the workout session.
+             * @default quick_start
+             */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
+            /** @default custom */
+            type: components["schemas"]["WorkoutSessionType"];
+        };
         /** WorkoutSessionInsightItem */
         WorkoutSessionInsightItem: {
             /** Code */
@@ -5428,6 +5394,11 @@ export type components = {
             /** Volume Per Minute */
             volume_per_minute?: number | null;
         };
+        /**
+         * WorkoutSessionSourceType
+         * @enum {string}
+         */
+        WorkoutSessionSourceType: "quick_start" | "personal_template" | "system_template" | "community_template" | "program_day" | "previous_session";
         /**
          * WorkoutSessionType
          * @enum {string}
@@ -5566,6 +5537,10 @@ export type components = {
              * @default Workout started successfully
              */
             message: string;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /**
              * Start Time
              * Format: date-time
@@ -8824,39 +8799,6 @@ export interface operations {
             };
         };
     };
-    create_user_api_v1_users__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     logout_api_v1_users_auth_logout_post: {
         parameters: {
             query?: never;
@@ -9295,37 +9237,6 @@ export interface operations {
             };
         };
     };
-    get_user_api_v1_users__user_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_workouts_calendar_month_api_v1_workouts_calendar_get: {
         parameters: {
             query?: {
@@ -9486,6 +9397,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutHistoryItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_workout_session_api_v1_workouts_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutSessionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutStartResponse"];
                 };
             };
             /** @description Validation Error */

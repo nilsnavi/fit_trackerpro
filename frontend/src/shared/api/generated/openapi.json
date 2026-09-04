@@ -6255,61 +6255,6 @@
         "title": "UserAchievementResponse",
         "type": "object"
       },
-      "UserCreate": {
-        "properties": {
-          "first_name": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Given name.",
-            "title": "First Name"
-          },
-          "last_name": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Family name.",
-            "title": "Last Name"
-          },
-          "telegram_id": {
-            "description": "Telegram user ID (positive integer).",
-            "exclusiveMinimum": 0.0,
-            "maximum": 1000000000000.0,
-            "title": "Telegram Id",
-            "type": "integer"
-          },
-          "username": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Telegram @username without the leading @.",
-            "title": "Username"
-          }
-        },
-        "required": [
-          "telegram_id"
-        ],
-        "title": "UserCreate",
-        "type": "object"
-      },
       "UserProfileData": {
         "additionalProperties": true,
         "description": "User profile JSON (equipment, limitations, goals).",
@@ -6739,72 +6684,6 @@
           }
         },
         "title": "UserProfileUpdate",
-        "type": "object"
-      },
-      "UserResponse": {
-        "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "first_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "First Name"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "last_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Name"
-          },
-          "telegram_id": {
-            "title": "Telegram Id",
-            "type": "integer"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          },
-          "username": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Username"
-          }
-        },
-        "required": [
-          "id",
-          "telegram_id",
-          "username",
-          "first_name",
-          "last_name",
-          "created_at",
-          "updated_at"
-        ],
-        "title": "UserResponse",
         "type": "object"
       },
       "UserSettingsData": {
@@ -7678,6 +7557,21 @@
               }
             ]
           },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start"
+          },
           "tags": {
             "items": {
               "type": "string"
@@ -7800,12 +7694,38 @@
               }
             ]
           },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start"
+          },
           "tags": {
             "items": {
               "type": "string"
             },
             "title": "Tags",
             "type": "array"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
           },
           "version": {
             "title": "Version",
@@ -7958,6 +7878,58 @@
         "title": "WorkoutPostSummaryResponse",
         "type": "object"
       },
+      "WorkoutSessionCreateRequest": {
+        "description": "Canonical request for creating a WorkoutSession from any start source.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StartWorkoutTemplateOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Source entity ID. Required for all sources except quick_start.",
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start",
+            "description": "Canonical start source for the workout session."
+          },
+          "type": {
+            "$ref": "#/components/schemas/WorkoutSessionType",
+            "default": "custom"
+          }
+        },
+        "title": "WorkoutSessionCreateRequest",
+        "type": "object"
+      },
       "WorkoutSessionInsightItem": {
         "properties": {
           "code": {
@@ -8079,6 +8051,18 @@
         },
         "title": "WorkoutSessionMetrics",
         "type": "object"
+      },
+      "WorkoutSessionSourceType": {
+        "enum": [
+          "quick_start",
+          "personal_template",
+          "system_template",
+          "community_template",
+          "program_day",
+          "previous_session"
+        ],
+        "title": "WorkoutSessionSourceType",
+        "type": "string"
       },
       "WorkoutSessionType": {
         "enum": [
@@ -8464,6 +8448,21 @@
             "maxLength": 500,
             "title": "Message",
             "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start"
           },
           "start_time": {
             "format": "date-time",
@@ -8851,7 +8850,7 @@
     }
   },
   "info": {
-    "description": "\n    Backend API for FitTracker Pro Telegram Mini App\n    \n    ## Authentication\n    **Public (no JWT):** ``GET /`` and ``GET /health``, ``/api/v1/system/*``,\n    ``POST /api/v1/users/auth/telegram``, ``POST /api/v1/users/auth/refresh``,\n    ``POST /api/v1/users/``, ``GET /api/v1/users/{user_id}``, plus integration webhooks.\n\n    **Authenticated:** all other ``/api/v1`` routes require a Bearer access token:\n    ```\n    Authorization: Bearer <access_token>\n    ```\n    \n    ## Rate Limiting\n    Tiered limits via ``RateLimitMiddleware`` (Redis or in-memory): default reads, auth,\n    ``/workouts`` (60/min per Bearer user), ``/analytics`` (30/min per user), system, writes,\n    export, emergency notify. ``POST .../users/auth/telegram`` (and legacy ``/auth/telegram``)\n    uses **SlowAPI**: 10 requests/minute **per client IP** (429 with ``Retry-After``).\n    Other routes: per Telegram user id when a valid access token or refresh body is present;\n    otherwise per client IP. Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``,\n    ``X-RateLimit-Reset``, ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and ``RateLimit-*``.\n    ",
+    "description": "\n    Backend API for FitTracker Pro Telegram Mini App\n    \n    ## Authentication\n    **Public (no JWT):** ``GET /`` and ``GET /health``, ``/api/v1/system/*``,\n    ``POST /api/v1/users/auth/telegram``, ``POST /api/v1/users/auth/refresh``,\n    plus explicitly registered integration webhooks.\n\n    **Authenticated:** all other ``/api/v1`` routes require a Bearer access token:\n    ```\n    Authorization: Bearer <access_token>\n    ```\n    \n    ## Rate Limiting\n    Tiered limits via ``RateLimitMiddleware`` (Redis or in-memory): default reads, auth,\n    ``/workouts`` (60/min per Bearer user), ``/analytics`` (30/min per user), system, writes,\n    export, emergency notify. ``POST .../users/auth/telegram`` (and legacy ``/auth/telegram``)\n    uses **SlowAPI**: 10 requests/minute **per client IP** (429 with ``Retry-After``).\n    Other routes: per Telegram user id when a valid access token or refresh body is present;\n    otherwise per client IP. Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``,\n    ``X-RateLimit-Reset``, ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and ``RateLimit-*``.\n    ",
     "title": "FitTracker Pro API",
     "version": "1.0.0"
   },
@@ -9190,7 +9189,7 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 5,
+              "default": 9,
               "maximum": 12,
               "minimum": 1,
               "title": "Month",
@@ -14398,7 +14397,7 @@
     },
     "/api/v1/system/ready": {
       "get": {
-        "description": "Readiness probe for load balancers and orchestrators.\nПроверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).\n\nHTTP 200 только при ``status == \"ready\"``; иначе 503 с ``status == \"degraded\"`` и телом проверок.",
+        "description": "Readiness probe for load balancers and orchestrators.\nChecks all critical dependencies:\n- Database connectivity\n- Redis availability (if configured)\n- External services (if configured)\n\nReturns 200 only if the application is ready to serve traffic.\nUsed by load balancers to route traffic only to ready instances.",
         "operationId": "readiness_probe",
         "responses": {
           "200": {
@@ -14412,7 +14411,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Readiness probe (PostgreSQL, Redis)",
+        "summary": "Readiness probe (dependencies are healthy)",
         "tags": [
           "System",
           "System"
@@ -14437,48 +14436,6 @@
         "summary": "Service version and build metadata",
         "tags": [
           "System"
-        ]
-      }
-    },
-    "/api/v1/users/": {
-      "post": {
-        "description": "Create or update user from Telegram data",
-        "operationId": "create_user_api_v1_users__post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create User",
-        "tags": [
-          "Users"
         ]
       }
     },
@@ -15044,49 +15001,6 @@
         ]
       }
     },
-    "/api/v1/users/{user_id}": {
-      "get": {
-        "description": "Get user by ID",
-        "operationId": "get_user_api_v1_users__user_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "user_id",
-            "required": true,
-            "schema": {
-              "title": "User Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get User",
-        "tags": [
-          "Users"
-        ]
-      }
-    },
     "/api/v1/workouts/calendar": {
       "get": {
         "description": "Compatibility endpoint for the current frontend calendar page.\n\nReturns a flat list of workouts in the selected month (frontend groups by day).",
@@ -15109,7 +15023,7 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 5,
+              "default": 9,
               "maximum": 12,
               "minimum": 1,
               "title": "Month",
@@ -15433,6 +15347,52 @@
           }
         ],
         "summary": "Update Active Workout",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/sessions": {
+      "post": {
+        "operationId": "create_workout_session_api_v1_workouts_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutSessionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Workout Session",
         "tags": [
           "Workouts"
         ]

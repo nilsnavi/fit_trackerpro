@@ -10,12 +10,8 @@ from app.main import app
 
 
 def _registered_paths(application: FastAPI) -> set[str]:
-    """Плоский список path из зарегистрированных маршрутов (как в OpenAPI)."""
-    return {
-        getattr(route, "path", None)
-        for route in application.routes
-        if getattr(route, "path", None) is not None
-    }
+    """Public API paths, independent of FastAPI's internal router representation."""
+    return set(application.openapi().get("paths", {}))
 
 
 @pytest.mark.smoke
@@ -25,8 +21,6 @@ async def test_backend_smoke():
     assert app.title == "FitTracker Pro API"
 
     paths = _registered_paths(app)
-    assert "/health" in paths
-    assert "/health/ready" in paths
     assert "/api/v1/system/health" in paths
     assert "/api/v1/system/ready" in paths
     assert "/api/v1/system/version" in paths

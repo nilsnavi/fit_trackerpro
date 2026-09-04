@@ -20,7 +20,7 @@ ENV NODE_ENV=development
 
 # NODE_ENV must not be production during install (devDependencies include Vite).
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
 COPY . .
 

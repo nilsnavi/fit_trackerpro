@@ -21,5 +21,48 @@
     "src/shared/ui/RouteErrorBoundary.tsx",
     "src/shared/ui/Button.tsx"
   ],
-  "baseline": {}
+  "baseline": {
+    "src/shared/offline/syncQueue/engine.ts": {
+      "lines": 95,
+      "statements": 92.5,
+      "functions": 91.6,
+      "branches": 75.7
+    },
+    "src/shared/offline/syncQueue/recoverableError.ts": {
+      "lines": 85.7,
+      "statements": 85.7,
+      "functions": 100,
+      "branches": 91.6
+    },
+    "src/shared/offline/syncQueue/types.ts": {
+      "lines": 100,
+      "statements": 100,
+      "functions": 100,
+      "branches": 100
+    },
+    "src/shared/offline/syncQueue/workoutKinds.ts": {
+      "lines": 100,
+      "statements": 100,
+      "functions": 100,
+      "branches": 100
+    },
+    "src/shared/lib/telegramEnv.ts": {
+      "lines": 100,
+      "statements": 100,
+      "functions": 100,
+      "branches": 100
+    },
+    "src/shared/ui/RouteErrorBoundary.tsx": {
+      "lines": 90.9,
+      "statements": 90.9,
+      "functions": 75,
+      "branches": 75
+    },
+    "src/shared/ui/Button.tsx": {
+      "lines": 100,
+      "statements": 100,
+      "functions": 100,
+      "branches": 95.4
+    }
+  }
 }

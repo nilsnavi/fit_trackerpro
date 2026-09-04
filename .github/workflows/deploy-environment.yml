@@ -29,6 +29,9 @@ jobs:
     name: "Stage: pre-deploy validation (${{ inputs.deploy_environment }})"
     runs-on: ubuntu-latest
     environment: ${{ inputs.deploy_environment }}
+    permissions:
+      contents: read
+      packages: read
     env:
       DEPLOY_IMAGE_TAG: ${{ inputs.image_tag }}
 
@@ -87,6 +90,16 @@ jobs:
           set -Eeuo pipefail
           docker compose -f docker-compose.prod.yml config --quiet
           echo "docker-compose.prod.yml renders successfully."
+
+      - name: Confirm immutable application images exist
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker buildx imagetools inspect "ghcr.io/${{ github.repository }}/backend:${{ inputs.image_tag }}" >/dev/null
+          docker buildx imagetools inspect "ghcr.io/${{ github.repository }}/frontend:${{ inputs.image_tag }}" >/dev/null
+          echo "Backend and frontend image manifests exist for the exact deploy tag."
 
       - name: Validate nginx configuration syntax
         run: |

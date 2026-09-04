@@ -117,6 +117,7 @@ jobs:
       )
     permissions:
       contents: read
+      packages: read
     uses: ./.github/workflows/deploy-environment.yml
     with:
       image_tag: ${{ needs.resolve-tag.outputs.image_tag }}

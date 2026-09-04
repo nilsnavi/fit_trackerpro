@@ -1,6 +1,6 @@
 # Python Backend Dockerfile for FastAPI
 # Build from repository root: docker build -f backend/Dockerfile .
-FROM python:3.11-alpine3.22
+FROM python:3.12-alpine3.22
 
 # Proxy arguments
 ARG HTTP_PROXY
@@ -29,7 +29,6 @@ WORKDIR /app
 # Install system dependencies (Alpine)
 RUN export http_proxy=$HTTP_PROXY && \
     export https_proxy=$HTTPS_PROXY && \
-    sed -i 's|https://dl-cdn.alpinelinux.org|http://dl-cdn.alpinelinux.org|g' /etc/apk/repositories && \
     apk add --no-cache \
     python3-dev \
     gcc \

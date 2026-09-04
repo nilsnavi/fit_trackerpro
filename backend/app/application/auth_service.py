@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -27,6 +28,7 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
+    TelegramLookupResponse,
     TelegramUserData,
     UserProfileData,
     UserProfileResponse,
@@ -73,7 +75,15 @@ class AuthService:
                 },
                 settings={"theme": "telegram", "notifications": True, "units": "metric"},
             )
-            return await self.repository.insert_user(user), True
+            try:
+                return await self.repository.insert_user(user), True
+            except IntegrityError:
+                # Two simultaneous first launches from Telegram may race on telegram_id.
+                await self.repository.rollback()
+                existing = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
+                if existing is None:
+                    raise
+                return existing, False
 
         user.username = telegram_user_data.get("username") or user.username
         user.first_name = telegram_user_data.get("first_name") or user.first_name
@@ -83,6 +93,22 @@ class AuthService:
             user.profile = profile_data
         await self.repository.commit_user_fields()
         return user, False
+
+    async def lookup_telegram_registration(
+        self,
+        auth_request: TelegramAuthRequest,
+    ) -> TelegramLookupResponse:
+        """Validate fresh initData and report whether the Telegram identity exists."""
+        is_valid, user_data, error = validate_and_get_user(
+            init_data=auth_request.init_data,
+            bot_token=settings.TELEGRAM_BOT_TOKEN,
+            max_age_seconds=300,
+        )
+        if not is_valid:
+            raise AuthenticationError(f"Authentication failed: {error}")
+
+        user = await self.repository.get_user_by_telegram_id(telegram_id=user_data["id"])
+        return TelegramLookupResponse(registered=user is not None)
 
     async def authenticate_telegram(
         self,
