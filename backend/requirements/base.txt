@@ -1,4 +1,9 @@
 # FastAPI and Web Framework
+# prometheus-fastapi-instrumentator pinned >=8: the 7.x middleware crashes on
+# starlette>=0.50 routing ('_IncludedRouter' has no attribute 'path' → 500 on
+# every /api/v1/* request); 8.x is built for the new routing and requires
+# starlette>=1.0, which fastapi 0.141.x accepts.
+prometheus-fastapi-instrumentator==8.1.0
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
 python-multipart==0.0.32
@@ -33,4 +38,3 @@ slowapi==0.1.10
 # Logging and Monitoring
 structlog==25.5.0
 sentry-sdk==2.68.1
-prometheus-fastapi-instrumentator==7.1.0

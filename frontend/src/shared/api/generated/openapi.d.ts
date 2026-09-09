@@ -20,23 +20,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/analytics/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Analytics Dashboard */
-        get: operations["get_analytics_dashboard_api_v1_analytics__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/analytics/achievements/": {
         parameters: {
             query?: never;
@@ -1346,11 +1329,15 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * Readiness probe (PostgreSQL, Redis)
+         * Readiness probe (dependencies are healthy)
          * @description Readiness probe for load balancers and orchestrators.
-         *     Проверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).
+         *     Checks all critical dependencies:
+         *     - Database connectivity
+         *     - Redis availability (if configured)
+         *     - External services (if configured)
          *
-         *     HTTP 200 только при ``status == "ready"``; иначе 503 с ``status == "degraded"`` и телом проверок.
+         *     Returns 200 only if the application is ready to serve traffic.
+         *     Used by load balancers to route traffic only to ready instances.
          */
         get: operations["readiness_probe"];
         put?: never;
@@ -1771,6 +1758,23 @@ export type paths = {
         patch: operations["update_active_workout_api_v1_workouts_history__workout_id__patch"];
         trace?: never;
     };
+    "/api/v1/workouts/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Workout Session */
+        post: operations["create_workout_session_api_v1_workouts_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workouts/sessions/{session_id}/exercises/{exercise_id}/weight-recommendation": {
         parameters: {
             query?: never;
@@ -2139,24 +2143,15 @@ export type components = {
              * @description Mean workout duration in minutes within the selected period.
              */
             avg_duration: number;
-            /**
-             * Avg Rest Time Seconds
-             * @description Mean actual_rest_seconds across sets where rest was tracked.
-             */
+            /** Avg Rest Time Seconds */
             avg_rest_time_seconds?: number | null;
-            /**
-             * Avg Rpe Per Workout
-             * @description Mean of per-workout average RPE (only sets with RPE logged).
-             */
+            /** Avg Rpe Per Workout */
             avg_rpe_per_workout?: number | null;
-            /**
-             * Avg Rpe Previous Period
-             * @description Same metric for the immediately preceding period of equal length.
-             */
+            /** Avg Rpe Previous Period */
             avg_rpe_previous_period?: number | null;
             /**
              * Avg Rpe Trend
-             * @description up | down | flat when both current and previous period have RPE data.
+             * @description Direction of RPE change vs previous equivalent window: up | down | flat.
              */
             avg_rpe_trend?: string | null;
             /**
@@ -2164,15 +2159,9 @@ export type components = {
              * @description Most frequent exercise name in the selected period.
              */
             favorite_exercise?: string | null;
-            /**
-             * Intensity Score
-             * @description avg_rpe × (sets_count / avg_rest_minutes); None if rest or RPE insufficient.
-             */
+            /** Intensity Score */
             intensity_score?: number | null;
-            /**
-             * Intensity Weekly Chart
-             * @description Intensity score by ISO week (for longer windows).
-             */
+            /** Intensity Weekly Chart */
             intensity_weekly_chart?: components["schemas"]["AnalyticsIntensityWeekPoint"][];
             /**
              * Period
@@ -2186,18 +2175,12 @@ export type components = {
             streak_days: number;
             /** Total Duration Minutes */
             total_duration_minutes: number;
-            /**
-             * Total Time Under Tension Seconds
-             * @description Sum of (completed_at - started_at) in seconds where both timestamps exist.
-             */
+            /** Total Time Under Tension Seconds */
             total_time_under_tension_seconds?: number | null;
             /** Total Workouts */
             total_workouts: number;
-            /**
-             * Weekly Chart
-             * @description Workout counts by day or by ISO week start within the chart window.
-             */
-            weekly_chart?: components["schemas"]["AnalyticsWeeklyChartPoint"][];
+            /** Weekly Chart */
+            weekly_chart: components["schemas"]["AnalyticsWeeklyChartPoint"][];
             /**
              * Workouts This Month
              * @description Workouts logged in the current calendar month.
@@ -2210,7 +2193,6 @@ export type components = {
             workouts_this_week: number;
             /**
              * Workouts With Rpe Count
-             * @description Number of completed workouts in the window that logged at least one RPE value.
              * @default 0
              */
             workouts_with_rpe_count: number;
@@ -2355,11 +2337,6 @@ export type components = {
             refresh_token?: string | null;
             /** Success */
             success: boolean;
-            /**
-             * Token
-             * @description JWT access token (Mini App / camelCase alias of access_token).
-             */
-            token?: string | null;
             /**
              * Token Type
              * @default bearer
@@ -4031,7 +4008,26 @@ export type components = {
          * MuscleLoadEntry
          * @description Daily muscle load aggregate entry
          */
-        MuscleLoadEntry: {
+        "MuscleLoadEntry-Input": {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Id */
+            id: number;
+            /** Load Score */
+            load_score: number;
+            /** Muscle Group */
+            muscle_group: string;
+            /** User Id */
+            user_id: number;
+        };
+        /**
+         * MuscleLoadEntry
+         * @description Daily muscle load aggregate entry
+         */
+        "MuscleLoadEntry-Output": {
             /**
              * Date
              * Format: date
@@ -4062,7 +4058,7 @@ export type components = {
              */
             dateTo: string;
             /** Items */
-            items: components["schemas"]["MuscleLoadEntry"][];
+            items: components["schemas"]["MuscleLoadEntry-Output"][];
             /** Page */
             page: number;
             /** Pagesize */
@@ -4599,7 +4595,28 @@ export type components = {
          * TrainingLoadDailyEntry
          * @description Daily training load aggregate entry
          */
-        TrainingLoadDailyEntry: {
+        "TrainingLoadDailyEntry-Input": {
+            /** Avg Rpe */
+            avg_rpe?: number | null;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Fatigue Score */
+            fatigue_score: number;
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
+            /** Volume */
+            volume: number;
+        };
+        /**
+         * TrainingLoadDailyEntry
+         * @description Daily training load aggregate entry
+         */
+        "TrainingLoadDailyEntry-Output": {
             /** Avgrpe */
             avgRpe?: number | null;
             /**
@@ -4632,7 +4649,7 @@ export type components = {
              */
             dateTo: string;
             /** Items */
-            items: components["schemas"]["TrainingLoadDailyEntry"][];
+            items: components["schemas"]["TrainingLoadDailyEntry-Output"][];
             /** Page */
             page: number;
             /** Pagesize */
@@ -4937,10 +4954,6 @@ export type components = {
         UserUnits: "metric" | "imperial";
         /** ValidationError */
         ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -5291,6 +5304,10 @@ export type components = {
              */
             message: string;
             session_metrics?: components["schemas"]["WorkoutSessionMetrics"] | null;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /** Tags */
             tags: string[];
             /** Template Id */
@@ -5328,8 +5345,14 @@ export type components = {
             /** Id */
             id: number;
             session_metrics?: components["schemas"]["WorkoutSessionMetrics"] | null;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /** Tags */
             tags: string[];
+            /** Template Id */
+            template_id?: number | null;
             /** Version */
             version: number;
         };
@@ -5382,6 +5405,27 @@ export type components = {
             /** Workout Id */
             workout_id: number;
         };
+        /**
+         * WorkoutSessionCreateRequest
+         * @description Canonical request for creating a WorkoutSession from any start source.
+         */
+        WorkoutSessionCreateRequest: {
+            /** Name */
+            name?: string | null;
+            overrides?: components["schemas"]["StartWorkoutTemplateOverrides"] | null;
+            /**
+             * Source Id
+             * @description Source entity ID. Required for all sources except quick_start.
+             */
+            source_id?: number | null;
+            /**
+             * @description Canonical start source for the workout session.
+             * @default quick_start
+             */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
+            /** @default custom */
+            type: components["schemas"]["WorkoutSessionType"];
+        };
         /** WorkoutSessionInsightItem */
         WorkoutSessionInsightItem: {
             /** Code */
@@ -5428,6 +5472,11 @@ export type components = {
             /** Volume Per Minute */
             volume_per_minute?: number | null;
         };
+        /**
+         * WorkoutSessionSourceType
+         * @enum {string}
+         */
+        WorkoutSessionSourceType: "quick_start" | "personal_template" | "system_template" | "community_template" | "program_day" | "previous_session";
         /**
          * WorkoutSessionType
          * @enum {string}
@@ -5566,6 +5615,10 @@ export type components = {
              * @default Workout started successfully
              */
             message: string;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /**
              * Start Time
              * Format: date-time
@@ -5740,37 +5793,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_analytics_dashboard_api_v1_analytics__get: {
-        parameters: {
-            query?: {
-                period?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnalyticsDashboardResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6257,7 +6279,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MuscleLoadEntry"][];
+                    "application/json": components["schemas"]["MuscleLoadEntry-Output"][];
                 };
             };
             /** @description Validation Error */
@@ -6532,7 +6554,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TrainingLoadDailyEntry"][];
+                    "application/json": components["schemas"]["TrainingLoadDailyEntry-Output"][];
                 };
             };
             /** @description Validation Error */
@@ -9486,6 +9508,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutHistoryItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_workout_session_api_v1_workouts_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutSessionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutStartResponse"];
                 };
             };
             /** @description Validation Error */

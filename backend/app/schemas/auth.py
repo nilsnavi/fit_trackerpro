@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.schemas.enums import ExperienceLevel, FitnessGoal, TokenKind, UserTheme, UserUnits
 
@@ -175,12 +175,24 @@ class UserSettingsPatch(BaseModel):
 class TelegramAuthRequest(BaseModel):
     """Request model for Telegram authentication"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     init_data: str = Field(
         ...,
         min_length=1,
         max_length=16384,
+        validation_alias=AliasChoices("initData", "init_data"),
         description="Raw initData string from Telegram WebApp",
         examples=["query_id=...&user={...}&auth_date=...&hash=..."],
+    )
+
+
+class TelegramLookupResponse(BaseModel):
+    """Whether a database user already exists for validated initData (no user creation)."""
+
+    registered: bool = Field(
+        ...,
+        description="True when a user row exists for this Telegram account.",
     )
 
 

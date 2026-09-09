@@ -315,7 +315,6 @@
                 "type": "null"
               }
             ],
-            "description": "Mean actual_rest_seconds across sets where rest was tracked.",
             "title": "Avg Rest Time Seconds"
           },
           "avg_rpe_per_workout": {
@@ -327,7 +326,6 @@
                 "type": "null"
               }
             ],
-            "description": "Mean of per-workout average RPE (only sets with RPE logged).",
             "title": "Avg Rpe Per Workout"
           },
           "avg_rpe_previous_period": {
@@ -339,7 +337,6 @@
                 "type": "null"
               }
             ],
-            "description": "Same metric for the immediately preceding period of equal length.",
             "title": "Avg Rpe Previous Period"
           },
           "avg_rpe_trend": {
@@ -351,7 +348,7 @@
                 "type": "null"
               }
             ],
-            "description": "up | down | flat when both current and previous period have RPE data.",
+            "description": "Direction of RPE change vs previous equivalent window: up | down | flat.",
             "title": "Avg Rpe Trend"
           },
           "favorite_exercise": {
@@ -375,11 +372,9 @@
                 "type": "null"
               }
             ],
-            "description": "avg_rpe × (sets_count / avg_rest_minutes); None if rest or RPE insufficient.",
             "title": "Intensity Score"
           },
           "intensity_weekly_chart": {
-            "description": "Intensity score by ISO week (for longer windows).",
             "items": {
               "$ref": "#/components/schemas/AnalyticsIntensityWeekPoint"
             },
@@ -409,7 +404,6 @@
                 "type": "null"
               }
             ],
-            "description": "Sum of (completed_at - started_at) in seconds where both timestamps exist.",
             "title": "Total Time Under Tension Seconds"
           },
           "total_workouts": {
@@ -417,7 +411,6 @@
             "type": "integer"
           },
           "weekly_chart": {
-            "description": "Workout counts by day or by ISO week start within the chart window.",
             "items": {
               "$ref": "#/components/schemas/AnalyticsWeeklyChartPoint"
             },
@@ -436,7 +429,6 @@
           },
           "workouts_with_rpe_count": {
             "default": 0,
-            "description": "Number of completed workouts in the window that logged at least one RPE value.",
             "title": "Workouts With Rpe Count",
             "type": "integer"
           }
@@ -448,7 +440,8 @@
           "avg_duration",
           "workouts_this_week",
           "workouts_this_month",
-          "streak_days"
+          "streak_days",
+          "weekly_chart"
         ],
         "title": "AnalyticsDashboardResponse",
         "type": "object"
@@ -761,19 +754,6 @@
             "title": "Success",
             "type": "boolean"
           },
-          "token": {
-            "anyOf": [
-              {
-                "maxLength": 16384,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "JWT access token (Mini App / camelCase alias of access_token).",
-            "title": "Token"
-          },
           "token_type": {
             "default": "bearer",
             "pattern": "^(?i)bearer$",
@@ -1021,7 +1001,7 @@
           "media": {
             "anyOf": [
               {
-                "contentMediaType": "application/octet-stream",
+                "format": "binary",
                 "type": "string"
               },
               {
@@ -4978,7 +4958,42 @@
         "title": "MuscleImbalanceSignalsResponse",
         "type": "object"
       },
-      "MuscleLoadEntry": {
+      "MuscleLoadEntry-Input": {
+        "description": "Daily muscle load aggregate entry",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "load_score": {
+            "title": "Load Score",
+            "type": "number"
+          },
+          "muscle_group": {
+            "title": "Muscle Group",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "muscle_group",
+          "date",
+          "load_score"
+        ],
+        "title": "MuscleLoadEntry",
+        "type": "object"
+      },
+      "MuscleLoadEntry-Output": {
         "description": "Daily muscle load aggregate entry",
         "properties": {
           "date": {
@@ -5028,7 +5043,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/MuscleLoadEntry"
+              "$ref": "#/components/schemas/MuscleLoadEntry-Output"
             },
             "title": "Items",
             "type": "array"
@@ -6071,7 +6086,53 @@
         "title": "TelegramUserData",
         "type": "object"
       },
-      "TrainingLoadDailyEntry": {
+      "TrainingLoadDailyEntry-Input": {
+        "description": "Daily training load aggregate entry",
+        "properties": {
+          "avg_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Rpe"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "fatigue_score": {
+            "title": "Fatigue Score",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "date",
+          "volume",
+          "fatigue_score"
+        ],
+        "title": "TrainingLoadDailyEntry",
+        "type": "object"
+      },
+      "TrainingLoadDailyEntry-Output": {
         "description": "Daily training load aggregate entry",
         "properties": {
           "avgRpe": {
@@ -6132,7 +6193,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/TrainingLoadDailyEntry"
+              "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
             },
             "title": "Items",
             "type": "array"
@@ -6891,13 +6952,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -7678,6 +7732,21 @@
               }
             ]
           },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start"
+          },
           "tags": {
             "items": {
               "type": "string"
@@ -7800,12 +7869,38 @@
               }
             ]
           },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start"
+          },
           "tags": {
             "items": {
               "type": "string"
             },
             "title": "Tags",
             "type": "array"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
           },
           "version": {
             "title": "Version",
@@ -7958,6 +8053,58 @@
         "title": "WorkoutPostSummaryResponse",
         "type": "object"
       },
+      "WorkoutSessionCreateRequest": {
+        "description": "Canonical request for creating a WorkoutSession from any start source.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StartWorkoutTemplateOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Source entity ID. Required for all sources except quick_start.",
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start",
+            "description": "Canonical start source for the workout session."
+          },
+          "type": {
+            "$ref": "#/components/schemas/WorkoutSessionType",
+            "default": "custom"
+          }
+        },
+        "title": "WorkoutSessionCreateRequest",
+        "type": "object"
+      },
       "WorkoutSessionInsightItem": {
         "properties": {
           "code": {
@@ -8079,6 +8226,18 @@
         },
         "title": "WorkoutSessionMetrics",
         "type": "object"
+      },
+      "WorkoutSessionSourceType": {
+        "enum": [
+          "quick_start",
+          "personal_template",
+          "system_template",
+          "community_template",
+          "program_day",
+          "previous_session"
+        ],
+        "title": "WorkoutSessionSourceType",
+        "type": "string"
       },
       "WorkoutSessionType": {
         "enum": [
@@ -8464,6 +8623,21 @@
             "maxLength": 500,
             "title": "Message",
             "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/WorkoutSessionSourceType",
+            "default": "quick_start"
           },
           "start_time": {
             "format": "date-time",
@@ -8877,55 +9051,6 @@
         ]
       }
     },
-    "/api/v1/analytics/": {
-      "get": {
-        "operationId": "get_analytics_dashboard_api_v1_analytics__get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "period",
-            "required": false,
-            "schema": {
-              "default": "week",
-              "pattern": "^(week|month|all)$",
-              "title": "Period",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AnalyticsDashboardResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Analytics Dashboard",
-        "tags": [
-          "Analytics"
-        ]
-      }
-    },
     "/api/v1/analytics/achievements/": {
       "get": {
         "operationId": "get_achievements_api_v1_analytics_achievements__get",
@@ -9190,7 +9315,7 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 5,
+              "default": 9,
               "maximum": 12,
               "minimum": 1,
               "title": "Month",
@@ -9798,7 +9923,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/MuscleLoadEntry"
+                    "$ref": "#/components/schemas/MuscleLoadEntry-Output"
                   },
                   "title": "Response Get Muscle Load Api V1 Analytics Muscle Load Get",
                   "type": "array"
@@ -10493,7 +10618,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/TrainingLoadDailyEntry"
+                    "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
                   },
                   "title": "Response Get Daily Training Load Api V1 Analytics Training Load Daily Get",
                   "type": "array"
@@ -14398,7 +14523,7 @@
     },
     "/api/v1/system/ready": {
       "get": {
-        "description": "Readiness probe for load balancers and orchestrators.\nПроверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).\n\nHTTP 200 только при ``status == \"ready\"``; иначе 503 с ``status == \"degraded\"`` и телом проверок.",
+        "description": "Readiness probe for load balancers and orchestrators.\nChecks all critical dependencies:\n- Database connectivity\n- Redis availability (if configured)\n- External services (if configured)\n\nReturns 200 only if the application is ready to serve traffic.\nUsed by load balancers to route traffic only to ready instances.",
         "operationId": "readiness_probe",
         "responses": {
           "200": {
@@ -14412,7 +14537,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Readiness probe (PostgreSQL, Redis)",
+        "summary": "Readiness probe (dependencies are healthy)",
         "tags": [
           "System",
           "System"
@@ -15109,7 +15234,7 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 5,
+              "default": 9,
               "maximum": 12,
               "minimum": 1,
               "title": "Month",
@@ -15433,6 +15558,52 @@
           }
         ],
         "summary": "Update Active Workout",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/sessions": {
+      "post": {
+        "operationId": "create_workout_session_api_v1_workouts_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutSessionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Workout Session",
         "tags": [
           "Workouts"
         ]

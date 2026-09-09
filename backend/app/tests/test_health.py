@@ -176,7 +176,7 @@ async def test_api_docs_disabled_in_production():
     settings = Settings(
         DATABASE_URL="sqlite+aiosqlite:///:memory:",
         SECRET_KEY="test-secret-key",
-        TELEGRAM_BOT_TOKEN="test-token",
+        TELEGRAM_BOT_TOKEN="123456:test-token-for-pydantic-check",
         TELEGRAM_WEBAPP_URL="https://test.com",
         DEBUG=False,
     )
