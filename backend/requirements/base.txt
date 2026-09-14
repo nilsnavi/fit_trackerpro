@@ -11,7 +11,7 @@ gunicorn==25.3.0
 
 # Database
 sqlalchemy==2.0.52
-alembic==1.19.1
+alembic==1.19.2
 asyncpg==0.31.0
 psycopg[binary]==3.3.5
 
@@ -37,4 +37,4 @@ slowapi==0.1.10
 
 # Logging and Monitoring
 structlog==25.5.0
-sentry-sdk==2.68.1
+sentry-sdk==2.69.1
