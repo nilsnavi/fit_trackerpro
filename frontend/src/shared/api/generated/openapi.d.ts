@@ -4166,26 +4166,7 @@ export type components = {
          * MuscleLoadEntry
          * @description Daily muscle load aggregate entry
          */
-        "MuscleLoadEntry-Input": {
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
-            /** Id */
-            id: number;
-            /** Load Score */
-            load_score: number;
-            /** Muscle Group */
-            muscle_group: string;
-            /** User Id */
-            user_id: number;
-        };
-        /**
-         * MuscleLoadEntry
-         * @description Daily muscle load aggregate entry
-         */
-        "MuscleLoadEntry-Output": {
+        MuscleLoadEntry: {
             /**
              * Date
              * Format: date
@@ -4216,7 +4197,7 @@ export type components = {
              */
             dateTo: string;
             /** Items */
-            items: components["schemas"]["MuscleLoadEntry-Output"][];
+            items: components["schemas"]["MuscleLoadEntry"][];
             /** Page */
             page: number;
             /** Pagesize */
@@ -4874,28 +4855,7 @@ export type components = {
          * TrainingLoadDailyEntry
          * @description Daily training load aggregate entry
          */
-        "TrainingLoadDailyEntry-Input": {
-            /** Avg Rpe */
-            avg_rpe?: number | null;
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
-            /** Fatigue Score */
-            fatigue_score: number;
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
-            /** Volume */
-            volume: number;
-        };
-        /**
-         * TrainingLoadDailyEntry
-         * @description Daily training load aggregate entry
-         */
-        "TrainingLoadDailyEntry-Output": {
+        TrainingLoadDailyEntry: {
             /** Avgrpe */
             avgRpe?: number | null;
             /**
@@ -4928,7 +4888,7 @@ export type components = {
              */
             dateTo: string;
             /** Items */
-            items: components["schemas"]["TrainingLoadDailyEntry-Output"][];
+            items: components["schemas"]["TrainingLoadDailyEntry"][];
             /** Page */
             page: number;
             /** Pagesize */
@@ -5233,6 +5193,10 @@ export type components = {
         UserUnits: "metric" | "imperial";
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -6755,7 +6719,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MuscleLoadEntry-Output"][];
+                    "application/json": components["schemas"]["MuscleLoadEntry"][];
                 };
             };
             /** @description Validation Error */
@@ -7030,7 +6994,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TrainingLoadDailyEntry-Output"][];
+                    "application/json": components["schemas"]["TrainingLoadDailyEntry"][];
                 };
             };
             /** @description Validation Error */

@@ -1001,7 +1001,7 @@
           "media": {
             "anyOf": [
               {
-                "format": "binary",
+                "contentMediaType": "application/octet-stream",
                 "type": "string"
               },
               {
@@ -5124,42 +5124,7 @@
         "title": "MuscleImbalanceSignalsResponse",
         "type": "object"
       },
-      "MuscleLoadEntry-Input": {
-        "description": "Daily muscle load aggregate entry",
-        "properties": {
-          "date": {
-            "format": "date",
-            "title": "Date",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "load_score": {
-            "title": "Load Score",
-            "type": "number"
-          },
-          "muscle_group": {
-            "title": "Muscle Group",
-            "type": "string"
-          },
-          "user_id": {
-            "title": "User Id",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "user_id",
-          "muscle_group",
-          "date",
-          "load_score"
-        ],
-        "title": "MuscleLoadEntry",
-        "type": "object"
-      },
-      "MuscleLoadEntry-Output": {
+      "MuscleLoadEntry": {
         "description": "Daily muscle load aggregate entry",
         "properties": {
           "date": {
@@ -5209,7 +5174,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/MuscleLoadEntry-Output"
+              "$ref": "#/components/schemas/MuscleLoadEntry"
             },
             "title": "Items",
             "type": "array"
@@ -6524,53 +6489,7 @@
         "title": "TelegramUserData",
         "type": "object"
       },
-      "TrainingLoadDailyEntry-Input": {
-        "description": "Daily training load aggregate entry",
-        "properties": {
-          "avg_rpe": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avg Rpe"
-          },
-          "date": {
-            "format": "date",
-            "title": "Date",
-            "type": "string"
-          },
-          "fatigue_score": {
-            "title": "Fatigue Score",
-            "type": "number"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "user_id": {
-            "title": "User Id",
-            "type": "integer"
-          },
-          "volume": {
-            "title": "Volume",
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "user_id",
-          "date",
-          "volume",
-          "fatigue_score"
-        ],
-        "title": "TrainingLoadDailyEntry",
-        "type": "object"
-      },
-      "TrainingLoadDailyEntry-Output": {
+      "TrainingLoadDailyEntry": {
         "description": "Daily training load aggregate entry",
         "properties": {
           "avgRpe": {
@@ -6631,7 +6550,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
+              "$ref": "#/components/schemas/TrainingLoadDailyEntry"
             },
             "title": "Items",
             "type": "array"
@@ -7390,6 +7309,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -10811,7 +10737,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/MuscleLoadEntry-Output"
+                    "$ref": "#/components/schemas/MuscleLoadEntry"
                   },
                   "title": "Response Get Muscle Load Api V1 Analytics Muscle Load Get",
                   "type": "array"
@@ -11506,7 +11432,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
+                    "$ref": "#/components/schemas/TrainingLoadDailyEntry"
                   },
                   "title": "Response Get Daily Training Load Api V1 Analytics Training Load Daily Get",
                   "type": "array"
