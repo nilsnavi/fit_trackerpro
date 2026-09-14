@@ -7,7 +7,6 @@ import type {
     WorkoutTemplateResponse,
     WorkoutTemplateListResponse,
     WorkoutStartRequest,
-    WorkoutStartFromTemplateRequest,
     WorkoutStartResponse,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
@@ -18,6 +17,10 @@ import type {
     WorkoutSetPatchRequest,
     WorkoutSetResponse,
     WeightRecommendationResponse,
+    WorkoutSessionListItem,
+    WorkoutCancelResponse,
+    ProgressionRecommendation,
+    ProgressionPolicy,
 } from '@features/workouts/types/workouts'
 
 function normalizeWorkoutStartResponse(response: WorkoutStartResponse): WorkoutStartResponse {
@@ -173,21 +176,6 @@ export const workoutsApi = {
             .then(normalizeWorkoutStartResponse)
     },
 
-    createWorkoutSession(payload: WorkoutStartRequest): Promise<WorkoutStartResponse> {
-        return api
-            .post<WorkoutStartResponse>('/workouts/sessions', toWorkoutSessionCreatePayload(payload))
-            .then(normalizeWorkoutStartResponse)
-    },
-
-    startWorkoutFromTemplateWithOverrides(
-        templateId: number,
-        payload: WorkoutStartFromTemplateRequest,
-    ): Promise<WorkoutStartResponse> {
-        return api
-            .post<WorkoutStartResponse>(`/workouts/start/from-template/${templateId}`, payload)
-            .then(normalizeWorkoutStartResponse)
-    },
-
     completeWorkout(
         workoutId: number,
         payload: WorkoutCompleteRequest,
@@ -217,4 +205,35 @@ export const workoutsApi = {
             `/workouts/sessions/${sessionId}/exercises/${exerciseId}/weight-recommendation`,
         )
     },
+
+    // ─── SPEC-005 ────────────────────────────────────────────────────────────
+
+    /** SPEC-005 §48: incomplete sessions for the restore prompt. */
+    listIncompleteSessions(): Promise<WorkoutSessionListItem[]> {
+        return api.get<WorkoutSessionListItem[]>('/workouts/sessions/incomplete')
+    },
+
+    /** SPEC-005 §3: cancel an in-progress session. */
+    cancelWorkout(
+        workoutId: number,
+        payload: { comments?: string; idempotency_key?: string } = {},
+    ): Promise<WorkoutCancelResponse> {
+        return api.post<WorkoutCancelResponse>(`/workouts/${workoutId}/cancel`, payload)
+    },
+
+    /** SPEC-005 §37–38: explainable progression recommendation. */
+    getProgressionRecommendation(params: {
+        exercise_id: number
+        policy?: ProgressionPolicy
+        increment?: number
+        rep_range_min?: number
+        rep_range_max?: number
+        target_rpe?: number
+        target_rir?: number
+        percent_1rm?: number
+        time_increment_seconds?: number
+    }): Promise<ProgressionRecommendation> {
+        return api.get<ProgressionRecommendation>('/workouts/progression/recommendation', params)
+    },
+
 }

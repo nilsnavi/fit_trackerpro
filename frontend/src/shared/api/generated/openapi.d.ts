@@ -1758,6 +1758,46 @@ export type paths = {
         patch: operations["update_active_workout_api_v1_workouts_history__workout_id__patch"];
         trace?: never;
     };
+    "/api/v1/workouts/plate-calculator": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calculate Plates Endpoint
+         * @description Разложить блины на одну сторону штанги (SPEC-005 §42–43).
+         */
+        post: operations["calculate_plates_endpoint_api_v1_workouts_plate_calculator_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progression/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Progression Recommendation
+         * @description Explainable next-target recommendation (SPEC-005 §37–38).
+         */
+        get: operations["get_progression_recommendation_api_v1_workouts_progression_recommendation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workouts/sessions": {
         parameters: {
             query?: never;
@@ -1769,6 +1809,46 @@ export type paths = {
         put?: never;
         /** Create Workout Session */
         post: operations["create_workout_session_api_v1_workouts_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/sessions/incomplete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Incomplete Sessions
+         * @description Незавершённые сессии для восстановления (SPEC-005 §48).
+         */
+        get: operations["list_incomplete_sessions_api_v1_workouts_sessions_incomplete_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/sessions/{session_id}/exercises/{exercise_id}/smart-rest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Smart Rest Recommendation
+         * @description Рекомендация отдыха по типу подхода и интенсивности (SPEC-005 §19).
+         */
+        get: operations["get_smart_rest_recommendation_api_v1_workouts_sessions__session_id__exercises__exercise_id__smart_rest_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1933,6 +2013,46 @@ export type paths = {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workout_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Workout
+         * @description Отменить незавершённую тренировку (SPEC-005 §3/§48).
+         */
+        post: operations["cancel_workout_api_v1_workouts__workout_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workout_id}/exercises/{exercise_row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Session Exercise
+         * @description Пропустить / заменить / переместить / аннотировать упражнение (SPEC-005 §25–28).
+         */
+        patch: operations["patch_session_exercise_api_v1_workouts__workout_id__exercises__exercise_row_id__patch"];
         trace?: never;
     };
     "/api/v1/workouts/{workout_id}/sets/{set_id}": {
@@ -2847,8 +2967,22 @@ export type components = {
          * @description Completed exercise data
          */
         "CompletedExercise-Input": {
+            /** Block Id */
+            block_id?: number | null;
+            /** Block Order */
+            block_order?: number | null;
+            /** Block Rest Seconds */
+            block_rest_seconds?: number | null;
+            /** Block Rounds */
+            block_rounds?: number | null;
+            block_type?: components["schemas"]["WorkoutBlockType"] | null;
             /** Exercise Id */
             exercise_id: number;
+            /**
+             * Id
+             * @description Database row id of the session exercise, when persisted.
+             */
+            id?: number | null;
             /** Name */
             name: string;
             /** Notes */
@@ -2858,14 +2992,33 @@ export type components = {
              * @description Recorded sets (max 100 per exercise).
              */
             sets_completed: components["schemas"]["CompletedSet-Input"][];
+            /**
+             * Status
+             * @description Exercise status inside the session ('skipped' when skipped).
+             */
+            status?: string | null;
         };
         /**
          * CompletedExercise
          * @description Completed exercise data
          */
         "CompletedExercise-Output": {
+            /** Block Id */
+            block_id?: number | null;
+            /** Block Order */
+            block_order?: number | null;
+            /** Block Rest Seconds */
+            block_rest_seconds?: number | null;
+            /** Block Rounds */
+            block_rounds?: number | null;
+            block_type?: components["schemas"]["WorkoutBlockType"] | null;
             /** Exercise Id */
             exercise_id: number;
+            /**
+             * Id
+             * @description Database row id of the session exercise, when persisted.
+             */
+            id?: number | null;
             /** Name */
             name: string;
             /** Notes */
@@ -2875,6 +3028,11 @@ export type components = {
              * @description Recorded sets (max 100 per exercise).
              */
             sets_completed: components["schemas"]["CompletedSet-Output"][];
+            /**
+             * Status
+             * @description Exercise status inside the session ('skipped' when skipped).
+             */
+            status?: string | null;
         };
         /**
          * CompletedSet
@@ -4008,26 +4166,7 @@ export type components = {
          * MuscleLoadEntry
          * @description Daily muscle load aggregate entry
          */
-        "MuscleLoadEntry-Input": {
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
-            /** Id */
-            id: number;
-            /** Load Score */
-            load_score: number;
-            /** Muscle Group */
-            muscle_group: string;
-            /** User Id */
-            user_id: number;
-        };
-        /**
-         * MuscleLoadEntry
-         * @description Daily muscle load aggregate entry
-         */
-        "MuscleLoadEntry-Output": {
+        MuscleLoadEntry: {
             /**
              * Date
              * Format: date
@@ -4058,7 +4197,7 @@ export type components = {
              */
             dateTo: string;
             /** Items */
-            items: components["schemas"]["MuscleLoadEntry-Output"][];
+            items: components["schemas"]["MuscleLoadEntry"][];
             /** Page */
             page: number;
             /** Pagesize */
@@ -4192,6 +4331,78 @@ export type components = {
             unit: string;
             /** Value */
             value: number;
+        };
+        /**
+         * PersonalRecordEntry
+         * @description Personal record achieved or matched (SPEC-005 §40).
+         */
+        PersonalRecordEntry: {
+            /** Achieved At */
+            achieved_at?: string | null;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Name */
+            exercise_name: string;
+            /**
+             * Is New Record
+             * @default true
+             */
+            is_new_record: boolean;
+            /** Previous Value */
+            previous_value?: number | null;
+            record_type: components["schemas"]["PersonalRecordType"];
+            /** Set Number */
+            set_number?: number | null;
+            /**
+             * Unit
+             * @default kg
+             */
+            unit: string;
+            /** Value */
+            value: number;
+        };
+        /**
+         * PersonalRecordType
+         * @description Personal record types tracked per exercise (SPEC-005 §40).
+         * @enum {string}
+         */
+        PersonalRecordType: "MAX_WEIGHT" | "MAX_REPS_AT_WEIGHT" | "ESTIMATED_1RM" | "MAX_VOLUME" | "MAX_DURATION";
+        /**
+         * PlateCalculationRequest
+         * @description Plate calculator request (SPEC-005 §42–43).
+         */
+        PlateCalculationRequest: {
+            /**
+             * Available Plates
+             * @description Available plate weights in kg.
+             */
+            available_plates?: number[];
+            /**
+             * Bar Weight
+             * @default 20
+             */
+            bar_weight: number;
+            /** Target Weight */
+            target_weight: number;
+        };
+        /**
+         * PlateCalculationResponse
+         * @description Plate calculator result per side (SPEC-005 §42–43).
+         */
+        PlateCalculationResponse: {
+            /** Achievable */
+            achievable: boolean;
+            /** Exact Weight */
+            exact_weight?: number | null;
+            /** Nearest Weight */
+            nearest_weight?: number | null;
+            /** Plates Per Side */
+            plates_per_side?: number[];
+            /**
+             * Remainder
+             * @default 0
+             */
+            remainder: number;
         };
         /**
          * ProgressInsightsBestSetItem
@@ -4329,6 +4540,43 @@ export type components = {
             total_volume: number;
             /** Workout Count */
             workout_count: number;
+        };
+        /**
+         * ProgressionPolicy
+         * @description Supported progression policies (SPEC-005 §29).
+         * @enum {string}
+         */
+        ProgressionPolicy: "MANUAL" | "LINEAR" | "DOUBLE_PROGRESSION" | "RPE_BASED" | "RIR_BASED" | "PERCENT_1RM" | "TIME_PROGRESSION";
+        /**
+         * ProgressionRecommendation
+         * @description Explainable progression recommendation (SPEC-005 §37–38).
+         */
+        ProgressionRecommendation: {
+            /**
+             * Confidence
+             * @default low
+             */
+            confidence: string;
+            /** Difference */
+            difference?: number | null;
+            /** @default MANUAL */
+            policy: components["schemas"]["ProgressionPolicy"];
+            /** Previous Value */
+            previous_value?: number | null;
+            /**
+             * Reason Code
+             * @default NO_DATA
+             */
+            reason_code: string;
+            /**
+             * Reason Text
+             * @default
+             */
+            reason_text: string;
+            /** Recommended Value */
+            recommended_value?: number | null;
+            /** Source Session Id */
+            source_session_id?: number | null;
         };
         /**
          * ReadinessChecks
@@ -4508,6 +4756,18 @@ export type components = {
             opening_avg_rpe: number;
         };
         /**
+         * SmartRestRecommendation
+         * @description Smart rest recommendation (SPEC-005 §19).
+         */
+        SmartRestRecommendation: {
+            /** Reason Code */
+            reason_code: string;
+            /** Reason Text */
+            reason_text: string;
+            /** Recommended Rest Seconds */
+            recommended_rest_seconds: number;
+        };
+        /**
          * StartWorkoutTemplateOverrides
          * @description Optional template overrides for start workflow without mutating source template.
          */
@@ -4595,28 +4855,7 @@ export type components = {
          * TrainingLoadDailyEntry
          * @description Daily training load aggregate entry
          */
-        "TrainingLoadDailyEntry-Input": {
-            /** Avg Rpe */
-            avg_rpe?: number | null;
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
-            /** Fatigue Score */
-            fatigue_score: number;
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
-            /** Volume */
-            volume: number;
-        };
-        /**
-         * TrainingLoadDailyEntry
-         * @description Daily training load aggregate entry
-         */
-        "TrainingLoadDailyEntry-Output": {
+        TrainingLoadDailyEntry: {
             /** Avgrpe */
             avgRpe?: number | null;
             /**
@@ -4649,7 +4888,7 @@ export type components = {
              */
             dateTo: string;
             /** Items */
-            items: components["schemas"]["TrainingLoadDailyEntry-Output"][];
+            items: components["schemas"]["TrainingLoadDailyEntry"][];
             /** Page */
             page: number;
             /** Pagesize */
@@ -4954,6 +5193,10 @@ export type components = {
         UserUnits: "metric" | "imperial";
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -5202,6 +5445,59 @@ export type components = {
             avg_sleep_score_7d: number | null;
         };
         /**
+         * WorkoutBlockPayload
+         * @description Block definition attached to a session create/update (SPEC-005 §24).
+         */
+        WorkoutBlockPayload: {
+            /**
+             * Client Id
+             * @description Client-side identifier to correlate exercises with the block.
+             */
+            client_id?: string | null;
+            /**
+             * Order
+             * @default 0
+             */
+            order: number;
+            /** Rest Seconds */
+            rest_seconds?: number | null;
+            /**
+             * Rounds
+             * @default 1
+             */
+            rounds: number;
+            /** @default NORMAL */
+            type: components["schemas"]["WorkoutBlockType"];
+        };
+        /**
+         * WorkoutBlockResponse
+         * @description Persisted session block (SPEC-005 §24).
+         */
+        WorkoutBlockResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Order
+             * @default 0
+             */
+            order: number;
+            /** Rest Seconds */
+            rest_seconds?: number | null;
+            /**
+             * Rounds
+             * @default 1
+             */
+            rounds: number;
+            /** @default NORMAL */
+            type: components["schemas"]["WorkoutBlockType"];
+        };
+        /**
+         * WorkoutBlockType
+         * @description Training block grouping exercises within a session (SPEC-005 §24).
+         * @enum {string}
+         */
+        WorkoutBlockType: "NORMAL" | "SUPERSET" | "TRISET" | "CIRCUIT";
+        /**
          * WorkoutCalendarResponse
          * @description Workout calendar response
          */
@@ -5227,6 +5523,34 @@ export type components = {
             total_duration: number;
             /** Total Workouts */
             total_workouts: number;
+        };
+        /**
+         * WorkoutCancelRequest
+         * @description Request model for cancelling an in-progress session (SPEC-005 §3).
+         */
+        WorkoutCancelRequest: {
+            /** Comments */
+            comments?: string | null;
+            /**
+             * Idempotency Key
+             * @description Optional idempotency key for replay-safe cancellation.
+             */
+            idempotency_key?: string | null;
+        };
+        /**
+         * WorkoutCancelResponse
+         * @description Response after cancelling a session.
+         */
+        WorkoutCancelResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Message
+             * @default Workout cancelled. This session is excluded from analytics.
+             */
+            message: string;
+            /** @default cancelled */
+            status: components["schemas"]["WorkoutStatus"];
         };
         /**
          * WorkoutCompleteRequest
@@ -5303,6 +5627,10 @@ export type components = {
              * @default Workout completed successfully
              */
             message: string;
+            /** Personal Records */
+            personal_records?: components["schemas"]["PersonalRecordEntry"][];
+            /** Progression Recommendations */
+            progression_recommendations?: components["schemas"]["ProgressionRecommendation"][];
             session_metrics?: components["schemas"]["WorkoutSessionMetrics"] | null;
             /** Source Id */
             source_id?: number | null;
@@ -5318,10 +5646,37 @@ export type components = {
             version: number;
         };
         /**
+         * WorkoutExercisePatchRequest
+         * @description PATCH payload for a session exercise row (SPEC-005 §6/§25-28).
+         */
+        WorkoutExercisePatchRequest: {
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Replacement Exercise Id
+             * @description Replace the exercise (session-only) with this exercise.
+             */
+            replacement_exercise_id?: number | null;
+            /** Replacement Name */
+            replacement_name?: string | null;
+            /**
+             * Status
+             * @description Set to 'skipped' to skip the exercise for this session only.
+             */
+            status?: string | null;
+            /**
+             * Target Order Index
+             * @description Reposition the exercise within the session.
+             */
+            target_order_index?: number | null;
+        };
+        /**
          * WorkoutHistoryItem
          * @description Single workout history entry
          */
         WorkoutHistoryItem: {
+            /** Blocks */
+            blocks?: components["schemas"]["WorkoutBlockResponse"][];
             /** Comments */
             comments: string | null;
             /**
@@ -5349,6 +5704,10 @@ export type components = {
             source_id?: number | null;
             /** @default quick_start */
             source_type: components["schemas"]["WorkoutSessionSourceType"];
+            /** Started At */
+            started_at?: string | null;
+            /** @default active */
+            status: components["schemas"]["WorkoutStatus"];
             /** Tags */
             tags: string[];
             /** Template Id */
@@ -5437,6 +5796,42 @@ export type components = {
             /** Title */
             title: string;
         };
+        /**
+         * WorkoutSessionListResponse
+         * @description Lightweight response for incomplete session restore (SPEC-005 §48).
+         */
+        WorkoutSessionListResponse: {
+            /**
+             * Completed Exercise Count
+             * @default 0
+             */
+            completed_exercise_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Elapsed Seconds
+             * @description Elapsed time derived from started_at.
+             */
+            elapsed_seconds?: number | null;
+            /**
+             * Exercise Count
+             * @default 0
+             */
+            exercise_count: number;
+            /** Id */
+            id: number;
+            /** Name */
+            name?: string | null;
+            status: components["schemas"]["WorkoutStatus"];
+        };
         /** WorkoutSessionMetrics */
         WorkoutSessionMetrics: {
             /** Avg Rest Seconds */
@@ -5451,7 +5846,14 @@ export type components = {
              */
             completed_sets: number;
             effort_distribution?: components["schemas"]["SessionEffortDistribution"];
+            /**
+             * Exercise Count
+             * @default 0
+             */
+            exercise_count: number;
             fatigue_trend?: components["schemas"]["SessionFatigueTrend"] | null;
+            /** Max Weight */
+            max_weight?: number | null;
             /** Rest Consistency Score */
             rest_consistency_score?: number | null;
             /**
@@ -5465,12 +5867,29 @@ export type components = {
              */
             rest_tracking_ratio: number;
             /**
+             * Total Reps
+             * @default 0
+             */
+            total_reps: number;
+            /**
              * Total Rest Seconds
              * @default 0
              */
             total_rest_seconds: number;
+            /** Total Volume */
+            total_volume?: number | null;
             /** Volume Per Minute */
             volume_per_minute?: number | null;
+            /**
+             * Warmup Sets
+             * @default 0
+             */
+            warmup_sets: number;
+            /**
+             * Working Sets
+             * @default 0
+             */
+            working_sets: number;
         };
         /**
          * WorkoutSessionSourceType
@@ -5487,6 +5906,11 @@ export type components = {
          * @description Request model for updating an in-progress workout session.
          */
         WorkoutSessionUpdateRequest: {
+            /**
+             * Blocks
+             * @description Full replacement list of session blocks (when provided).
+             */
+            blocks?: components["schemas"]["WorkoutBlockPayload"][] | null;
             /** Comments */
             comments?: string | null;
             /**
@@ -5508,6 +5932,8 @@ export type components = {
              * @description Optional idempotency key for replay-safe updates.
              */
             idempotency_key?: string | null;
+            /** @description Lifecycle transition target: 'active' (resume) or 'paused'. */
+            status?: components["schemas"]["WorkoutStatus"] | null;
             /**
              * Tags
              * @description Session tags kept while workout is in progress.
@@ -5521,6 +5947,8 @@ export type components = {
         WorkoutSetPatchRequest: {
             /** Completed */
             completed?: boolean | null;
+            /** Duration */
+            duration?: number | null;
             /** Notes */
             notes?: string | null;
             /** Reps */
@@ -5542,12 +5970,16 @@ export type components = {
              * @default true
              */
             completed: boolean;
+            /** Duration */
+            duration?: number | null;
             /** Exercise Id */
             exercise_id: number;
             /** Id */
             id: number;
             /** Notes */
             notes?: string | null;
+            /** Personal Records */
+            personal_records?: components["schemas"]["PersonalRecordEntry"][] | null;
             /** Reps */
             reps?: number | null;
             /** Rest Seconds */
@@ -5615,6 +6047,8 @@ export type components = {
              * @default Workout started successfully
              */
             message: string;
+            /** @default active */
+            session_status: components["schemas"]["WorkoutStatus"];
             /** Source Id */
             source_id?: number | null;
             /** @default quick_start */
@@ -5652,6 +6086,12 @@ export type components = {
             /** Total Workouts 7D */
             total_workouts_7d: number;
         };
+        /**
+         * WorkoutStatus
+         * @description Lifecycle status of a WorkoutSession (SPEC-005 §3).
+         * @enum {string}
+         */
+        WorkoutStatus: "draft" | "active" | "paused" | "completed" | "cancelled";
         /**
          * WorkoutTemplateCloneRequest
          * @description Clone existing template.
@@ -6279,7 +6719,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MuscleLoadEntry-Output"][];
+                    "application/json": components["schemas"]["MuscleLoadEntry"][];
                 };
             };
             /** @description Validation Error */
@@ -6554,7 +6994,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TrainingLoadDailyEntry-Output"][];
+                    "application/json": components["schemas"]["TrainingLoadDailyEntry"][];
                 };
             };
             /** @description Validation Error */
@@ -9521,6 +9961,78 @@ export interface operations {
             };
         };
     };
+    calculate_plates_endpoint_api_v1_workouts_plate_calculator_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlateCalculationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlateCalculationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_progression_recommendation_api_v1_workouts_progression_recommendation_get: {
+        parameters: {
+            query: {
+                exercise_id: number;
+                policy?: components["schemas"]["ProgressionPolicy"];
+                increment?: number | null;
+                rep_range_min?: number | null;
+                rep_range_max?: number | null;
+                target_rpe?: number | null;
+                target_rir?: number | null;
+                percent_1rm?: number | null;
+                time_increment_seconds?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_workout_session_api_v1_workouts_sessions_post: {
         parameters: {
             query?: never;
@@ -9541,6 +10053,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_incomplete_sessions_api_v1_workouts_sessions_incomplete_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutSessionListResponse"][];
+                };
+            };
+        };
+    };
+    get_smart_rest_recommendation_api_v1_workouts_sessions__session_id__exercises__exercise_id__smart_rest_get: {
+        parameters: {
+            query?: {
+                set_type?: string;
+                rpe?: number | null;
+                rir?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: number;
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmartRestRecommendation"];
                 };
             };
             /** @description Validation Error */
@@ -9968,6 +10536,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutTemplateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_workout_api_v1_workouts__workout_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutCancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutCancelResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_session_exercise_api_v1_workouts__workout_id__exercises__exercise_row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+                exercise_row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutExercisePatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutHistoryItem"];
                 };
             };
             /** @description Validation Error */

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
+from app.application.progression_service import recommend as recommend_progression
+from app.application.records_service import (
+    collect_session_records,
+    evaluate_set_records,
+)
 from app.application.session_metrics import compute_session_metrics
 from app.core.audit import (
     WORKOUT_COMPLETE,
@@ -31,16 +38,30 @@ from app.domain.workout_template import WorkoutTemplate
 from app.infrastructure.cache import invalidate_user_analytics_cache
 from app.infrastructure.idempotency import run_idempotent
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
-from app.schemas.enums import WorkoutSessionSourceType, WorkoutSessionType, WorkoutSetType
+from app.schemas.enums import (
+    ProgressionPolicy,
+    WorkoutSessionSourceType,
+    WorkoutSessionType,
+    WorkoutSetType,
+    WorkoutStatus,
+)
 from app.schemas.workouts import (
     CompletedExercise,
     ExerciseInTemplate,
+    PersonalRecordEntry,
+    ProgressionRecommendation,
     StartWorkoutTemplateOverrides,
+    WorkoutBlockPayload,
+    WorkoutBlockResponse,
+    WorkoutCancelRequest,
+    WorkoutCancelResponse,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
+    WorkoutExercisePatchRequest,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
     WorkoutSessionCreateRequest,
+    WorkoutSessionListResponse,
     WorkoutSessionMetrics,
     WorkoutSessionUpdateRequest,
     WorkoutSetPatchRequest,
@@ -97,6 +118,47 @@ class WorkoutsService:
             "message": f"RPE={rpe} (=10): Рекомендуется уменьшить вес до {new_weight} кг",
         }
 
+    async def get_smart_rest_recommendation(
+        self,
+        *,
+        user_id: int,
+        set_type: str,
+        rpe: Optional[float] = None,
+        rir: Optional[float] = None,
+    ) -> dict:
+        """Smart rest recommendation (SPEC-005 §19): set type + intensity aware."""
+        del user_id  # Recommendation is stateless per current model.
+        if set_type == "warmup":
+            return {
+                "recommended_rest_seconds": 45,
+                "reason_code": "WARMUP_SET",
+                "reason_text": "Разминочный подход — короткий отдых достаточен.",
+            }
+        intensity = rpe if rpe is not None else (10 - rir if rir is not None else None)
+        if intensity is None:
+            return {
+                "recommended_rest_seconds": 90,
+                "reason_code": "DEFAULT_REST",
+                "reason_text": "Стандартный отдых для рабочего подхода.",
+            }
+        if intensity >= 9:
+            return {
+                "recommended_rest_seconds": 180,
+                "reason_code": "HEAVY_SET",
+                "reason_text": f"Тяжёлый рабочий подход, RPE {intensity} — нужен полный отдых.",
+            }
+        if intensity >= 7:
+            return {
+                "recommended_rest_seconds": 120,
+                "reason_code": "MODERATE_SET",
+                "reason_text": f"Рабочий подход средней интенсивности (RPE {intensity}).",
+            }
+        return {
+            "recommended_rest_seconds": 60,
+            "reason_code": "LIGHT_SET",
+            "reason_text": f"Лёгкий подход (RPE {intensity}) — отдых можно сократить.",
+        }
+
     @staticmethod
     def _safe_float(value: object) -> Optional[float]:
         try:
@@ -148,6 +210,9 @@ class WorkoutsService:
         for exercise in exercises:
             if not isinstance(exercise, dict):
                 continue
+            # SPEC-005 §26: skipped exercises contribute no load.
+            if str(exercise.get("status") or "") == "skipped":
+                continue
             exercise_id_raw = exercise.get("exercise_id")
             if exercise_id_raw is None:
                 continue
@@ -167,6 +232,9 @@ class WorkoutsService:
                 continue
             for set_item in sets:
                 if not isinstance(set_item, dict):
+                    continue
+                # SPEC-005 §53: warm-up has a reduced (zero) load coefficient.
+                if str(set_item.get("set_type") or "working") == "warmup":
                     continue
                 reps = self._safe_float(set_item.get("reps"))
                 if reps is None or reps < 0:
@@ -274,6 +342,10 @@ class WorkoutsService:
                 name=str(raw_exercise.get(
                     "name") or f"Exercise #{ex_idx + 1}").strip() or f"Exercise #{ex_idx + 1}",
                 notes=raw_exercise.get("notes"),
+                # SPEC-005 §26: skipped stays in session; §24: block membership.
+                status=raw_exercise.get("status"),
+                block_id=raw_exercise.get("block_id"),
+                block_order=raw_exercise.get("block_order"),
             )
             sets_payload = raw_exercise.get("sets_completed") if isinstance(
                 raw_exercise, dict) else None
@@ -311,6 +383,66 @@ class WorkoutsService:
                     )
             rows.append(session_exercise)
         return rows
+
+    @staticmethod
+    def _resolve_block_index(block_ref: object, client_ids: list[Optional[str]]) -> Optional[int]:
+        if block_ref is None:
+            return None
+        ref = str(block_ref)
+        for idx, cid in enumerate(client_ids):
+            if cid is not None and str(cid) == ref:
+                return idx
+        try:
+            idx = int(ref)
+            return idx if 0 <= idx < len(client_ids) else None
+        except (TypeError, ValueError):
+            return None
+
+    async def _sync_session_blocks(
+        self,
+        *,
+        user_id: int,
+        workout: WorkoutLog,
+        blocks_payload: list[WorkoutBlockPayload],
+    ) -> None:
+        """Replace session blocks and propagate ids into exercise payloads."""
+        from app.domain.workout_block import WorkoutBlock
+
+        rows: list[WorkoutBlock] = []
+        for idx, payload in enumerate(blocks_payload):
+            rows.append(
+                WorkoutBlock(
+                    user_id=user_id,
+                    workout_session_id=workout.id,
+                    type=payload.type.value,
+                    order=payload.order if payload.order else idx,
+                    rounds=payload.rounds,
+                    rest_seconds=payload.rest_seconds,
+                )
+            )
+        rows = await self.repository.replace_session_blocks(
+            user_id=user_id,
+            workout_session_id=workout.id,
+            blocks=rows,
+        )
+
+        client_ids = [b.client_id for b in blocks_payload]
+        exercises = list(workout.exercises or [])
+        for exercise in exercises:
+            if not isinstance(exercise, dict):
+                continue
+            block_index = self._resolve_block_index(exercise.get("block_id"), client_ids)
+            if block_index is None or block_index >= len(rows):
+                exercise.pop("_block_row_index", None)
+                continue
+            row = rows[block_index]
+            exercise["block_id"] = int(row.id)
+            exercise["block_type"] = row.type
+            exercise["block_order"] = int(row.order)
+            exercise["block_rounds"] = int(row.rounds)
+            exercise["block_rest_seconds"] = row.rest_seconds
+            exercise.pop("_block_row_index", None)
+        workout.exercises = exercises
 
     @staticmethod
     def _apply_reorder(existing: list[dict], order: list[int]) -> list[dict]:
@@ -823,7 +955,19 @@ class WorkoutsService:
             default_name = source_session.comments or f"Workout #{source_session.id}"
             source_version = source_session.version
         else:
-            initial_exercises = []
+            # SPEC-005 §2: quick start / manual workout may define its own
+            # exercise plan via overrides without any template source.
+            override_exercises = data.overrides.exercises if data.overrides else []
+            if override_exercises:
+                initial_exercises = [
+                    self._exercise_template_to_workout_draft(
+                        ex.model_dump(mode="json") if isinstance(ex, BaseModel) else ex,
+                        idx,
+                    )
+                    for idx, ex in enumerate(override_exercises)
+                ]
+            else:
+                initial_exercises = []
             override_comments = data.overrides.comments if data.overrides else None
             override_tags = list(data.overrides.tags) if data.overrides else []
             default_name = None
@@ -840,6 +984,9 @@ class WorkoutsService:
             comments=data.name or override_comments or default_name,
             tags=override_tags or (
                 [data.type.value] if data.type != WorkoutSessionType.CUSTOM else []),
+            # SPEC-005 §3/§4: lifecycle status + start timestamp.
+            status=WorkoutStatus.ACTIVE.value,
+            started_at=datetime.now(timezone.utc),
         )
         workout = await self.repository.create_workout_log(workout)
         await self.repository.replace_session_snapshot(
@@ -878,6 +1025,7 @@ class WorkoutsService:
             start_time=workout.created_at,
             status="in_progress",
             message="Workout session created successfully",
+            session_status=WorkoutStatus(workout.status or WorkoutStatus.ACTIVE.value),
         )
 
     async def start_workout(
@@ -1073,12 +1221,18 @@ class WorkoutsService:
             version=workout.version,
             completed_at=workout.updated_at,
             message=message,
+            session_status=WorkoutStatus(workout.status or WorkoutStatus.ACTIVE.value)
+            if workout.status in {s.value for s in WorkoutStatus}
+            else WorkoutStatus.ACTIVE,
+            personal_records=[],
+            progression_recommendations=[],
         )
 
     def _workout_log_to_history_item(
         self,
         workout: WorkoutLog,
         exercises: list[CompletedExercise],
+        blocks: Optional[list] = None,
     ) -> WorkoutHistoryItem:
         return WorkoutHistoryItem(
             id=workout.id,
@@ -1100,7 +1254,19 @@ class WorkoutsService:
             ),
             version=workout.version,
             created_at=workout.created_at,
+            status=self._infer_workout_status(workout),
+            started_at=workout.started_at,
+            blocks=list(blocks or []),
         )
+
+    @staticmethod
+    def _infer_workout_status(workout: WorkoutLog) -> WorkoutStatus:
+        """Derive lifecycle status, falling back to legacy duration-based logic."""
+        if workout.status and workout.status in {s.value for s in WorkoutStatus}:
+            return WorkoutStatus(workout.status)
+        if workout.duration is not None and int(workout.duration) > 0:
+            return WorkoutStatus.COMPLETED
+        return WorkoutStatus.ACTIVE
 
     @staticmethod
     def _request_payload_hash(payload: dict) -> str:
@@ -1156,11 +1322,25 @@ class WorkoutsService:
         workout.tags = data.tags
         workout.glucose_before = data.glucose_before
         workout.glucose_after = data.glucose_after
+        # SPEC-005 §3: pause/resume transitions during an active session.
+        if data.status == WorkoutStatus.PAUSED:
+            workout.status = WorkoutStatus.PAUSED.value
+        elif data.status == WorkoutStatus.ACTIVE:
+            workout.status = WorkoutStatus.ACTIVE.value
         workout.session_metrics = compute_session_metrics(
             workout.exercises, workout.duration)
         workout.version += 1
 
         workout = await self.repository.commit_workout_update(workout)
+
+        # SPEC-005 §24: sync superset/triset/circuit blocks for the session.
+        if data.blocks is not None:
+            await self._sync_session_blocks(
+                user_id=user_id,
+                workout=workout,
+                blocks_payload=data.blocks,
+            )
+            workout = await self.repository.commit_workout_update(workout)
         await self.repository.replace_session_snapshot(
             user_id=user_id,
             workout_session_id=workout.id,
@@ -1234,6 +1414,9 @@ class WorkoutsService:
         workout.glucose_after = data.glucose_after
         workout.session_metrics = compute_session_metrics(
             workout.exercises, workout.duration)
+        # SPEC-005 §3/§47: completion finalizes lifecycle state.
+        workout.status = WorkoutStatus.COMPLETED.value
+        workout.completed_at = datetime.now(timezone.utc)
         workout.version += 1
 
         await self._upsert_training_load_daily(user_id=user_id, target_date=workout.date)
@@ -1261,6 +1444,14 @@ class WorkoutsService:
             meta={"duration_min": data.duration},
         )
 
+        # SPEC-005 §40: detect PRs across the completed session (warm-up excluded).
+        personal_records = collect_session_records(workout.exercises or [])
+
+        # SPEC-005 §51: next targets from the progression engine for each exercise.
+        progression_recommendations = self._build_progression_recommendations(
+            exercises=workout.exercises or [],
+        )
+
         return WorkoutCompleteResponse(
             id=workout.id,
             user_id=workout.user_id,
@@ -1277,8 +1468,261 @@ class WorkoutsService:
             session_metrics=self._session_metrics_model(
                 workout.session_metrics),
             version=workout.version,
-            completed_at=workout.updated_at,
+            completed_at=workout.completed_at or workout.updated_at,
             message="Workout completed successfully",
+            personal_records=[
+                PersonalRecordEntry.model_validate(record) for record in personal_records
+            ],
+            progression_recommendations=[
+                ProgressionRecommendation.model_validate(rec)
+                for rec in progression_recommendations
+            ],
+        )
+
+    def _build_progression_recommendations(
+        self,
+        *,
+        exercises: list[dict],
+    ) -> list[dict]:
+        """Next-target recommendations for every exercise of a finished session."""
+        recommendations: list[dict] = []
+        for exercise in exercises:
+            if not isinstance(exercise, dict):
+                continue
+            if str(exercise.get("status") or "") == "skipped":
+                continue
+            exercise_id_raw = exercise.get("exercise_id")
+            try:
+                exercise_id = int(exercise_id_raw)
+            except (TypeError, ValueError):
+                continue
+            recommendation = recommend_progression(
+                policy=ProgressionPolicy.DOUBLE_PROGRESSION,
+                current_exercise=exercise,
+                history=[],
+                exercise_id=exercise_id,
+            )
+            recommendations.append({**recommendation, "exercise_id": exercise_id})
+        return recommendations
+
+    async def cancel_workout(
+        self,
+        user_id: int,
+        workout_id: int,
+        data: WorkoutCancelRequest,
+        client_ip: str | None = None,
+    ) -> WorkoutCancelResponse:
+        """Cancel an in-progress session (SPEC-005 §3/§48)."""
+        operation_type = "session_cancel"
+        payload_dump = data.model_dump(mode="json")
+        request_hash = self._request_payload_hash(payload_dump)
+
+        if data.idempotency_key:
+            cached = await self.repository.get_idempotency_record(
+                user_id=user_id,
+                operation_type=operation_type,
+                idempotency_key=data.idempotency_key,
+            )
+            if cached:
+                if cached.request_hash != request_hash:
+                    raise WorkoutConflictError(
+                        "Idempotency key reused with different payload",
+                        details={
+                            "idempotency_key": data.idempotency_key,
+                            "operation_type": operation_type,
+                        },
+                    )
+                return WorkoutCancelResponse.model_validate(cached.response_payload)
+
+        workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
+        if not workout:
+            raise WorkoutNotFoundError("Workout not found")
+
+        workout.status = WorkoutStatus.CANCELLED.value
+        workout.comments = data.comments if data.comments is not None else workout.comments
+        workout.version += 1
+        workout = await self.repository.commit_workout_update(workout)
+
+        if data.idempotency_key:
+            response = WorkoutCancelResponse(id=workout.id)
+            await self.repository.create_idempotency_record(
+                user_id=user_id,
+                operation_type=operation_type,
+                idempotency_key=data.idempotency_key,
+                resource_id=workout_id,
+                request_hash=request_hash,
+                response_payload=response.model_dump(mode="json"),
+            )
+            return response
+
+        return WorkoutCancelResponse(id=workout.id)
+
+    async def list_incomplete_sessions(self, user_id: int) -> list[WorkoutSessionListResponse]:
+        """Active/draft/paused sessions for restore prompt (SPEC-005 §48)."""
+        workouts = await self.repository.list_incomplete_workouts(user_id=user_id)
+        items: list[WorkoutSessionListResponse] = []
+        for workout in workouts:
+            exercises = workout.exercises or []
+            completed_count = sum(
+                1
+                for exercise in exercises
+                if isinstance(exercise, dict)
+                and exercise.get("sets_completed")
+                and all(
+                    bool(s.get("completed"))
+                    for s in exercise["sets_completed"]
+                    if isinstance(s, dict)
+                )
+            )
+            elapsed = None
+            if workout.started_at is not None:
+                started = workout.started_at if workout.started_at.tzinfo else workout.started_at.replace(tzinfo=timezone.utc)
+                elapsed = max(0, int((datetime.now(timezone.utc) - started).total_seconds()))
+            items.append(
+                WorkoutSessionListResponse(
+                    id=workout.id,
+                    name=workout.comments,
+                    status=self._infer_workout_status(workout),
+                    date=workout.date,
+                    elapsed_seconds=elapsed,
+                    exercise_count=len(exercises),
+                    completed_exercise_count=completed_count,
+                    created_at=workout.created_at,
+                )
+            )
+        return items
+
+    async def patch_session_exercise(
+        self,
+        *,
+        user_id: int,
+        workout_id: int,
+        exercise_row_id: int,
+        data: WorkoutExercisePatchRequest,
+    ) -> WorkoutHistoryItem:
+        """Skip / reorder / replace / annotate one session exercise (SPEC-005 §25–28)."""
+        workout = await self.repository.get_workout(user_id=user_id, workout_id=workout_id)
+        if not workout:
+            raise WorkoutNotFoundError("Workout not found")
+        if workout.duration is not None:
+            raise WorkoutConflictError("Completed workout cannot be modified")
+
+        snapshot_rows = await self.repository.get_session_exercise_rows(
+            user_id=user_id,
+            workout_session_id=workout_id,
+        )
+        target_row = next((row for row in snapshot_rows if row.id == exercise_row_id), None)
+        if target_row is None:
+            raise WorkoutNotFoundError("Exercise not found")
+
+        exercises = list(workout.exercises or [])
+        target_index = int(target_row.order_index)
+        if target_index < 0 or target_index >= len(exercises):
+            raise WorkoutNotFoundError("Exercise not found")
+
+        target = exercises[target_index]
+        if not isinstance(target, dict):
+            raise WorkoutConflictError("Exercise payload is malformed")
+
+        if data.status is not None:
+            if data.status not in ("skipped", None):
+                raise WorkoutConflictError("Unsupported exercise status")
+            target["status"] = data.status
+            target_row.status = data.status
+        if data.notes is not None:
+            target["notes"] = data.notes
+            target_row.notes = data.notes
+        if data.replacement_exercise_id is not None:
+            # SPEC-005 §25: replacement affects only the current session.
+            replacement_name = data.replacement_name or f"Exercise #{data.replacement_exercise_id}"
+            target["exercise_id"] = int(data.replacement_exercise_id)
+            target["name"] = replacement_name
+            target_row.exercise_id = int(data.replacement_exercise_id)
+            target_row.name = replacement_name
+
+        if data.target_order_index is not None and data.target_order_index != target_index:
+            new_index = max(0, min(int(data.target_order_index), len(exercises) - 1))
+            exercises.insert(new_index, exercises.pop(target_index))
+            for idx, exercise in enumerate(exercises):
+                row = next((r for r in snapshot_rows if r.order_index == idx), None)
+                if row is not None:
+                    row.order_index = new_index if exercise is target else row.order_index
+            # Reindex snapshot rows to match the reordered payload.
+            for idx, exercise in enumerate(exercises):
+                row = next(
+                    (
+                        r
+                        for r in snapshot_rows
+                        if isinstance(exercise, dict)
+                        and r.exercise_id == exercise.get("exercise_id")
+                        and r.name == exercise.get("name")
+                    ),
+                    None,
+                )
+                if row is not None:
+                    row.order_index = idx
+
+        workout.exercises = exercises
+        # JSONB payloads are mutated in place; flag the column so SQLAlchemy
+        # does not skip the UPDATE for structurally equal values.
+        flag_modified(workout, "exercises")
+        workout.session_metrics = compute_session_metrics(exercises, workout.duration)
+        workout.version += 1
+        workout = await self.repository.commit_workout_update(workout)
+        await self.repository.commit()
+
+        return await self.get_workout_detail(user_id=user_id, workout_id=workout.id)
+
+    async def get_progression_recommendation(
+        self,
+        *,
+        user_id: int,
+        exercise_id: int,
+        policy: ProgressionPolicy,
+        increment: Optional[float] = None,
+        rep_range_min: Optional[int] = None,
+        rep_range_max: Optional[int] = None,
+        target_rpe: Optional[float] = None,
+        target_rir: Optional[float] = None,
+        percent_1rm: Optional[float] = None,
+        time_increment_seconds: Optional[int] = None,
+    ) -> dict:
+        """Explainable next-target recommendation from user history (SPEC-005 §37)."""
+        history = await self.repository.list_recent_exercise_history(
+            user_id=user_id,
+            exercise_id=exercise_id,
+            limit=10,
+        )
+        history_payload = [
+            {
+                "session_id": workout.id,
+                "date": workout.date.isoformat(),
+                "completed": workout.status == WorkoutStatus.COMPLETED.value
+                if workout.status in {s.value for s in WorkoutStatus}
+                else workout.duration is not None,
+                "sets_completed": workout.exercises[0].get("sets_completed", [])
+                if workout.exercises and isinstance(workout.exercises[0], dict)
+                else [],
+            }
+            for workout in history
+        ]
+        current: dict = {"sets_completed": history_payload[0]["sets_completed"]} if history_payload else {}
+        if history_payload:
+            current["session_id"] = history_payload[0]["session_id"]
+        return recommend_progression(
+            policy=policy,
+            current_exercise=current,
+            history=history_payload,
+            increment=increment if increment is not None else 2.5,
+            rep_range=(
+                rep_range_min if rep_range_min is not None else 8,
+                rep_range_max if rep_range_max is not None else 12,
+            ),
+            target_rpe=target_rpe,
+            target_rir=target_rir,
+            percent_1rm=percent_1rm,
+            time_increment_seconds=time_increment_seconds if time_increment_seconds is not None else 5,
+            exercise_id=exercise_id,
         )
 
     async def complete_workout(
@@ -1359,10 +1803,14 @@ class WorkoutsService:
         # exercise can appear multiple times in one workout, so exercise_id is
         # not unique enough for set metadata.
         set_metadata: dict[tuple[int, int], dict] = {}
+        row_id_by_index: dict[int, int] = {}
         for s in sets_from_db:
             if s.session_exercise:
                 key = (int(s.session_exercise.order_index), s.set_number)
                 set_metadata[key] = {"id": s.id, "notes": s.notes}
+                row_id_by_index.setdefault(
+                    int(s.session_exercise.order_index), int(s.session_exercise.id)
+                )
 
         # Enrich raw_exercises with IDs and notes from DB
         enriched_exercises = []
@@ -1384,11 +1832,28 @@ class WorkoutsService:
                         **s, "id": meta.get("id"), "notes": meta.get("notes") or s.get("notes")}
                     enriched_sets.append(enriched_set)
                 ex = {**ex, "sets_completed": enriched_sets}
+            row_id = row_id_by_index.get(exercise_index)
+            if row_id is not None:
+                ex = {**ex, "id": row_id}
             enriched_exercises.append(ex)
 
         exercises = [CompletedExercise.model_validate(
             ex) for ex in enriched_exercises]
-        return self._workout_log_to_history_item(workout, exercises)
+        block_rows = await self.repository.list_session_blocks(
+            user_id=user_id,
+            workout_session_id=workout_id,
+        )
+        blocks = [
+            WorkoutBlockResponse(
+                id=int(row.id),
+                type=row.type,
+                order=int(row.order or 0),
+                rounds=int(row.rounds or 1),
+                rest_seconds=row.rest_seconds,
+            )
+            for row in block_rows
+        ]
+        return self._workout_log_to_history_item(workout, exercises, blocks=blocks)
 
     async def patch_workout_set(
         self,
@@ -1432,6 +1897,10 @@ class WorkoutsService:
                 if data.reps is not None:
                     set_item["reps"] = int(data.reps)
                     db_set.reps = int(data.reps)
+                # SPEC-005 §20: timed sets persist their measured duration.
+                if data.duration is not None:
+                    set_item["duration"] = int(data.duration)
+                    db_set.duration = int(data.duration)
                 if data.weight is not None:
                     set_item["weight"] = float(data.weight)
                     db_set.weight = float(data.weight)
@@ -1447,6 +1916,10 @@ class WorkoutsService:
                 if data.completed is not None:
                     set_item["completed"] = data.completed
                     db_set.completed = data.completed
+                    # SPEC-005 §16: completion timestamp is fixed at completion.
+                    if data.completed:
+                        set_item["completed_at"] = datetime.now(timezone.utc).isoformat()
+                        db_set.completed_at = datetime.now(timezone.utc)
                 if data.notes is not None:
                     set_item["notes"] = data.notes
                     db_set.notes = data.notes
@@ -1458,6 +1931,7 @@ class WorkoutsService:
             raise WorkoutNotFoundError("Set not found")
 
         workout.exercises = exercises
+        flag_modified(workout, "exercises")
         workout.session_metrics = compute_session_metrics(
             workout.exercises, workout.duration)
         workout.version += 1
@@ -1473,6 +1947,17 @@ class WorkoutsService:
             meta={"mode": "patch_set", "set_id": set_id},
         )
 
+        # SPEC-005 §40: PR check right after a completed working set.
+        personal_records = []
+        if updated_set.get("completed"):
+            personal_records = evaluate_set_records(
+                exercise_id=int(db_set.session_exercise.exercise_id),
+                exercise_name=str(db_set.session_exercise.name),
+                set_item=updated_set,
+                previous_bests={"MAX_WEIGHT": None, "MAX_REPS_AT_WEIGHT": None,
+                                "ESTIMATED_1RM": None, "MAX_VOLUME": None, "MAX_DURATION": None},
+            )
+
         return WorkoutSetResponse(
             id=set_id,
             workout_id=workout_id,
@@ -1482,6 +1967,10 @@ class WorkoutsService:
             weight=updated_set.get("weight"),
             rpe=updated_set.get("rpe"),
             rest_seconds=updated_set.get("rest_seconds"),
+            duration=updated_set.get("duration"),
             completed=updated_set.get("completed", True),
             notes=updated_set.get("notes"),
+            personal_records=[
+                PersonalRecordEntry.model_validate(record) for record in personal_records
+            ] or None,
         )

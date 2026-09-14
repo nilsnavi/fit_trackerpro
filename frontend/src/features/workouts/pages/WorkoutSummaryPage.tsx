@@ -6,7 +6,13 @@ import { Button } from '@shared/ui/Button'
 import { getErrorMessage } from '@shared/errors'
 import { useWorkoutHistoryItemQuery } from '@features/workouts/hooks/useWorkoutHistoryItemQuery'
 import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHistoryQuery'
-import type { CompletedExercise, CompletedSet, WorkoutHistoryItem } from '@features/workouts/types/workouts'
+import type {
+    CompletedExercise,
+    CompletedSet,
+    PersonalRecordEntry,
+    ProgressionRecommendation,
+    WorkoutHistoryItem,
+} from '@features/workouts/types/workouts'
 import type { WorkoutSessionSummaryMetrics } from '@features/workouts/active/lib/workoutSessionSummaryMetrics'
 import { formatDurationRu } from '@features/workouts/active/lib/workoutSessionSummaryMetrics'
 
@@ -14,6 +20,9 @@ type SummaryRouteState = Partial<WorkoutSessionSummaryMetrics> & {
     workoutTitle?: string
     durationMinutes?: number
     finishedAt?: string
+    /** SPEC-005 §51: server-computed data from the completion response. */
+    personalRecords?: PersonalRecordEntry[]
+    progressionRecommendations?: ProgressionRecommendation[]
 }
 
 function setVolume(set: CompletedSet): number {
@@ -199,6 +208,66 @@ export function WorkoutSummaryPage() {
                         </div>
                     ) : null}
                 </section>
+
+                {routeState?.personalRecords && routeState.personalRecords.length > 0 ? (
+                    <section
+                        className="rounded-[24px] border border-[#FACC15]/25 bg-[#FACC15]/[0.06] p-4"
+                        data-testid="summary-pr-list"
+                    >
+                        <h2 className="text-base font-black text-[#FACC15]">
+                            🏆 Новые рекорды: {routeState.personalRecords.length}
+                        </h2>
+                        <div className="mt-3 space-y-2">
+                            {routeState.personalRecords.slice(0, 6).map((record, index) => (
+                                <div key={`${record.record_type}-${record.exercise_id}-${index}`} className="rounded-2xl bg-black/25 px-3 py-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="truncate text-sm font-black text-[#F8FAFC]">{record.exercise_name}</p>
+                                        <span className="shrink-0 text-xs font-bold uppercase text-[#8A94A6]">
+                                            {record.record_type.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
+                                    <p className="mt-0.5 text-xs font-semibold text-[#8A94A6]">
+                                        {formatKg(record.value)} {record.unit === 'sec' ? 'сек' : 'кг'}
+                                        {record.previous_value != null
+                                            ? ` (прошлый: ${formatKg(record.previous_value)} ${record.unit === 'sec' ? 'сек' : 'кг'})`
+                                            : ''}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                ) : null}
+
+                {routeState?.progressionRecommendations && routeState.progressionRecommendations.length > 0 ? (
+                    <section
+                        className="rounded-[24px] border border-white/[0.08] bg-[#101720] p-4"
+                        data-testid="summary-progression"
+                    >
+                        <h2 className="text-base font-black text-[#F8FAFC]">Следующая цель</h2>
+                        <div className="mt-3 space-y-2">
+                            {routeState.progressionRecommendations.slice(0, 6).map((rec, index) => {
+                                const name =
+                                    workout?.exercises.find(
+                                        (exercise) => exercise.exercise_id === rec.exercise_id,
+                                    )?.name ?? `Упражнение #${rec.exercise_id ?? index}`
+                                const hasTarget = rec.recommended_value != null
+                                return (
+                                    <div key={`${rec.exercise_id}-${index}`} className="rounded-2xl bg-black/20 px-3 py-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="truncate text-sm font-black text-[#F8FAFC]">{name}</p>
+                                            <span className="shrink-0 text-sm font-black tabular-nums text-[#4ADE80]">
+                                                {hasTarget ? `${formatKg(rec.recommended_value as number)} кг` : '—'}
+                                            </span>
+                                        </div>
+                                        {rec.reason_text ? (
+                                            <p className="mt-0.5 text-xs font-semibold text-[#8A94A6]">{rec.reason_text}</p>
+                                        ) : null}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </section>
+                ) : null}
 
                 <div className="grid gap-2">
                     <Button
