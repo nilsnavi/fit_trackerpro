@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.api.deps.idempotency import optional_idempotency_key
+from app.application.strength_math import calculate_plates
 from app.application.workouts_service import WorkoutsService
 from app.core.audit import get_client_ip
 from app.domain.user import User
@@ -46,7 +47,6 @@ from app.schemas.workouts import (
     WorkoutTemplatePatchRequest,
     WorkoutTemplateResponse,
 )
-from app.application.strength_math import calculate_plates
 
 router = APIRouter()
 

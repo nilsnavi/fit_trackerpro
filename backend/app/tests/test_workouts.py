@@ -1500,7 +1500,7 @@ class TestSpec005RecommendationEndpoints:
 
     async def test_smart_rest_recommendation(self, authenticated_client: AsyncClient):
         r = await authenticated_client.get(
-            f"/api/v1/workouts/sessions/1/exercises/1/smart-rest",
+            "/api/v1/workouts/sessions/1/exercises/1/smart-rest",
             params={"set_type": "working", "rpe": 9},
         )
         assert r.status_code == 200, r.text

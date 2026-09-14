@@ -1910,10 +1910,81 @@
       "CompletedExercise-Input": {
         "description": "Completed exercise data",
         "properties": {
+          "block_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Id"
+          },
+          "block_order": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Order"
+          },
+          "block_rest_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Rest Seconds"
+          },
+          "block_rounds": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Rounds"
+          },
+          "block_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkoutBlockType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "exercise_id": {
             "minimum": 1.0,
             "title": "Exercise Id",
             "type": "integer"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Database row id of the session exercise, when persisted.",
+            "title": "Id"
           },
           "name": {
             "maxLength": 255,
@@ -1942,6 +2013,18 @@
             "minItems": 1,
             "title": "Sets Completed",
             "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exercise status inside the session ('skipped' when skipped).",
+            "title": "Status"
           }
         },
         "required": [
@@ -1955,10 +2038,81 @@
       "CompletedExercise-Output": {
         "description": "Completed exercise data",
         "properties": {
+          "block_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Id"
+          },
+          "block_order": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Order"
+          },
+          "block_rest_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Rest Seconds"
+          },
+          "block_rounds": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Rounds"
+          },
+          "block_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkoutBlockType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "exercise_id": {
             "minimum": 1.0,
             "title": "Exercise Id",
             "type": "integer"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Database row id of the session exercise, when persisted.",
+            "title": "Id"
           },
           "name": {
             "maxLength": 255,
@@ -1987,6 +2141,18 @@
             "minItems": 1,
             "title": "Sets Completed",
             "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exercise status inside the session ('skipped' when skipped).",
+            "title": "Status"
           }
         },
         "required": [
@@ -5299,6 +5465,169 @@
         "title": "PersonalRecord",
         "type": "object"
       },
+      "PersonalRecordEntry": {
+        "description": "Personal record achieved or matched (SPEC-005 §40).",
+        "properties": {
+          "achieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achieved At"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "is_new_record": {
+            "default": true,
+            "title": "Is New Record",
+            "type": "boolean"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "record_type": {
+            "$ref": "#/components/schemas/PersonalRecordType"
+          },
+          "set_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Number"
+          },
+          "unit": {
+            "default": "kg",
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "record_type",
+          "exercise_id",
+          "exercise_name",
+          "value"
+        ],
+        "title": "PersonalRecordEntry",
+        "type": "object"
+      },
+      "PersonalRecordType": {
+        "description": "Personal record types tracked per exercise (SPEC-005 §40).",
+        "enum": [
+          "MAX_WEIGHT",
+          "MAX_REPS_AT_WEIGHT",
+          "ESTIMATED_1RM",
+          "MAX_VOLUME",
+          "MAX_DURATION"
+        ],
+        "title": "PersonalRecordType",
+        "type": "string"
+      },
+      "PlateCalculationRequest": {
+        "description": "Plate calculator request (SPEC-005 §42–43).",
+        "properties": {
+          "available_plates": {
+            "description": "Available plate weights in kg.",
+            "items": {
+              "type": "number"
+            },
+            "title": "Available Plates",
+            "type": "array"
+          },
+          "bar_weight": {
+            "default": 20,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Bar Weight",
+            "type": "number"
+          },
+          "target_weight": {
+            "maximum": 2000.0,
+            "minimum": 0.0,
+            "title": "Target Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "target_weight"
+        ],
+        "title": "PlateCalculationRequest",
+        "type": "object"
+      },
+      "PlateCalculationResponse": {
+        "description": "Plate calculator result per side (SPEC-005 §42–43).",
+        "properties": {
+          "achievable": {
+            "title": "Achievable",
+            "type": "boolean"
+          },
+          "exact_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact Weight"
+          },
+          "nearest_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nearest Weight"
+          },
+          "plates_per_side": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Plates Per Side",
+            "type": "array"
+          },
+          "remainder": {
+            "default": 0.0,
+            "title": "Remainder",
+            "type": "number"
+          }
+        },
+        "required": [
+          "achievable"
+        ],
+        "title": "PlateCalculationResponse",
+        "type": "object"
+      },
       "ProgressInsightsBestSetItem": {
         "description": "Top set by volume/weight in selected period.",
         "properties": {
@@ -5610,6 +5939,91 @@
         "title": "ProgressInsightsVolumePoint",
         "type": "object"
       },
+      "ProgressionPolicy": {
+        "description": "Supported progression policies (SPEC-005 §29).",
+        "enum": [
+          "MANUAL",
+          "LINEAR",
+          "DOUBLE_PROGRESSION",
+          "RPE_BASED",
+          "RIR_BASED",
+          "PERCENT_1RM",
+          "TIME_PROGRESSION"
+        ],
+        "title": "ProgressionPolicy",
+        "type": "string"
+      },
+      "ProgressionRecommendation": {
+        "description": "Explainable progression recommendation (SPEC-005 §37–38).",
+        "properties": {
+          "confidence": {
+            "default": "low",
+            "pattern": "^(low|medium|high)$",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/ProgressionPolicy",
+            "default": "MANUAL"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "reason_code": {
+            "default": "NO_DATA",
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "reason_text": {
+            "default": "",
+            "title": "Reason Text",
+            "type": "string"
+          },
+          "recommended_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Value"
+          },
+          "source_session_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Session Id"
+          }
+        },
+        "title": "ProgressionRecommendation",
+        "type": "object"
+      },
       "ReadinessChecks": {
         "description": "Per-dependency result: ``\"ok\"`` or ``\"error: …\"`` (human-readable failure).",
         "properties": {
@@ -5909,6 +6323,30 @@
           "delta"
         ],
         "title": "SessionFatigueTrend",
+        "type": "object"
+      },
+      "SmartRestRecommendation": {
+        "description": "Smart rest recommendation (SPEC-005 §19).",
+        "properties": {
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "reason_text": {
+            "title": "Reason Text",
+            "type": "string"
+          },
+          "recommended_rest_seconds": {
+            "title": "Recommended Rest Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "recommended_rest_seconds",
+          "reason_code",
+          "reason_text"
+        ],
+        "title": "SmartRestRecommendation",
         "type": "object"
       },
       "StartWorkoutTemplateOverrides": {
@@ -7489,6 +7927,106 @@
         "title": "WellnessStats",
         "type": "object"
       },
+      "WorkoutBlockPayload": {
+        "description": "Block definition attached to a session create/update (SPEC-005 §24).",
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Client-side identifier to correlate exercises with the block.",
+            "title": "Client Id"
+          },
+          "order": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Order",
+            "type": "integer"
+          },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Seconds"
+          },
+          "rounds": {
+            "default": 1,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Rounds",
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/WorkoutBlockType",
+            "default": "NORMAL"
+          }
+        },
+        "title": "WorkoutBlockPayload",
+        "type": "object"
+      },
+      "WorkoutBlockResponse": {
+        "description": "Persisted session block (SPEC-005 §24).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "order": {
+            "default": 0,
+            "title": "Order",
+            "type": "integer"
+          },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Seconds"
+          },
+          "rounds": {
+            "default": 1,
+            "title": "Rounds",
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/WorkoutBlockType",
+            "default": "NORMAL"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "WorkoutBlockResponse",
+        "type": "object"
+      },
+      "WorkoutBlockType": {
+        "description": "Training block grouping exercises within a session (SPEC-005 §24).",
+        "enum": [
+          "NORMAL",
+          "SUPERSET",
+          "TRISET",
+          "CIRCUIT"
+        ],
+        "title": "WorkoutBlockType",
+        "type": "string"
+      },
       "WorkoutCalendarResponse": {
         "description": "Workout calendar response",
         "properties": {
@@ -7547,6 +8085,63 @@
           "rest_days"
         ],
         "title": "WorkoutCalendarSummary",
+        "type": "object"
+      },
+      "WorkoutCancelRequest": {
+        "description": "Request model for cancelling an in-progress session (SPEC-005 §3).",
+        "properties": {
+          "comments": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional idempotency key for replay-safe cancellation.",
+            "title": "Idempotency Key"
+          }
+        },
+        "title": "WorkoutCancelRequest",
+        "type": "object"
+      },
+      "WorkoutCancelResponse": {
+        "description": "Response after cancelling a session.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "message": {
+            "default": "Workout cancelled. This session is excluded from analytics.",
+            "maxLength": 500,
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkoutStatus",
+            "default": "cancelled"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "WorkoutCancelResponse",
         "type": "object"
       },
       "WorkoutCompleteRequest": {
@@ -7722,6 +8317,20 @@
             "title": "Message",
             "type": "string"
           },
+          "personal_records": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalRecordEntry"
+            },
+            "title": "Personal Records",
+            "type": "array"
+          },
+          "progression_recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressionRecommendation"
+            },
+            "title": "Progression Recommendations",
+            "type": "array"
+          },
           "session_metrics": {
             "anyOf": [
               {
@@ -7791,9 +8400,85 @@
         "title": "WorkoutCompleteResponse",
         "type": "object"
       },
+      "WorkoutExercisePatchRequest": {
+        "description": "PATCH payload for a session exercise row (SPEC-005 §6/§25-28).",
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "replacement_exercise_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Replace the exercise (session-only) with this exercise.",
+            "title": "Replacement Exercise Id"
+          },
+          "replacement_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set to 'skipped' to skip the exercise for this session only.",
+            "title": "Status"
+          },
+          "target_order_index": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reposition the exercise within the session.",
+            "title": "Target Order Index"
+          }
+        },
+        "title": "WorkoutExercisePatchRequest",
+        "type": "object"
+      },
       "WorkoutHistoryItem": {
         "description": "Single workout history entry",
         "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/WorkoutBlockResponse"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
           "comments": {
             "anyOf": [
               {
@@ -7883,6 +8568,22 @@
           "source_type": {
             "$ref": "#/components/schemas/WorkoutSessionSourceType",
             "default": "quick_start"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkoutStatus",
+            "default": "active"
           },
           "tags": {
             "items": {
@@ -8133,6 +8834,70 @@
         "title": "WorkoutSessionInsightItem",
         "type": "object"
       },
+      "WorkoutSessionListResponse": {
+        "description": "Lightweight response for incomplete session restore (SPEC-005 §48).",
+        "properties": {
+          "completed_exercise_count": {
+            "default": 0,
+            "title": "Completed Exercise Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "elapsed_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Elapsed time derived from started_at.",
+            "title": "Elapsed Seconds"
+          },
+          "exercise_count": {
+            "default": 0,
+            "title": "Exercise Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkoutStatus"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "date",
+          "created_at"
+        ],
+        "title": "WorkoutSessionListResponse",
+        "type": "object"
+      },
       "WorkoutSessionMetrics": {
         "properties": {
           "avg_rest_seconds": {
@@ -8176,6 +8941,11 @@
           "effort_distribution": {
             "$ref": "#/components/schemas/SessionEffortDistribution"
           },
+          "exercise_count": {
+            "default": 0,
+            "title": "Exercise Count",
+            "type": "integer"
+          },
           "fatigue_trend": {
             "anyOf": [
               {
@@ -8185,6 +8955,17 @@
                 "type": "null"
               }
             ]
+          },
+          "max_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Weight"
           },
           "rest_consistency_score": {
             "anyOf": [
@@ -8207,10 +8988,26 @@
             "title": "Rest Tracking Ratio",
             "type": "number"
           },
+          "total_reps": {
+            "default": 0,
+            "title": "Total Reps",
+            "type": "integer"
+          },
           "total_rest_seconds": {
             "default": 0,
             "title": "Total Rest Seconds",
             "type": "integer"
+          },
+          "total_volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Volume"
           },
           "volume_per_minute": {
             "anyOf": [
@@ -8222,6 +9019,16 @@
               }
             ],
             "title": "Volume Per Minute"
+          },
+          "warmup_sets": {
+            "default": 0,
+            "title": "Warmup Sets",
+            "type": "integer"
+          },
+          "working_sets": {
+            "default": 0,
+            "title": "Working Sets",
+            "type": "integer"
           }
         },
         "title": "WorkoutSessionMetrics",
@@ -8253,6 +9060,22 @@
       "WorkoutSessionUpdateRequest": {
         "description": "Request model for updating an in-progress workout session.",
         "properties": {
+          "blocks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkoutBlockPayload"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Full replacement list of session blocks (when provided).",
+            "title": "Blocks"
+          },
           "comments": {
             "anyOf": [
               {
@@ -8327,6 +9150,17 @@
             "description": "Optional idempotency key for replay-safe updates.",
             "title": "Idempotency Key"
           },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkoutStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lifecycle transition target: 'active' (resume) or 'paused'."
+          },
           "tags": {
             "description": "Session tags kept while workout is in progress.",
             "items": {
@@ -8355,6 +9189,19 @@
               }
             ],
             "title": "Completed"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "maximum": 86400.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
           },
           "notes": {
             "anyOf": [
@@ -8440,6 +9287,17 @@
             "title": "Completed",
             "type": "boolean"
           },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
           "exercise_id": {
             "title": "Exercise Id",
             "type": "integer"
@@ -8458,6 +9316,20 @@
               }
             ],
             "title": "Notes"
+          },
+          "personal_records": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PersonalRecordEntry"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Personal Records"
           },
           "reps": {
             "anyOf": [
@@ -8624,6 +9496,10 @@
             "title": "Message",
             "type": "string"
           },
+          "session_status": {
+            "$ref": "#/components/schemas/WorkoutStatus",
+            "default": "active"
+          },
           "source_id": {
             "anyOf": [
               {
@@ -8727,6 +9603,18 @@
         ],
         "title": "WorkoutStats",
         "type": "object"
+      },
+      "WorkoutStatus": {
+        "description": "Lifecycle status of a WorkoutSession (SPEC-005 §3).",
+        "enum": [
+          "draft",
+          "active",
+          "paused",
+          "completed",
+          "cancelled"
+        ],
+        "title": "WorkoutStatus",
+        "type": "string"
       },
       "WorkoutTemplateCloneRequest": {
         "description": "Clone existing template.",
@@ -15563,6 +16451,237 @@
         ]
       }
     },
+    "/api/v1/workouts/plate-calculator": {
+      "post": {
+        "description": "Разложить блины на одну сторону штанги (SPEC-005 §42–43).",
+        "operationId": "calculate_plates_endpoint_api_v1_workouts_plate_calculator_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlateCalculationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlateCalculationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Calculate Plates Endpoint",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/progression/recommendation": {
+      "get": {
+        "description": "Explainable next-target recommendation (SPEC-005 §37–38).",
+        "operationId": "get_progression_recommendation_api_v1_workouts_progression_recommendation_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Exercise Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "policy",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ProgressionPolicy",
+              "default": "DOUBLE_PROGRESSION"
+            }
+          },
+          {
+            "in": "query",
+            "name": "increment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "maximum": 200,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Increment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rep_range_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rep Range Min"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rep_range_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rep Range Max"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_rpe",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Rpe"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_rir",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Rir"
+            }
+          },
+          {
+            "in": "query",
+            "name": "percent_1rm",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "maximum": 200,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Percent 1Rm"
+            }
+          },
+          {
+            "in": "query",
+            "name": "time_increment_seconds",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3600,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Time Increment Seconds"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionRecommendation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Progression Recommendation",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
     "/api/v1/workouts/sessions": {
       "post": {
         "operationId": "create_workout_session_api_v1_workouts_sessions_post",
@@ -15604,6 +16723,141 @@
           }
         ],
         "summary": "Create Workout Session",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/sessions/incomplete": {
+      "get": {
+        "description": "Незавершённые сессии для восстановления (SPEC-005 §48).",
+        "operationId": "list_incomplete_sessions_api_v1_workouts_sessions_incomplete_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkoutSessionListResponse"
+                  },
+                  "title": "Response List Incomplete Sessions Api V1 Workouts Sessions Incomplete Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Incomplete Sessions",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/sessions/{session_id}/exercises/{exercise_id}/smart-rest": {
+      "get": {
+        "description": "Рекомендация отдыха по типу подхода и интенсивности (SPEC-005 §19).",
+        "operationId": "get_smart_rest_recommendation_api_v1_workouts_sessions__session_id__exercises__exercise_id__smart_rest_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "title": "Exercise Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "set_type",
+            "required": false,
+            "schema": {
+              "default": "working",
+              "pattern": "^(warmup|working|dropset|failure)$",
+              "title": "Set Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rpe",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rpe"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rir",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rir"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmartRestRecommendation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Smart Rest Recommendation",
         "tags": [
           "Workouts"
         ]
@@ -16286,6 +17540,131 @@
           }
         ],
         "summary": "Unarchive Workout Template",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/{workout_id}/cancel": {
+      "post": {
+        "description": "Отменить незавершённую тренировку (SPEC-005 §3/§48).",
+        "operationId": "cancel_workout_api_v1_workouts__workout_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutCancelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Workout",
+        "tags": [
+          "Workouts"
+        ]
+      }
+    },
+    "/api/v1/workouts/{workout_id}/exercises/{exercise_row_id}": {
+      "patch": {
+        "description": "Пропустить / заменить / переместить / аннотировать упражнение (SPEC-005 §25–28).",
+        "operationId": "patch_session_exercise_api_v1_workouts__workout_id__exercises__exercise_row_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "exercise_row_id",
+            "required": true,
+            "schema": {
+              "title": "Exercise Row Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutExercisePatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutHistoryItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Session Exercise",
         "tags": [
           "Workouts"
         ]

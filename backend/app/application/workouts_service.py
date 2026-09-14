@@ -10,7 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.application.progression_service import recommend as recommend_progression
-from app.application.records_service import collect_session_records, evaluate_set_records, is_working_set
+from app.application.records_service import (
+    collect_session_records,
+    evaluate_set_records,
+)
 from app.application.session_metrics import compute_session_metrics
 from app.core.audit import (
     WORKOUT_COMPLETE,

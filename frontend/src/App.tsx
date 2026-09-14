@@ -42,9 +42,8 @@ export default function App() {
                             <BrowserRouter>
                                 <PwaUpdatePrompt />
                                 <TelegramAuthBootstrapGate>
-                                    <IncompleteWorkoutGate>
-                                        <AppRoutes />
-                                    </IncompleteWorkoutGate>
+                                    <AppRoutes />
+                                    <IncompleteWorkoutGate />
                                 </TelegramAuthBootstrapGate>
                                 <Toaster />
                             </BrowserRouter>
