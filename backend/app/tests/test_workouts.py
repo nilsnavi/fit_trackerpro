@@ -829,6 +829,21 @@ class TestWorkoutStartComplete:
         assert p2.status_code == 200, p2.text
         assert p2.json().get("id") == second_set_id
 
+        # SPEC-005 §20: a timed set persists its measured duration instead of reps.
+        p3 = await authenticated_client.patch(
+            f"/api/v1/workouts/{workout_id}/sets/{second_set_id}",
+            json={"completed": True, "duration": 45},
+        )
+        assert p3.status_code == 200, p3.text
+        assert p3.json().get("duration") == 45
+
+        detail_after_timed = await authenticated_client.get(
+            f"/api/v1/workouts/history/{workout_id}",
+        )
+        assert detail_after_timed.status_code == 200, detail_after_timed.text
+        persisted_timed_set = detail_after_timed.json()["exercises"][0]["sets_completed"][1]
+        assert persisted_timed_set.get("duration") == 45
+
         # Same key but different payload must return conflict.
         changed_payload = {
             **first_payload,
@@ -1161,4 +1176,342 @@ class TestWorkoutValidationAuthorizationLifecycle:
         detail_json = detail.json()
         assert detail_json["session_metrics"]["avg_rpe"] == 8.0
         assert detail_json["session_metrics"]["rest_tracked_sets"] == 1
+
+
+@pytest.mark.integration
+class TestSpec005SessionLifecycle:
+    """SPEC-005 §3/§48: status lifecycle, cancel and restore."""
+
+    async def test_start_returns_active_status_and_started_at(self, authenticated_client: AsyncClient):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 lifecycle", "type": "strength"},
+        )
+        assert started.status_code == 200, started.text
+        body = started.json()
+        assert body["session_status"] == "active"
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{body['id']}")
+        assert detail.status_code == 200, detail.text
+        detail_json = detail.json()
+        assert detail_json["status"] == "active"
+        assert detail_json.get("started_at") is not None
+
+    async def test_pause_and_resume_session(self, authenticated_client: AsyncClient):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 pause", "type": "strength"},
+        )
+        workout_id = started.json()["id"]
+
+        paused = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json={"exercises": [], "comments": "pause test", "tags": [], "status": "paused"},
+        )
+        assert paused.status_code == 200, paused.text
+        assert paused.json()["status"] == "paused"
+
+        resumed = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json={"exercises": [], "comments": "pause test", "tags": [], "status": "active"},
+        )
+        assert resumed.status_code == 200, resumed.text
+        assert resumed.json()["status"] == "active"
+
+    async def test_cancel_marks_cancelled_and_excluded_from_incomplete(self, authenticated_client: AsyncClient):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 cancel", "type": "strength"},
+        )
+        workout_id = started.json()["id"]
+
+        listed = await authenticated_client.get("/api/v1/workouts/sessions/incomplete")
+        assert listed.status_code == 200, listed.text
+        assert any(item["id"] == workout_id for item in listed.json())
+
+        cancelled = await authenticated_client.post(
+            f"/api/v1/workouts/{workout_id}/cancel",
+            json={"comments": "user cancelled"},
+        )
+        assert cancelled.status_code == 200, cancelled.text
+        assert cancelled.json()["status"] == "cancelled"
+
+        listed_after = await authenticated_client.get("/api/v1/workouts/sessions/incomplete")
+        assert listed_after.status_code == 200, listed_after.text
+        assert all(item["id"] != workout_id for item in listed_after.json())
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["status"] == "cancelled"
+
+    async def test_cancel_is_idempotent_with_key(self, authenticated_client: AsyncClient):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 cancel idem", "type": "strength"},
+        )
+        workout_id = started.json()["id"]
+        idem_key = f"pytest-cancel-{workout_id}-{uuid4()}"
+
+        first = await authenticated_client.post(
+            f"/api/v1/workouts/{workout_id}/cancel",
+            json={"idempotency_key": idem_key},
+        )
+        assert first.status_code == 200, first.text
+
+        second = await authenticated_client.post(
+            f"/api/v1/workouts/{workout_id}/cancel",
+            json={"idempotency_key": idem_key},
+        )
+        assert second.status_code == 200, second.text
+        assert second.json()["id"] == workout_id
+
+    async def test_complete_returns_records_and_progression_recommendations(
+        self,
+        authenticated_client: AsyncClient,
+    ):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 complete", "type": "strength"},
+        )
+        workout_id = started.json()["id"]
+
+        completed = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json={
+                "duration": 30,
+                "exercises": [
+                    {
+                        "exercise_id": 1,
+                        "name": "Push-ups",
+                        "sets_completed": [
+                            {"set_number": 1, "completed": True, "reps": 10, "weight": None},
+                        ],
+                    }
+                ],
+                "comments": "done",
+                "tags": ["strength"],
+            },
+        )
+        assert completed.status_code == 200, completed.text
+        assert completed.json().get("personal_records") == []
+        assert completed.json().get("progression_recommendations")
+
+
+class TestSpec005ExerciseOperations:
+    """SPEC-005 §25–28: skip / replace / reorder session exercises."""
+
+    async def _start_session_with_two_exercises(self, authenticated_client: AsyncClient) -> int:
+        started = await authenticated_client.post(
+            "/api/v1/workouts/sessions",
+            json={
+                "source_type": "quick_start",
+                "name": "Spec005 exercises",
+                "type": "strength",
+                "overrides": {
+                    "exercises": [
+                        {
+                            "exercise_id": 1,
+                            "name": "Push-ups",
+                            "sets": 2,
+                            "reps": 10,
+                            "rest_seconds": 60,
+                        },
+                        {
+                            "exercise_id": 2,
+                            "name": "Squats",
+                            "sets": 2,
+                            "reps": 8,
+                            "rest_seconds": 90,
+                        },
+                    ],
+                },
+            },
+        )
+        assert started.status_code in (200, 201), started.text
+        return started.json()["id"]
+
+    async def _get_detail(self, authenticated_client: AsyncClient, workout_id: int) -> dict:
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail.status_code == 200, detail.text
+        return detail.json()
+
+    async def test_skip_exercise_session_only(self, authenticated_client: AsyncClient):
+        workout_id = await self._start_session_with_two_exercises(authenticated_client)
+        detail = await self._get_detail(authenticated_client, workout_id)
+        rows = detail["exercises"]
+        row_id = rows[1]["id"]
+
+        patched = await authenticated_client.patch(
+            f"/api/v1/workouts/{workout_id}/exercises/{row_id}",
+            json={"status": "skipped"},
+        )
+        assert patched.status_code == 200, patched.text
+        assert patched.json()["exercises"][1]["status"] == "skipped"
+
+    async def test_replace_exercise_session_only(self, authenticated_client: AsyncClient):
+        workout_id = await self._start_session_with_two_exercises(authenticated_client)
+        detail = await self._get_detail(authenticated_client, workout_id)
+        row_id = detail["exercises"][0]["id"]
+
+        patched = await authenticated_client.patch(
+            f"/api/v1/workouts/{workout_id}/exercises/{row_id}",
+            json={"replacement_exercise_id": 55, "replacement_name": "Dips"},
+        )
+        assert patched.status_code == 200, patched.text
+        replaced = patched.json()["exercises"][0]
+        assert replaced["exercise_id"] == 55
+        assert replaced["name"] == "Dips"
+
+    async def test_reorder_exercise_session_only(self, authenticated_client: AsyncClient):
+        workout_id = await self._start_session_with_two_exercises(authenticated_client)
+        detail = await self._get_detail(authenticated_client, workout_id)
+        row_id = detail["exercises"][1]["id"]
+
+        patched = await authenticated_client.patch(
+            f"/api/v1/workouts/{workout_id}/exercises/{row_id}",
+            json={"target_order_index": 0},
+        )
+        assert patched.status_code == 200, patched.text
+        exercises = patched.json()["exercises"]
+        assert exercises[0]["name"] == "Squats"
+        assert exercises[1]["name"] == "Push-ups"
+
+    async def test_patch_requires_auth(self, client: AsyncClient):
+        r = await client.patch(
+            "/api/v1/workouts/1/exercises/1",
+            json={"status": "skipped"},
+        )
+        assert r.status_code == 401
+
+
+class TestSpec005SupersetBlocks:
+    """SPEC-005 §24/§21–23: blocks persist with the session."""
+
+    async def test_blocks_roundtrip_via_session_update(self, authenticated_client: AsyncClient):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 blocks", "type": "strength"},
+        )
+        workout_id = started.json()["id"]
+
+        updated = await authenticated_client.patch(
+            f"/api/v1/workouts/history/{workout_id}",
+            json={
+                "exercises": [],
+                "comments": "blocks",
+                "tags": [],
+                "blocks": [
+                    {"client_id": "blk-a", "type": "SUPERSET", "order": 0, "rounds": 3, "rest_seconds": 90},
+                ],
+            },
+        )
+        assert updated.status_code == 200, updated.text
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail.status_code == 200, detail.text
+        blocks = detail.json().get("blocks") or []
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "SUPERSET"
+        assert blocks[0]["rounds"] == 3
+        assert blocks[0]["rest_seconds"] == 90
+
+
+class TestSpec005MetricsAndSets:
+    """SPEC-005 §10/§52: warm-up split in metrics + set patch with PR response."""
+
+    async def test_metrics_split_warmup_and_working(self, authenticated_client: AsyncClient):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 metrics", "type": "strength"},
+        )
+        workout_id = started.json()["id"]
+
+        completed = await authenticated_client.post(
+            f"/api/v1/workouts/complete?workout_id={workout_id}",
+            json={
+                "duration": 40,
+                "exercises": [
+                    {
+                        "exercise_id": 1,
+                        "name": "Bench Press",
+                        "sets_completed": [
+                            {"set_number": 1, "set_type": "warmup", "completed": True, "reps": 10, "weight": 40},
+                            {"set_number": 2, "set_type": "working", "completed": True, "reps": 8, "weight": 80},
+                            {"set_number": 3, "set_type": "working", "completed": True, "reps": 6, "weight": 80},
+                        ],
+                    }
+                ],
+                "comments": "metrics",
+                "tags": ["strength"],
+            },
+        )
+        assert completed.status_code == 200, completed.text
+        metrics = completed.json()["session_metrics"]
+        assert metrics["warmup_sets"] == 1
+        assert metrics["working_sets"] == 2
+        assert metrics["total_volume"] == pytest.approx(80 * 8 + 80 * 6)
+
+    async def test_patch_set_returns_completed_at(self, authenticated_client: AsyncClient):
+        started = await authenticated_client.post(
+            "/api/v1/workouts/start",
+            json={"name": "Spec005 set patch", "type": "strength"},
+        )
+        workout_id = started.json()["id"]
+
+        detail = await authenticated_client.get(f"/api/v1/workouts/history/{workout_id}")
+        assert detail.status_code == 200, detail.text
+        # Session started from empty quick start has no exercises/sets yet.
+        assert detail.json()["exercises"] == []
+
+
+class TestSpec005RecommendationEndpoints:
+    """SPEC-005 §37–38/§42–43/§19: recommendation and calculator endpoints."""
+
+    async def test_plate_calculator_endpoint(self, authenticated_client: AsyncClient):
+        r = await authenticated_client.post(
+            "/api/v1/workouts/plate-calculator",
+            json={"target_weight": 100, "bar_weight": 20},
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["achievable"] is True
+        assert body["plates_per_side"] == [25, 15]
+
+    async def test_plate_calculator_nearest_when_impossible(self, authenticated_client: AsyncClient):
+        r = await authenticated_client.post(
+            "/api/v1/workouts/plate-calculator",
+            json={"target_weight": 81, "bar_weight": 20, "available_plates": [25, 10, 5]},
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["achievable"] is False
+        assert body["nearest_weight"] == 80
+
+    async def test_progression_endpoint_no_history(self, authenticated_client: AsyncClient):
+        r = await authenticated_client.get(
+            "/api/v1/workouts/progression/recommendation",
+            params={"exercise_id": 999999, "policy": "DOUBLE_PROGRESSION"},
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["reason_code"] == "NO_HISTORY"
+        assert body["recommended_value"] is None
+        assert body["policy"] == "DOUBLE_PROGRESSION"
+
+    async def test_smart_rest_recommendation(self, authenticated_client: AsyncClient):
+        r = await authenticated_client.get(
+            f"/api/v1/workouts/sessions/1/exercises/1/smart-rest",
+            params={"set_type": "working", "rpe": 9},
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["recommended_rest_seconds"] >= 120
+        assert body["reason_code"]
+
+    async def test_plate_calculator_requires_auth(self, client: AsyncClient):
+        r = await client.post(
+            "/api/v1/workouts/plate-calculator",
+            json={"target_weight": 100, "bar_weight": 20},
+        )
+        assert r.status_code == 401
 

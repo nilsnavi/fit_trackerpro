@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from .water_entry import WaterEntry
     from .water_goal import WaterGoal
     from .water_reminder import WaterReminder
+    from .workout_block import WorkoutBlock
     from .workout_log import WorkoutLog
     from .workout_session_exercise import WorkoutSessionExercise
     from .workout_set import WorkoutSet
@@ -119,6 +120,12 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         overlaps="workout_session",
+    )
+    workout_blocks: Mapped[list["WorkoutBlock"]] = relationship(
+        "WorkoutBlock",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        overlaps="workout_session,workout_blocks",
     )
     glucose_logs: Mapped[list["GlucoseLog"]] = relationship(
         "GlucoseLog",

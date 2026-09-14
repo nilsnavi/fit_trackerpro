@@ -55,6 +55,10 @@ export type WorkoutHistoryItem = {
     created_at: string
     glucose_before?: number
     glucose_after?: number
+    /** SPEC-005 §3/§48 */
+    status?: string
+    started_at?: string
+    blocks?: Array<Record<string, unknown>>
 }
 
 export type WorkoutTemplate = {
@@ -86,6 +90,8 @@ export type MockWorkoutApiState = {
     createTemplateRequests: Array<Record<string, unknown>>
     updateSessionRequests: Array<{ workoutId: number; payload: Record<string, unknown> }>
     completeRequests: Array<{ workoutId: number; payload: Record<string, unknown> }>
+    // SPEC-005 request capture for the extended golden path.
+    setPatchRequests: Array<{ workoutId: number; setId: number; payload: Record<string, unknown> }>
     nextTemplateId: number
     nextWorkoutId: number
 }
@@ -166,10 +172,29 @@ export function buildWorkoutState(overrides?: Partial<MockWorkoutApiState>): Moc
         createTemplateRequests: [],
         updateSessionRequests: [],
         completeRequests: [],
+        setPatchRequests: [],
         nextTemplateId: 500,
         nextWorkoutId: 900,
         ...overrides,
     }
+}
+
+/**
+ * SPEC-005 §16: the server owns set row ids. Session updates arrive from the
+ * client without ids, so the mock re-assigns deterministic ones — exactly like
+ * the backend snapshot rebuild does.
+ */
+export function withSetIds(workoutId: number, exercises: CompletedExercise[]): CompletedExercise[] {
+    return exercises.map((exercise, exerciseIndex) => ({
+        ...exercise,
+        sets_completed: exercise.sets_completed.map((set, setIndex) => {
+            const existing = (set as { id?: number }).id
+            return {
+                ...set,
+                id: typeof existing === 'number' ? existing : workoutId * 1000 + exerciseIndex * 10 + setIndex + 1,
+            }
+        }),
+    }))
 }
 
 // ── Browser seed helpers ──────────────────────────────────────────────────────
@@ -323,14 +348,129 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, detail)
         }
 
-        if (method === 'POST' && normalizedPath.endsWith('/workouts/start')) {
+        // ── SPEC-005 endpoints ────────────────────────────────────────────────
+
+        if (method === 'GET' && normalizedPath.endsWith('/workouts/sessions/incomplete')) {
+            const open = state.historyItems.filter(
+                (item) => item.duration == null && (item.status ?? 'active') !== 'cancelled',
+            )
+            return respond(200, open.map((item) => ({
+                id: item.id,
+                name: item.comments ?? null,
+                status: item.status ?? 'active',
+                date: item.date,
+                elapsed_seconds: 1800,
+                exercise_count: item.exercises.length,
+                completed_exercise_count: item.exercises.filter((exercise) =>
+                    exercise.sets_completed.some((set) => set.completed),
+                ).length,
+                created_at: item.created_at,
+            })))
+        }
+
+        if (method === 'GET' && normalizedPath.endsWith('/workouts/progression/recommendation')) {
+            const exerciseId = Number(url.searchParams.get('exercise_id') ?? 0)
+            return respond(200, {
+                recommended_value: 82.5,
+                previous_value: 80,
+                difference: 2.5,
+                policy: String(url.searchParams.get('policy') ?? 'DOUBLE_PROGRESSION'),
+                reason_code: 'REP_RANGE_COMPLETED',
+                reason_text: 'Верхняя граница 8–12 достигнута во всех рабочих подходах — двойная прогрессия: 80 + 2.5 = 82.5 кг.',
+                confidence: 'high',
+                source_session_id: state.details.size > 0 ? Array.from(state.details.keys())[0] : null,
+                exercise_id: exerciseId,
+            })
+        }
+
+        if (method === 'POST' && /\/workouts\/\d+\/cancel$/.test(normalizedPath)) {
+            const workoutId = Number(normalizedPath.split('/')[normalizedPath.split('/').length - 2])
+            const current = state.details.get(workoutId)
+            if (current) {
+                const cancelled: WorkoutHistoryItem = { ...current, status: 'cancelled' }
+                state.details.set(workoutId, cancelled)
+                state.historyItems = state.historyItems.filter((item) => item.id !== workoutId)
+            }
+            return respond(200, {
+                id: workoutId,
+                status: 'cancelled',
+                message: 'Workout cancelled',
+            })
+        }
+
+        if (method === 'PATCH' && /\/workouts\/\d+\/sets\/\d+$/.test(normalizedPath)) {
+            const segments = normalizedPath.split('/')
+            const workoutId = Number(segments[segments.length - 3])
+            const setId = Number(segments[segments.length - 1])
+            const payload = (req.postDataJSON?.() ?? {}) as Record<string, unknown>
+            state.setPatchRequests.push({ workoutId, setId, payload })
+
+            // The completion payload never carries set_number: the server owns the
+            // mapping from the set row id. Resolve it from the stored session, exactly
+            // like the backend snapshot lookup — otherwise the client would apply the
+            // response to the wrong set row.
+            const current = state.details.get(workoutId)
+            let setNumber = Number(payload.set_number ?? 1)
+            let exerciseId = Number(payload.exercise_id ?? 1)
+            let exerciseName = String(payload.exercise_name ?? 'Упражнение')
+            for (const exercise of current?.exercises ?? []) {
+                for (const set of exercise.sets_completed) {
+                    if ((set as { id?: number }).id !== setId) continue
+                    setNumber = set.set_number
+                    exerciseId = exercise.exercise_id
+                    exerciseName = exercise.name
+                }
+            }
+
+            return respond(200, {
+                id: setId,
+                workout_id: workoutId,
+                exercise_id: exerciseId,
+                set_number: setNumber,
+                reps: payload.reps ?? null,
+                weight: payload.weight ?? null,
+                rpe: payload.rpe ?? null,
+                // SPEC-005 §20: timed sets carry duration instead of reps.
+                duration: payload.duration ?? null,
+                rest_seconds: payload.rest_seconds ?? null,
+                completed: payload.completed ?? true,
+                notes: payload.notes ?? null,
+                personal_records: payload.completed === false
+                    ? null
+                    : [{
+                        record_type: 'MAX_WEIGHT',
+                        exercise_id: exerciseId,
+                        exercise_name: exerciseName,
+                        value: Number(payload.weight ?? 100),
+                        unit: 'kg',
+                        is_new_record: true,
+                        previous_value: null,
+                        set_number: setNumber,
+                        achieved_at: isoNow(),
+                    }],
+            })
+        }
+
+        if (
+            method === 'POST' &&
+            (normalizedPath.endsWith('/workouts/start') || normalizedPath.endsWith('/workouts/sessions'))
+        ) {
             const payload = (req.postDataJSON?.() ?? {}) as Record<string, unknown>
             state.startRequests.push(payload)
             const workoutId = state.nextWorkoutId++
             const title = String(payload.name ?? 'E2E сессия')
-            const templateId = typeof payload.template_id === 'number' ? payload.template_id : null
+            // SPEC-005 §2: both the legacy /start payload and the canonical
+            // /sessions payload (source_type + source_id + overrides) are mocked.
+            const templateId = typeof payload.template_id === 'number'
+                ? payload.template_id
+                : payload.source_type === 'personal_template' && typeof payload.source_id === 'number'
+                    ? payload.source_id
+                    : null
             const template = templateId == null ? null : state.templates.find((item) => item.id === templateId)
-            const templateExercisesRaw = (template?.exercises ?? []) as TemplateExercise[]
+            const overrides = (payload.overrides ?? {}) as { exercises?: TemplateExercise[] }
+            const templateExercisesRaw = (Array.isArray(overrides.exercises) && overrides.exercises.length > 0
+                ? overrides.exercises
+                : template?.exercises ?? []) as TemplateExercise[]
             const exercises: CompletedExercise[] = templateExercisesRaw.map((exercise, exerciseIndex) => {
                 const sets = Math.max(1, Number(exercise.sets ?? 1))
                 const reps = typeof exercise.reps === 'number' ? exercise.reps : undefined
@@ -341,7 +481,11 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
                     exercise_id: Number(exercise.exercise_id ?? exerciseIndex + 1),
                     name: String(exercise.name ?? `Упражнение ${exerciseIndex + 1}`),
                     sets_completed: Array.from({ length: sets }, (_, setIndex) => ({
+                        // SPEC-005 §16: every persisted set carries its row id, which
+                        // the PATCH /sets/{id} completion flow requires.
+                        id: workoutId * 1000 + exerciseIndex * 10 + setIndex + 1,
                         set_number: setIndex + 1,
+                        set_type: 'working',
                         completed: false,
                         reps,
                         weight,
@@ -350,14 +494,20 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
                 }
             })
 
+            const overrideTags = Array.isArray(overrides.tags) ? overrides.tags as string[] : []
             const detail: WorkoutHistoryItem = {
                 id: workoutId,
                 date: isoNow(),
                 duration: undefined,
                 exercises,
                 comments: title,
-                tags: typeof payload.type === 'string' ? [String(payload.type)] : [],
+                tags: overrideTags.length > 0
+                    ? overrideTags
+                    : typeof payload.type === 'string' ? [String(payload.type)] : [],
                 created_at: isoMinutesAgo(12),
+                // SPEC-005 §3/§4: lifecycle status + start timestamp.
+                status: 'active',
+                started_at: isoMinutesAgo(12),
             }
             state.details.set(workoutId, detail)
             state.historyItems = [detail, ...state.historyItems.filter((item) => item.id !== workoutId)]
@@ -368,6 +518,7 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
                 date: detail.date,
                 start_time: detail.created_at,
                 status: 'ok',
+                session_status: 'active',
                 message: 'started',
             })
         }
@@ -382,9 +533,16 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             }
             const updated: WorkoutHistoryItem = {
                 ...current,
-                exercises: Array.isArray(payload.exercises) ? payload.exercises as CompletedExercise[] : current.exercises,
+                exercises: Array.isArray(payload.exercises)
+                    ? withSetIds(workoutId, payload.exercises as CompletedExercise[])
+                    : current.exercises,
                 comments: typeof payload.comments === 'string' ? payload.comments : current.comments,
                 tags: Array.isArray(payload.tags) ? payload.tags as string[] : current.tags,
+                status: typeof payload.status === 'string' ? payload.status : current.status,
+                // SPEC-005 §24: session blocks (superset/triset/circuit).
+                blocks: Array.isArray(payload.blocks)
+                    ? (payload.blocks as Array<Record<string, unknown>>).map((block, index) => ({ id: index + 1, ...block }))
+                    : current.blocks,
             }
             state.details.set(workoutId, updated)
             state.historyItems = [updated, ...state.historyItems.filter((item) => item.id !== workoutId)]
@@ -402,12 +560,22 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             const completed: WorkoutHistoryItem = {
                 ...current,
                 duration: typeof payload.duration === 'number' ? payload.duration : current.duration,
-                exercises: Array.isArray(payload.exercises) ? payload.exercises as CompletedExercise[] : current.exercises,
+                exercises: Array.isArray(payload.exercises)
+                    ? withSetIds(workoutId, payload.exercises as CompletedExercise[])
+                    : current.exercises,
                 comments: typeof payload.comments === 'string' ? payload.comments : current.comments,
                 tags: Array.isArray(payload.tags) ? payload.tags as string[] : current.tags,
             }
             state.details.set(workoutId, completed)
             state.historyItems = [completed, ...state.historyItems.filter((item) => item.id !== workoutId)]
+            const workingSets = completed.exercises.flatMap((exercise) =>
+                exercise.sets_completed.filter((set) => (set as { set_type?: string }).set_type !== 'warmup' && set.completed),
+            )
+            const maxWeightSet = workingSets.reduce<CompletedSet | null>((best, set) => {
+                if (typeof set.weight !== 'number') return best
+                if (!best || typeof best.weight !== 'number' || set.weight > best.weight) return set
+                return best
+            }, null)
             return respond(200, {
                 id: workoutId,
                 user_id: 1,
@@ -420,6 +588,32 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
                 glucose_before: completed.glucose_before,
                 glucose_after: completed.glucose_after,
                 completed_at: isoNow(),
+                // SPEC-005 §40: PRs detected during the session (warm-up excluded).
+                personal_records: maxWeightSet && typeof maxWeightSet.weight === 'number'
+                    ? [{
+                        record_type: 'MAX_WEIGHT',
+                        exercise_id: completed.exercises[0]?.exercise_id ?? 1,
+                        exercise_name: completed.exercises[0]?.name ?? 'Exercise',
+                        value: maxWeightSet.weight,
+                        unit: 'kg',
+                        is_new_record: true,
+                        previous_value: null,
+                        set_number: maxWeightSet.set_number,
+                        achieved_at: isoNow(),
+                    }]
+                    : [],
+                // SPEC-005 §51: explainable next targets.
+                progression_recommendations: completed.exercises.map((exercise) => ({
+                    exercise_id: exercise.exercise_id,
+                    recommended_value: 82.5,
+                    previous_value: 80,
+                    difference: 2.5,
+                    policy: 'DOUBLE_PROGRESSION',
+                    reason_code: 'REP_RANGE_COMPLETED',
+                    reason_text: 'Верхняя граница 8–12 достигнута во всех рабочих подходах.',
+                    confidence: 'high',
+                    source_session_id: workoutId,
+                })),
                 message: 'completed',
             })
         }

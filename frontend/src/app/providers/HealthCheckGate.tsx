@@ -5,7 +5,7 @@
  * Shows a maintenance screen if backend is not healthy.
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useBackendHealth } from '@shared/hooks/useBackendHealth';
 import { MaintenanceScreen } from '../components/MaintenanceScreen';
 
@@ -27,6 +27,15 @@ export const HealthCheckGate: React.FC<HealthCheckGateProps> = ({
     500, // Wait 500ms before first check
   );
 
+  // Background health polls set `isLoading` again every few seconds. Swapping the
+  // app out for the loading screen on those polls would unmount the whole tree and
+  // wipe in-progress UI state (an active workout draft must survive health checks,
+  // SPEC-005 §48), so the loading screen is only used before the first ready check.
+  const hasBeenReadyRef = useRef(false);
+  if (isReady) {
+    hasBeenReadyRef.current = true;
+  }
+
   // If backend is not ready and not loading, show maintenance screen
   if (!isReady && !isLoading) {
     return (
@@ -39,7 +48,7 @@ export const HealthCheckGate: React.FC<HealthCheckGateProps> = ({
 
   // If loading, optionally show a loading screen, otherwise render children
   // (most apps render children and show a spinner separately)
-  if (isLoading && showLoadingWhileChecking) {
+  if (isLoading && showLoadingWhileChecking && !hasBeenReadyRef.current) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
         <div className="text-center">

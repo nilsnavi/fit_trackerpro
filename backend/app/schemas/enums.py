@@ -60,6 +60,47 @@ class WorkoutSetType(StrEnum):
     FAILURE = "failure"
 
 
+class WorkoutStatus(StrEnum):
+    """Lifecycle status of a WorkoutSession (SPEC-005 §3)."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class WorkoutBlockType(StrEnum):
+    """Training block grouping exercises within a session (SPEC-005 §24)."""
+
+    NORMAL = "NORMAL"
+    SUPERSET = "SUPERSET"
+    TRISET = "TRISET"
+    CIRCUIT = "CIRCUIT"
+
+
+class ProgressionPolicy(StrEnum):
+    """Supported progression policies (SPEC-005 §29)."""
+
+    MANUAL = "MANUAL"
+    LINEAR = "LINEAR"
+    DOUBLE_PROGRESSION = "DOUBLE_PROGRESSION"
+    RPE_BASED = "RPE_BASED"
+    RIR_BASED = "RIR_BASED"
+    PERCENT_1RM = "PERCENT_1RM"
+    TIME_PROGRESSION = "TIME_PROGRESSION"
+
+
+class PersonalRecordType(StrEnum):
+    """Personal record types tracked per exercise (SPEC-005 §40)."""
+
+    MAX_WEIGHT = "MAX_WEIGHT"
+    MAX_REPS_AT_WEIGHT = "MAX_REPS_AT_WEIGHT"
+    ESTIMATED_1RM = "ESTIMATED_1RM"
+    MAX_VOLUME = "MAX_VOLUME"
+    MAX_DURATION = "MAX_DURATION"
+
+
 class ChallengeType(StrEnum):
     WORKOUT_COUNT = "workout_count"
     DURATION = "duration"

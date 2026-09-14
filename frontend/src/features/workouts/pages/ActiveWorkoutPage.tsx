@@ -34,6 +34,9 @@ import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveW
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
+import { useProgressionRecommendation } from '@features/workouts/active/hooks/useProgressionRecommendation'
+import { useWakeLock } from '@features/workouts/active/hooks/useWakeLock'
+import { findPreviousResult } from '@features/workouts/active/lib/previousResult'
 
 import {
     useActiveWorkoutActions,
@@ -56,7 +59,6 @@ import { useActiveWorkoutExerciseActions } from '@features/workouts/active/hooks
 import { useActiveWorkoutRestFlow } from '@features/workouts/active/hooks/useActiveWorkoutRestFlow'
 import { useActiveWorkoutStats } from '@features/workouts/active/hooks/useActiveWorkoutStats'
 import { useActiveWorkoutHistoryInsights } from '@features/workouts/active/hooks/useActiveWorkoutHistoryInsights'
-import { FloatingRestTimer } from '@features/workouts/active/components/FloatingRestTimer'
 import { useActiveWorkoutCatalogSuggestions } from '@features/workouts/active/hooks/useActiveWorkoutCatalogSuggestions'
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -356,6 +358,26 @@ export function ActiveWorkoutPage() {
         recommendationExercise?.exercise_id ?? 0,
         Boolean(isActiveDraft && recommendationExercise?.exercise_id && hasPreviousSetWithRpe),
     )
+
+    // SPEC-005 §8: previous completed result for the active exercise.
+    const previousResult = useMemo(
+        () =>
+            recommendationExercise
+                ? findPreviousResult(historyData?.items, workout?.id, recommendationExercise)
+                : null,
+        [historyData?.items, recommendationExercise, workout?.id],
+    )
+
+    // SPEC-005 §37: explainable progression recommendation for the active exercise.
+    const {
+        data: progressionRecommendation,
+        isLoading: isProgressionLoading,
+        isError: isProgressionError,
+    } = useProgressionRecommendation({
+        exerciseId: recommendationExercise?.exercise_id ?? 0,
+        policy: 'DOUBLE_PROGRESSION',
+        enabled: Boolean(isActiveDraft && recommendationExercise?.exercise_id),
+    })
     const legacyWeightRecommendation = useMemo(
         () =>
             weightRecommendation
@@ -388,6 +410,39 @@ export function ActiveWorkoutPage() {
         : isError
             ? getErrorMessage(queryError)
             : null
+
+    // SPEC-005 §49: keep the screen awake during an active session (graceful fallback).
+    useWakeLock(Boolean(isActiveDraft))
+
+    // SPEC-005 §26: skip / un-skip exercise for the current session only.
+    const handleSkipExercise = useCallback(
+        (exerciseIndex: number) => {
+            if (!workout) return
+            tg.hapticFeedback({ type: 'impact', style: 'light' })
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? { ...exercise, status: 'skipped' } : exercise,
+                ),
+            }))
+            toast.info('Упражнение пропущено')
+        },
+        [patchItem, tg, workout],
+    )
+
+    const handleUnskipExercise = useCallback(
+        (exerciseIndex: number) => {
+            if (!workout) return
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? { ...exercise, status: null } : exercise,
+                ),
+            }))
+            toast.info('Упражнение возвращено в тренировку')
+        },
+        [patchItem, workout],
+    )
 
     const isLoading: boolean = isValidWorkoutId && isFetching
 
@@ -606,6 +661,9 @@ export function ActiveWorkoutPage() {
                     workoutTitle,
                     durationMinutes,
                     finishedAt: data.completed_at,
+                    // SPEC-005 §51: server-computed PRs + next targets.
+                    personalRecords: data.personal_records ?? [],
+                    progressionRecommendations: data.progression_recommendations ?? [],
                 },
             })
         } catch (error) {
@@ -907,6 +965,10 @@ export function ActiveWorkoutPage() {
                         currentExerciseIndex={currentExerciseIndex}
                         currentSetIndex={currentSetIndex}
                         previousBestByExercise={previousBestByExercise}
+                        previousResult={previousResult}
+                        progressionRecommendation={progressionRecommendation}
+                        isProgressionLoading={isProgressionLoading}
+                        isProgressionError={isProgressionError}
                         weightRecommendation={weightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
@@ -921,6 +983,8 @@ export function ActiveWorkoutPage() {
                         onSetLastCompletedSet={setLastCompletedSet}
                         onAddExercise={() => exerciseActions.resetAddItemForm('exercise')}
                         onFinishWorkout={handleFinishWorkoutDirect}
+                        onSkipExercise={handleSkipExercise}
+                        onUnskipExercise={handleUnskipExercise}
                     />
 
                     {renderLegacyActiveWorkoutDebug ? (
@@ -1149,7 +1213,6 @@ export function ActiveWorkoutPage() {
             {renderLegacyActiveWorkoutDebug && isActiveDraft && !isLoading && !errorMessage && workout && (
                 <>
                     <WorkoutSessionRestOverlay onTimerEnd={handleRestTimerEnd} />
-                    <FloatingRestTimer workout={workout} onUpdateSet={updateSet} />
                     <ActiveWorkoutBottomActions
                         isActiveDraft={isActiveDraft}
                         restPresets={restPresets}

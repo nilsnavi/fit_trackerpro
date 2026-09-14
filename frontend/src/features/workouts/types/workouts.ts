@@ -73,6 +73,8 @@ export interface CompletedSet {
     /** Database ID of the workout_set row */
     id?: number
     set_number: number
+    /** SPEC-005 §10: warmup | working | dropset | failure */
+    set_type?: 'warmup' | 'working' | 'dropset' | 'failure'
     reps?: number
     weight?: number
     rpe?: number
@@ -102,6 +104,8 @@ export interface WorkoutSetPatchRequest {
     weight?: number | null
     rpe?: number | null
     rest_seconds?: number | null
+    /** SPEC-005 §20: timed sets carry duration instead of reps. */
+    duration?: number | null
     completed?: boolean | null
     notes?: string | null
 }
@@ -116,6 +120,8 @@ export interface WorkoutSetResponse {
     weight?: number | null
     rpe?: number | null
     rest_seconds?: number | null
+    /** SPEC-005 §20: timed sets carry duration instead of reps. */
+    duration?: number | null
     completed: boolean
     notes?: string | null
 }
@@ -126,12 +132,99 @@ export interface WeightRecommendationResponse {
     message: string
 }
 
+/** SPEC-005 §48: incomplete session for restore prompt */
+export interface WorkoutSessionListItem {
+    id: number
+    name?: string | null
+    status: WorkoutStatus
+    date: string
+    elapsed_seconds?: number | null
+    exercise_count: number
+    completed_exercise_count: number
+    created_at: string
+}
+
+/** SPEC-005 §3: cancel response */
+export interface WorkoutCancelResponse {
+    id: number
+    status: WorkoutStatus
+    message: string
+}
+
 export interface CompletedExercise {
     exercise_id: number
     name: string
     sets_completed: CompletedSet[]
     notes?: string
+    /** SPEC-005 §26: 'skipped' exercises stay in session, excluded from volume */
+    status?: string | null
+    /**
+     * SPEC-005 §24: block membership (superset/triset/circuit).
+     * A client id while the session is local, the block row id once persisted.
+     */
+    block_id?: number | string | null
+    block_type?: WorkoutBlockType | null
+    block_order?: number | null
+    block_rounds?: number | null
+    block_rest_seconds?: number | null
 }
+
+export type WorkoutBlockType = 'NORMAL' | 'SUPERSET' | 'TRISET' | 'CIRCUIT'
+
+/** SPEC-005 §3 */
+export type WorkoutStatus = 'draft' | 'active' | 'paused' | 'completed' | 'cancelled'
+
+export interface WorkoutBlockPayload {
+    /** Row id, present once the block was persisted by the server. */
+    id?: number
+    client_id?: string
+    type: WorkoutBlockType
+    order: number
+    rounds: number
+    rest_seconds?: number | null
+}
+
+/** SPEC-005 §40 */
+export type PersonalRecordType =
+    | 'MAX_WEIGHT'
+    | 'MAX_REPS_AT_WEIGHT'
+    | 'ESTIMATED_1RM'
+    | 'MAX_VOLUME'
+    | 'MAX_DURATION'
+
+export interface PersonalRecordEntry {
+    record_type: PersonalRecordType
+    exercise_id: number
+    exercise_name: string
+    value: number
+    unit: string
+    is_new_record: boolean
+    previous_value?: number | null
+    set_number?: number | null
+    achieved_at?: string | null
+}
+
+/** SPEC-005 §37–38: explainable progression recommendation */
+export interface ProgressionRecommendation {
+    recommended_value?: number | null
+    previous_value?: number | null
+    difference?: number | null
+    policy: ProgressionPolicy
+    reason_code: string
+    reason_text: string
+    confidence: 'low' | 'medium' | 'high'
+    source_session_id?: number | null
+    exercise_id?: number
+}
+
+export type ProgressionPolicy =
+    | 'MANUAL'
+    | 'LINEAR'
+    | 'DOUBLE_PROGRESSION'
+    | 'RPE_BASED'
+    | 'RIR_BASED'
+    | 'PERCENT_1RM'
+    | 'TIME_PROGRESSION'
 
 export interface SessionFatigueTrend {
     opening_avg_rpe: number
@@ -176,12 +269,6 @@ export interface WorkoutStartTemplateOverrides {
     tags?: string[]
 }
 
-export interface WorkoutStartFromTemplateRequest {
-    name?: string
-    type?: WorkoutStartType
-    overrides?: WorkoutStartTemplateOverrides
-}
-
 export interface WorkoutStartResponse {
     id: number
     /** Legacy compatibility: some deployments may still return workout_id instead of id. */
@@ -211,6 +298,10 @@ export interface WorkoutSessionUpdateRequest {
     tags: string[]
     glucose_before?: number
     glucose_after?: number
+    /** SPEC-005 §3: pause/resume transition */
+    status?: 'active' | 'paused'
+    /** SPEC-005 §24: blocks for superset/triset/circuit */
+    blocks?: WorkoutBlockPayload[]
 }
 
 export interface WorkoutCompleteResponse {
@@ -218,6 +309,10 @@ export interface WorkoutCompleteResponse {
     user_id: number
     template_id?: number
     source_type?: WorkoutSessionSourceType
+    /** SPEC-005 §51: PRs achieved during the session */
+    personal_records?: PersonalRecordEntry[]
+    /** SPEC-005 §51: next targets from the progression engine */
+    progression_recommendations?: ProgressionRecommendation[]
     source_id?: number
     date: string
     duration: number
@@ -249,6 +344,11 @@ export interface WorkoutHistoryItem {
     session_metrics?: WorkoutSessionMetrics | null
     version?: number
     created_at: string
+    /** SPEC-005 §3/§48 */
+    status?: WorkoutStatus
+    started_at?: string | null
+    /** SPEC-005 §24: superset/triset/circuit blocks of the session. */
+    blocks?: WorkoutBlockPayload[]
 }
 
 export interface WorkoutHistoryResponse {

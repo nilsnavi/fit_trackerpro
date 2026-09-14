@@ -26,6 +26,7 @@ from app.domain.base import Base
 if TYPE_CHECKING:
     from .glucose_log import GlucoseLog
     from .user import User
+    from .workout_block import WorkoutBlock
     from .workout_session_exercise import WorkoutSessionExercise
     from .workout_set import WorkoutSet
     from .workout_template import WorkoutTemplate
@@ -67,6 +68,25 @@ class WorkoutLog(Base):
         default=1,
         server_default="1",
         comment="Optimistic locking version for in-progress updates",
+    )
+    # SPEC-005 §3: draft/active/paused/completed/cancelled lifecycle.
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="active",
+        server_default="active",
+        index=True,
+        comment="Session lifecycle status (draft/active/paused/completed/cancelled)",
+    )
+    started_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Session start timestamp for elapsed time computation",
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Completion timestamp set when status becomes completed",
     )
     source_type: Mapped[Optional[str]] = mapped_column(
         String(32),
@@ -152,6 +172,13 @@ class WorkoutLog(Base):
         order_by="WorkoutSessionExercise.order_index",
         overlaps="user,workout_session_exercises",
     )
+    workout_blocks: Mapped[list["WorkoutBlock"]] = relationship(
+        "WorkoutBlock",
+        back_populates="workout_session",
+        cascade="all, delete-orphan",
+        order_by="WorkoutBlock.order",
+        overlaps="user,workout_blocks",
+    )
     workout_sets: Mapped[list["WorkoutSet"]] = relationship(
         "WorkoutSet",
         back_populates="workout_session",
@@ -175,6 +202,10 @@ class WorkoutLog(Base):
             name="ck_workout_logs_version_positive",
         ),
         CheckConstraint(
+            "status IN ('draft','active','paused','completed','cancelled')",
+            name="ck_workout_logs_status_allowed",
+        ),
+        CheckConstraint(
             "source_type IS NULL OR source_type IN ('quick_start','personal_template','system_template','community_template','program_day','previous_session')",
             name="ck_workout_logs_source_type_allowed",
         ),
@@ -195,6 +226,7 @@ class WorkoutLog(Base):
         Index('ix_workout_logs_user_date', 'user_id', 'date'),
         Index('ix_workout_logs_user_id_id_version', 'user_id', 'id', 'version'),
         Index('ix_workout_logs_user_source', 'user_id', 'source_type', 'source_id'),
+        Index('ix_workout_logs_user_status', 'user_id', 'status'),
     )
 
     def __repr__(self) -> str:
