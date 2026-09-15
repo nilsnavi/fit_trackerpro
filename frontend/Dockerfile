@@ -19,8 +19,11 @@ ENV HUSKY=0
 ENV NODE_ENV=development
 
 # NODE_ENV must not be production during install (devDependencies include Vite).
+# npm ci (not `npm install`) so the lockfile tree is reproduced verbatim, including
+# peer-only packages such as react-is that recharts imports directly. `npm install
+# --legacy-peer-deps` skips them and breaks the Vite build.
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
 COPY . .
 

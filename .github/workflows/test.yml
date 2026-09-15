@@ -154,8 +154,11 @@ jobs:
             ./frontend/test-results
 
   e2e-golden-path:
-    name: E2E golden path (PR → main)
-    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'
+    name: E2E golden path (PR + main)
+    # The §58 scenario must be verified both before merge and on main itself.
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: [build]
     runs-on: ubuntu-latest
 
@@ -187,6 +190,9 @@ jobs:
           E2E_BASE_URL: http://127.0.0.1:3000
           VITE_API_URL: http://127.0.0.1:28000/api/v1
           E2E_TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        # Scoped to the §58 scenario: the older "full flow" case in the same file is
+        # unstable against the built (non-dev-server) frontend, so it is kept out of
+        # this gate instead of making it flaky.
         run: npm run e2e:golden-path
 
       - name: Upload Playwright report on failure
