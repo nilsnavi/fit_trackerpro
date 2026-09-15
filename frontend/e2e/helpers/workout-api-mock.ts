@@ -239,46 +239,69 @@ export async function fillActiveSetInputs(page: Page, values: { weight?: number;
     }
 }
 
+/** Set once per page load so only the first dismissal waits for a sheet. */
+const DISMISS_ONCE_FLAG = '__e2eDismissBlockingDone'
+
 /**
  * Nothing on the screen is clickable while a sheet is open. The §48 restore prompt is the
- * one that greets the app when a draft session exists; close it the way a user would.
+ * one that greets the app when an unfinished session exists; close it the way a user would.
+ *
+ * The gate that renders the prompt is loaded lazily, so it can land well after the screen has
+ * painted. On the first call of each page load (a reload starts a new page load) an in-progress
+ * session is given a moment to raise its sheet, instead of racing it with a 2s poll window.
  */
 export async function dismissBlockingDialog(page: Page) {
-    // The prompt renders after the incomplete-session query resolves, so poll briefly
-    // instead of racing it right after navigation.
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-        const restorePrompt = page.getByTestId('session-restore-dialog')
-        if (await restorePrompt.isVisible().catch(() => false)) {
-            const continueButton = page.getByTestId('restore-continue-btn')
-            if (await continueButton.isVisible().catch(() => false)) await continueButton.click().catch(() => undefined)
-            else await page.keyboard.press('Escape').catch(() => undefined)
-            await expect(restorePrompt).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
-            return
-        }
+    const firstCallInPage = await page
+        .evaluate((flag) => {
+            const owner = window as unknown as Record<string, unknown>
+            if (owner[flag] === true) return false
+            owner[flag] = true
+            return true
+        }, DISMISS_ONCE_FLAG)
+        .catch(() => false)
 
-        const dialog = page.locator('[role="dialog"]').last()
-        if (await dialog.isVisible().catch(() => false)) {
-            const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
-            if ((await closeButton.count()) > 0) await closeButton.first().click().catch(() => undefined)
-            else await page.keyboard.press('Escape').catch(() => undefined)
-            await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
-            return
+    if (firstCallInPage) {
+        const sessionInProgress = await page
+            .evaluate(() => localStorage.getItem('workout-session-draft') !== null)
+            .catch(() => false)
+        if (sessionInProgress) {
+            await page
+                .locator('[role="dialog"]')
+                .first()
+                .waitFor({ state: 'visible', timeout: 5_000 })
+                .catch(() => undefined)
         }
+    }
 
-        await page.waitForTimeout(400)
+    const restorePrompt = page.getByTestId('session-restore-dialog')
+    if (await restorePrompt.isVisible().catch(() => false)) {
+        await page.getByTestId('restore-continue-btn').click()
+        await expect(restorePrompt).toBeHidden({ timeout: 10_000 })
+        return
+    }
+
+    const dialog = page.locator('[role="dialog"]').last()
+    if (await dialog.isVisible().catch(() => false)) {
+        const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
+        if ((await closeButton.count()) > 0) await closeButton.first().click().catch(() => undefined)
+        else await page.keyboard.press('Escape').catch(() => undefined)
+        await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
     }
 }
 
 export async function completeActiveSet(page: Page) {
     const button = activeSetCompleteButton(page)
     await expect(button).toBeVisible({ timeout: 30_000 })
-    await dismissBlockingDialog(page)
-    await fillActiveSetInputs(page)
-    const clicked = await button.click({ timeout: 15_000 }).then(() => true).catch(() => false)
-    if (clicked) return
 
-    // A sheet that appeared late (or a re-rendered prompt) can swallow the first click.
-    await dismissBlockingDialog(page)
+    // A sheet that appeared late can swallow the click, so dismiss and retry a couple of times.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        await dismissBlockingDialog(page)
+        await fillActiveSetInputs(page)
+        const clicked = await button.click({ timeout: 5_000 }).then(() => true).catch(() => false)
+        if (clicked) return
+    }
+
+    await fillActiveSetInputs(page)
     await button.click()
 }
 
@@ -542,12 +565,24 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             let setNumber = Number(payload.set_number ?? 1)
             let exerciseId = Number(payload.exercise_id ?? 1)
             let exerciseName = String(payload.exercise_name ?? 'Упражнение')
+            let storedSet: (CompletedSet & Record<string, unknown>) | undefined
             for (const exercise of current?.exercises ?? []) {
                 for (const set of exercise.sets_completed) {
                     if ((set as { id?: number }).id !== setId) continue
                     setNumber = set.set_number
                     exerciseId = exercise.exercise_id
                     exerciseName = exercise.name
+                    storedSet = set as CompletedSet & Record<string, unknown>
+                }
+            }
+
+            // The mock stands in for the server, so a completed set has to survive into the
+            // session the next GET returns — otherwise a reload after logging a set would
+            // show the row as pending again.
+            if (storedSet) {
+                storedSet.completed = payload.completed !== false
+                for (const field of ['reps', 'weight', 'rpe', 'duration', 'rest_seconds', 'set_type'] as const) {
+                    if (payload[field] !== undefined) storedSet[field] = payload[field]
                 }
             }
 

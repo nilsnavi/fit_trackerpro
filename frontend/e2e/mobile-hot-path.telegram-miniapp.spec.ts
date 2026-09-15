@@ -255,16 +255,21 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await dismissBlockingDialog(page)
         await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
-        // Go offline and make a local change.
+        // Let the session baseline settle, so only the offline edit can be queued.
+        await page.waitForTimeout(3_000)
+        const syncedBefore = state.updateSessionRequests.length
+
+        // Go offline and make a local-only change (the new set inherits its predecessor).
         await context.setOffline(true)
-        await completeActiveSet(page)
+        await page.locator('[data-testid="add-set-btn"]').click()
 
         // API must not be called while offline; visible status wording can vary by shell state.
         await expect(page.getByText(/офлайн|Нет сети/i).first()).toBeVisible({ timeout: 12_000 })
-        await expect.poll(() => state.updateSessionRequests.length).toBe(0)
+        await page.waitForTimeout(3_000)
+        expect(state.updateSessionRequests.length).toBe(syncedBefore)
 
         // Reconnect and ensure queue drains (update calls happen).
         await context.setOffline(false)
-        await expect.poll(() => state.updateSessionRequests.length, { timeout: 20_000 }).toBeGreaterThan(0)
+        await expect.poll(() => state.updateSessionRequests.length, { timeout: 20_000 }).toBeGreaterThan(syncedBefore)
     })
 })

@@ -4,8 +4,12 @@
  */
 import { test, expect } from '@playwright/test'
 import {
+    activeSetCompleteButton,
     buildExercise,
     buildWorkoutState,
+    completeActiveSet,
+    expectActiveSet,
+    finishActiveWorkout,
     mockWorkoutApi,
     seedAuth,
 } from './helpers/workout-api-mock'
@@ -115,18 +119,11 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
         await page.locator('[data-testid="save-and-start-btn"]').click()
         await expect(page).toHaveURL(/\/workouts\/active\/\d+/, { timeout: 30_000 })
 
-        const setToggleButton = page.getByRole('button', { name: /Отметить подход 1 выполненным/ })
-        await expect(setToggleButton).toBeVisible({ timeout: 30_000 })
-        await setToggleButton.click()
-        await expect(page.getByRole('button', { name: /Отметить подход 2 выполненным/ })).toBeVisible()
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
+        await completeActiveSet(page)
+        await expectActiveSet(page, 2)
 
-        const finishBtn = page.getByRole('button', { name: 'Завершить' }).last()
-        await expect(finishBtn).toBeVisible({ timeout: 10_000 })
-        await finishBtn.click()
-
-        const confirmFinishBtn = page.getByRole('dialog').getByRole('button', { name: 'Завершить' })
-        await expect(confirmFinishBtn).toBeVisible({ timeout: 10_000 })
-        await confirmFinishBtn.click()
+        await finishActiveWorkout(page)
         await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary/, { timeout: 30_000 })
 
         await nav.getByRole('link', { name: 'Прогресс' }).click()
