@@ -4,7 +4,8 @@
  * Export all helpers and types so each spec can import only what it needs
  * instead of defining them inline.
  */
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
+import { setupTelegramWebApp } from './telegram-mock'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -200,41 +201,123 @@ export function withSetIds(workoutId: number, exercises: CompletedExercise[]): C
 // ── Browser seed helpers ──────────────────────────────────────────────────────
 
 /**
- * TelegramAuthGate only renders the app once it has a Telegram `initData`, which a
- * Mini App client supplies. Seed the same shape the real client does, so specs see the
- * app shell, and serve an empty script for the telegram-web-app.js that index.html
- * loads from telegram.org — outside Telegram it replaces window.Telegram with a WebApp
- * whose initData is empty and the app falls back to its "Открой в Telegram" screen.
- */
-export async function seedTelegramWebApp(page: Page) {
-    await page.addInitScript(() => {
-        const w = window as Window & { Telegram?: { WebApp?: Record<string, unknown> } }
-        w.Telegram = {
-            WebApp: {
-                initData: 'user%3D%7B%22id%22%3A100001%7D',
-                initDataUnsafe: { user: { id: 100001, first_name: 'E2E', last_name: 'Tester' } },
-                ready: () => {},
-                expand: () => {},
-                close: () => {},
-            },
-        }
-    })
-
-    await page.route('**/telegram-web-app.js', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }),
-    )
-}
-
-/**
- * Make the app treat the visitor as a signed-in Mini App user: the Telegram context
- * above plus the token that the mocked API hands back for it.
+ * Make the app treat the visitor as a signed-in Mini App user: the Telegram WebApp
+ * context that TelegramAuthGate reads, plus the token the mocked auth exchange returns.
  * Called before `page.goto`, like every other seeding helper.
  */
 export async function seedAuth(page: Page) {
-    await seedTelegramWebApp(page)
+    await setupTelegramWebApp(page)
     await page.addInitScript(() => {
         localStorage.setItem('auth_token', 'e2e-token')
     })
+}
+
+// ── Active workout screen ─────────────────────────────────────────────────────
+// The screen renders one row per set (`set-row-N`). Only the active row carries an
+// enabled "Завершить подход" control: completed rows show a check icon, locked rows a
+// padlock. Specs target those controls instead of the removed numbered aria-label.
+
+/** The control that completes whichever set is currently active. */
+export function activeSetCompleteButton(page: Page) {
+    return page.getByRole('button', { name: 'Завершить подход' }).first()
+}
+
+/**
+ * A set cannot be completed while its weight or reps are empty or zero (SPEC-005 §13),
+ * so seed plausible values first — the same thing a user does before tapping through.
+ */
+export async function fillActiveSetInputs(page: Page, values: { weight?: number; reps?: number } = {}) {
+    const weightInput = page.getByLabel('Вес').first()
+    if (await weightInput.isVisible().catch(() => false)) {
+        const current = await weightInput.inputValue().catch(() => '')
+        if (!current || current === '0') await weightInput.fill(String(values.weight ?? 80))
+    }
+    const repsInput = page.getByLabel('Повторы').first()
+    if (await repsInput.isVisible().catch(() => false)) {
+        const current = await repsInput.inputValue().catch(() => '')
+        if (!current || current === '0') await repsInput.fill(String(values.reps ?? 10))
+    }
+}
+
+/**
+ * Nothing on the screen is clickable while a sheet is open. The §48 restore prompt is the
+ * one that greets the app when a draft session exists; close it the way a user would.
+ */
+export async function dismissBlockingDialog(page: Page) {
+    // The prompt renders after the incomplete-session query resolves, so poll briefly
+    // instead of racing it right after navigation.
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        const restorePrompt = page.getByTestId('session-restore-dialog')
+        if (await restorePrompt.isVisible().catch(() => false)) {
+            const continueButton = page.getByTestId('restore-continue-btn')
+            if (await continueButton.isVisible().catch(() => false)) await continueButton.click().catch(() => undefined)
+            else await page.keyboard.press('Escape').catch(() => undefined)
+            await expect(restorePrompt).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
+            return
+        }
+
+        const dialog = page.locator('[role="dialog"]').last()
+        if (await dialog.isVisible().catch(() => false)) {
+            const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
+            if ((await closeButton.count()) > 0) await closeButton.first().click().catch(() => undefined)
+            else await page.keyboard.press('Escape').catch(() => undefined)
+            await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
+            return
+        }
+
+        await page.waitForTimeout(400)
+    }
+}
+
+export async function completeActiveSet(page: Page) {
+    const button = activeSetCompleteButton(page)
+    await expect(button).toBeVisible({ timeout: 30_000 })
+    await dismissBlockingDialog(page)
+    await fillActiveSetInputs(page)
+    const clicked = await button.click({ timeout: 15_000 }).then(() => true).catch(() => false)
+    if (clicked) return
+
+    // A sheet that appeared late (or a re-rendered prompt) can swallow the first click.
+    await dismissBlockingDialog(page)
+    await button.click()
+}
+
+/** A completed set offers no "Завершить подход" control inside its row. */
+export async function expectSetCompleted(page: Page, setNumber: number) {
+    await expect(
+        page
+            .locator(`[data-testid="set-row-${setNumber}"]`)
+            .getByRole('button', { name: 'Завершить подход' }),
+    ).toHaveCount(0)
+}
+
+/** The active set has advanced to `setNumber`. */
+export async function expectActiveSet(page: Page, setNumber: number) {
+    await expect(
+        page
+            .locator(`[data-testid="set-row-${setNumber}"]`)
+            .getByRole('button', { name: 'Завершить подход' })
+            .first(),
+    ).toBeVisible({ timeout: 30_000 })
+}
+
+/**
+ * Finish the active workout and land on the summary step. "Завершить" may open the
+ * §47 confirmation dialog mid-action, so a covered click is tolerated and the dialog is
+ * confirmed when it appears.
+ */
+export async function finishActiveWorkout(page: Page) {
+    await dismissBlockingDialog(page)
+    const completeButton = page.locator('main').getByRole('button', { name: 'Завершить', exact: true }).last()
+    await expect(completeButton).toBeVisible({ timeout: 30_000 })
+    await completeButton.click({ timeout: 15_000 }).catch(() => undefined)
+
+    const confirmDialog = page.locator('[role="dialog"]').last()
+    if (await confirmDialog.isVisible().catch(() => false)) {
+        await confirmDialog.getByRole('button', { name: 'Завершить', exact: true }).last().click()
+    }
+
+    await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary(?:\?.*)?$/, { timeout: 30_000 })
 }
 
 export async function seedDraft(page: Page, workoutId: number, title: string) {

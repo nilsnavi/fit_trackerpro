@@ -2,9 +2,16 @@ import { test, expect } from '@playwright/test'
 import {
     type CompletedExercise,
     type WorkoutHistoryItem,
+    activeSetCompleteButton,
     buildWorkoutState,
+    completeActiveSet,
+    dismissBlockingDialog,
+    expectActiveSet,
+    expectSetCompleted,
+    finishActiveWorkout,
     seedAuth,
     seedDraft,
+    withSetIds,
     mockWorkoutApi,
     isoNow,
     isoMinutesAgo,
@@ -101,11 +108,10 @@ test('create template -> start workout -> log sets -> complete -> open history',
 
     await expect.poll(() => state.startRequests.length).toBe(1)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
-    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible()
+    await expect(activeSetCompleteButton(page)).toBeVisible()
 
-    const firstSetCompleteButton = page.getByRole('button', { name: 'Отметить подход 1 выполненным' })
-    await firstSetCompleteButton.dispatchEvent('click')
-    await expect(page.getByLabel('Подход выполнен').first()).toBeVisible()
+    await completeActiveSet(page)
+    await expectSetCompleted(page, 1)
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
 
     const skipRestTimer = page.getByRole('button', { name: 'Skip' })
@@ -113,17 +119,9 @@ test('create template -> start workout -> log sets -> complete -> open history',
         await skipRestTimer.click()
     }
 
-    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
-    await expect(page.getByText('Завершить тренировку?')).toBeVisible({ timeout: 45_000 })
-    await page.getByRole('button', { name: 'Завершить', exact: true }).last().click()
-
-    await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary(?:\?.*)?$/, { timeout: 30_000 })
-    await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-    await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
-    await page.getByTestId('confirm-finish-btn').click()
+    await finishActiveWorkout(page)
 
     await expect.poll(() => state.completeRequests.length, { timeout: 45_000 }).toBe(1)
-    await expect(page).toHaveURL(/\/workouts\/\d+(?:\?.*)?$/, { timeout: 30_000 })
 
     await page.goto('/workouts', { waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('heading', { name: 'Последние сессии' })).toBeVisible({ timeout: 30_000 })
@@ -136,7 +134,7 @@ test('repeat workout from workouts page', async ({ page }) => {
         id: lastWorkoutId,
         date: isoNow(),
         duration: 46,
-        exercises: [
+        exercises: withSetIds(lastWorkoutId, [
             {
                 exercise_id: 1001,
                 name: 'Присед',
@@ -145,7 +143,7 @@ test('repeat workout from workouts page', async ({ page }) => {
                     { set_number: 2, reps: 5, weight: 90, completed: true },
                 ],
             },
-        ],
+        ]),
         comments: 'E2E повторить прошлую',
         tags: ['strength'],
         created_at: isoMinutesAgo(24 * 60),
@@ -172,7 +170,7 @@ test('repeat workout from workouts page', async ({ page }) => {
     expect(repeatedExercises[0]?.sets_completed[0]?.completed).toBe(false)
     expect(repeatedExercises[0]?.sets_completed[1]?.completed).toBe(false)
     await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
-    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible()
+    await expect(activeSetCompleteButton(page)).toBeVisible()
 })
 
 test('resume draft from workouts page', async ({ page }) => {
@@ -181,7 +179,7 @@ test('resume draft from workouts page', async ({ page }) => {
         id: draftWorkoutId,
         date: isoNow(),
         duration: undefined,
-        exercises: [
+        exercises: withSetIds(draftWorkoutId, [
             {
                 exercise_id: 1002,
                 name: 'Жим лёжа',
@@ -189,7 +187,7 @@ test('resume draft from workouts page', async ({ page }) => {
                     { set_number: 1, reps: 8, weight: 70, completed: false },
                 ],
             },
-        ],
+        ]),
         comments: 'E2E draft resume',
         tags: ['strength'],
         created_at: isoMinutesAgo(10),
@@ -211,7 +209,7 @@ test('resume draft from workouts page', async ({ page }) => {
 
     await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
     await expect(page.getByRole('heading', { name: 'Жим лёжа' }).last()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible()
+    await expect(activeSetCompleteButton(page)).toBeVisible()
 })
 
 test('complete workout', async ({ page }) => {
@@ -220,7 +218,7 @@ test('complete workout', async ({ page }) => {
         id: workoutId,
         date: isoNow(),
         duration: undefined,
-        exercises: [
+        exercises: withSetIds(workoutId, [
             {
                 exercise_id: 1001,
                 name: 'Присед',
@@ -229,7 +227,7 @@ test('complete workout', async ({ page }) => {
                     { set_number: 2, reps: 5, weight: 80, completed: false },
                 ],
             },
-        ],
+        ]),
         comments: 'E2E активная сессия',
         tags: ['strength'],
         created_at: isoMinutesAgo(15),
@@ -245,24 +243,18 @@ test('complete workout', async ({ page }) => {
 
     await page.goto(`/workouts/active/${workoutId}`)
     await expect(page.getByRole('heading', { name: 'Присед' }).last()).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible({ timeout: 30_000 })
+    await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
-    await page.getByRole('button', { name: 'Отметить подход 1 выполненным' }).click()
+    await completeActiveSet(page)
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
 
     // Completing the last remaining set opens the summary step before final save.
-    await page.getByRole('button', { name: 'Отметить подход 2 выполненным' }).click()
+    await expectActiveSet(page, 2)
+    await completeActiveSet(page)
 
-    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
-    await expect(page.getByText('Завершить тренировку?')).toBeVisible({ timeout: 45_000 })
-    await page.getByRole('button', { name: 'Завершить', exact: true }).last().click()
-    await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}/summary(?:\\?.*)?$`))
-    await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-    await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
-    await page.getByTestId('confirm-finish-btn').click()
+    await finishActiveWorkout(page)
 
     await expect.poll(() => state.completeRequests.length).toBe(1)
-    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}(?:\\?.*)?$`))
     expect(state.completeRequests[0]?.payload.duration).toBeTruthy()
 })
 
@@ -272,7 +264,7 @@ test('auto-complete workout on last "Готово" tap', async ({ page }) => {
         id: workoutId,
         date: isoNow(),
         duration: undefined,
-        exercises: [
+        exercises: withSetIds(workoutId, [
             {
                 exercise_id: 1001,
                 name: 'Присед',
@@ -280,7 +272,7 @@ test('auto-complete workout on last "Готово" tap', async ({ page }) => {
                     { set_number: 1, reps: 5, weight: 80, completed: false },
                 ],
             },
-        ],
+        ]),
         comments: 'E2E авто-завершение по готово',
         tags: ['strength'],
         created_at: isoMinutesAgo(8),
@@ -296,21 +288,14 @@ test('auto-complete workout on last "Готово" tap', async ({ page }) => {
 
     await page.goto(`/workouts/active/${workoutId}`)
     await expect(page.getByRole('heading', { name: 'Присед' }).last()).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible({ timeout: 30_000 })
+    await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
     // One incomplete set in session: marking it done opens the summary step before final save.
-    await page.getByRole('button', { name: 'Отметить подход 1 выполненным' }).click()
+    await completeActiveSet(page)
 
-    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
-    await expect(page.getByText('Завершить тренировку?')).toBeVisible({ timeout: 45_000 })
-    await page.getByRole('button', { name: 'Завершить', exact: true }).last().click()
-    await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}/summary(?:\\?.*)?$`))
-    await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-    await expect(page.getByText('Завершение тренировки')).toBeVisible({ timeout: 45_000 })
-    await page.getByTestId('confirm-finish-btn').click()
+    await finishActiveWorkout(page)
 
     await expect.poll(() => state.completeRequests.length).toBe(1)
-    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}(?:\\?.*)?$`))
     expect(state.completeRequests[0]?.payload.duration).toBeTruthy()
 })
 
@@ -320,7 +305,7 @@ test('offline -> reconnect -> sync', async ({ page, context }) => {
         id: workoutId,
         date: isoNow(),
         duration: undefined,
-        exercises: [
+        exercises: withSetIds(workoutId, [
             {
                 exercise_id: 1002,
                 name: 'Жим лёжа',
@@ -329,7 +314,7 @@ test('offline -> reconnect -> sync', async ({ page, context }) => {
                     { set_number: 2, reps: 8, weight: 70, completed: false },
                 ],
             },
-        ],
+        ]),
         comments: 'E2E офлайн синк',
         tags: ['strength'],
         created_at: isoMinutesAgo(20),
@@ -344,20 +329,21 @@ test('offline -> reconnect -> sync', async ({ page, context }) => {
     await mockWorkoutApi(page, state)
 
     await page.goto(`/workouts/active/${workoutId}`)
-    await expect(page.getByRole('button', { name: 'Отметить подход 1 выполненным' })).toBeVisible({ timeout: 30_000 })
+    await dismissBlockingDialog(page)
+    await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
     await context.setOffline(true)
-    await page.getByRole('button', { name: 'Отметить подход 1 выполненным' }).click()
+    await completeActiveSet(page)
 
     const status = page.getByRole('status').filter({ hasText: 'Нет сети' }).first()
     await expect(status).toBeVisible({ timeout: 8000 })
-    await expect(page.getByText(/сохранено локально/)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/сохранен[оы] локально/)).toBeVisible({ timeout: 5000 })
 
     await context.setOffline(false)
 
     await expect.poll(() => state.updateSessionRequests.length, { timeout: 8000 }).toBeGreaterThan(0)
 
     await page.reload()
-    await expect(page.getByLabel('Подход выполнен').first()).toBeVisible()
+    await expectSetCompleted(page, 1)
 })
 })
