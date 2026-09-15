@@ -205,7 +205,13 @@ test('resume draft from workouts page', async ({ page }) => {
     const activeWorkoutLink = page.getByRole('link', { name: /Открыть активную тренировку|Активная тренировка/ }).first()
     await expect(activeWorkoutLink).toBeVisible({ timeout: 30_000 })
 
-    await activeWorkoutLink.click()
+    // The seeded unfinished session raises the §48 prompt over the hub, and that sheet
+    // swallows the click. Its "Продолжить" and the hub pill reach the same screen, so
+    // accept the prompt and fall back to the pill when it did not appear.
+    await dismissBlockingDialog(page)
+    if (!/\/workouts\/active\/\d+/.test(page.url())) {
+        await activeWorkoutLink.click()
+    }
 
     await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
     await expect(page.getByRole('heading', { name: 'Жим лёжа' }).last()).toBeVisible()

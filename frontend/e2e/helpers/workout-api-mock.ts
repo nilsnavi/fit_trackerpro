@@ -721,9 +721,18 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             if (!current) {
                 return respond(404, { detail: 'Workout not found' })
             }
+            // The server closes the session: it records the elapsed time and the terminal
+            // status. The history list drops its "В процессе" badge on that duration.
+            const startedAt = new Date(current.started_at ?? current.created_at).getTime()
+            const elapsedMinutes = Number.isFinite(startedAt)
+                ? Math.max(1, Math.round((Date.now() - startedAt) / 60_000))
+                : 1
             const completed: WorkoutHistoryItem = {
                 ...current,
-                duration: typeof payload.duration === 'number' ? payload.duration : current.duration,
+                status: 'completed',
+                duration: typeof payload.duration === 'number' && payload.duration > 0
+                    ? payload.duration
+                    : current.duration ?? elapsedMinutes,
                 exercises: Array.isArray(payload.exercises)
                     ? withSetIds(workoutId, payload.exercises as CompletedExercise[])
                     : current.exercises,

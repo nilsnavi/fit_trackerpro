@@ -98,9 +98,11 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         // The app shell redirects the root to the dashboard.
         await expect(page).toHaveURL(/\/home$/)
 
-        // Verify navigation is visible (auth success indicator)
+        // Verify the dashboard rendered (auth success indicator). The dashboard hides
+        // the shell navigation, so its own content is the signal; the nav locator below
+        // is used on the section routes later in this flow.
+        await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible({ timeout: 15_000 })
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
-        await expect(nav).toBeVisible()
 
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 2: Go directly to workout mode page
@@ -221,7 +223,9 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         await seedAuth(page)
         await mockWorkoutApi(page, state)
 
-        await page.goto('/')
+        // The root redirects to the dashboard, which hides the shell navigation, so the
+        // bottom nav is exercised from the workouts hub, where it is rendered.
+        await page.goto('/workouts')
 
         // Verify navigation visible
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
@@ -240,8 +244,8 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
             await expect(page).toHaveURL(section.url)
         }
 
-        // Return home
+        // Return home; the dashboard drops the nav again, so the assertion is the URL.
         await nav.getByRole('link', { name: 'Главная' }).click()
-        await expect(page).toHaveURL(/\/home/)
+        await expect(page).toHaveURL(/\/home(?:\?.*)?$/)
     })
 })

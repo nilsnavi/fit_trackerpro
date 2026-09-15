@@ -92,12 +92,15 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
         await page.goto('/')
         // The app shell redirects the root to the dashboard.
         await expect(page).toHaveURL(/(?:\/|\/home)$/)
-        await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
 
         // ─────────────────────────────────────────────────────────────────────────
         // STEP 2: Navigate to Workouts section
         // ─────────────────────────────────────────────────────────────────────────
+        // The dashboard hides the shell navigation, so the bottom nav is driven from the
+        // catalog, which renders it.
+        await page.goto('/exercises')
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
+        await expect(nav).toBeVisible()
         await nav.getByRole('link', { name: 'Тренировки' }).click()
         await expect(page).toHaveURL(/\/workouts(?:\?.*)?$/)
         await expect(page.getByRole('heading', { name: 'Тренировки' })).toBeVisible()

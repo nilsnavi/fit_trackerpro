@@ -89,12 +89,13 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             })
         })
 
-        // Шаг 3 — главная страница загрузилась.
+        // Шаг 3 — главная страница загрузилась. Дашборд скрывает нижнюю навигацию оболочки,
+        // поэтому проверяем его собственный контент, а не навигацию.
         await page.goto('/')
         await expect(page).toHaveURL(/\/$/)
+        await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible({ timeout: 15_000 })
 
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
-        await expect(nav).toBeVisible()
 
         // Шаг 4 — создать тренировку через UI режима.
         await page.goto('/workouts/mode/strength')
