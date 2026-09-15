@@ -199,7 +199,39 @@ export function withSetIds(workoutId: number, exercises: CompletedExercise[]): C
 
 // ── Browser seed helpers ──────────────────────────────────────────────────────
 
+/**
+ * TelegramAuthGate only renders the app once it has a Telegram `initData`, which a
+ * Mini App client supplies. Seed the same shape the real client does, so specs see the
+ * app shell, and serve an empty script for the telegram-web-app.js that index.html
+ * loads from telegram.org — outside Telegram it replaces window.Telegram with a WebApp
+ * whose initData is empty and the app falls back to its "Открой в Telegram" screen.
+ */
+export async function seedTelegramWebApp(page: Page) {
+    await page.addInitScript(() => {
+        const w = window as Window & { Telegram?: { WebApp?: Record<string, unknown> } }
+        w.Telegram = {
+            WebApp: {
+                initData: 'user%3D%7B%22id%22%3A100001%7D',
+                initDataUnsafe: { user: { id: 100001, first_name: 'E2E', last_name: 'Tester' } },
+                ready: () => {},
+                expand: () => {},
+                close: () => {},
+            },
+        }
+    })
+
+    await page.route('**/telegram-web-app.js', (route) =>
+        route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }),
+    )
+}
+
+/**
+ * Make the app treat the visitor as a signed-in Mini App user: the Telegram context
+ * above plus the token that the mocked API hands back for it.
+ * Called before `page.goto`, like every other seeding helper.
+ */
 export async function seedAuth(page: Page) {
+    await seedTelegramWebApp(page)
     await page.addInitScript(() => {
         localStorage.setItem('auth_token', 'e2e-token')
     })
@@ -277,6 +309,20 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
 
         if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me'))) {
             return respond(200, buildUserProfile())
+        }
+
+        // TelegramAuthGate exchanges the injected initData for a token; without this
+        // handler the catch-all answer has no access_token and the app lands on its
+        // "Ошибка авторизации" screen instead of the shell.
+        if (method === 'POST' && normalizedPath.endsWith('/users/auth/telegram')) {
+            return respond(200, {
+                success: true,
+                message: 'ok',
+                access_token: 'e2e-token',
+                refresh_token: 'e2e-refresh-token',
+                is_new_user: false,
+                onboarding_required: false,
+            })
         }
 
         if (method === 'GET' && /\/users\/stats$/.test(normalizedPath)) {

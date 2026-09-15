@@ -46,15 +46,6 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             exercises: [buildExercise(9001, 'E2E Mock Exercise', 'strength')],
         })
 
-        // index.html подключает telegram-web-app.js — он сбрасывает initData в браузере; для E2E отдаём пустышку.
-        await page.route('**/telegram-web-app.js', (route) =>
-            route.fulfill({
-                status: 200,
-                contentType: 'application/javascript; charset=utf-8',
-                body: '/* playwright: skip official Telegram script */',
-            }),
-        )
-
         // Шаг 5 — мок каталога упражнений.
         // Ставим более специфичный роут до общего `mockWorkoutApi`, чтобы было явно видно правило в тесте.
         await page.route('**/api/v1/exercises/**', async (route) => {
@@ -74,26 +65,7 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
         })
 
         await page.addInitScript(() => {
-            const w = window as Window & {
-                Telegram?: { WebApp?: Record<string, unknown> }
-                __APP_CONFIG__?: Record<string, unknown>
-            }
-            w.Telegram = {
-                WebApp: {
-                    initData: 'mock',
-                    initDataUnsafe: { user: { id: 12345, first_name: 'Test' } },
-                    ready: () => {},
-                    expand: () => {},
-                    close: () => {},
-                    onEvent: () => {},
-                    offEvent: () => {},
-                    setHeaderColor: () => {},
-                    setBackgroundColor: () => {},
-                    enableClosingConfirmation: () => {},
-                    colorScheme: 'light',
-                    themeParams: {},
-                },
-            }
+            const w = window as Window & { __APP_CONFIG__?: Record<string, unknown> }
             w.__APP_CONFIG__ = { API_URL: '/api/v1' }
         })
 

@@ -80,22 +80,7 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
     }) => {
         const state = buildWorkoutState()
 
-        // Step 1: Mock Telegram WebApp context
-        await page.addInitScript(() => {
-            // Minimal Telegram.WebApp stub for Mini App context detection
-            const w = window as Window & { Telegram?: { WebApp?: Record<string, unknown> } }
-            w.Telegram = {
-                WebApp: {
-                    initData: 'user%3D%7B%22id%22%3A100001%7D',
-                    initDataUnsafe: { user: { id: 100001 } },
-                    ready: () => {},
-                    expand: () => {},
-                    close: () => {},
-                },
-            }
-        })
-
-        // Step 2: Setup auth via token injection (auth would normally come from Telegram)
+        // Steps 1-2: Mini App context plus the token the mocked auth exchange returns.
         await seedAuth(page)
 
         // Step 3: Mock all API endpoints (includes user profile)
@@ -294,19 +279,6 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
                     ],
                 } as never,
             ],
-        })
-
-        await page.addInitScript(() => {
-            const w = window as Window & { Telegram?: { WebApp?: Record<string, unknown> } }
-            w.Telegram = {
-                WebApp: {
-                    initData: 'user%3D%7B%22id%22%3A100001%7D',
-                    initDataUnsafe: { user: { id: 100001 } },
-                    ready: () => {},
-                    expand: () => {},
-                    close: () => {},
-                },
-            }
         })
 
         await seedAuth(page)
@@ -543,7 +515,7 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
         // (maintenance) gate, or the authenticated shell.
         await page.goto('/')
 
-        const fallbackMsg = page.getByRole('heading', { name: /Откройте Mini App в Telegram/i })
+        const fallbackMsg = page.getByRole('heading', { name: /Открой в Telegram|Откройте Mini App в Telegram/i })
         const maintenanceMsg = page.getByRole('heading', { name: /Техническое обслуживание/i })
         const navigation = page.getByRole('navigation', { name: 'Основная навигация' })
 
@@ -558,9 +530,11 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
             .toBeGreaterThan(0)
 
         if ((await fallbackMsg.count()) > 0) {
-            // Should show Telegram fallback
+            // Telegram gate: it either links to the bot or just explains where to open the app.
             await expect(fallbackMsg).toBeVisible()
-            await expect(page.getByRole('button', { name: /Проверить снова|Retry/i })).toBeVisible()
+            await expect(
+                page.getByText(/Мини-приложение доступно через бота|Запустите мини-приложение из Telegram/),
+            ).toBeVisible()
         } else if ((await maintenanceMsg.count()) > 0) {
             // Backend unavailable: the health gate takes over instead
             await expect(maintenanceMsg).toBeVisible()
