@@ -21,7 +21,11 @@
 
 import { test, expect } from '@playwright/test'
 import {
+    activeSetCompleteButton,
     buildWorkoutState,
+    completeActiveSet,
+    expectActiveSet,
+    finishActiveWorkout,
     seedAuth,
     mockWorkoutApi,
     buildExercise,
@@ -81,25 +85,7 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
             exercises: TEST_EXERCISES,
         })
 
-        // Step 1: Mock Telegram WebApp context (MUST be before page.goto)
-        await page.addInitScript(() => {
-            const w = window as Window & { Telegram?: { WebApp?: Record<string, unknown> }; __APP_CONFIG__?: Record<string, unknown> }
-            w.Telegram = {
-                WebApp: {
-                    initData: 'user%3D%7B%22id%22%3A100001%7D',
-                    initDataUnsafe: { user: { id: 100001, first_name: 'E2E', last_name: 'Tester' } },
-                    ready: () => { },
-                    expand: () => { },
-                    close: () => { },
-                    colorScheme: 'light',
-                    themeParams: {},
-                },
-            }
-            // Override API_URL to use relative path for mocking
-            w.__APP_CONFIG__ = { API_URL: '/api/v1' }
-        })
-
-        // Step 2: Seed auth token (MUST be before page.goto)
+        // Step 1: Mini App context plus an auth token (MUST be before page.goto)
         await seedAuth(page)
 
         // Step 3: Mock all API endpoints (MUST be before page.goto)
@@ -109,7 +95,8 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         // STEP 1: Verify app loads and user is authenticated
         // ═══════════════════════════════════════════════════════════════════════
         await page.goto('/')
-        await expect(page).toHaveURL(/\/$/)
+        // The app shell redirects the root to the dashboard.
+        await expect(page).toHaveURL(/\/home$/)
 
         // Verify navigation is visible (auth success indicator)
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
@@ -169,29 +156,22 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         // STEP 5: Log sets
         // ═══════════════════════════════════════════════════════════════════════
         // Wait for active workout page to load
-        await expect(page.getByRole('button', { name: /Отметить подход 1 выполненным/ })).toBeVisible({ timeout: 30_000 })
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
         // Mark first set as completed (click "Готово" button)
-        await page.getByRole('button', { name: /Отметить подход 1 выполненным/ }).click()
+        await completeActiveSet(page)
 
         // Wait for sync queue to process the set update
         await waitForSyncQueueEmpty(page, 15_000)
 
         // Verify set is marked as completed and the next set becomes actionable.
-        await expect(page.getByRole('button', { name: /Отметить подход 2 выполненным/ })).toBeVisible()
+        await expectActiveSet(page, 2)
 
         // ═══════════════════════════════════════════════════════════════════════
         // STEP 6: Complete workout
         // ═══════════════════════════════════════════════════════════════════════
-        // Click finish workout button
-        const finishBtn = page.getByRole('button', { name: 'Завершить' }).last()
-        await expect(finishBtn).toBeVisible({ timeout: 10_000 })
-        await finishBtn.click()
-
-        // Confirm finish in modal
-        const confirmFinishBtn = page.getByRole('dialog').getByRole('button', { name: 'Завершить' })
-        await expect(confirmFinishBtn).toBeVisible({ timeout: 10_000 })
-        await confirmFinishBtn.click()
+        // Finish the workout (confirmation dialog handled inside the helper)
+        await finishActiveWorkout(page)
 
         // Wait for sync queue to process completion
         await waitForSyncQueueEmpty(page, 30_000)
@@ -238,18 +218,6 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         const state = buildWorkoutState()
 
         // Setup Telegram mock and auth
-        await page.addInitScript(() => {
-            const w = window as Window & { Telegram?: { WebApp?: Record<string, unknown> } }
-            w.Telegram = {
-                WebApp: {
-                    initData: 'user%3D%7B%22id%22%3A100001%7D',
-                    initDataUnsafe: { user: { id: 100001 } },
-                    ready: () => { },
-                    expand: () => { },
-                    close: () => { },
-                },
-            }
-        })
         await seedAuth(page)
         await mockWorkoutApi(page, state)
 

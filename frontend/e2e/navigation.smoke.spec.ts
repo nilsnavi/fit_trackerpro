@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
-test('app loads and navigation works', async ({ page }) => {
+test('app loads and navigation works', async ({ workoutAuthPage: page }) => {
     await page.goto('/')
 
     await expect(page).toHaveTitle(/FitTracker Pro/i)
@@ -11,4 +11,3 @@ test('app loads and navigation works', async ({ page }) => {
     await nav.getByRole('link', { name: 'Тренировки' }).click()
     await expect(page).toHaveURL(/\/workouts(?:\?.*)?$/)
 })
-
