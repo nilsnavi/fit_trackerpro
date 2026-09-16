@@ -10,7 +10,6 @@
 import { test as base, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { buildWorkoutState, seedAuth, mockWorkoutApi, type MockWorkoutApiState } from './helpers/workout-api-mock'
-import { setupTelegramWebApp } from './helpers/telegram-mock'
 
 export type TestFixtures = {
     // Pre-authenticated page with Telegram WebApp mock
@@ -32,10 +31,7 @@ export type TestFixtures = {
  */
 export const test = base.extend<TestFixtures>({
     authenticatedPage: async ({ page }, use) => {
-        // Setup Telegram WebApp context
-        await setupTelegramWebApp(page)
-
-        // Seed auth token
+        // Telegram context plus an auth token
         await seedAuth(page)
 
         await use(page)
@@ -73,10 +69,7 @@ export const test = base.extend<TestFixtures>({
      * This is the most common setup for workout tests.
      */
     workoutAuthPage: async ({ page }, use) => {
-        // Setup Telegram WebApp
-        await setupTelegramWebApp(page)
-
-        // Seed auth
+        // Telegram context plus an auth token
         await seedAuth(page)
 
         // Setup workout API mocking

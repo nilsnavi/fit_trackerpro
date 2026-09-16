@@ -4,7 +4,8 @@
  * Export all helpers and types so each spec can import only what it needs
  * instead of defining them inline.
  */
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
+import { setupTelegramWebApp } from './telegram-mock'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -199,10 +200,147 @@ export function withSetIds(workoutId: number, exercises: CompletedExercise[]): C
 
 // ── Browser seed helpers ──────────────────────────────────────────────────────
 
+/**
+ * Make the app treat the visitor as a signed-in Mini App user: the Telegram WebApp
+ * context that TelegramAuthGate reads, plus the token the mocked auth exchange returns.
+ * Called before `page.goto`, like every other seeding helper.
+ */
 export async function seedAuth(page: Page) {
+    await setupTelegramWebApp(page)
     await page.addInitScript(() => {
         localStorage.setItem('auth_token', 'e2e-token')
     })
+}
+
+// ── Active workout screen ─────────────────────────────────────────────────────
+// The screen renders one row per set (`set-row-N`). Only the active row carries an
+// enabled "Завершить подход" control: completed rows show a check icon, locked rows a
+// padlock. Specs target those controls instead of the removed numbered aria-label.
+
+/** The control that completes whichever set is currently active. */
+export function activeSetCompleteButton(page: Page) {
+    return page.getByRole('button', { name: 'Завершить подход' }).first()
+}
+
+/**
+ * A set cannot be completed while its weight or reps are empty or zero (SPEC-005 §13),
+ * so seed plausible values first — the same thing a user does before tapping through.
+ */
+export async function fillActiveSetInputs(page: Page, values: { weight?: number; reps?: number } = {}) {
+    const weightInput = page.getByLabel('Вес').first()
+    if (await weightInput.isVisible().catch(() => false)) {
+        const current = await weightInput.inputValue().catch(() => '')
+        if (!current || current === '0') await weightInput.fill(String(values.weight ?? 80))
+    }
+    const repsInput = page.getByLabel('Повторы').first()
+    if (await repsInput.isVisible().catch(() => false)) {
+        const current = await repsInput.inputValue().catch(() => '')
+        if (!current || current === '0') await repsInput.fill(String(values.reps ?? 10))
+    }
+}
+
+/** Set once per page load so only the first dismissal waits for a sheet. */
+const DISMISS_ONCE_FLAG = '__e2eDismissBlockingDone'
+
+/**
+ * Nothing on the screen is clickable while a sheet is open. The §48 restore prompt is the
+ * one that greets the app when an unfinished session exists; close it the way a user would.
+ *
+ * The gate that renders the prompt is loaded lazily, so it can land well after the screen has
+ * painted. On the first call of each page load (a reload starts a new page load) an in-progress
+ * session is given a moment to raise its sheet, instead of racing it with a 2s poll window.
+ */
+export async function dismissBlockingDialog(page: Page) {
+    const firstCallInPage = await page
+        .evaluate((flag) => {
+            const owner = window as unknown as Record<string, unknown>
+            if (owner[flag] === true) return false
+            owner[flag] = true
+            return true
+        }, DISMISS_ONCE_FLAG)
+        .catch(() => false)
+
+    if (firstCallInPage) {
+        const sessionInProgress = await page
+            .evaluate(() => localStorage.getItem('workout-session-draft') !== null)
+            .catch(() => false)
+        if (sessionInProgress) {
+            await page
+                .locator('[role="dialog"]')
+                .first()
+                .waitFor({ state: 'visible', timeout: 5_000 })
+                .catch(() => undefined)
+        }
+    }
+
+    const restorePrompt = page.getByTestId('session-restore-dialog')
+    if (await restorePrompt.isVisible().catch(() => false)) {
+        await page.getByTestId('restore-continue-btn').click()
+        await expect(restorePrompt).toBeHidden({ timeout: 10_000 })
+        return
+    }
+
+    const dialog = page.locator('[role="dialog"]').last()
+    if (await dialog.isVisible().catch(() => false)) {
+        const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
+        if ((await closeButton.count()) > 0) await closeButton.first().click().catch(() => undefined)
+        else await page.keyboard.press('Escape').catch(() => undefined)
+        await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
+    }
+}
+
+export async function completeActiveSet(page: Page) {
+    const button = activeSetCompleteButton(page)
+    await expect(button).toBeVisible({ timeout: 30_000 })
+
+    // A sheet that appeared late can swallow the click, so dismiss and retry a couple of times.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        await dismissBlockingDialog(page)
+        await fillActiveSetInputs(page)
+        const clicked = await button.click({ timeout: 5_000 }).then(() => true).catch(() => false)
+        if (clicked) return
+    }
+
+    await fillActiveSetInputs(page)
+    await button.click()
+}
+
+/** A completed set offers no "Завершить подход" control inside its row. */
+export async function expectSetCompleted(page: Page, setNumber: number) {
+    await expect(
+        page
+            .locator(`[data-testid="set-row-${setNumber}"]`)
+            .getByRole('button', { name: 'Завершить подход' }),
+    ).toHaveCount(0)
+}
+
+/** The active set has advanced to `setNumber`. */
+export async function expectActiveSet(page: Page, setNumber: number) {
+    await expect(
+        page
+            .locator(`[data-testid="set-row-${setNumber}"]`)
+            .getByRole('button', { name: 'Завершить подход' })
+            .first(),
+    ).toBeVisible({ timeout: 30_000 })
+}
+
+/**
+ * Finish the active workout and land on the summary step. "Завершить" may open the
+ * §47 confirmation dialog mid-action, so a covered click is tolerated and the dialog is
+ * confirmed when it appears.
+ */
+export async function finishActiveWorkout(page: Page) {
+    await dismissBlockingDialog(page)
+    const completeButton = page.locator('main').getByRole('button', { name: 'Завершить', exact: true }).last()
+    await expect(completeButton).toBeVisible({ timeout: 30_000 })
+    await completeButton.click({ timeout: 15_000 }).catch(() => undefined)
+
+    const confirmDialog = page.locator('[role="dialog"]').last()
+    if (await confirmDialog.isVisible().catch(() => false)) {
+        await confirmDialog.getByRole('button', { name: 'Завершить', exact: true }).last().click()
+    }
+
+    await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary(?:\?.*)?$/, { timeout: 30_000 })
 }
 
 export async function seedDraft(page: Page, workoutId: number, title: string) {
@@ -277,6 +415,20 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
 
         if (method === 'GET' && (normalizedPath.endsWith('/auth/me') || normalizedPath.endsWith('/users/me'))) {
             return respond(200, buildUserProfile())
+        }
+
+        // TelegramAuthGate exchanges the injected initData for a token; without this
+        // handler the catch-all answer has no access_token and the app lands on its
+        // "Ошибка авторизации" screen instead of the shell.
+        if (method === 'POST' && normalizedPath.endsWith('/users/auth/telegram')) {
+            return respond(200, {
+                success: true,
+                message: 'ok',
+                access_token: 'e2e-token',
+                refresh_token: 'e2e-refresh-token',
+                is_new_user: false,
+                onboarding_required: false,
+            })
         }
 
         if (method === 'GET' && /\/users\/stats$/.test(normalizedPath)) {
@@ -413,12 +565,24 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             let setNumber = Number(payload.set_number ?? 1)
             let exerciseId = Number(payload.exercise_id ?? 1)
             let exerciseName = String(payload.exercise_name ?? 'Упражнение')
+            let storedSet: (CompletedSet & Record<string, unknown>) | undefined
             for (const exercise of current?.exercises ?? []) {
                 for (const set of exercise.sets_completed) {
                     if ((set as { id?: number }).id !== setId) continue
                     setNumber = set.set_number
                     exerciseId = exercise.exercise_id
                     exerciseName = exercise.name
+                    storedSet = set as CompletedSet & Record<string, unknown>
+                }
+            }
+
+            // The mock stands in for the server, so a completed set has to survive into the
+            // session the next GET returns — otherwise a reload after logging a set would
+            // show the row as pending again.
+            if (storedSet) {
+                storedSet.completed = payload.completed !== false
+                for (const field of ['reps', 'weight', 'rpe', 'duration', 'rest_seconds', 'set_type'] as const) {
+                    if (payload[field] !== undefined) storedSet[field] = payload[field]
                 }
             }
 
@@ -557,9 +721,18 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             if (!current) {
                 return respond(404, { detail: 'Workout not found' })
             }
+            // The server closes the session: it records the elapsed time and the terminal
+            // status. The history list drops its "В процессе" badge on that duration.
+            const startedAt = new Date(current.started_at ?? current.created_at).getTime()
+            const elapsedMinutes = Number.isFinite(startedAt)
+                ? Math.max(1, Math.round((Date.now() - startedAt) / 60_000))
+                : 1
             const completed: WorkoutHistoryItem = {
                 ...current,
-                duration: typeof payload.duration === 'number' ? payload.duration : current.duration,
+                status: 'completed',
+                duration: typeof payload.duration === 'number' && payload.duration > 0
+                    ? payload.duration
+                    : current.duration ?? elapsedMinutes,
                 exercises: Array.isArray(payload.exercises)
                     ? withSetIds(workoutId, payload.exercises as CompletedExercise[])
                     : current.exercises,

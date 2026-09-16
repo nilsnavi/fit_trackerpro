@@ -190,9 +190,6 @@ jobs:
           E2E_BASE_URL: http://127.0.0.1:3000
           VITE_API_URL: http://127.0.0.1:28000/api/v1
           E2E_TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        # Scoped to the §58 scenario: the older "full flow" case in the same file is
-        # unstable against the built (non-dev-server) frontend, so it is kept out of
-        # this gate instead of making it flaky.
         run: npm run e2e:golden-path
 
       - name: Upload Playwright report on failure

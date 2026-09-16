@@ -4,8 +4,12 @@
  */
 import { test, expect } from '@playwright/test'
 import {
+    activeSetCompleteButton,
     buildExercise,
     buildWorkoutState,
+    completeActiveSet,
+    expectActiveSet,
+    finishActiveWorkout,
     mockWorkoutApi,
     seedAuth,
 } from './helpers/workout-api-mock'
@@ -46,15 +50,6 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             exercises: [buildExercise(9001, 'E2E Mock Exercise', 'strength')],
         })
 
-        // index.html подключает telegram-web-app.js — он сбрасывает initData в браузере; для E2E отдаём пустышку.
-        await page.route('**/telegram-web-app.js', (route) =>
-            route.fulfill({
-                status: 200,
-                contentType: 'application/javascript; charset=utf-8',
-                body: '/* playwright: skip official Telegram script */',
-            }),
-        )
-
         // Шаг 5 — мок каталога упражнений.
         // Ставим более специфичный роут до общего `mockWorkoutApi`, чтобы было явно видно правило в тесте.
         await page.route('**/api/v1/exercises/**', async (route) => {
@@ -74,26 +69,7 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
         })
 
         await page.addInitScript(() => {
-            const w = window as Window & {
-                Telegram?: { WebApp?: Record<string, unknown> }
-                __APP_CONFIG__?: Record<string, unknown>
-            }
-            w.Telegram = {
-                WebApp: {
-                    initData: 'mock',
-                    initDataUnsafe: { user: { id: 12345, first_name: 'Test' } },
-                    ready: () => {},
-                    expand: () => {},
-                    close: () => {},
-                    onEvent: () => {},
-                    offEvent: () => {},
-                    setHeaderColor: () => {},
-                    setBackgroundColor: () => {},
-                    enableClosingConfirmation: () => {},
-                    colorScheme: 'light',
-                    themeParams: {},
-                },
-            }
+            const w = window as Window & { __APP_CONFIG__?: Record<string, unknown> }
             w.__APP_CONFIG__ = { API_URL: '/api/v1' }
         })
 
@@ -113,12 +89,13 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             })
         })
 
-        // Шаг 3 — главная страница загрузилась.
+        // Шаг 3 — главная страница загрузилась. Дашборд скрывает нижнюю навигацию оболочки,
+        // поэтому проверяем его собственный контент, а не навигацию.
         await page.goto('/')
         await expect(page).toHaveURL(/\/$/)
+        await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible({ timeout: 15_000 })
 
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
-        await expect(nav).toBeVisible()
 
         // Шаг 4 — создать тренировку через UI режима.
         await page.goto('/workouts/mode/strength')
@@ -143,18 +120,11 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
         await page.locator('[data-testid="save-and-start-btn"]').click()
         await expect(page).toHaveURL(/\/workouts\/active\/\d+/, { timeout: 30_000 })
 
-        const setToggleButton = page.getByRole('button', { name: /Отметить подход 1 выполненным/ })
-        await expect(setToggleButton).toBeVisible({ timeout: 30_000 })
-        await setToggleButton.click()
-        await expect(page.getByRole('button', { name: /Отметить подход 2 выполненным/ })).toBeVisible()
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
+        await completeActiveSet(page)
+        await expectActiveSet(page, 2)
 
-        const finishBtn = page.getByRole('button', { name: 'Завершить' }).last()
-        await expect(finishBtn).toBeVisible({ timeout: 10_000 })
-        await finishBtn.click()
-
-        const confirmFinishBtn = page.getByRole('dialog').getByRole('button', { name: 'Завершить' })
-        await expect(confirmFinishBtn).toBeVisible({ timeout: 10_000 })
-        await confirmFinishBtn.click()
+        await finishActiveWorkout(page)
         await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary/, { timeout: 30_000 })
 
         await nav.getByRole('link', { name: 'Прогресс' }).click()

@@ -33,7 +33,7 @@
     "e2e:ci:workout-flows": "playwright test --grep @workout-flows --reporter=line,html",
     "e2e:ci:mobile": "playwright test --project=mobile-android --project=mobile-ios --grep @mobile --reporter=line,html",
     "e2e:smoke:real": "playwright test --grep @smoke-real --reporter=line,html",
-    "e2e:golden-path": "playwright test e2e/golden-path.spec.ts --project=chromium --grep @spec-005",
+    "e2e:golden-path": "playwright test e2e/golden-path.spec.ts --project=chromium",
     "e2e:mvp": "playwright test e2e/mvp-regression.spec.ts",
     "e2e:mvp:headed": "playwright test e2e/mvp-regression.spec.ts --headed"
   },
