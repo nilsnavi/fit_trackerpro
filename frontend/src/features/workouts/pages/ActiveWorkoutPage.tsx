@@ -34,7 +34,12 @@ import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveW
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
-import { useProgressionRecommendation } from '@features/workouts/active/hooks/useProgressionRecommendation'
+import {
+    useAcceptProgressionRecommendation,
+    useExerciseProgressionRecommendation,
+    useProgressionRecommendation,
+    useRejectProgressionRecommendation,
+} from '@features/workouts/active/hooks/useProgressionRecommendation'
 import { useWakeLock } from '@features/workouts/active/hooks/useWakeLock'
 import { findPreviousResult } from '@features/workouts/active/lib/previousResult'
 
@@ -368,16 +373,85 @@ export function ActiveWorkoutPage() {
         [historyData?.items, recommendationExercise, workout?.id],
     )
 
-    // SPEC-005 §37: explainable progression recommendation for the active exercise.
+    // SPEC-006 §41/§45: persisted next target for the active exercise.
     const {
-        data: progressionRecommendation,
-        isLoading: isProgressionLoading,
-        isError: isProgressionError,
+        data: storedProgressionRecommendation,
+        isLoading: isStoredProgressionLoading,
+    } = useExerciseProgressionRecommendation({
+        exerciseId: recommendationExercise?.exercise_id ?? 0,
+        templateId: workout?.template_id ?? null,
+        enabled: Boolean(isActiveDraft && recommendationExercise?.exercise_id),
+    })
+
+    // SPEC-005 §37: read-only preview, used when nothing is stored yet.
+    const {
+        data: progressionPreview,
+        isLoading: isPreviewLoading,
+        isError: isPreviewError,
     } = useProgressionRecommendation({
         exerciseId: recommendationExercise?.exercise_id ?? 0,
         policy: 'DOUBLE_PROGRESSION',
-        enabled: Boolean(isActiveDraft && recommendationExercise?.exercise_id),
+        enabled: Boolean(
+            isActiveDraft &&
+                recommendationExercise?.exercise_id &&
+                !storedProgressionRecommendation,
+        ),
     })
+
+    const progressionRecommendation = storedProgressionRecommendation ?? progressionPreview
+    const isProgressionLoading = isStoredProgressionLoading || isPreviewLoading
+    const isProgressionError = isPreviewError && !storedProgressionRecommendation
+
+    // SPEC-006 §42–§44: accepting/modifying/rejecting is always explicit.
+    const acceptProgression = useAcceptProgressionRecommendation()
+    const rejectProgression = useRejectProgressionRecommendation()
+    const handleAcceptProgression = useCallback(
+        (recommendation: { id?: number | null; recommended_value?: number | null }, selectedValue?: number) => {
+            if (!recommendation.id) return
+            acceptProgression.mutate(
+                {
+                    recommendationId: recommendation.id,
+                    selectedValue: selectedValue ?? recommendation.recommended_value ?? undefined,
+                },
+                {
+                    onSuccess: (updated) => {
+                        toast.success(
+                            `Следующая цель: ${updated.actual_selected_value ?? updated.recommended_value ?? '—'} кг`,
+                        )
+                    },
+                    onError: () => toast.error('Не удалось сохранить рекомендацию'),
+                },
+            )
+        },
+        [acceptProgression],
+    )
+    const handleRejectProgression = useCallback(
+        (recommendation: { id?: number | null }) => {
+            if (!recommendation.id) return
+            rejectProgression.mutate(
+                { recommendationId: recommendation.id },
+                {
+                    onSuccess: () => toast.info('Рекомендация отклонена'),
+                    onError: () => toast.error('Не удалось отклонить рекомендацию'),
+                },
+            )
+        },
+        [rejectProgression],
+    )
+    // SPEC-006 §46: the "Почему?" sheet explains the recommendation with the
+    // previous session's working sets (warm-ups already excluded upstream).
+    const previousCompletedSets = useMemo(
+        () =>
+            (previousResult?.sets ?? [])
+                .filter((set) => set.completed)
+                .map((set) => ({
+                    set_number: set.set_number,
+                    reps: set.reps ?? null,
+                    weight: set.weight ?? null,
+                    duration: set.duration ?? null,
+                })),
+        [previousResult],
+    )
     const legacyWeightRecommendation = useMemo(
         () =>
             weightRecommendation
@@ -969,6 +1043,12 @@ export function ActiveWorkoutPage() {
                         progressionRecommendation={progressionRecommendation}
                         isProgressionLoading={isProgressionLoading}
                         isProgressionError={isProgressionError}
+                        onAcceptProgression={handleAcceptProgression}
+                        onRejectProgression={handleRejectProgression}
+                        isProgressionDeciding={
+                            acceptProgression.isPending || rejectProgression.isPending
+                        }
+                        progressionPreviousSets={previousCompletedSets}
                         weightRecommendation={weightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
