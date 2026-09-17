@@ -205,6 +205,21 @@ export interface PersonalRecordEntry {
 }
 
 /** SPEC-005 §37–38: explainable progression recommendation */
+export type ProgressionRecommendationStatus =
+    | 'INCREASE'
+    | 'KEEP'
+    | 'DECREASE'
+    | 'DELOAD'
+    | 'MANUAL'
+    | 'INSUFFICIENT_DATA'
+
+export type ProgressionRecommendationLifecycle =
+    | 'generated'
+    | 'accepted'
+    | 'modified'
+    | 'rejected'
+    | 'expired'
+
 export interface ProgressionRecommendation {
     recommended_value?: number | null
     previous_value?: number | null
@@ -215,6 +230,78 @@ export interface ProgressionRecommendation {
     confidence: 'low' | 'medium' | 'high'
     source_session_id?: number | null
     exercise_id?: number
+    // SPEC-006 §8–§10: persisted identity, lifecycle and scope.
+    id?: number | null
+    scope_key?: string | null
+    template_id?: number | null
+    template_exercise_id?: number | null
+    status?: ProgressionRecommendationStatus | null
+    lifecycle_status?: ProgressionRecommendationLifecycle | null
+    policy_version?: string | null
+    actual_selected_value?: number | null
+    previous_reps?: number | null
+    recommended_reps?: number | null
+    reps_min?: number | null
+    reps_max?: number | null
+    previous_duration?: number | null
+    recommended_duration?: number | null
+    failure_streak?: number
+    persisted?: boolean
+    recovery_warning?: string | null
+}
+
+export interface ProgressionPolicyConfig {
+    id: number | null
+    user_id: number
+    exercise_id: number
+    template_id?: number | null
+    template_exercise_id?: number | null
+    scope_key: string
+    policy_scope_key?: string | null
+    type: ProgressionPolicy
+    policy_version: string
+    increment?: number | null
+    min_value?: number | null
+    max_value?: number | null
+    reps_min?: number | null
+    reps_max?: number | null
+    sets_target?: number | null
+    target_rpe?: number | null
+    target_rir?: number | null
+    percent_1rm?: number | null
+    time_increment_seconds?: number | null
+    time_target_seconds?: number | null
+    time_priority?: 'TIME_FIRST' | 'WEIGHT_FIRST' | null
+    failure_threshold?: number | null
+    deload_percent?: number | null
+    equipment_increment?: number | null
+    enabled: boolean
+}
+
+export interface ProgressionPolicyUpdateRequest {
+    type: ProgressionPolicy
+    increment?: number | null
+    min_value?: number | null
+    max_value?: number | null
+    reps_min?: number | null
+    reps_max?: number | null
+    sets_target?: number | null
+    target_rpe?: number | null
+    target_rir?: number | null
+    percent_1rm?: number | null
+    time_increment_seconds?: number | null
+    time_target_seconds?: number | null
+    time_priority?: 'TIME_FIRST' | 'WEIGHT_FIRST' | null
+    failure_threshold?: number | null
+    deload_percent?: number | null
+    equipment_increment?: number | null
+    enabled?: boolean
+}
+
+export interface ProgressionScopeParams {
+    template_id?: number | null
+    template_exercise_id?: number | null
+    [key: string]: number | null | undefined
 }
 
 export type ProgressionPolicy =

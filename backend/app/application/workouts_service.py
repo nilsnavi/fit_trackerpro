@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.application.progression_engine_service import ProgressionEngineService
 from app.application.progression_service import recommend as recommend_progression
 from app.application.records_service import (
     collect_session_records,
@@ -937,6 +938,7 @@ class WorkoutsService:
             data=data,
         )
 
+        apply_progression_targets = False
         if template is not None:
             initial_exercises, override_comments, override_tags = self._resolve_start_overrides(
                 template_exercises=template.exercises or [],
@@ -944,6 +946,9 @@ class WorkoutsService:
             )
             default_name = template.name
             source_version = template.version
+            # SPEC-006 §58: an explicit per-session plan always wins over the
+            # accepted target, so prefilling only applies to a plain start.
+            apply_progression_targets = not (data.overrides and data.overrides.exercises)
         elif source_session is not None:
             initial_exercises = [
                 self._exercise_session_to_workout_draft(ex, idx)
@@ -954,6 +959,13 @@ class WorkoutsService:
             override_tags = list(data.overrides.tags) if data.overrides else []
             default_name = source_session.comments or f"Workout #{source_session.id}"
             source_version = source_session.version
+            # SPEC-006 §42/§58: repeating a session that came from a template
+            # keeps that template context, so the accepted next target still
+            # seeds the copied working sets instead of freezing the weights of
+            # the repeated session (the template itself is never changed).
+            if source_session.template_id is not None:
+                template_id_for_session = int(source_session.template_id)
+                apply_progression_targets = not (data.overrides and data.overrides.exercises)
         else:
             # SPEC-005 §2: quick start / manual workout may define its own
             # exercise plan via overrides without any template source.
@@ -972,6 +984,13 @@ class WorkoutsService:
             override_tags = list(data.overrides.tags) if data.overrides else []
             default_name = None
             source_version = None
+
+        if apply_progression_targets and template_id_for_session is not None:
+            initial_exercises = await self._apply_accepted_progression_targets(
+                user_id=user_id,
+                template_id=template_id_for_session,
+                exercises=initial_exercises,
+            )
 
         workout = WorkoutLog(
             user_id=user_id,
@@ -1447,8 +1466,11 @@ class WorkoutsService:
         # SPEC-005 §40: detect PRs across the completed session (warm-up excluded).
         personal_records = collect_session_records(workout.exercises or [])
 
-        # SPEC-005 §51: next targets from the progression engine for each exercise.
-        progression_recommendations = self._build_progression_recommendations(
+        # SPEC-006 §40/§51: evaluate + persist the next target for every
+        # non-skipped exercise of the finished session (idempotent, batched).
+        progression_recommendations = await self._build_progression_recommendations(
+            user_id=user_id,
+            workout=workout,
             exercises=workout.exercises or [],
         )
 
@@ -1479,31 +1501,66 @@ class WorkoutsService:
             ],
         )
 
-    def _build_progression_recommendations(
+    async def _apply_accepted_progression_targets(
         self,
         *,
+        user_id: int,
+        template_id: int,
         exercises: list[dict],
     ) -> list[dict]:
-        """Next-target recommendations for every exercise of a finished session."""
-        recommendations: list[dict] = []
-        for exercise in exercises:
-            if not isinstance(exercise, dict):
+        """Prefill planned working sets with the user's accepted next target.
+
+        SPEC-006 §42/§58: only an ``accepted``/``modified`` recommendation may do
+        this — a ``generated`` proposal is never applied silently, and the
+        template's own weight stays untouched. Only working sets are seeded
+        (warm-ups keep whatever the template planned).
+        """
+        engine = ProgressionEngineService(self.repository.db)
+        targets = await engine.resolve_accepted_targets(
+            user_id=user_id,
+            template_id=template_id,
+            exercises=exercises,
+        )
+        if not targets:
+            return exercises
+        for index, target in targets.items():
+            if index >= len(exercises):
                 continue
-            if str(exercise.get("status") or "") == "skipped":
+            draft = exercises[index]
+            sets_payload = draft.get("sets_completed") if isinstance(draft, dict) else None
+            if not isinstance(sets_payload, list):
                 continue
-            exercise_id_raw = exercise.get("exercise_id")
-            try:
-                exercise_id = int(exercise_id_raw)
-            except (TypeError, ValueError):
-                continue
-            recommendation = recommend_progression(
-                policy=ProgressionPolicy.DOUBLE_PROGRESSION,
-                current_exercise=exercise,
-                history=[],
-                exercise_id=exercise_id,
-            )
-            recommendations.append({**recommendation, "exercise_id": exercise_id})
-        return recommendations
+            for set_payload in sets_payload:
+                if not isinstance(set_payload, dict):
+                    continue
+                set_type = self._normalize_set_type(set_payload.get("set_type"))
+                if set_type != WorkoutSetType.WORKING.value:
+                    continue
+                if target.weight is not None:
+                    set_payload["weight"] = target.weight
+                elif target.duration is not None:
+                    set_payload["duration"] = target.duration
+        return exercises
+
+    async def _build_progression_recommendations(
+        self,
+        *,
+        user_id: int,
+        workout: WorkoutLog,
+        exercises: list[dict],
+    ) -> list[dict]:
+        """Next-target recommendations for every exercise of a finished session.
+
+        Delegates to the SPEC-006 Progression Engine service: the pure domain
+        engine decides, this service persists the result and stays compatible
+        with the existing ``progression_recommendations`` wire field.
+        """
+        engine = ProgressionEngineService(self.repository.db)
+        return await engine.evaluate_finished_session(
+            user_id=user_id,
+            workout=workout,
+            exercises_payload=exercises,
+        )
 
     async def cancel_workout(
         self,

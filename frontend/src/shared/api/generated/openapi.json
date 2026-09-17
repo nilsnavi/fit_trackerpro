@@ -1001,7 +1001,7 @@
           "media": {
             "anyOf": [
               {
-                "contentMediaType": "application/octet-stream",
+                "format": "binary",
                 "type": "string"
               },
               {
@@ -2600,6 +2600,16 @@
         ],
         "title": "CompletedSet",
         "type": "object"
+      },
+      "Confidence": {
+        "description": "SPEC-006 §29 — quality of the underlying data, not an AI probability.",
+        "enum": [
+          "high",
+          "medium",
+          "low"
+        ],
+        "title": "Confidence",
+        "type": "string"
       },
       "DailyWellnessCreate": {
         "description": "Request model for creating daily wellness entry",
@@ -5124,7 +5134,42 @@
         "title": "MuscleImbalanceSignalsResponse",
         "type": "object"
       },
-      "MuscleLoadEntry": {
+      "MuscleLoadEntry-Input": {
+        "description": "Daily muscle load aggregate entry",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "load_score": {
+            "title": "Load Score",
+            "type": "number"
+          },
+          "muscle_group": {
+            "title": "Muscle Group",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "muscle_group",
+          "date",
+          "load_score"
+        ],
+        "title": "MuscleLoadEntry",
+        "type": "object"
+      },
+      "MuscleLoadEntry-Output": {
         "description": "Daily muscle load aggregate entry",
         "properties": {
           "date": {
@@ -5174,7 +5219,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/MuscleLoadEntry"
+              "$ref": "#/components/schemas/MuscleLoadEntry-Output"
             },
             "title": "Items",
             "type": "array"
@@ -5918,9 +5963,479 @@
         "title": "ProgressionPolicy",
         "type": "string"
       },
-      "ProgressionRecommendation": {
-        "description": "Explainable progression recommendation (SPEC-005 §37–38).",
+      "ProgressionPolicyResponse": {
+        "description": "Effective policy for one progression scope (SPEC §6/§7).",
         "properties": {
+          "deload_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deload Percent"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "equipment_increment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipment Increment"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "failure_threshold": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Threshold"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the scope still uses defaults.",
+            "title": "Id"
+          },
+          "increment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Increment"
+          },
+          "max_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "percent_1rm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent 1Rm"
+          },
+          "policy_scope_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Scope the stored policy row actually lives in; differs from scope_key when a template-level or user-level policy is inherited. Null for defaults.",
+            "title": "Policy Scope Key"
+          },
+          "policy_version": {
+            "default": "MANUAL_V1",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "reps_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Max"
+          },
+          "reps_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Min"
+          },
+          "scope_key": {
+            "description": "Progression scope: user + template + exercise + program slot.",
+            "title": "Scope Key",
+            "type": "string"
+          },
+          "sets_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sets Target"
+          },
+          "target_rir": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rir"
+          },
+          "target_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rpe"
+          },
+          "template_exercise_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Exercise Id"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "time_increment_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Increment Seconds"
+          },
+          "time_priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimePriority"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "time_target_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Target Seconds"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ProgressionPolicy",
+            "default": "MANUAL"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "exercise_id",
+          "scope_key"
+        ],
+        "title": "ProgressionPolicyResponse",
+        "type": "object"
+      },
+      "ProgressionPolicyUpdate": {
+        "description": "PUT body: configure progression for one exercise scope.",
+        "properties": {
+          "deload_percent": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 90.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deload Percent"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "equipment_increment": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 50.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipment Increment"
+          },
+          "failure_threshold": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Threshold"
+          },
+          "increment": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 200.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Increment"
+          },
+          "max_value": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "percent_1rm": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 200.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent 1Rm"
+          },
+          "reps_max": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Max"
+          },
+          "reps_min": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Min"
+          },
+          "sets_target": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sets Target"
+          },
+          "target_rir": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rir"
+          },
+          "target_rpe": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rpe"
+          },
+          "time_increment_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Increment Seconds"
+          },
+          "time_priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimePriority"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Weight+time exercises: TIME_FIRST or WEIGHT_FIRST (SPEC §24)."
+          },
+          "time_target_seconds": {
+            "anyOf": [
+              {
+                "maximum": 86400.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Target Seconds"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ProgressionPolicy",
+            "default": "MANUAL",
+            "description": "MANUAL never computes a target; the engine only proposes for other types."
+          }
+        },
+        "title": "ProgressionPolicyUpdate",
+        "type": "object"
+      },
+      "ProgressionRecommendation": {
+        "description": "Explainable progression recommendation (SPEC-005 §37–38, SPEC-006 §8).\n\nSPEC-006 fields are additive: existing consumers keep reading the original\nkeys, while the card can now show status, lifecycle and the persisted id.",
+        "properties": {
+          "actual_selected_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Selected Value"
+          },
           "confidence": {
             "default": "low",
             "pattern": "^(low|medium|high)$",
@@ -5938,9 +6453,80 @@
             ],
             "title": "Difference"
           },
+          "exercise_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exercise Id"
+          },
+          "failure_streak": {
+            "default": 0,
+            "title": "Failure Streak",
+            "type": "integer"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "lifecycle_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle Status"
+          },
           "policy": {
             "$ref": "#/components/schemas/ProgressionPolicy",
             "default": "MANUAL"
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Version"
+          },
+          "previous_duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Duration"
+          },
+          "previous_reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Reps"
           },
           "previous_value": {
             "anyOf": [
@@ -5963,6 +6549,28 @@
             "title": "Reason Text",
             "type": "string"
           },
+          "recommended_duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Duration"
+          },
+          "recommended_reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Reps"
+          },
           "recommended_value": {
             "anyOf": [
               {
@@ -5974,6 +6582,50 @@
             ],
             "title": "Recommended Value"
           },
+          "recovery_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Warning"
+          },
+          "reps_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Max"
+          },
+          "reps_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Min"
+          },
+          "scope_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Key"
+          },
           "source_session_id": {
             "anyOf": [
               {
@@ -5984,9 +6636,318 @@
               }
             ],
             "title": "Source Session Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "template_exercise_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Exercise Id"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
           }
         },
         "title": "ProgressionRecommendation",
+        "type": "object"
+      },
+      "ProgressionRecommendationDecision": {
+        "description": "POST body for accept/reject (SPEC §42–§44).",
+        "properties": {
+          "selected_value": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Omit to accept the recommended value; send a different own value to record the recommendation as ``modified``.",
+            "title": "Selected Value"
+          }
+        },
+        "title": "ProgressionRecommendationDecision",
+        "type": "object"
+      },
+      "ProgressionRecommendationResponse": {
+        "description": "Explainable recommendation (SPEC §8/§27/§28/§29/§46).",
+        "properties": {
+          "actual_selected_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Selected Value"
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/Confidence",
+            "default": "low"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exercise Name"
+          },
+          "failure_streak": {
+            "default": 0,
+            "title": "Failure Streak",
+            "type": "integer"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for a non-persisted preview.",
+            "title": "Id"
+          },
+          "idempotent_replay": {
+            "default": false,
+            "title": "Idempotent Replay",
+            "type": "boolean"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/RecommendationLifecycle",
+            "default": "generated"
+          },
+          "persisted": {
+            "default": false,
+            "title": "Persisted",
+            "type": "boolean"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/ProgressionPolicy",
+            "default": "MANUAL"
+          },
+          "policy_version": {
+            "default": "MANUAL_V1",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "previous_duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Duration"
+          },
+          "previous_reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Reps"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "reason_code": {
+            "default": "",
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "reason_text": {
+            "default": "",
+            "title": "Reason Text",
+            "type": "string"
+          },
+          "recommended_duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Duration"
+          },
+          "recommended_reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Reps"
+          },
+          "recommended_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Value"
+          },
+          "recovery_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Advisory only — recovery never changes the recommendation (SPEC §34).",
+            "title": "Recovery Warning"
+          },
+          "reps_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Max"
+          },
+          "reps_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Min"
+          },
+          "scope_key": {
+            "title": "Scope Key",
+            "type": "string"
+          },
+          "source_session_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Session Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecommendationStatus",
+            "default": "INSUFFICIENT_DATA"
+          },
+          "template_exercise_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Exercise Id"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "scope_key"
+        ],
+        "title": "ProgressionRecommendationResponse",
         "type": "object"
       },
       "ReadinessChecks": {
@@ -6032,6 +6993,31 @@
         ],
         "title": "ReadinessResponse",
         "type": "object"
+      },
+      "RecommendationLifecycle": {
+        "description": "SPEC-006 §10 — a recommendation never mutates the program by itself.",
+        "enum": [
+          "generated",
+          "accepted",
+          "modified",
+          "rejected",
+          "expired"
+        ],
+        "title": "RecommendationLifecycle",
+        "type": "string"
+      },
+      "RecommendationStatus": {
+        "description": "SPEC-006 §9.",
+        "enum": [
+          "INCREASE",
+          "KEEP",
+          "DECREASE",
+          "DELOAD",
+          "MANUAL",
+          "INSUFFICIENT_DATA"
+        ],
+        "title": "RecommendationStatus",
+        "type": "string"
       },
       "RecoveryStateRecalculateResponse": {
         "description": "Recovery state after manual recalculation",
@@ -6489,7 +7475,62 @@
         "title": "TelegramUserData",
         "type": "object"
       },
-      "TrainingLoadDailyEntry": {
+      "TimePriority": {
+        "description": "SPEC-006 §24 — weight+time exercises: which lever moves first.",
+        "enum": [
+          "TIME_FIRST",
+          "WEIGHT_FIRST"
+        ],
+        "title": "TimePriority",
+        "type": "string"
+      },
+      "TrainingLoadDailyEntry-Input": {
+        "description": "Daily training load aggregate entry",
+        "properties": {
+          "avg_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Rpe"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "fatigue_score": {
+            "title": "Fatigue Score",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "date",
+          "volume",
+          "fatigue_score"
+        ],
+        "title": "TrainingLoadDailyEntry",
+        "type": "object"
+      },
+      "TrainingLoadDailyEntry-Output": {
         "description": "Daily training load aggregate entry",
         "properties": {
           "avgRpe": {
@@ -6550,7 +7591,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/TrainingLoadDailyEntry"
+              "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
             },
             "title": "Items",
             "type": "array"
@@ -7309,13 +8350,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -10737,7 +11771,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/MuscleLoadEntry"
+                    "$ref": "#/components/schemas/MuscleLoadEntry-Output"
                   },
                   "title": "Response Get Muscle Load Api V1 Analytics Muscle Load Get",
                   "type": "array"
@@ -11432,7 +12466,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/TrainingLoadDailyEntry"
+                    "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
                   },
                   "title": "Response Get Daily Training Load Api V1 Analytics Training Load Daily Get",
                   "type": "array"
@@ -14778,6 +15812,469 @@
         ]
       }
     },
+    "/api/v1/progression/exercises/{exercise_id}": {
+      "get": {
+        "description": "Progression scope is user + program/template + exercise + exercise slot (SPEC §7).",
+        "operationId": "get_exercise_progression_api_v1_progression_exercises__exercise_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "title": "Exercise Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_exercise_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Exercise Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionPolicyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Effective progression policy for an exercise scope",
+        "tags": [
+          "Progression"
+        ]
+      },
+      "put": {
+        "description": "Persisting a policy never changes existing recommendations or workout history.",
+        "operationId": "update_exercise_progression_api_v1_progression_exercises__exercise_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "title": "Exercise Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_exercise_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Exercise Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressionPolicyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionPolicyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Configure progression for an exercise scope",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/exercises/{exercise_id}/history": {
+      "get": {
+        "operationId": "get_exercise_progression_history_api_v1_progression_exercises__exercise_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "title": "Exercise Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_exercise_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Exercise Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+                  },
+                  "title": "Response Get Exercise Progression History Api V1 Progression Exercises  Exercise Id  History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recommendation history for an exercise scope",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/exercises/{exercise_id}/recommendation": {
+      "get": {
+        "operationId": "get_exercise_recommendation_api_v1_progression_exercises__exercise_id__recommendation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "title": "Exercise Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_exercise_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Exercise Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Latest persisted recommendation (or a read-only preview)",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/recommendations/{recommendation_id}/accept": {
+      "post": {
+        "description": "Only an explicit accept may change the program target (SPEC §42/§43).",
+        "operationId": "accept_recommendation_api_v1_progression_recommendations__recommendation_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "title": "Recommendation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProgressionRecommendationDecision"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept (or modify) a recommendation",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/recommendations/{recommendation_id}/reject": {
+      "post": {
+        "description": "Rejection leaves workout history untouched (SPEC §44).",
+        "operationId": "reject_recommendation_api_v1_progression_recommendations__recommendation_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "title": "Recommendation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject a recommendation",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
     "/api/v1/system/emergency/contact": {
       "get": {
         "operationId": "get_emergency_contacts_api_v1_system_emergency_contact_get",
@@ -17771,6 +19268,10 @@
     {
       "description": "Emergency and safety-related endpoints (e.g. SOS).",
       "name": "Emergency"
+    },
+    {
+      "description": "Progression engine (SPEC-006): per-scope policies, explainable next-target recommendations, and accept/modify/reject lifecycle.",
+      "name": "Progression"
     }
   ]
 }

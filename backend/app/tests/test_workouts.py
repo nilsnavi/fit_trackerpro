@@ -1494,7 +1494,8 @@ class TestSpec005RecommendationEndpoints:
         )
         assert r.status_code == 200, r.text
         body = r.json()
-        assert body["reason_code"] == "NO_HISTORY"
+        # SPEC-006 §30: reason codes come from the canonical engine enum.
+        assert body["reason_code"] == "NO_PREVIOUS_HISTORY"
         assert body["recommended_value"] is None
         assert body["policy"] == "DOUBLE_PROGRESSION"
 

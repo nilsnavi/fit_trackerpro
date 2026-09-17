@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
     ArrowLeft,
@@ -29,11 +29,24 @@ import type {
     WorkoutHistoryItem,
 } from '@features/workouts/types/workouts'
 import { useWorkoutSessionUiStore } from '@/state/local'
-import { ProgressionRecommendationCard } from './ProgressionRecommendationCard'
 import { PreviousResultCard } from './PreviousResultCard'
 import { PlateCalculatorModal } from './PlateCalculatorModal'
 import type { ProgressionRecommendation as Recommendation } from '../hooks/useProgressionRecommendation'
 import type { PreviousExerciseResult } from '../lib/previousResult'
+
+// Loaded on demand so the active-workout route chunk stays inside its budget.
+const ProgressionRecommendationCard = lazy(() =>
+    import('./ProgressionRecommendationCard').then((module) => ({
+        default: module.ProgressionRecommendationCard,
+    })),
+)
+
+type ProgressionExplanationSet = {
+    set_number?: number
+    reps?: number | null
+    weight?: number | null
+    duration?: number | null
+}
 import {
     groupExerciseWithNext,
     supersetSlots,
@@ -93,6 +106,12 @@ export interface ActiveWorkoutScreenProps {
     progressionRecommendation?: Recommendation | null
     isProgressionLoading?: boolean
     isProgressionError?: boolean
+    /** SPEC-006 §42–§44: explicit accept/modify/reject for a stored recommendation. */
+    onAcceptProgression?: (recommendation: Recommendation, selectedValue?: number) => void
+    onRejectProgression?: (recommendation: Recommendation) => void
+    isProgressionDeciding?: boolean
+    /** SPEC-006 §46: previous sets shown in the "Почему?" sheet. */
+    progressionPreviousSets?: ProgressionExplanationSet[]
     weightRecommendation?: WeightRecommendationResponse
     isWeightRecLoading: boolean
     isWeightRecError: boolean
@@ -885,6 +904,10 @@ function ActiveExerciseCard({
     progressionRecommendation,
     isProgressionLoading,
     isProgressionError,
+    onAcceptProgression,
+    onRejectProgression,
+    isProgressionDeciding,
+    progressionPreviousSets,
     onUpdateSet,
     onPatchWorkout,
     onNotifySetCompleted,
@@ -909,6 +932,10 @@ function ActiveExerciseCard({
     progressionRecommendation?: Recommendation | null
     isProgressionLoading?: boolean
     isProgressionError?: boolean
+    onAcceptProgression?: (recommendation: Recommendation, selectedValue?: number) => void
+    onRejectProgression?: (recommendation: Recommendation) => void
+    isProgressionDeciding?: boolean
+    progressionPreviousSets?: ProgressionExplanationSet[]
     onUpdateSet: UpdateSetFn
     onPatchWorkout: PatchItemFn
     onNotifySetCompleted: () => void
@@ -1150,18 +1177,30 @@ function ActiveExerciseCard({
                 <InlineRestTimer />
                 {/* SPEC-005 §8: previous completed result. */}
                 <PreviousResultCard previous={previousResult} />
-                {/* SPEC-005 §37: explainable progression recommendation. */}
-                <ProgressionRecommendationCard
-                    recommendation={progressionRecommendation}
-                    isLoading={isProgressionLoading}
-                    isError={isProgressionError}
-                    onApply={(value) => {
-                        const nextIncomplete = exercise.sets_completed.find((set) => !set.completed)
-                        if (nextIncomplete) {
-                            onUpdateSet(exerciseIndex, nextIncomplete.set_number, { weight: value })
-                        }
-                    }}
-                />
+                {/* SPEC-005 §37 / SPEC-006 §45: explainable progression recommendation. */}
+                <Suspense
+                    fallback={
+                        <div className="rounded-[16px] border border-white/[0.08] bg-black/20 px-3 py-2 text-sm font-bold text-telegram-hint">
+                            Расчёт рекомендации...
+                        </div>
+                    }
+                >
+                    <ProgressionRecommendationCard
+                        recommendation={progressionRecommendation}
+                        isLoading={isProgressionLoading}
+                        isError={isProgressionError}
+                        onAccept={onAcceptProgression}
+                        onReject={onRejectProgression}
+                        isDeciding={isProgressionDeciding}
+                        previousSets={progressionPreviousSets}
+                        onApply={(value) => {
+                            const nextIncomplete = exercise.sets_completed.find((set) => !set.completed)
+                            if (nextIncomplete) {
+                                onUpdateSet(exerciseIndex, nextIncomplete.set_number, { weight: value })
+                            }
+                        }}
+                    />
+                </Suspense>
                 <WeightRecommendationInline
                     recommendation={recommendation}
                     isLoading={isWeightRecLoading}
@@ -1231,6 +1270,10 @@ export function ActiveWorkoutScreen({
     progressionRecommendation,
     isProgressionLoading,
     isProgressionError,
+    onAcceptProgression,
+    onRejectProgression,
+    isProgressionDeciding,
+    progressionPreviousSets,
     weightRecommendation,
     isWeightRecLoading,
     isWeightRecError,
@@ -1331,6 +1374,10 @@ export function ActiveWorkoutScreen({
                                     progressionRecommendation={progressionRecommendation}
                                     isProgressionLoading={isProgressionLoading}
                                     isProgressionError={isProgressionError}
+                                    onAcceptProgression={onAcceptProgression}
+                                    onRejectProgression={onRejectProgression}
+                                    isProgressionDeciding={isProgressionDeciding}
+                                    progressionPreviousSets={progressionPreviousSets}
                                     onUpdateSet={onUpdateSet}
                                     onPatchWorkout={onPatchWorkout}
                                     onNotifySetCompleted={onNotifySetCompleted}

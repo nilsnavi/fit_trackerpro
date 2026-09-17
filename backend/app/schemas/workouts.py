@@ -717,7 +717,30 @@ class SmartRestRecommendation(BaseModel):
 
 
 class ProgressionRecommendation(BaseModel):
-    """Explainable progression recommendation (SPEC-005 §37–38)."""
+    """Explainable progression recommendation (SPEC-005 §37–38, SPEC-006 §8).
+
+    SPEC-006 fields are additive: existing consumers keep reading the original
+    keys, while the card can now show status, lifecycle and the persisted id.
+    """
+
+    # SPEC-006 §8/§9/§10 — persisted recommendation identity + lifecycle.
+    id: Optional[int] = None
+    exercise_id: Optional[int] = None
+    scope_key: Optional[str] = None
+    template_id: Optional[int] = None
+    template_exercise_id: Optional[int] = None
+    status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    policy_version: Optional[str] = None
+    actual_selected_value: Optional[float] = None
+    previous_reps: Optional[int] = None
+    recommended_reps: Optional[int] = None
+    reps_min: Optional[int] = None
+    reps_max: Optional[int] = None
+    previous_duration: Optional[int] = None
+    recommended_duration: Optional[int] = None
+    failure_streak: int = 0
+    recovery_warning: Optional[str] = None
 
     recommended_value: Optional[float] = None
     previous_value: Optional[float] = None
