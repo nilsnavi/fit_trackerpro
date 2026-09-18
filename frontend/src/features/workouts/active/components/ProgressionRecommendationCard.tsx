@@ -186,6 +186,17 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                         </p>
                     ) : null}
 
+                    {/* SPEC-006 §58: the target stays accepted, its automatic
+                        prefill does not come back without a new decision. */}
+                    {recommendation.prefill_declined ? (
+                        <p
+                            data-testid="progression-prefill-declined"
+                            className="mt-2 text-xs font-bold text-telegram-hint"
+                        >
+                            Автоподстановка выключена: цель не подставляется в новые тренировки сама.
+                        </p>
+                    ) : null}
+
                     {lifecycle && LIFECYCLE_LABELS[lifecycle] ? (
                         <p
                             data-testid="progression-lifecycle"

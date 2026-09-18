@@ -81,6 +81,12 @@ class ProgressionRecommendationRecord(Base):
     decided_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # SPEC-006 §58: set when the user undid this target's automatic prefill. The
+    # recommendation stays accepted (it is still the agreed next target); only
+    # the silent substitution is switched off until a newer one is accepted.
+    prefill_declined_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )

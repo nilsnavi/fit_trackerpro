@@ -91,6 +91,16 @@ class ProgressionPolicy(StrEnum):
     TIME_PROGRESSION = "TIME_PROGRESSION"
 
 
+class ProgressionBulkSkipReason(StrEnum):
+    """Why a bulk action left one selected target alone (SPEC-006 §58)."""
+
+    # Unknown id, someone else's record, or one that is no longer an accepted
+    # target (rejected or superseded by a newer recommendation).
+    NOT_FOUND = "not_found"
+    # The target is accepted and fine — its automatic prefill is just already off.
+    ALREADY_DISABLED = "already_disabled"
+
+
 class PersonalRecordType(StrEnum):
     """Personal record types tracked per exercise (SPEC-005 §40)."""
 

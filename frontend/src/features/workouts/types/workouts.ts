@@ -96,6 +96,13 @@ export interface CompletedSet {
     completed: boolean
     /** Set-level notes/comments */
     notes?: string
+    /**
+     * SPEC-006 §58: the value the plan had before an accepted progression target
+     * replaced it (`null` = the set was empty). Lets the UI offer a one-tap
+     * revert to the planned number.
+     */
+    planned_weight?: number | null
+    planned_duration?: number | null
 }
 
 /** Editable fields for a completed set from workout history. */
@@ -167,6 +174,18 @@ export interface CompletedExercise {
     block_order?: number | null
     block_rounds?: number | null
     block_rest_seconds?: number | null
+    /** SPEC-006 §58: set while the accepted target seeds this exercise's sets. */
+    progression_target?: ProgressionTargetInfo | null
+}
+
+/** SPEC-006 §42/§58: accepted progress target a session's numbers came from. */
+export interface ProgressionTargetInfo {
+    recommendation_id: number
+    scope_key: string
+    value: number
+    unit: 'kg' | 'seconds'
+    policy?: string | null
+    lifecycle_status?: string | null
 }
 
 export type WorkoutBlockType = 'NORMAL' | 'SUPERSET' | 'TRISET' | 'CIRCUIT'
@@ -248,6 +267,67 @@ export interface ProgressionRecommendation {
     failure_streak?: number
     persisted?: boolean
     recovery_warning?: string | null
+    /** SPEC-006 §58: user undid this target's automatic prefill. */
+    prefill_declined?: boolean
+    /** Policy that governs the scope now (differs from `policy` after an edit). */
+    effective_policy?: ProgressionPolicy | null
+    /** Step the scope progresses by now, equipment-aware. */
+    effective_increment?: number | null
+    effective_time_increment_seconds?: number | null
+    /** Catalog name of the exercise (filled by the prefill list endpoint). */
+    exercise_name?: string | null
+}
+
+/** SPEC-006 §58: accepted targets and their automatic-prefill state. */
+export interface ProgressionPrefillList {
+    items: ProgressionRecommendation[]
+    total: number
+}
+
+/** SPEC-006 §58: edit an accepted target in place (value, policy, rep range). */
+export interface ProgressionTargetUpdateRequest {
+    /** Kilograms, or seconds when the policy is TIME_PROGRESSION. */
+    value?: number
+    type?: ProgressionPolicy
+    reps_min?: number
+    reps_max?: number
+}
+
+/** SPEC-006 §58: one policy / rep-range edit applied to many targets at once. */
+export interface ProgressionTargetBulkUpdateRequest {
+    recommendation_ids: number[]
+    type?: ProgressionPolicy
+    reps_min?: number
+    reps_max?: number
+}
+
+/** SPEC-006 §58: why a bulk change left one selected target alone. */
+export type ProgressionBulkSkipReason =
+    /** Unknown id, someone else's record, or no longer an accepted target. */
+    | 'not_found'
+    /** The target is fine — its automatic prefill is just already off. */
+    | 'already_disabled'
+
+/** SPEC-006 §58: one skipped target, named and explained. */
+export interface ProgressionBulkSkipped {
+    recommendation_id: number
+    reason: ProgressionBulkSkipReason
+    /** Present only while the record still exists as an accepted target. */
+    exercise_id?: number | null
+    exercise_name?: string | null
+    /** Current value: kilograms, or seconds when the target is timed. */
+    value?: number | null
+    unit?: 'kg' | 'seconds' | null
+    scope_key?: string | null
+}
+
+/** SPEC-006 §58: outcome of a bulk change across accepted targets. */
+export interface ProgressionBulkResult {
+    updated: number
+    /** Targets the change did not apply to, each with the reason. */
+    skipped: ProgressionBulkSkipped[]
+    /** True when the request addressed every current target instead of a list. */
+    applied_to_all: boolean
 }
 
 export interface ProgressionPolicyConfig {

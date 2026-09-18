@@ -17,9 +17,9 @@ import {
 import { Button } from '@shared/ui/Button'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { cn } from '@shared/lib/cn'
-import { getErrorMessage } from '@shared/errors'
 import { toast } from '@shared/stores/toastStore'
 import { formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
+import { useCompleteWorkoutSet } from '@features/workouts/active/hooks/useCompleteWorkoutSet'
 import { useRestTimer } from '@features/workouts/active/hooks/useRestTimer'
 import { weightRecommendationQueryKey } from '@features/workouts/active/hooks/useWeightRecommendation'
 import type {
@@ -28,10 +28,10 @@ import type {
     WeightRecommendationResponse,
     WorkoutHistoryItem,
 } from '@features/workouts/types/workouts'
-import { useWorkoutSessionUiStore } from '@/state/local'
 import { PreviousResultCard } from './PreviousResultCard'
 import { PlateCalculatorModal } from './PlateCalculatorModal'
 import type { ProgressionRecommendation as Recommendation } from '../hooks/useProgressionRecommendation'
+import { ProgressionPrefillNotice } from './ProgressionPrefillNotice'
 import type { PreviousExerciseResult } from '../lib/previousResult'
 
 // Loaded on demand so the active-workout route chunk stays inside its budget.
@@ -59,7 +59,6 @@ import {
     isTimedSet,
 } from '../lib/activeWorkoutUtils'
 
-const DEFAULT_REST_SECONDS = 90
 // SPEC-005 §14: RPE 1–10 with 0.5 step.
 const RPE_OPTIONS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const
 // SPEC-005 §10: allowed set types.
@@ -112,6 +111,8 @@ export interface ActiveWorkoutScreenProps {
     isProgressionDeciding?: boolean
     /** SPEC-006 §46: previous sets shown in the "Почему?" sheet. */
     progressionPreviousSets?: ProgressionExplanationSet[]
+    /** SPEC-006 §58: undo the accepted target that seeded the active exercise. */
+    onRevertProgressionPrefill?: (exerciseIndex: number) => void
     weightRecommendation?: WeightRecommendationResponse
     isWeightRecLoading: boolean
     isWeightRecError: boolean
@@ -135,12 +136,6 @@ export interface ActiveWorkoutScreenProps {
 function formatKg(value: number | undefined): string {
     if (value == null || !Number.isFinite(value)) return '0'
     return Number.isInteger(value) ? String(value) : value.toFixed(1)
-}
-
-function getRestSeconds(exercise: CompletedExercise): number {
-    const planned = exercise.sets_completed.find((set) => typeof set.planned_rest_seconds === 'number')?.planned_rest_seconds
-    const tracked = exercise.sets_completed.find((set) => typeof set.rest_seconds === 'number')?.rest_seconds
-    return planned ?? tracked ?? DEFAULT_REST_SECONDS
 }
 
 function getActiveSetIndex(exercise: CompletedExercise, currentSetIndex: number): number {
@@ -908,6 +903,7 @@ function ActiveExerciseCard({
     onRejectProgression,
     isProgressionDeciding,
     progressionPreviousSets,
+    onRevertProgressionPrefill,
     onUpdateSet,
     onPatchWorkout,
     onNotifySetCompleted,
@@ -936,6 +932,8 @@ function ActiveExerciseCard({
     onRejectProgression?: (recommendation: Recommendation) => void
     isProgressionDeciding?: boolean
     progressionPreviousSets?: ProgressionExplanationSet[]
+    /** SPEC-006 §58: undo the accepted target that seeded this exercise. */
+    onRevertProgressionPrefill?: () => void
     onUpdateSet: UpdateSetFn
     onPatchWorkout: PatchItemFn
     onNotifySetCompleted: () => void
@@ -950,30 +948,12 @@ function ActiveExerciseCard({
     onUngroup?: () => void
 }) {
     const queryClient = useQueryClient()
-    const startRest = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
     const completed = exercise.sets_completed.filter((set) => set.completed).length
     const total = exercise.sets_completed.length
     const [completionError, setCompletionError] = useState<string | null>(null)
     // SPEC-005 §42: plate calculator state.
     const [isPlateCalculatorOpen, setIsPlateCalculatorOpen] = useState(false)
     const [plateTargetWeight, setPlateTarget] = useState(0)
-
-    const completeSetMutation = useMutation({
-        mutationFn: async ({ setId, weight, reps, duration, rpe }: {
-            setId: number
-            weight: number
-            reps?: number
-            /** SPEC-005 §20: timed sets send duration instead of reps. */
-            duration?: number
-            rpe?: number
-        }) =>
-            workoutsApi.patchWorkoutSet(workoutId, setId, {
-                weight,
-                ...(typeof duration === 'number' ? { duration } : { reps: reps ?? 0 }),
-                ...(typeof rpe === 'number' ? { rpe } : {}),
-                completed: true,
-            }),
-    })
 
     const patchSetRpeMutation = useMutation({
         mutationFn: async ({ setId, rpe }: { setId: number; rpe: number }) =>
@@ -1017,109 +997,20 @@ function ActiveExerciseCard({
         onNotifySetCompleted()
     }, [exerciseIndex, onNotifySetCompleted, onPatchWorkout])
 
-    const completeSet = useCallback(
-        async (set: CompletedSet) => {
-            if (set.completed) return
-            setCompletionError(null)
-
-            // SPEC-005 §20: timed sets validate duration instead of reps.
-            const isTimed = isTimedSet(set)
-            const isWarmup = set.set_type === 'warmup'
-
-            const weight = typeof set.weight === 'number' ? set.weight : Number.NaN
-            const reps = typeof set.reps === 'number' ? set.reps : Number.NaN
-            if (!isTimed && (!Number.isFinite(weight) || weight <= 0) && !isWarmup) {
-                setCompletionError('Заполните вес больше 0')
-                return
-            }
-            if (!isTimed && (!Number.isFinite(reps) || reps <= 0)) {
-                setCompletionError('Заполните повторы больше 0')
-                return
-            }
-            if (isTimed && (!Number.isFinite(set.duration) || (set.duration ?? 0) <= 0)) {
-                setCompletionError('Заполните длительность больше 0')
-                return
-            }
-            if (typeof set.id !== 'number' || set.id <= 0) {
-                setCompletionError('Не удалось сохранить подход: отсутствует id set')
-                return
-            }
-
-            try {
-                const saved = await completeSetMutation.mutateAsync({
-                    setId: set.id,
-                    // Warm-up may legitimately have empty weight (bodyweight).
-                    weight: Number.isFinite(weight) ? weight : 0,
-                    // SPEC-005 §20: timed sets persist duration and no reps.
-                    ...(isTimed ? { duration: set.duration } : { reps }),
-                    rpe: typeof set.rpe === 'number' ? set.rpe : undefined,
-                })
-
-                onUpdateSet(exerciseIndex, saved.set_number, {
-                    id: saved.id,
-                    weight: saved.weight ?? (Number.isFinite(weight) ? weight : undefined),
-                    reps: saved.reps == null ? undefined : Number(saved.reps),
-                    duration: saved.duration == null ? set.duration : Number(saved.duration),
-                    rpe: saved.rpe == null ? undefined : Number(saved.rpe),
-                    rest_seconds: saved.rest_seconds ?? undefined,
-                    completed: saved.completed,
-                    completed_at: new Date().toISOString(),
-                    notes: saved.notes ?? undefined,
-                })
-                onSetLastCompletedSet({ exerciseIndex, setNumber: saved.set_number })
-
-                const nextSetIndex = saved.set_number
-                const nextSet = exercise.sets_completed[nextSetIndex]
-                if (nextSet) {
-                    // SPEC-005 §11: prefill next set from the previous working set.
-                    const prefillSource = isWarmup ? (exercise.sets_completed.find((s) => s.set_type !== 'warmup') ?? set) : set
-                    onUpdateSet(exerciseIndex, nextSet.set_number, isTimed
-                        // SPEC-005 §20: a timed set prefill copies duration, not reps.
-                        ? { duration: prefillSource.duration ?? DEFAULT_TIMED_SET_SECONDS, reps: undefined }
-                        : { weight: prefillSource.weight, reps: prefillSource.reps })
-                    onSetCurrentPosition(exerciseIndex, nextSetIndex)
-                    if (!isWarmup) {
-                        refreshWeightRecommendation(nextSet)
-                    }
-                    // SPEC-005 §17: rest timer starts after every completed set;
-                    // the PR check and warm-up exclusion happen server-side.
-                    startRest({
-                        forExerciseId: `${exercise.exercise_id}-${exerciseIndex}`,
-                        exerciseIndex,
-                        exerciseName: exercise.name,
-                        nextSetOrdinal: nextSet.set_number,
-                        totalSets: exercise.sets_completed.length,
-                        total: getRestSeconds(exercise),
-                    })
-                } else {
-                    const nextExerciseIndex = exercises.findIndex((_, index) => index > exerciseIndex)
-                    if (nextExerciseIndex >= 0) {
-                        onSetCurrentPosition(nextExerciseIndex, 0)
-                        onSelectExercise(nextExerciseIndex)
-                    } else {
-                        toast.success('Все упражнения выполнены')
-                    }
-                }
-
-                onNotifySetCompleted()
-            } catch (error) {
-                setCompletionError(`Не удалось сохранить подход: ${getErrorMessage(error)}`)
-            }
-        },
-        [
-            completeSetMutation,
-            exercise,
-            exerciseIndex,
-            exercises,
-            onNotifySetCompleted,
-            onSelectExercise,
-            onSetCurrentPosition,
-            onSetLastCompletedSet,
-            onUpdateSet,
-            refreshWeightRecommendation,
-            startRest,
-        ],
-    )
+    // SPEC-005 §11/§17: завершение подхода со всей его записью живёт в отдельном владельце.
+    const { completeSet } = useCompleteWorkoutSet({
+        workoutId,
+        exercise,
+        exerciseIndex,
+        exercises,
+        onUpdateSet,
+        onSetLastCompletedSet,
+        onSetCurrentPosition,
+        onSelectExercise,
+        onNotifySetCompleted,
+        onCompletionError: setCompletionError,
+        onSetSaved: refreshWeightRecommendation,
+    })
 
     const updateSetRpe = useCallback(
         (set: CompletedSet, rpe: number) => {
@@ -1201,6 +1092,11 @@ function ActiveExerciseCard({
                         }}
                     />
                 </Suspense>
+                <ProgressionPrefillNotice
+                    exercise={exercise}
+                    onRevert={onRevertProgressionPrefill}
+                    className="mt-3"
+                />
                 <WeightRecommendationInline
                     recommendation={recommendation}
                     isLoading={isWeightRecLoading}
@@ -1210,7 +1106,7 @@ function ActiveExerciseCard({
                     exercise={exercise}
                     exerciseIndex={exerciseIndex}
                     currentSetIndex={currentSetIndex}
-                    isSaving={isSaving || completeSetMutation.isPending}
+                    isSaving={isSaving}
                     errorMessage={completionError}
                     onUpdateSet={onUpdateSet}
                     onUpdateSetRpe={updateSetRpe}
@@ -1274,6 +1170,7 @@ export function ActiveWorkoutScreen({
     onRejectProgression,
     isProgressionDeciding,
     progressionPreviousSets,
+    onRevertProgressionPrefill,
     weightRecommendation,
     isWeightRecLoading,
     isWeightRecError,
@@ -1378,6 +1275,7 @@ export function ActiveWorkoutScreen({
                                     onRejectProgression={onRejectProgression}
                                     isProgressionDeciding={isProgressionDeciding}
                                     progressionPreviousSets={progressionPreviousSets}
+                                    onRevertProgressionPrefill={() => onRevertProgressionPrefill?.(index)}
                                     onUpdateSet={onUpdateSet}
                                     onPatchWorkout={onPatchWorkout}
                                     onNotifySetCompleted={onNotifySetCompleted}

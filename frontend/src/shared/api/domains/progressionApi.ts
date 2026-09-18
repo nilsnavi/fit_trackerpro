@@ -1,9 +1,13 @@
 import { api } from '@shared/api/client'
 import type {
+    ProgressionBulkResult,
     ProgressionPolicyConfig,
     ProgressionPolicyUpdateRequest,
+    ProgressionPrefillList,
     ProgressionRecommendation,
     ProgressionScopeParams,
+    ProgressionTargetBulkUpdateRequest,
+    ProgressionTargetUpdateRequest,
 } from '@features/workouts/types/workouts'
 
 /**
@@ -69,6 +73,64 @@ export const progressionApi = {
         return api.post<ProgressionRecommendation>(
             `/progression/recommendations/${recommendationId}/reject`,
             {},
+        )
+    },
+
+    /** SPEC-006 §58: accepted targets and whether they prefill new sessions. */
+    listPrefillTargets(
+        params: { declined_only?: boolean; limit?: number } = {},
+    ): Promise<ProgressionPrefillList> {
+        return api.get<ProgressionPrefillList>('/progression/prefill', params)
+    },
+
+    /** SPEC-006 §58: turns the automatic prefill of one target back on. */
+    enablePrefill(recommendationId: number): Promise<ProgressionRecommendation> {
+        return api.post<ProgressionRecommendation>(
+            `/progression/prefill/${recommendationId}/enable`,
+            {},
+        )
+    },
+
+    /** SPEC-006 §58: stops prefilling one target automatically (it stays accepted). */
+    disablePrefill(recommendationId: number): Promise<ProgressionRecommendation> {
+        return api.post<ProgressionRecommendation>(
+            `/progression/prefill/${recommendationId}/disable`,
+            {},
+        )
+    },
+
+    /**
+     * SPEC-006 §58: stops prefilling many targets at once. Omitting the ids
+     * switches every current target off — the rows the screen lists.
+     */
+    bulkDisablePrefill(recommendationIds?: number[] | null): Promise<ProgressionBulkResult> {
+        return api.post<ProgressionBulkResult>(
+            '/progression/prefill/bulk-disable',
+            recommendationIds == null ? {} : { recommendation_ids: recommendationIds },
+        )
+    },
+
+    /**
+     * SPEC-006 §58: applies one policy / rep-range edit to several targets.
+     * Values and prefill switches stay per-target decisions.
+     */
+    bulkUpdateTargets(
+        payload: ProgressionTargetBulkUpdateRequest,
+    ): Promise<ProgressionBulkResult> {
+        return api.post<ProgressionBulkResult>('/progression/prefill/bulk-update', payload)
+    },
+
+    /**
+     * SPEC-006 §58: edits the target itself — its value, its policy and/or its
+     * rep range. Only the fields sent are written.
+     */
+    updateTarget(
+        recommendationId: number,
+        payload: ProgressionTargetUpdateRequest,
+    ): Promise<ProgressionRecommendation> {
+        return api.patch<ProgressionRecommendation>(
+            `/progression/prefill/${recommendationId}`,
+            payload,
         )
     },
 }
