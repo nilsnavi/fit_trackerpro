@@ -12,7 +12,7 @@ from app.domain.progression.types import (
     RecommendationStatus,
     TimePriority,
 )
-from app.schemas.enums import ProgressionPolicy
+from app.schemas.enums import ProgressionBulkSkipReason, ProgressionPolicy
 
 
 class ProgressionPolicyResponse(BaseModel):
@@ -92,6 +92,20 @@ class ProgressionRecommendationResponse(BaseModel):
     template_exercise_id: Optional[int] = None
     policy: ProgressionPolicy = ProgressionPolicy.MANUAL
     policy_version: str = "MANUAL_V1"
+    effective_policy: Optional[ProgressionPolicy] = Field(
+        None,
+        description=(
+            "Policy that governs the scope right now. Differs from ``policy`` (the "
+            "policy this target was produced by) once the target's policy is edited "
+            "on the settings screen (SPEC §58)."
+        ),
+    )
+    effective_increment: Optional[float] = Field(
+        None, description="Step the scope progresses by now (equipment-aware)."
+    )
+    effective_time_increment_seconds: Optional[int] = Field(
+        None, description="Time step in seconds for time-based policies (SPEC §24)."
+    )
     status: RecommendationStatus = RecommendationStatus.INSUFFICIENT_DATA
     lifecycle_status: RecommendationLifecycle = RecommendationLifecycle.GENERATED
     previous_value: Optional[float] = None
@@ -112,9 +126,118 @@ class ProgressionRecommendationResponse(BaseModel):
     created_at: Optional[datetime] = None
     persisted: bool = False
     idempotent_replay: bool = False
+    prefill_declined: bool = Field(
+        False,
+        description=(
+            "True when the user undid this target's automatic prefill: it stays "
+            "accepted, but a new session no longer starts on it (SPEC §58)."
+        ),
+    )
     recovery_warning: Optional[str] = Field(
         None, description="Advisory only — recovery never changes the recommendation (SPEC §34)."
     )
+
+
+class ProgressionBulkSkipped(BaseModel):
+    """One selected target a bulk action did not change, explained (SPEC §58).
+
+    Reporting the id alone leaves the user guessing which goal was left behind;
+    the name, the value it still carries and the scope come along so the screen
+    can name the row exactly like the list does. A target that is not a current
+    accepted target can only be identified by its id.
+    """
+
+    recommendation_id: int
+    reason: ProgressionBulkSkipReason
+    exercise_id: Optional[int] = None
+    exercise_name: Optional[str] = Field(
+        None, description="Catalog name; null when the target no longer exists."
+    )
+    value: Optional[float] = Field(
+        None, description="The target's current value (kg, or seconds when timed)."
+    )
+    unit: Optional[str] = Field(None, description="'kg' or 'seconds'.")
+    scope_key: Optional[str] = Field(
+        None, description="Progression scope the skipped target belongs to."
+    )
+
+
+class ProgressionBulkResult(BaseModel):
+    """Outcome of a bulk change across accepted targets (SPEC §58)."""
+
+    updated: int = Field(0, description="Targets the change actually applied to.")
+    skipped: list[ProgressionBulkSkipped] = Field(
+        default_factory=list,
+        description=(
+            "Targets the change did not apply to, each with the reason: unknown, "
+            "someone else's, no longer an accepted target, or — for switching the "
+            "prefill off — already switched off."
+        ),
+    )
+    applied_to_all: bool = Field(
+        False,
+        description="True when the request addressed every current target of the user.",
+    )
+
+
+class ProgressionPrefillBulkDisable(BaseModel):
+    """POST body: switch the automatic prefill off for many targets at once."""
+
+    recommendation_ids: Optional[list[int]] = Field(
+        None,
+        max_length=200,
+        description=(
+            "Targets to switch off. Omit (or send null) to switch off every "
+            "accepted target the settings screen lists."
+        ),
+    )
+
+
+class ProgressionTargetBulkUpdate(BaseModel):
+    """POST body: apply one policy / rep-range edit to several targets (§58).
+
+    ``value`` is deliberately absent: a bulk action configures how the scopes
+    progress, while the next number stays a per-target decision.
+    """
+
+    recommendation_ids: list[int] = Field(..., min_length=1, max_length=200)
+    type: Optional[ProgressionPolicy] = Field(
+        None, description="Policy type applied to each selected target's own scope."
+    )
+    reps_min: Optional[int] = Field(None, ge=0, le=1000)
+    reps_max: Optional[int] = Field(None, ge=0, le=1000)
+
+
+class ProgressionPrefillListResponse(BaseModel):
+    """SPEC §58: accepted targets and whether they prefill new sessions."""
+
+    items: list[ProgressionRecommendationResponse] = Field(default_factory=list)
+    total: int = 0
+
+
+class ProgressionTargetUpdate(BaseModel):
+    """PATCH body: edit an accepted target in place (SPEC §58).
+
+    Omitted fields keep their current value — the endpoint never resets a policy
+    parameter the user did not touch. The remaining policy parameters (step,
+    RPE target, sets, percent of 1RM…) belong to the per-exercise policy screen
+    (``PUT /progression/exercises/{id}``), so they are deliberately not here.
+    """
+
+    value: Optional[float] = Field(
+        None,
+        gt=0,
+        le=2000,
+        description=(
+            "New target value: kilograms, or seconds when the policy is "
+            "TIME_PROGRESSION. New sessions start on it."
+        ),
+    )
+    type: Optional[ProgressionPolicy] = Field(
+        None, description="Policy type for the target's own progression scope."
+    )
+    reps_min: Optional[int] = Field(None, ge=0, le=1000)
+    reps_max: Optional[int] = Field(None, ge=0, le=1000)
 
 
 class ProgressionRecommendationDecision(BaseModel):

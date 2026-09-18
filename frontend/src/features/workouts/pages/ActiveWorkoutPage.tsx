@@ -42,6 +42,7 @@ import {
 } from '@features/workouts/active/hooks/useProgressionRecommendation'
 import { useWakeLock } from '@features/workouts/active/hooks/useWakeLock'
 import { findPreviousResult } from '@features/workouts/active/lib/previousResult'
+import { revertProgressionPrefill } from '@features/workouts/active/lib/progressionPrefill'
 
 import {
     useActiveWorkoutActions,
@@ -504,6 +505,23 @@ export function ActiveWorkoutPage() {
         [patchItem, tg, workout],
     )
 
+    // SPEC-006 §58: undo the accepted target that seeded this exercise's sets.
+    const handleRevertProgressionPrefill = useCallback(
+        (exerciseIndex: number) => {
+            tg.hapticFeedback({ type: 'impact', style: 'light' })
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? revertProgressionPrefill(exercise) : exercise,
+                ),
+            }))
+            toast.success(
+                'Вернули значение из плана — больше не подставляем его автоматически',
+            )
+        },
+        [patchItem, tg],
+    )
+
     const handleUnskipExercise = useCallback(
         (exerciseIndex: number) => {
             if (!workout) return
@@ -691,8 +709,15 @@ export function ActiveWorkoutPage() {
         setFinishWarning(null)
         await flushWorkoutSync()
 
-        const current = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey) ?? workout
-        const hasCompletedSet = current.exercises.some((exercise) =>
+        // Единственный владелец сессии — оптимистичный кэш детали: он и только он знает
+        // текущее состояние подходов (устаревший ответ PATCH его больше не откатывает).
+        const session = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey) ?? workout
+        if (!session) {
+            setFinishWarning('Нет данных тренировки')
+            return
+        }
+
+        const hasCompletedSet = session.exercises.some((exercise) =>
             exercise.sets_completed.some((set) => set.completed),
         )
 
@@ -702,7 +727,7 @@ export function ActiveWorkoutPage() {
         }
 
         const metrics = computeWorkoutSessionSummaryMetrics(
-            current,
+            session,
             elapsedSeconds,
             currentExerciseIndex,
             currentSetIndex,
@@ -714,11 +739,11 @@ export function ActiveWorkoutPage() {
                 workoutId,
                 payload: {
                     duration: durationMinutes,
-                    exercises: current.exercises,
-                    comments: current.comments,
-                    tags: current.tags ?? [],
-                    glucose_before: current.glucose_before,
-                    glucose_after: current.glucose_after,
+                    exercises: session.exercises,
+                    comments: session.comments,
+                    tags: session.tags ?? [],
+                    glucose_before: session.glucose_before,
+                    glucose_after: session.glucose_after,
                 },
             })
 
@@ -1041,6 +1066,7 @@ export function ActiveWorkoutPage() {
                         previousBestByExercise={previousBestByExercise}
                         previousResult={previousResult}
                         progressionRecommendation={progressionRecommendation}
+                        onRevertProgressionPrefill={handleRevertProgressionPrefill}
                         isProgressionLoading={isProgressionLoading}
                         isProgressionError={isProgressionError}
                         onAcceptProgression={handleAcceptProgression}

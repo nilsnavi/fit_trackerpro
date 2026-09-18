@@ -1001,7 +1001,7 @@
           "media": {
             "anyOf": [
               {
-                "format": "binary",
+                "contentMediaType": "application/octet-stream",
                 "type": "string"
               },
               {
@@ -2004,6 +2004,16 @@
             ],
             "title": "Notes"
           },
+          "progression_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressionTargetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sets_completed": {
             "description": "Recorded sets (max 100 per exercise).",
             "items": {
@@ -2132,6 +2142,16 @@
             ],
             "title": "Notes"
           },
+          "progression_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressionTargetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sets_completed": {
             "description": "Recorded sets (max 100 per exercise).",
             "items": {
@@ -2251,6 +2271,20 @@
             "description": "Set-level notes/comments.",
             "title": "Notes"
           },
+          "planned_duration": {
+            "anyOf": [
+              {
+                "maximum": 86400.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Duration planned before the progression target was applied.",
+            "title": "Planned Duration"
+          },
           "planned_rest_seconds": {
             "anyOf": [
               {
@@ -2264,6 +2298,20 @@
             ],
             "description": "Planned rest for the set, in seconds.",
             "title": "Planned Rest Seconds"
+          },
+          "planned_weight": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Weight planned before the progression target was applied.",
+            "title": "Planned Weight"
           },
           "reps": {
             "anyOf": [
@@ -2475,6 +2523,20 @@
             "description": "Set-level notes/comments.",
             "title": "Notes"
           },
+          "planned_duration": {
+            "anyOf": [
+              {
+                "maximum": 86400.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Duration planned before the progression target was applied.",
+            "title": "Planned Duration"
+          },
           "planned_rest_seconds": {
             "anyOf": [
               {
@@ -2488,6 +2550,20 @@
             ],
             "description": "Planned rest for the set, in seconds.",
             "title": "Planned Rest Seconds"
+          },
+          "planned_weight": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Weight planned before the progression target was applied.",
+            "title": "Planned Weight"
           },
           "reps": {
             "anyOf": [
@@ -5134,42 +5210,7 @@
         "title": "MuscleImbalanceSignalsResponse",
         "type": "object"
       },
-      "MuscleLoadEntry-Input": {
-        "description": "Daily muscle load aggregate entry",
-        "properties": {
-          "date": {
-            "format": "date",
-            "title": "Date",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "load_score": {
-            "title": "Load Score",
-            "type": "number"
-          },
-          "muscle_group": {
-            "title": "Muscle Group",
-            "type": "string"
-          },
-          "user_id": {
-            "title": "User Id",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "user_id",
-          "muscle_group",
-          "date",
-          "load_score"
-        ],
-        "title": "MuscleLoadEntry",
-        "type": "object"
-      },
-      "MuscleLoadEntry-Output": {
+      "MuscleLoadEntry": {
         "description": "Daily muscle load aggregate entry",
         "properties": {
           "date": {
@@ -5219,7 +5260,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/MuscleLoadEntry-Output"
+              "$ref": "#/components/schemas/MuscleLoadEntry"
             },
             "title": "Items",
             "type": "array"
@@ -5949,6 +5990,119 @@
         "title": "ProgressInsightsVolumePoint",
         "type": "object"
       },
+      "ProgressionBulkResult": {
+        "description": "Outcome of a bulk change across accepted targets (SPEC §58).",
+        "properties": {
+          "applied_to_all": {
+            "default": false,
+            "description": "True when the request addressed every current target of the user.",
+            "title": "Applied To All",
+            "type": "boolean"
+          },
+          "skipped": {
+            "description": "Targets the change did not apply to, each with the reason: unknown, someone else's, no longer an accepted target, or — for switching the prefill off — already switched off.",
+            "items": {
+              "$ref": "#/components/schemas/ProgressionBulkSkipped"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "updated": {
+            "default": 0,
+            "description": "Targets the change actually applied to.",
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "title": "ProgressionBulkResult",
+        "type": "object"
+      },
+      "ProgressionBulkSkipReason": {
+        "description": "Why a bulk action left one selected target alone (SPEC-006 §58).",
+        "enum": [
+          "not_found",
+          "already_disabled"
+        ],
+        "title": "ProgressionBulkSkipReason",
+        "type": "string"
+      },
+      "ProgressionBulkSkipped": {
+        "description": "One selected target a bulk action did not change, explained (SPEC §58).\n\nReporting the id alone leaves the user guessing which goal was left behind;\nthe name, the value it still carries and the scope come along so the screen\ncan name the row exactly like the list does. A target that is not a current\naccepted target can only be identified by its id.",
+        "properties": {
+          "exercise_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exercise Id"
+          },
+          "exercise_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Catalog name; null when the target no longer exists.",
+            "title": "Exercise Name"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ProgressionBulkSkipReason"
+          },
+          "recommendation_id": {
+            "title": "Recommendation Id",
+            "type": "integer"
+          },
+          "scope_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Progression scope the skipped target belongs to.",
+            "title": "Scope Key"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "'kg' or 'seconds'.",
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The target's current value (kg, or seconds when timed).",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "recommendation_id",
+          "reason"
+        ],
+        "title": "ProgressionBulkSkipped",
+        "type": "object"
+      },
       "ProgressionPolicy": {
         "description": "Supported progression policies (SPEC-005 §29).",
         "enum": [
@@ -6422,6 +6576,48 @@
         "title": "ProgressionPolicyUpdate",
         "type": "object"
       },
+      "ProgressionPrefillBulkDisable": {
+        "description": "POST body: switch the automatic prefill off for many targets at once.",
+        "properties": {
+          "recommendation_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Targets to switch off. Omit (or send null) to switch off every accepted target the settings screen lists.",
+            "title": "Recommendation Ids"
+          }
+        },
+        "title": "ProgressionPrefillBulkDisable",
+        "type": "object"
+      },
+      "ProgressionPrefillListResponse": {
+        "description": "SPEC §58: accepted targets and whether they prefill new sessions.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "ProgressionPrefillListResponse",
+        "type": "object"
+      },
       "ProgressionRecommendation": {
         "description": "Explainable progression recommendation (SPEC-005 §37–38, SPEC-006 §8).\n\nSPEC-006 fields are additive: existing consumers keep reading the original\nkeys, while the card can now show status, lifecycle and the persisted id.",
         "properties": {
@@ -6736,6 +6932,41 @@
             ],
             "title": "Difference"
           },
+          "effective_increment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Step the scope progresses by now (equipment-aware).",
+            "title": "Effective Increment"
+          },
+          "effective_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressionPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Policy that governs the scope right now. Differs from ``policy`` (the policy this target was produced by) once the target's policy is edited on the settings screen (SPEC §58)."
+          },
+          "effective_time_increment_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time step in seconds for time-based policies (SPEC §24).",
+            "title": "Effective Time Increment Seconds"
+          },
           "exercise_id": {
             "title": "Exercise Id",
             "type": "integer"
@@ -6790,6 +7021,12 @@
             "default": "MANUAL_V1",
             "title": "Policy Version",
             "type": "string"
+          },
+          "prefill_declined": {
+            "default": false,
+            "description": "True when the user undid this target's automatic prefill: it stays accepted, but a new session no longer starts on it (SPEC §58).",
+            "title": "Prefill Declined",
+            "type": "boolean"
           },
           "previous_duration": {
             "anyOf": [
@@ -6948,6 +7185,178 @@
           "scope_key"
         ],
         "title": "ProgressionRecommendationResponse",
+        "type": "object"
+      },
+      "ProgressionTargetBulkUpdate": {
+        "description": "POST body: apply one policy / rep-range edit to several targets (§58).\n\n``value`` is deliberately absent: a bulk action configures how the scopes\nprogress, while the next number stays a per-target decision.",
+        "properties": {
+          "recommendation_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Recommendation Ids",
+            "type": "array"
+          },
+          "reps_max": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Max"
+          },
+          "reps_min": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Min"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressionPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Policy type applied to each selected target's own scope."
+          }
+        },
+        "required": [
+          "recommendation_ids"
+        ],
+        "title": "ProgressionTargetBulkUpdate",
+        "type": "object"
+      },
+      "ProgressionTargetInfo": {
+        "description": "SPEC-006 §42/§58: accepted target a session's numbers were seeded from.\n\nPresent on an exercise only while the seeded value is still in place; the UI\nlabels the number and offers a revert to the planned one.",
+        "properties": {
+          "lifecycle_status": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle Status"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy"
+          },
+          "recommendation_id": {
+            "minimum": 1.0,
+            "title": "Recommendation Id",
+            "type": "integer"
+          },
+          "scope_key": {
+            "maxLength": 128,
+            "title": "Scope Key",
+            "type": "string"
+          },
+          "unit": {
+            "default": "kg",
+            "description": "What ``value`` measures.",
+            "pattern": "^(kg|seconds)$",
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "description": "Accepted target: kg or seconds.",
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "recommendation_id",
+          "scope_key",
+          "value"
+        ],
+        "title": "ProgressionTargetInfo",
+        "type": "object"
+      },
+      "ProgressionTargetUpdate": {
+        "description": "PATCH body: edit an accepted target in place (SPEC §58).\n\nOmitted fields keep their current value — the endpoint never resets a policy\nparameter the user did not touch. The remaining policy parameters (step,\nRPE target, sets, percent of 1RM…) belong to the per-exercise policy screen\n(``PUT /progression/exercises/{id}``), so they are deliberately not here.",
+        "properties": {
+          "reps_max": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Max"
+          },
+          "reps_min": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Min"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressionPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Policy type for the target's own progression scope."
+          },
+          "value": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 2000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New target value: kilograms, or seconds when the policy is TIME_PROGRESSION. New sessions start on it.",
+            "title": "Value"
+          }
+        },
+        "title": "ProgressionTargetUpdate",
         "type": "object"
       },
       "ReadinessChecks": {
@@ -7484,53 +7893,7 @@
         "title": "TimePriority",
         "type": "string"
       },
-      "TrainingLoadDailyEntry-Input": {
-        "description": "Daily training load aggregate entry",
-        "properties": {
-          "avg_rpe": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avg Rpe"
-          },
-          "date": {
-            "format": "date",
-            "title": "Date",
-            "type": "string"
-          },
-          "fatigue_score": {
-            "title": "Fatigue Score",
-            "type": "number"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "user_id": {
-            "title": "User Id",
-            "type": "integer"
-          },
-          "volume": {
-            "title": "Volume",
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "user_id",
-          "date",
-          "volume",
-          "fatigue_score"
-        ],
-        "title": "TrainingLoadDailyEntry",
-        "type": "object"
-      },
-      "TrainingLoadDailyEntry-Output": {
+      "TrainingLoadDailyEntry": {
         "description": "Daily training load aggregate entry",
         "properties": {
           "avgRpe": {
@@ -7591,7 +7954,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
+              "$ref": "#/components/schemas/TrainingLoadDailyEntry"
             },
             "title": "Items",
             "type": "array"
@@ -8350,6 +8713,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -11771,7 +12141,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/MuscleLoadEntry-Output"
+                    "$ref": "#/components/schemas/MuscleLoadEntry"
                   },
                   "title": "Response Get Muscle Load Api V1 Analytics Muscle Load Get",
                   "type": "array"
@@ -12466,7 +12836,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/TrainingLoadDailyEntry-Output"
+                    "$ref": "#/components/schemas/TrainingLoadDailyEntry"
                   },
                   "title": "Response Get Daily Training Load Api V1 Analytics Training Load Daily Get",
                   "type": "array"
@@ -16157,6 +16527,324 @@
           }
         ],
         "summary": "Latest persisted recommendation (or a read-only preview)",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/prefill": {
+      "get": {
+        "description": "SPEC §58: the newest accepted target per scope, prefill state included.",
+        "operationId": "list_prefill_targets_api_v1_progression_prefill_get",
+        "parameters": [
+          {
+            "description": "Only targets whose automatic prefill the user switched off.",
+            "in": "query",
+            "name": "declined_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Only targets whose automatic prefill the user switched off.",
+              "title": "Declined Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionPrefillListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accepted targets and their automatic-prefill state",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/prefill/bulk-disable": {
+      "post": {
+        "description": "SPEC §58: omitting the ids switches off every target the screen lists.\n\nOne tap after a training cycle instead of walking the list row by row. The\ntargets themselves are untouched — only the silent substitution stops.",
+        "operationId": "bulk_disable_prefill_api_v1_progression_prefill_bulk_disable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProgressionPrefillBulkDisable"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stop prefilling many accepted targets automatically",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/prefill/bulk-update": {
+      "post": {
+        "description": "SPEC §58: values and prefill switches stay per-target; only the plan moves.",
+        "operationId": "bulk_update_prefill_targets_api_v1_progression_prefill_bulk_update_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressionTargetBulkUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply one policy / rep-range edit to many accepted targets",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/prefill/{recommendation_id}": {
+      "patch": {
+        "description": "Only fields the user actually edited are written (SPEC §58).",
+        "operationId": "update_prefill_target_api_v1_progression_prefill__recommendation_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "title": "Recommendation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressionTargetUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit an accepted target's value, policy and rep range",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/prefill/{recommendation_id}/disable": {
+      "post": {
+        "description": "Same as undoing the prefill in a session: the target itself is kept (SPEC §58).",
+        "operationId": "disable_prefill_api_v1_progression_prefill__recommendation_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "title": "Recommendation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stop prefilling an accepted target automatically",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/prefill/{recommendation_id}/enable": {
+      "post": {
+        "description": "The target itself is unchanged — only the silent substitution returns.",
+        "operationId": "enable_prefill_api_v1_progression_prefill__recommendation_id__enable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "title": "Recommendation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionRecommendationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Turn the automatic prefill of an accepted target back on",
         "tags": [
           "Progression"
         ]

@@ -185,6 +185,25 @@ describe('ProgressionRecommendationCard (SPEC-006)', () => {
         expect(onApply).toHaveBeenCalledWith(82.5)
     })
 
+    it('says when the automatic prefill was switched off', () => {
+        render(
+            <ProgressionRecommendationCard
+                recommendation={makeRecommendation({
+                    lifecycle_status: 'accepted',
+                    actual_selected_value: 82.5,
+                    prefill_declined: true,
+                })}
+                onApply={jest.fn()}
+            />,
+        )
+
+        expect(screen.getByTestId('progression-prefill-declined')).toHaveTextContent(
+            /Автоподстановка выключена/,
+        )
+        // The target itself is still the agreed number, so it stays applyable.
+        expect(screen.getByText('Подставить 82.5 кг')).toBeInTheDocument()
+    })
+
     it('renders nothing when there is no recommendation', () => {
         const { container } = render(<ProgressionRecommendationCard recommendation={null} />)
         expect(container).toBeEmptyDOMElement()

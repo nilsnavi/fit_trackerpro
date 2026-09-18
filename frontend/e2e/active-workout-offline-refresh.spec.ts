@@ -101,6 +101,9 @@ test.describe('active workout offline/refresh flows @regression', () => {
         const syncedBefore = state.updateSessionRequests.length
 
         await context.setOffline(true)
+        // The §48 restore prompt can land after the first dismissal, so settle it again before
+        // the screen has to be clickable.
+        await dismissBlockingDialog(page)
         // A local-only session edit (SPEC-005 §11: the new set inherits the previous one).
         await page.locator('[data-testid="add-set-btn"]').click()
 
@@ -120,7 +123,7 @@ test.describe('active workout offline/refresh flows @regression', () => {
         await expect(page.locator('[data-testid^="set-row-"]')).toHaveCount(2)
     })
 
-    test('completing a set is refused while offline', async ({ page, context }) => {
+    test('completing a set offline is queued and reaches the server on reconnect', async ({ page, context }) => {
         const workoutId = 4103
         const session = activeSession(workoutId, 1003, 'Становая', [100], 'E2E offline set completion')
         const state = buildWorkoutState({
@@ -137,13 +140,17 @@ test.describe('active workout offline/refresh flows @regression', () => {
         await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
         await context.setOffline(true)
-        await activeSetCompleteButton(page).click()
-        await expect(page.getByRole('status').filter({ hasText: 'Нет сети' }).first()).toBeVisible({ timeout: 12_000 })
+        await completeActiveSet(page)
 
-        // Set completion is a server write and the app does not queue it: nothing is sent and
-        // the row stays pending, so the set can be logged properly once the connection is back.
-        await page.waitForTimeout(3_000)
+        // The row completes locally right away: only the write waits for the network.
+        await expectSetCompleted(page, 1)
+        await page.waitForTimeout(2_000)
         expect(state.setPatchRequests.length).toBe(0)
-        await expect(activeSetCompleteButton(page)).toBeVisible()
+
+        // The queued write goes out on reconnect and the server sees the completed set.
+        await context.setOffline(false)
+        await expect.poll(() => state.setPatchRequests.length, { timeout: 25_000 }).toBeGreaterThan(0)
+        expect(state.setPatchRequests.at(-1)?.payload.completed).toBe(true)
+        await expectSetCompleted(page, 1)
     })
 })

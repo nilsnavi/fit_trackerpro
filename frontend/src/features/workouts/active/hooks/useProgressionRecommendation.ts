@@ -38,6 +38,9 @@ export const progressionQueryKeys = {
             params.template_id ?? null,
             params.template_exercise_id ?? null,
         ] as const,
+    /** SPEC-006 §58: accepted targets whose automatic prefill was switched off. */
+    prefillList: (declinedOnly: boolean) =>
+        [...progressionQueryKeys.all, 'prefill', declinedOnly] as const,
 }
 
 /**

@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Iterable, Optional, Sequence
 
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -190,9 +190,11 @@ class ProgressionRepository(SQLAlchemyRepository):
         """Newest *accepted/modified* target per progression scope (SPEC §42/§43).
 
         ``generated`` recommendations are deliberately excluded: a proposal may
-        prefill a session only after the user accepted (or modified) it. One
-        query with a window function keeps this bounded by the requested scopes
-        instead of scanning the user's whole recommendation history.
+        prefill a session only after the user accepted (or modified) it. So are
+        declined ones — undoing a prefill switches it off until a newer target is
+        accepted (SPEC §58). One query with a window function keeps this bounded
+        by the requested scopes instead of scanning the user's whole
+        recommendation history.
         """
         keys = [key for key in dict.fromkeys(scope_keys) if key]
         if not keys:
@@ -216,6 +218,7 @@ class ProgressionRepository(SQLAlchemyRepository):
                     ProgressionRecommendationRecord.scope_key.in_(keys),
                     ProgressionRecommendationRecord.lifecycle_status.in_(ACCEPTED_LIFECYCLES),
                     ProgressionRecommendationRecord.actual_selected_value.is_not(None),
+                    ProgressionRecommendationRecord.prefill_declined_at.is_(None),
                 )
             )
             .subquery()
@@ -328,17 +331,173 @@ class ProgressionRepository(SQLAlchemyRepository):
         record: ProgressionRecommendationRecord,
         lifecycle_status: str,
         actual_selected_value: Optional[float],
+        difference: Optional[float] = None,
     ) -> ProgressionRecommendationRecord:
         """Lifecycle transitions never touch workout history (SPEC §42–§44)."""
         record.lifecycle_status = lifecycle_status
         if actual_selected_value is not None:
             record.actual_selected_value = actual_selected_value
+        # Editing the target moves the goal itself, so the stored delta follows
+        # the edited value instead of the proposal it was computed from.
+        if difference is not None:
+            record.difference = difference
         record.decided_at = datetime.now(timezone.utc)
         await self.commit()
         await self.refresh(record)
         return record
 
+    async def decline_prefill(
+        self, *, user_id: int, recommendation_ids: Sequence[int]
+    ) -> int:
+        """Switch off the automatic prefill of these accepted targets (SPEC §58).
+
+        The lifecycle is left untouched — the target is still the agreed next
+        number, it is only no longer substituted silently. Idempotent: already
+        declined records are counted but not rewritten.
+        """
+        ids = [int(value) for value in dict.fromkeys(recommendation_ids) if value]
+        if not ids:
+            return 0
+        result = await self.db.execute(
+            update(ProgressionRecommendationRecord)
+            .where(
+                and_(
+                    ProgressionRecommendationRecord.user_id == user_id,
+                    ProgressionRecommendationRecord.id.in_(ids),
+                    ProgressionRecommendationRecord.prefill_declined_at.is_(None),
+                )
+            )
+            .values(prefill_declined_at=datetime.now(timezone.utc))
+        )
+        await self.commit()
+        return int(result.rowcount or 0)
+
+    async def enable_prefill(
+        self, *, user_id: int, recommendation_id: int
+    ) -> Optional[ProgressionRecommendationRecord]:
+        """Turn an accepted target's automatic prefill back on (SPEC §58)."""
+        record = await self.get_recommendation(
+            user_id=user_id, recommendation_id=recommendation_id
+        )
+        if record is None:
+            return None
+        if record.prefill_declined_at is not None:
+            record.prefill_declined_at = None
+            await self.commit()
+            await self.refresh(record)
+        return record
+
+    async def disable_prefill(
+        self, *, user_id: int, recommendation_id: int
+    ) -> Optional[ProgressionRecommendationRecord]:
+        """Switch one accepted target's automatic prefill off (SPEC §58).
+
+        The lifecycle is left untouched — this is a display/substitution choice,
+        not a rejection: the target keeps being the agreed next number and stays
+        visible in the UI. Idempotent, so a repeated toggle does not rewrite the
+        timestamp and muddies "when was this switched off".
+        """
+        record = await self.get_recommendation(
+            user_id=user_id, recommendation_id=recommendation_id
+        )
+        if record is None:
+            return None
+        if record.prefill_declined_at is None:
+            record.prefill_declined_at = datetime.now(timezone.utc)
+            await self.commit()
+            await self.refresh(record)
+        return record
+
+    async def latest_targets(
+        self,
+        *,
+        user_id: int,
+        declined_only: bool = False,
+        limit: int = 50,
+    ) -> list[ProgressionRecommendationRecord]:
+        """Newest accepted/modified target per scope, newest scopes first.
+
+        Ranking happens inside each scope *before* any prefill filter, so a scope
+        whose newest target was declined is reported as declined instead of
+        resurfacing an older, still-prefilling record (SPEC §58). Bounded by
+        ``limit`` — one row per scope, never the whole recommendation history.
+        """
+        ranked = (
+            select(
+                ProgressionRecommendationRecord.id.label("recommendation_id"),
+                func.row_number()
+                .over(
+                    partition_by=ProgressionRecommendationRecord.scope_key,
+                    order_by=(
+                        ProgressionRecommendationRecord.created_at.desc(),
+                        ProgressionRecommendationRecord.id.desc(),
+                    ),
+                )
+                .label("scope_rank"),
+            )
+            .where(
+                and_(
+                    ProgressionRecommendationRecord.user_id == user_id,
+                    ProgressionRecommendationRecord.lifecycle_status.in_(ACCEPTED_LIFECYCLES),
+                    ProgressionRecommendationRecord.actual_selected_value.is_not(None),
+                )
+            )
+            .subquery()
+        )
+        query = (
+            select(ProgressionRecommendationRecord)
+            .join(
+                ranked,
+                ProgressionRecommendationRecord.id == ranked.c.recommendation_id,
+            )
+            .where(ranked.c.scope_rank == 1)
+        )
+        if declined_only:
+            query = query.where(ProgressionRecommendationRecord.prefill_declined_at.is_not(None))
+        result = await self.db.execute(
+            query.order_by(
+                ProgressionRecommendationRecord.created_at.desc(),
+                ProgressionRecommendationRecord.id.desc(),
+            ).limit(int(limit))
+        )
+        return list(result.scalars().all())
+
+    async def targets_by_ids(
+        self, *, user_id: int, recommendation_ids: Sequence[int]
+    ) -> list[ProgressionRecommendationRecord]:
+        """Accepted targets among these ids (one query, user-scoped).
+
+        Used by the bulk actions of the settings screen: only ``accepted`` /
+        ``modified`` records carrying a chosen value count as targets, so a bulk
+        call can never reach a superseded or rejected recommendation. Foreign or
+        unknown ids simply do not come back.
+        """
+        ids = [int(value) for value in dict.fromkeys(recommendation_ids) if value]
+        if not ids:
+            return []
+        result = await self.db.execute(
+            select(ProgressionRecommendationRecord).where(
+                and_(
+                    ProgressionRecommendationRecord.user_id == user_id,
+                    ProgressionRecommendationRecord.id.in_(ids),
+                    ProgressionRecommendationRecord.lifecycle_status.in_(ACCEPTED_LIFECYCLES),
+                    ProgressionRecommendationRecord.actual_selected_value.is_not(None),
+                )
+            )
+        )
+        return list(result.scalars().all())
+
     # ─── history (bounded + batched) ────────────────────────────────────────
+
+    async def get_exercise_names(self, exercise_ids: Iterable[int]) -> dict[int, str]:
+        """Display names for a batch of exercises, one query (no N+1)."""
+        ids = {int(value) for value in exercise_ids}
+        if not ids:
+            return {}
+        result = await self.db.execute(
+            select(Exercise.id, Exercise.name).where(Exercise.id.in_(ids))
+        )
+        return {int(row[0]): str(row[1]) for row in result.all()}
 
     async def get_exercise_equipment(self, exercise_ids: Iterable[int]) -> dict[int, list[str]]:
         ids = {int(value) for value in exercise_ids}

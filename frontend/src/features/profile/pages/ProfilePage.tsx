@@ -10,6 +10,7 @@
  * - Экспорт данных
  */
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Edit2,
     Target,
@@ -688,6 +689,23 @@ export const ProfilePage: React.FC = () => {
                             ))}
                         </div>
                     </div>
+
+                    {/* SPEC-006 §58: accepted targets and their automatic-prefill state */}
+                    <Link
+                        to="/profile/progression-targets"
+                        className="flex items-center justify-between gap-3 py-2 border-t border-border"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Target className="w-4 h-4 text-telegram-hint" />
+                            <div>
+                                <span className="text-sm text-telegram-text">Цели прогрессии</span>
+                                <p className="text-xs text-telegram-hint">
+                                    Принятые веса и автоподстановка в тренировки
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                    </Link>
 
                     {/* Notifications */}
                     <div className="flex items-center justify-between py-2 border-t border-border">

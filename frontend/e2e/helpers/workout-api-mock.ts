@@ -239,53 +239,43 @@ export async function fillActiveSetInputs(page: Page, values: { weight?: number;
     }
 }
 
-/** Set once per page load so only the first dismissal waits for a sheet. */
-const DISMISS_ONCE_FLAG = '__e2eDismissBlockingDone'
-
 /**
  * Nothing on the screen is clickable while a sheet is open. The §48 restore prompt is the
  * one that greets the app when an unfinished session exists; close it the way a user would.
  *
  * The gate that renders the prompt is loaded lazily, so it can land well after the screen has
- * painted. On the first call of each page load (a reload starts a new page load) an in-progress
- * session is given a moment to raise its sheet, instead of racing it with a 2s poll window.
+ * painted — and it can land again after a dismissal. With an in-progress session on disk the
+ * prompt is expected, so its arrival is awaited for a bounded window instead of racing it;
+ * without one the call stays a single cheap check.
  */
 export async function dismissBlockingDialog(page: Page) {
-    const firstCallInPage = await page
-        .evaluate((flag) => {
-            const owner = window as unknown as Record<string, unknown>
-            if (owner[flag] === true) return false
-            owner[flag] = true
-            return true
-        }, DISMISS_ONCE_FLAG)
+    const sessionInProgress = await page
+        .evaluate(() => localStorage.getItem('workout-session-draft') !== null)
         .catch(() => false)
+    const deadline = Date.now() + (sessionInProgress ? 8_000 : 0)
 
-    if (firstCallInPage) {
-        const sessionInProgress = await page
-            .evaluate(() => localStorage.getItem('workout-session-draft') !== null)
-            .catch(() => false)
-        if (sessionInProgress) {
-            await page
-                .locator('[role="dialog"]')
-                .first()
-                .waitFor({ state: 'visible', timeout: 5_000 })
-                .catch(() => undefined)
+    for (;;) {
+        const restorePrompt = page.getByTestId('session-restore-dialog')
+        if (await restorePrompt.isVisible().catch(() => false)) {
+            await page.getByTestId('restore-continue-btn').click()
+            await expect(restorePrompt).toBeHidden({ timeout: 10_000 })
+            return
         }
-    }
 
-    const restorePrompt = page.getByTestId('session-restore-dialog')
-    if (await restorePrompt.isVisible().catch(() => false)) {
-        await page.getByTestId('restore-continue-btn').click()
-        await expect(restorePrompt).toBeHidden({ timeout: 10_000 })
-        return
-    }
+        const dialog = page.locator('[role="dialog"]').last()
+        if (await dialog.isVisible().catch(() => false)) {
+            // A sheet that is already animating out is still "visible" here, and an unbounded
+            // click on it would retry until the test times out: the close is bounded and the
+            // sheet is allowed to hide itself.
+            const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
+            if ((await closeButton.count()) > 0) await closeButton.first().click({ timeout: 3_000 }).catch(() => undefined)
+            else await page.keyboard.press('Escape').catch(() => undefined)
+            await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
+            return
+        }
 
-    const dialog = page.locator('[role="dialog"]').last()
-    if (await dialog.isVisible().catch(() => false)) {
-        const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
-        if ((await closeButton.count()) > 0) await closeButton.first().click().catch(() => undefined)
-        else await page.keyboard.press('Escape').catch(() => undefined)
-        await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
+        if (Date.now() >= deadline) return
+        await page.waitForTimeout(250)
     }
 }
 
