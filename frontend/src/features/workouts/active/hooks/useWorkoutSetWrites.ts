@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { isRecoverableSyncError } from '@shared/offline/syncQueue'
@@ -13,6 +13,7 @@ import type {
     WorkoutSetResponse,
 } from '@features/workouts/types/workouts'
 import { DEFAULT_TIMED_SET_SECONDS, isTimedSet } from '../lib/activeWorkoutUtils'
+import { weightRecommendationQueryKey } from './useWeightRecommendation'
 
 /** SPEC-005 §17: rest between sets, когда ни план, ни факт его не несут. */
 const DEFAULT_REST_SECONDS = 90
@@ -44,7 +45,7 @@ export function serverSetPatch(
     }
 }
 
-export interface UseCompleteWorkoutSetParams {
+export interface UseWorkoutSetWritesParams {
     workoutId: number
     exercise: CompletedExercise
     exerciseIndex: number
@@ -56,17 +57,15 @@ export interface UseCompleteWorkoutSetParams {
     onNotifySetCompleted: () => void
     /** Валидация подхода: сообщение об ошибке или `null`, когда проверки прошли. */
     onCompletionError: (message: string | null) => void
-    /** Ответ по подходу слит с состоянием: следующий подход может захотеть свежую рекомендацию. */
-    onSetSaved?: (nextSet?: CompletedSet) => void
 }
 
 /**
- * SPEC-005 §11/§17: завершение подхода — единственный владелец записи подхода и следствий
- * завершения. Рядок становится выполненным локально и сразу, а сама запись уходит следом:
- * при восстановимой ошибке она встаёт в офлайн-очередь, а успешный ответ добирает только
- * серверные поля (см. `serverSetPatch`).
+ * SPEC-005 §11/§17: единственный владелец записи подхода — его завершение и RPE.
+ * Завершение становится локальным сразу, а запись уходит следом: при восстановимой ошибке
+ * она встаёт в офлайн-очередь, а успешный ответ добирает только серверные поля
+ * (см. `serverSetPatch`). Свежая рекомендация по весу запрашивается здесь же.
  */
-export function useCompleteWorkoutSet({
+export function useWorkoutSetWrites({
     workoutId,
     exercise,
     exerciseIndex,
@@ -77,8 +76,8 @@ export function useCompleteWorkoutSet({
     onSelectExercise,
     onNotifySetCompleted,
     onCompletionError,
-    onSetSaved,
-}: UseCompleteWorkoutSetParams) {
+}: UseWorkoutSetWritesParams) {
+    const queryClient = useQueryClient()
     const startRest = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
 
     const completeSetMutation = useMutation({
@@ -107,6 +106,30 @@ export function useCompleteWorkoutSet({
             }
         },
     })
+
+    const patchSetRpeMutation = useMutation({
+        mutationFn: async ({ setId, rpe }: { setId: number; rpe: number }) =>
+            workoutsApi.patchWorkoutSet(workoutId, setId, { rpe }),
+    })
+
+    /** SPEC-005 §47: свежая рекомендация по весу для следующего подхода. */
+    const refreshWeightRecommendation = useCallback(
+        (nextSet?: CompletedSet) => {
+            void queryClient.fetchQuery({
+                queryKey: weightRecommendationQueryKey(workoutId, exercise.exercise_id),
+                queryFn: () => workoutsApi.getWeightRecommendation(workoutId, exercise.exercise_id),
+                staleTime: 0,
+            }).then((nextRecommendation) => {
+                if (!nextSet || typeof nextRecommendation.suggested_weight !== 'number') return
+                onUpdateSet(exerciseIndex, nextSet.set_number, {
+                    weight: nextRecommendation.suggested_weight,
+                })
+            }).catch(() => {
+                // Recommendation is optional and must not block workout editing.
+            })
+        },
+        [exercise.exercise_id, exerciseIndex, onUpdateSet, queryClient, workoutId],
+    )
 
     const completeSet = useCallback(
         async (set: CompletedSet) => {
@@ -191,7 +214,7 @@ export function useCompleteWorkoutSet({
                     duration: set.duration,
                 }))
                 if (nextSet && !isWarmup) {
-                    onSetSaved?.(nextSet)
+                    refreshWeightRecommendation(nextSet)
                 }
             } catch {
                 // Рядок уже завершён локально, а подходы принадлежат сессии: её синхронизация
@@ -209,11 +232,33 @@ export function useCompleteWorkoutSet({
             onSelectExercise,
             onSetCurrentPosition,
             onSetLastCompletedSet,
-            onSetSaved,
             onUpdateSet,
+            refreshWeightRecommendation,
             startRest,
         ],
     )
 
-    return { completeSet }
+    const updateSetRpe = useCallback(
+        (set: CompletedSet, rpe: number) => {
+            onUpdateSet(exerciseIndex, set.set_number, { rpe })
+
+            if (set.completed && typeof set.id === 'number' && set.id > 0) {
+                void patchSetRpeMutation.mutateAsync({ setId: set.id, rpe })
+                    .then(() => refreshWeightRecommendation(exercise.sets_completed[set.set_number]))
+                    .catch(() => {
+                        // Keep the UI non-blocking; the next sync/edit can retry this field.
+                    })
+                return
+            }
+
+            if (!set.completed) {
+                void queryClient.invalidateQueries({
+                    queryKey: weightRecommendationQueryKey(workoutId, exercise.exercise_id),
+                })
+            }
+        },
+        [exercise.exercise_id, exercise.sets_completed, exerciseIndex, onUpdateSet, patchSetRpeMutation, queryClient, refreshWeightRecommendation, workoutId],
+    )
+
+    return { completeSet, updateSetRpe }
 }
