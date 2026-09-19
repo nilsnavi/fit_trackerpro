@@ -1,5 +1,4 @@
 import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
     ArrowLeft,
     Check,
@@ -15,13 +14,11 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@shared/ui/Button'
-import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { cn } from '@shared/lib/cn'
 import { toast } from '@shared/stores/toastStore'
 import { formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
-import { useCompleteWorkoutSet } from '@features/workouts/active/hooks/useCompleteWorkoutSet'
 import { useRestTimer } from '@features/workouts/active/hooks/useRestTimer'
-import { weightRecommendationQueryKey } from '@features/workouts/active/hooks/useWeightRecommendation'
+import { useWorkoutSetWrites } from '@features/workouts/active/hooks/useWorkoutSetWrites'
 import type {
     CompletedExercise,
     CompletedSet,
@@ -947,36 +944,12 @@ function ActiveExerciseCard({
     onGroupWithNext?: () => void
     onUngroup?: () => void
 }) {
-    const queryClient = useQueryClient()
     const completed = exercise.sets_completed.filter((set) => set.completed).length
     const total = exercise.sets_completed.length
     const [completionError, setCompletionError] = useState<string | null>(null)
     // SPEC-005 §42: plate calculator state.
     const [isPlateCalculatorOpen, setIsPlateCalculatorOpen] = useState(false)
     const [plateTargetWeight, setPlateTarget] = useState(0)
-
-    const patchSetRpeMutation = useMutation({
-        mutationFn: async ({ setId, rpe }: { setId: number; rpe: number }) =>
-            workoutsApi.patchWorkoutSet(workoutId, setId, { rpe }),
-    })
-
-    const refreshWeightRecommendation = useCallback(
-        (nextSet?: CompletedSet) => {
-            void queryClient.fetchQuery({
-                queryKey: weightRecommendationQueryKey(workoutId, exercise.exercise_id),
-                queryFn: () => workoutsApi.getWeightRecommendation(workoutId, exercise.exercise_id),
-                staleTime: 0,
-            }).then((nextRecommendation) => {
-                if (!nextSet || typeof nextRecommendation.suggested_weight !== 'number') return
-                onUpdateSet(exerciseIndex, nextSet.set_number, {
-                    weight: nextRecommendation.suggested_weight,
-                })
-            }).catch(() => {
-                // Recommendation is optional and must not block workout editing.
-            })
-        },
-        [exercise.exercise_id, exerciseIndex, onUpdateSet, queryClient, workoutId],
-    )
 
     const deleteExercise = useCallback(() => {
         const shouldDelete = window.confirm('Удалить упражнение из тренировки?')
@@ -997,8 +970,8 @@ function ActiveExerciseCard({
         onNotifySetCompleted()
     }, [exerciseIndex, onNotifySetCompleted, onPatchWorkout])
 
-    // SPEC-005 §11/§17: завершение подхода со всей его записью живёт в отдельном владельце.
-    const { completeSet } = useCompleteWorkoutSet({
+    // SPEC-005 §11/§17/§47: завершение подхода, его RPE и рекомендация по весу — во владельце записи.
+    const { completeSet, updateSetRpe } = useWorkoutSetWrites({
         workoutId,
         exercise,
         exerciseIndex,
@@ -1009,30 +982,7 @@ function ActiveExerciseCard({
         onSelectExercise,
         onNotifySetCompleted,
         onCompletionError: setCompletionError,
-        onSetSaved: refreshWeightRecommendation,
     })
-
-    const updateSetRpe = useCallback(
-        (set: CompletedSet, rpe: number) => {
-            onUpdateSet(exerciseIndex, set.set_number, { rpe })
-
-            if (set.completed && typeof set.id === 'number' && set.id > 0) {
-                void patchSetRpeMutation.mutateAsync({ setId: set.id, rpe })
-                    .then(() => refreshWeightRecommendation(exercise.sets_completed[set.set_number]))
-                    .catch(() => {
-                        // Keep the UI non-blocking; the next sync/edit can retry this field.
-                    })
-                return
-            }
-
-            if (!set.completed) {
-                void queryClient.invalidateQueries({
-                    queryKey: weightRecommendationQueryKey(workoutId, exercise.exercise_id),
-                })
-            }
-        },
-        [exercise.exercise_id, exercise.sets_completed, exerciseIndex, onUpdateSet, patchSetRpeMutation, queryClient, refreshWeightRecommendation, workoutId],
-    )
 
     return (
         <section className="rounded-[24px] border border-[#4ADE80]/25 bg-[#111821] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.35)]">

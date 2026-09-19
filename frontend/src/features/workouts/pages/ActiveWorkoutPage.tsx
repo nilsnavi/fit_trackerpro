@@ -9,7 +9,7 @@ import { cn } from '@shared/lib/cn'
 import { getErrorMessage } from '@shared/errors'
 import { toast } from '@shared/stores/toastStore'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-import { useSyncQueueWithRetry } from '@shared/hooks/useSyncQueueWithRetry'
+import { useSyncQueue } from '@shared/hooks/useSyncQueue'
 import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { queryKeys } from '@shared/api/queryKeys'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
@@ -171,7 +171,7 @@ export function ActiveWorkoutPage() {
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
-    const { pendingItems: syncPendingItems } = useSyncQueueWithRetry()
+    const { pendingItems: syncPendingItems } = useSyncQueue()
     const { conflict: conflictInfo, isOpen: isConflictOpen, closeConflict } = useConflictResolution()
 
     const restPresetScopeKey = useMemo(() => {

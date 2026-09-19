@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 
 import { useTelegramContext } from '@app/providers/TelegramProvider'
 import { authApi, type TelegramAuthResponse } from '@features/profile/api/authApi'
+import type { UserProfile } from '@features/profile/types/profile'
 import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, clientErrorFromFetchResponse } from '@shared/errors'
 
@@ -61,6 +62,13 @@ async function telegramLookupFetchRaw(initData: string): Promise<{ registered: b
         throw new AppHttpError(clientError)
     }
     return (await response.json()) as { registered: boolean }
+}
+
+/**
+ * Профиль текущего пользователя: единственный вход из компонента авторизации к `authApi`.
+ */
+export async function fetchCurrentUserProfile(): Promise<UserProfile> {
+    return authApi.getCurrentUser()
 }
 
 /**
