@@ -1,46 +1,15 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
-import {
-    authApi,
-    type ExperienceLevel,
-    type FitnessGoal,
-} from '@features/profile/api/authApi'
-import { getPublicApiBaseUrl } from '@shared/config/runtime'
-import { getErrorMessage } from '@shared/errors'
+import type { ExperienceLevel, FitnessGoal } from '@features/profile/api/authApi'
 import { Button } from '@shared/ui/Button'
 import { Card } from '@shared/ui/Card'
-import { getAuthTokens } from '@/stores/authStore'
+import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit'
 
 export type OnboardingScreenProps = {
     onDone: () => void
     usedFallback?: boolean
     /** Pre-filled from Telegram `user.first_name` when available */
     defaultDisplayName?: string
-}
-
-async function saveOnboardingFetch(payload: {
-    fitness_goal: FitnessGoal
-    experience_level: ExperienceLevel
-}): Promise<void> {
-    const { accessToken } = getAuthTokens()
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (accessToken) {
-        headers.Authorization = `Bearer ${accessToken}`
-    }
-    const base = getPublicApiBaseUrl().replace(/\/$/, '')
-    const response = await fetch(`${base}/users/auth/onboarding`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-    })
-    if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { detail?: string; error?: { message?: string } }
-        const msg =
-            (typeof data.error === 'object' && data.error?.message) ||
-            data.detail ||
-            `HTTP ${response.status}`
-        throw new Error(String(msg))
-    }
 }
 
 /**
@@ -50,8 +19,7 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
     const [displayName, setDisplayName] = useState(defaultDisplayName)
     const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal>('strength')
     const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('beginner')
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const { submit, isSubmitting, error } = useOnboardingSubmit(onDone)
 
     const goalOptions = useMemo(
         () => [
@@ -70,34 +38,6 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
         ],
         [],
     )
-
-    const handleSubmit = useCallback(async () => {
-        setError(null)
-        setIsSubmitting(true)
-        try {
-            const trimmed = displayName.trim()
-            if (trimmed.length > 0) {
-                try {
-                    await authApi.updateCurrentUser({ first_name: trimmed })
-                } catch (e) {
-                    setError(getErrorMessage(e))
-                    return
-                }
-            }
-
-            const payload = { fitness_goal: fitnessGoal, experience_level: experienceLevel }
-            try {
-                await authApi.saveOnboarding(payload)
-            } catch {
-                await saveOnboardingFetch(payload)
-            }
-            onDone()
-        } catch (e) {
-            setError(getErrorMessage(e))
-        } finally {
-            setIsSubmitting(false)
-        }
-    }, [displayName, experienceLevel, fitnessGoal, onDone])
 
     return (
         <div className="flex min-h-dvh items-center justify-center p-4">
@@ -177,7 +117,7 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
                     type="button"
                     className="mt-4 w-full"
                     isLoading={isSubmitting}
-                    onClick={() => void handleSubmit()}
+                    onClick={() => void submit({ displayName, fitnessGoal, experienceLevel })}
                 >
                     Сохранить и продолжить
                 </Button>
