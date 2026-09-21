@@ -67,22 +67,14 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
         await page.getByLabel('Вес').first().fill('62.5')
         await page.getByLabel('Повторы').first().fill('8')
 
-        // Завершение подхода уходит PATCH'ем сессии; без ожидания ответа кэш детали
-        // ещё старый и кнопка «Завершить» откажет «Сначала завершите хотя бы один подход».
-        const sessionPatch = page.waitForResponse(
-            (response) =>
-                /\/workouts\/history\/\d+/.test(response.url()) &&
-                response.request().method() === 'PATCH',
-            { timeout: 45_000 },
-        )
         await page.getByRole('button', { name: 'Завершить подход' }).first().click()
-        await sessionPatch
 
         // §17: после завершения подхода стартует отдых; панель перекрывает нижнюю кнопку.
+        // Подход завершается локально и запись уходит фоном, поэтому здесь ждём видимое
+        // состояние интерфейса, а не ответ сети: синхронизацию доведёт завершение тренировки.
         const skipRestTimer = page.getByRole('button', { name: 'Пропустить', exact: true })
-        if (await skipRestTimer.isVisible().catch(() => false)) {
-            await skipRestTimer.click()
-        }
+        await expect(skipRestTimer).toBeVisible({ timeout: 30_000 })
+        await skipRestTimer.click()
 
         // Текущий контракт: кнопка «Завершить» (WorkoutBottomBar) закрывает сессию напрямую.
         await page.getByRole('button', { name: 'Завершить', exact: true }).click()

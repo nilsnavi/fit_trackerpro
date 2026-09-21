@@ -1160,6 +1160,227 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/progression/exercises/{exercise_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Effective progression policy for an exercise scope
+         * @description Progression scope is user + program/template + exercise + exercise slot (SPEC §7).
+         */
+        get: operations["get_exercise_progression_api_v1_progression_exercises__exercise_id__get"];
+        /**
+         * Configure progression for an exercise scope
+         * @description Persisting a policy never changes existing recommendations or workout history.
+         */
+        put: operations["update_exercise_progression_api_v1_progression_exercises__exercise_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/exercises/{exercise_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recommendation history for an exercise scope */
+        get: operations["get_exercise_progression_history_api_v1_progression_exercises__exercise_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/exercises/{exercise_id}/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest persisted recommendation (or a read-only preview) */
+        get: operations["get_exercise_recommendation_api_v1_progression_exercises__exercise_id__recommendation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Accepted targets and their automatic-prefill state
+         * @description SPEC §58: the newest accepted target per scope, prefill state included.
+         */
+        get: operations["list_prefill_targets_api_v1_progression_prefill_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/bulk-disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop prefilling many accepted targets automatically
+         * @description SPEC §58: omitting the ids switches off every target the screen lists.
+         *
+         *     One tap after a training cycle instead of walking the list row by row. The
+         *     targets themselves are untouched — only the silent substitution stops.
+         */
+        post: operations["bulk_disable_prefill_api_v1_progression_prefill_bulk_disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/bulk-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply one policy / rep-range edit to many accepted targets
+         * @description SPEC §58: values and prefill switches stay per-target; only the plan moves.
+         */
+        post: operations["bulk_update_prefill_targets_api_v1_progression_prefill_bulk_update_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/{recommendation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit an accepted target's value, policy and rep range
+         * @description Only fields the user actually edited are written (SPEC §58).
+         */
+        patch: operations["update_prefill_target_api_v1_progression_prefill__recommendation_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/{recommendation_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop prefilling an accepted target automatically
+         * @description Same as undoing the prefill in a session: the target itself is kept (SPEC §58).
+         */
+        post: operations["disable_prefill_api_v1_progression_prefill__recommendation_id__disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/{recommendation_id}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn the automatic prefill of an accepted target back on
+         * @description The target itself is unchanged — only the silent substitution returns.
+         */
+        post: operations["enable_prefill_api_v1_progression_prefill__recommendation_id__enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/recommendations/{recommendation_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept (or modify) a recommendation
+         * @description Only an explicit accept may change the program target (SPEC §42/§43).
+         */
+        post: operations["accept_recommendation_api_v1_progression_recommendations__recommendation_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/recommendations/{recommendation_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a recommendation
+         * @description Rejection leaves workout history untouched (SPEC §44).
+         */
+        post: operations["reject_recommendation_api_v1_progression_recommendations__recommendation_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/emergency/contact": {
         parameters: {
             query?: never;
@@ -2987,6 +3208,7 @@ export type components = {
             name: string;
             /** Notes */
             notes?: string | null;
+            progression_target?: components["schemas"]["ProgressionTargetInfo"] | null;
             /**
              * Sets Completed
              * @description Recorded sets (max 100 per exercise).
@@ -3023,6 +3245,7 @@ export type components = {
             name: string;
             /** Notes */
             notes?: string | null;
+            progression_target?: components["schemas"]["ProgressionTargetInfo"] | null;
             /**
              * Sets Completed
              * @description Recorded sets (max 100 per exercise).
@@ -3075,10 +3298,20 @@ export type components = {
              */
             notes?: string | null;
             /**
+             * Planned Duration
+             * @description Duration planned before the progression target was applied.
+             */
+            planned_duration?: number | null;
+            /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
              */
             planned_rest_seconds?: number | null;
+            /**
+             * Planned Weight
+             * @description Weight planned before the progression target was applied.
+             */
+            planned_weight?: number | null;
             /** Reps */
             reps?: number | null;
             /**
@@ -3160,10 +3393,20 @@ export type components = {
              */
             notes?: string | null;
             /**
+             * Planned Duration
+             * @description Duration planned before the progression target was applied.
+             */
+            planned_duration?: number | null;
+            /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
              */
             planned_rest_seconds?: number | null;
+            /**
+             * Planned Weight
+             * @description Weight planned before the progression target was applied.
+             */
+            planned_weight?: number | null;
             /** Reps */
             reps?: number | null;
             /**
@@ -3204,6 +3447,12 @@ export type components = {
             /** Weight */
             weight?: number | null;
         };
+        /**
+         * Confidence
+         * @description SPEC-006 §29 — quality of the underlying data, not an AI probability.
+         * @enum {string}
+         */
+        Confidence: "high" | "medium" | "low";
         /**
          * DailyWellnessCreate
          * @description Request model for creating daily wellness entry
@@ -4542,16 +4791,226 @@ export type components = {
             workout_count: number;
         };
         /**
+         * ProgressionBulkResult
+         * @description Outcome of a bulk change across accepted targets (SPEC §58).
+         */
+        ProgressionBulkResult: {
+            /**
+             * Applied To All
+             * @description True when the request addressed every current target of the user.
+             * @default false
+             */
+            applied_to_all: boolean;
+            /**
+             * Skipped
+             * @description Targets the change did not apply to, each with the reason: unknown, someone else's, no longer an accepted target, or — for switching the prefill off — already switched off.
+             */
+            skipped?: components["schemas"]["ProgressionBulkSkipped"][];
+            /**
+             * Updated
+             * @description Targets the change actually applied to.
+             * @default 0
+             */
+            updated: number;
+        };
+        /**
+         * ProgressionBulkSkipReason
+         * @description Why a bulk action left one selected target alone (SPEC-006 §58).
+         * @enum {string}
+         */
+        ProgressionBulkSkipReason: "not_found" | "already_disabled";
+        /**
+         * ProgressionBulkSkipped
+         * @description One selected target a bulk action did not change, explained (SPEC §58).
+         *
+         *     Reporting the id alone leaves the user guessing which goal was left behind;
+         *     the name, the value it still carries and the scope come along so the screen
+         *     can name the row exactly like the list does. A target that is not a current
+         *     accepted target can only be identified by its id.
+         */
+        ProgressionBulkSkipped: {
+            /** Exercise Id */
+            exercise_id?: number | null;
+            /**
+             * Exercise Name
+             * @description Catalog name; null when the target no longer exists.
+             */
+            exercise_name?: string | null;
+            reason: components["schemas"]["ProgressionBulkSkipReason"];
+            /** Recommendation Id */
+            recommendation_id: number;
+            /**
+             * Scope Key
+             * @description Progression scope the skipped target belongs to.
+             */
+            scope_key?: string | null;
+            /**
+             * Unit
+             * @description 'kg' or 'seconds'.
+             */
+            unit?: string | null;
+            /**
+             * Value
+             * @description The target's current value (kg, or seconds when timed).
+             */
+            value?: number | null;
+        };
+        /**
          * ProgressionPolicy
          * @description Supported progression policies (SPEC-005 §29).
          * @enum {string}
          */
         ProgressionPolicy: "MANUAL" | "LINEAR" | "DOUBLE_PROGRESSION" | "RPE_BASED" | "RIR_BASED" | "PERCENT_1RM" | "TIME_PROGRESSION";
         /**
+         * ProgressionPolicyResponse
+         * @description Effective policy for one progression scope (SPEC §6/§7).
+         */
+        ProgressionPolicyResponse: {
+            /** Deload Percent */
+            deload_percent?: number | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Equipment Increment */
+            equipment_increment?: number | null;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Failure Threshold */
+            failure_threshold?: number | null;
+            /**
+             * Id
+             * @description Null when the scope still uses defaults.
+             */
+            id?: number | null;
+            /** Increment */
+            increment?: number | null;
+            /** Max Value */
+            max_value?: number | null;
+            /** Min Value */
+            min_value?: number | null;
+            /** Percent 1Rm */
+            percent_1rm?: number | null;
+            /**
+             * Policy Scope Key
+             * @description Scope the stored policy row actually lives in; differs from scope_key when a template-level or user-level policy is inherited. Null for defaults.
+             */
+            policy_scope_key?: string | null;
+            /**
+             * Policy Version
+             * @default MANUAL_V1
+             */
+            policy_version: string;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /**
+             * Scope Key
+             * @description Progression scope: user + template + exercise + program slot.
+             */
+            scope_key: string;
+            /** Sets Target */
+            sets_target?: number | null;
+            /** Target Rir */
+            target_rir?: number | null;
+            /** Target Rpe */
+            target_rpe?: number | null;
+            /** Template Exercise Id */
+            template_exercise_id?: number | null;
+            /** Template Id */
+            template_id?: number | null;
+            /** Time Increment Seconds */
+            time_increment_seconds?: number | null;
+            time_priority?: components["schemas"]["TimePriority"] | null;
+            /** Time Target Seconds */
+            time_target_seconds?: number | null;
+            /** @default MANUAL */
+            type: components["schemas"]["ProgressionPolicy"];
+            /** User Id */
+            user_id: number;
+        };
+        /**
+         * ProgressionPolicyUpdate
+         * @description PUT body: configure progression for one exercise scope.
+         */
+        ProgressionPolicyUpdate: {
+            /** Deload Percent */
+            deload_percent?: number | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Equipment Increment */
+            equipment_increment?: number | null;
+            /** Failure Threshold */
+            failure_threshold?: number | null;
+            /** Increment */
+            increment?: number | null;
+            /** Max Value */
+            max_value?: number | null;
+            /** Min Value */
+            min_value?: number | null;
+            /** Percent 1Rm */
+            percent_1rm?: number | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Sets Target */
+            sets_target?: number | null;
+            /** Target Rir */
+            target_rir?: number | null;
+            /** Target Rpe */
+            target_rpe?: number | null;
+            /** Time Increment Seconds */
+            time_increment_seconds?: number | null;
+            /** @description Weight+time exercises: TIME_FIRST or WEIGHT_FIRST (SPEC §24). */
+            time_priority?: components["schemas"]["TimePriority"] | null;
+            /** Time Target Seconds */
+            time_target_seconds?: number | null;
+            /**
+             * @description MANUAL never computes a target; the engine only proposes for other types.
+             * @default MANUAL
+             */
+            type: components["schemas"]["ProgressionPolicy"];
+        };
+        /**
+         * ProgressionPrefillBulkDisable
+         * @description POST body: switch the automatic prefill off for many targets at once.
+         */
+        ProgressionPrefillBulkDisable: {
+            /**
+             * Recommendation Ids
+             * @description Targets to switch off. Omit (or send null) to switch off every accepted target the settings screen lists.
+             */
+            recommendation_ids?: number[] | null;
+        };
+        /**
+         * ProgressionPrefillListResponse
+         * @description SPEC §58: accepted targets and whether they prefill new sessions.
+         */
+        ProgressionPrefillListResponse: {
+            /** Items */
+            items?: components["schemas"]["ProgressionRecommendationResponse"][];
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
          * ProgressionRecommendation
-         * @description Explainable progression recommendation (SPEC-005 §37–38).
+         * @description Explainable progression recommendation (SPEC-005 §37–38, SPEC-006 §8).
+         *
+         *     SPEC-006 fields are additive: existing consumers keep reading the original
+         *     keys, while the card can now show status, lifecycle and the persisted id.
          */
         ProgressionRecommendation: {
+            /** Actual Selected Value */
+            actual_selected_value?: number | null;
             /**
              * Confidence
              * @default low
@@ -4559,8 +5018,25 @@ export type components = {
             confidence: string;
             /** Difference */
             difference?: number | null;
+            /** Exercise Id */
+            exercise_id?: number | null;
+            /**
+             * Failure Streak
+             * @default 0
+             */
+            failure_streak: number;
+            /** Id */
+            id?: number | null;
+            /** Lifecycle Status */
+            lifecycle_status?: string | null;
             /** @default MANUAL */
             policy: components["schemas"]["ProgressionPolicy"];
+            /** Policy Version */
+            policy_version?: string | null;
+            /** Previous Duration */
+            previous_duration?: number | null;
+            /** Previous Reps */
+            previous_reps?: number | null;
             /** Previous Value */
             previous_value?: number | null;
             /**
@@ -4573,10 +5049,212 @@ export type components = {
              * @default
              */
             reason_text: string;
+            /** Recommended Duration */
+            recommended_duration?: number | null;
+            /** Recommended Reps */
+            recommended_reps?: number | null;
             /** Recommended Value */
             recommended_value?: number | null;
+            /** Recovery Warning */
+            recovery_warning?: string | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Scope Key */
+            scope_key?: string | null;
             /** Source Session Id */
             source_session_id?: number | null;
+            /** Status */
+            status?: string | null;
+            /** Template Exercise Id */
+            template_exercise_id?: number | null;
+            /** Template Id */
+            template_id?: number | null;
+        };
+        /**
+         * ProgressionRecommendationDecision
+         * @description POST body for accept/reject (SPEC §42–§44).
+         */
+        ProgressionRecommendationDecision: {
+            /**
+             * Selected Value
+             * @description Omit to accept the recommended value; send a different own value to record the recommendation as ``modified``.
+             */
+            selected_value?: number | null;
+        };
+        /**
+         * ProgressionRecommendationResponse
+         * @description Explainable recommendation (SPEC §8/§27/§28/§29/§46).
+         */
+        ProgressionRecommendationResponse: {
+            /** Actual Selected Value */
+            actual_selected_value?: number | null;
+            /** @default low */
+            confidence: components["schemas"]["Confidence"];
+            /** Created At */
+            created_at?: string | null;
+            /** Difference */
+            difference?: number | null;
+            /**
+             * Effective Increment
+             * @description Step the scope progresses by now (equipment-aware).
+             */
+            effective_increment?: number | null;
+            /** @description Policy that governs the scope right now. Differs from ``policy`` (the policy this target was produced by) once the target's policy is edited on the settings screen (SPEC §58). */
+            effective_policy?: components["schemas"]["ProgressionPolicy"] | null;
+            /**
+             * Effective Time Increment Seconds
+             * @description Time step in seconds for time-based policies (SPEC §24).
+             */
+            effective_time_increment_seconds?: number | null;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Name */
+            exercise_name?: string | null;
+            /**
+             * Failure Streak
+             * @default 0
+             */
+            failure_streak: number;
+            /**
+             * Id
+             * @description Null for a non-persisted preview.
+             */
+            id?: number | null;
+            /**
+             * Idempotent Replay
+             * @default false
+             */
+            idempotent_replay: boolean;
+            /** @default generated */
+            lifecycle_status: components["schemas"]["RecommendationLifecycle"];
+            /**
+             * Persisted
+             * @default false
+             */
+            persisted: boolean;
+            /** @default MANUAL */
+            policy: components["schemas"]["ProgressionPolicy"];
+            /**
+             * Policy Version
+             * @default MANUAL_V1
+             */
+            policy_version: string;
+            /**
+             * Prefill Declined
+             * @description True when the user undid this target's automatic prefill: it stays accepted, but a new session no longer starts on it (SPEC §58).
+             * @default false
+             */
+            prefill_declined: boolean;
+            /** Previous Duration */
+            previous_duration?: number | null;
+            /** Previous Reps */
+            previous_reps?: number | null;
+            /** Previous Value */
+            previous_value?: number | null;
+            /**
+             * Reason Code
+             * @default
+             */
+            reason_code: string;
+            /**
+             * Reason Text
+             * @default
+             */
+            reason_text: string;
+            /** Recommended Duration */
+            recommended_duration?: number | null;
+            /** Recommended Reps */
+            recommended_reps?: number | null;
+            /** Recommended Value */
+            recommended_value?: number | null;
+            /**
+             * Recovery Warning
+             * @description Advisory only — recovery never changes the recommendation (SPEC §34).
+             */
+            recovery_warning?: string | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Scope Key */
+            scope_key: string;
+            /** Source Session Id */
+            source_session_id?: number | null;
+            /** @default INSUFFICIENT_DATA */
+            status: components["schemas"]["RecommendationStatus"];
+            /** Template Exercise Id */
+            template_exercise_id?: number | null;
+            /** Template Id */
+            template_id?: number | null;
+        };
+        /**
+         * ProgressionTargetBulkUpdate
+         * @description POST body: apply one policy / rep-range edit to several targets (§58).
+         *
+         *     ``value`` is deliberately absent: a bulk action configures how the scopes
+         *     progress, while the next number stays a per-target decision.
+         */
+        ProgressionTargetBulkUpdate: {
+            /** Recommendation Ids */
+            recommendation_ids: number[];
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** @description Policy type applied to each selected target's own scope. */
+            type?: components["schemas"]["ProgressionPolicy"] | null;
+        };
+        /**
+         * ProgressionTargetInfo
+         * @description SPEC-006 §42/§58: accepted target a session's numbers were seeded from.
+         *
+         *     Present on an exercise only while the seeded value is still in place; the UI
+         *     labels the number and offers a revert to the planned one.
+         */
+        ProgressionTargetInfo: {
+            /** Lifecycle Status */
+            lifecycle_status?: string | null;
+            /** Policy */
+            policy?: string | null;
+            /** Recommendation Id */
+            recommendation_id: number;
+            /** Scope Key */
+            scope_key: string;
+            /**
+             * Unit
+             * @description What ``value`` measures.
+             * @default kg
+             */
+            unit: string;
+            /**
+             * Value
+             * @description Accepted target: kg or seconds.
+             */
+            value: number;
+        };
+        /**
+         * ProgressionTargetUpdate
+         * @description PATCH body: edit an accepted target in place (SPEC §58).
+         *
+         *     Omitted fields keep their current value — the endpoint never resets a policy
+         *     parameter the user did not touch. The remaining policy parameters (step,
+         *     RPE target, sets, percent of 1RM…) belong to the per-exercise policy screen
+         *     (``PUT /progression/exercises/{id}``), so they are deliberately not here.
+         */
+        ProgressionTargetUpdate: {
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** @description Policy type for the target's own progression scope. */
+            type?: components["schemas"]["ProgressionPolicy"] | null;
+            /**
+             * Value
+             * @description New target value: kilograms, or seconds when the policy is TIME_PROGRESSION. New sessions start on it.
+             */
+            value?: number | null;
         };
         /**
          * ReadinessChecks
@@ -4607,6 +5285,18 @@ export type components = {
              */
             status: "ready" | "degraded";
         };
+        /**
+         * RecommendationLifecycle
+         * @description SPEC-006 §10 — a recommendation never mutates the program by itself.
+         * @enum {string}
+         */
+        RecommendationLifecycle: "generated" | "accepted" | "modified" | "rejected" | "expired";
+        /**
+         * RecommendationStatus
+         * @description SPEC-006 §9.
+         * @enum {string}
+         */
+        RecommendationStatus: "INCREASE" | "KEEP" | "DECREASE" | "DELOAD" | "MANUAL" | "INSUFFICIENT_DATA";
         /**
          * RecoveryStateRecalculateResponse
          * @description Recovery state after manual recalculation
@@ -4851,6 +5541,12 @@ export type components = {
              */
             username?: string | null;
         };
+        /**
+         * TimePriority
+         * @description SPEC-006 §24 — weight+time exercises: which lever moves first.
+         * @enum {string}
+         */
+        TimePriority: "TIME_FIRST" | "WEIGHT_FIRST";
         /**
          * TrainingLoadDailyEntry
          * @description Daily training load aggregate entry
@@ -8885,6 +9581,409 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DailyWellnessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise_progression_api_v1_progression_exercises__exercise_id__get: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionPolicyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_exercise_progression_api_v1_progression_exercises__exercise_id__put: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressionPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionPolicyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise_progression_history_api_v1_progression_exercises__exercise_id__history_get: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise_recommendation_api_v1_progression_exercises__exercise_id__recommendation_get: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prefill_targets_api_v1_progression_prefill_get: {
+        parameters: {
+            query?: {
+                /** @description Only targets whose automatic prefill the user switched off. */
+                declined_only?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionPrefillListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_disable_prefill_api_v1_progression_prefill_bulk_disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProgressionPrefillBulkDisable"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_update_prefill_targets_api_v1_progression_prefill_bulk_update_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressionTargetBulkUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_prefill_target_api_v1_progression_prefill__recommendation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressionTargetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_prefill_api_v1_progression_prefill__recommendation_id__disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_prefill_api_v1_progression_prefill__recommendation_id__enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_recommendation_api_v1_progression_recommendations__recommendation_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProgressionRecommendationDecision"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_recommendation_api_v1_progression_recommendations__recommendation_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
                 };
             };
             /** @description Validation Error */

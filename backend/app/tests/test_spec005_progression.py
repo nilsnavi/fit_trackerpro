@@ -10,6 +10,7 @@ from app.application.progression_service import (
 )
 from app.application.records_service import evaluate_set_records, is_working_set
 from app.application.strength_math import calculate_plates, estimate_1rm
+from app.domain.progression.types import ReasonCode
 from app.schemas.enums import ProgressionPolicy
 
 
@@ -94,7 +95,7 @@ class TestProgressionEngine:
             current_exercise=exercise,
         )
         assert result["recommended_value"] == 80
-        assert result["reason_code"] == "REP_RANGE_NOT_COMPLETED"
+        assert result["reason_code"] == ReasonCode.TARGET_NOT_COMPLETED.value
 
     def test_warmup_sets_do_not_drive_progression(self):
         exercise = self._exercise(
@@ -108,7 +109,8 @@ class TestProgressionEngine:
             current_exercise=exercise,
         )
         assert result["previous_value"] == 80
-        assert result["reason_code"] == "REP_RANGE_NOT_COMPLETED"
+        assert result["recommended_value"] == 80
+        assert result["reason_code"] == ReasonCode.TARGET_NOT_COMPLETED.value
 
     def test_linear_progression(self):
         exercise = self._exercise(
@@ -144,12 +146,15 @@ class TestProgressionEngine:
             target_rpe=8,
         )
         assert result["recommended_value"] == 82.5
-        assert result["reason_code"] == "RPE_BELOW_TARGET"
+        assert result["reason_code"] == ReasonCode.TARGET_RPE_MET.value
 
-    def test_rpe_based_decrease_on_high_rpe(self):
+    def test_rpe_above_target_keeps_weight(self):
+        """SPEC-006 §16/§17 supersedes the old "-10% on high RPE" preview."""
         exercise = self._exercise(
             [
-                {"set_number": 1, "weight": 80, "reps": 8, "rpe": 10, "completed": True},
+                {"set_number": 1, "weight": 80, "reps": 8, "rpe": 8, "completed": True},
+                {"set_number": 2, "weight": 80, "reps": 8, "rpe": 8.5, "completed": True},
+                {"set_number": 3, "weight": 80, "reps": 8, "rpe": 9, "completed": True},
             ]
         )
         result = recommend(
@@ -157,13 +162,15 @@ class TestProgressionEngine:
             current_exercise=exercise,
             target_rpe=8,
         )
-        assert result["reason_code"] == "RPE_TOO_HIGH"
-        assert result["recommended_value"] == 72.5
+        assert result["reason_code"] == ReasonCode.TARGET_RPE_EXCEEDED.value
+        assert result["recommended_value"] == 80
 
     def test_rir_based_increase(self):
         exercise = self._exercise(
             [
                 {"set_number": 1, "weight": 80, "reps": 8, "rir": 3, "completed": True},
+                {"set_number": 2, "weight": 80, "reps": 8, "rir": 2, "completed": True},
+                {"set_number": 3, "weight": 80, "reps": 8, "rir": 2, "completed": True},
             ]
         )
         result = recommend(
@@ -172,6 +179,7 @@ class TestProgressionEngine:
             target_rir=2,
         )
         assert result["recommended_value"] == 82.5
+        assert result["reason_code"] == ReasonCode.TARGET_RIR_MET.value
 
     def test_percent_1rm(self):
         exercise = self._exercise(
@@ -184,7 +192,7 @@ class TestProgressionEngine:
         )
         # e1RM(100x1) = 100 * (1 + 1/30) = 103.33 -> 75% = 77.5 (exact 2.5 step)
         assert result["recommended_value"] == 77.5
-        assert result["reason_code"] == "PERCENT_1RM_TARGET"
+        assert result["reason_code"] == ReasonCode.TARGET_COMPLETED.value
 
     def test_time_progression(self):
         exercise = self._exercise(
@@ -196,7 +204,7 @@ class TestProgressionEngine:
             time_increment_seconds=5,
         )
         assert result["recommended_value"] == 65
-        assert result["reason_code"] == "TIME_TARGET_COMPLETED"
+        assert result["reason_code"] == ReasonCode.TIME_TARGET_COMPLETED.value
 
     def test_no_history(self):
         result = recommend(
@@ -204,7 +212,7 @@ class TestProgressionEngine:
             current_exercise={"exercise_id": 1, "name": "X", "sets_completed": []},
         )
         assert result["recommended_value"] is None
-        assert result["reason_code"] == "NO_HISTORY"
+        assert result["reason_code"] == ReasonCode.NO_PREVIOUS_HISTORY.value
 
     def test_deload_after_three_failures(self):
         history = [
@@ -218,7 +226,7 @@ class TestProgressionEngine:
             history=history,
         )
         assert result is not None
-        assert result["reason_code"] == "DELOAD_AFTER_FAILURES"
+        assert result["reason_code"] == ReasonCode.FAILURE_THRESHOLD_REACHED.value
         assert result["recommended_value"] == 90
 
     def test_no_deload_before_threshold(self):
