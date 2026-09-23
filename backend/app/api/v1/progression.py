@@ -24,7 +24,9 @@ from app.schemas.progression import (
     ProgressionPolicyResponse,
     ProgressionPolicyUpdate,
     ProgressionPrefillBulkDisable,
+    ProgressionPrefillBulkEnable,
     ProgressionPrefillListResponse,
+    ProgressionPrefillSweepListResponse,
     ProgressionRecommendationDecision,
     ProgressionRecommendationResponse,
     ProgressionTargetBulkUpdate,
@@ -176,6 +178,30 @@ async def list_prefill_targets(
     return {"items": items, "total": len(items)}
 
 
+@router.get(
+    "/prefill/sweeps",
+    response_model=ProgressionPrefillSweepListResponse,
+    summary="Bulk switch-offs that can still be undone",
+)
+async def list_prefill_sweeps(
+    limit: int = Query(5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """SPEC §58: the undo as the server remembers it, not as one browser does.
+
+    Every bulk switch-off stamps its targets with one sweep id, so the way back is
+    the same on every device and survives a reload. The whole chain is returned,
+    newest first, so a run of bulk actions can be put back in any order; targets
+    switched on again by hand have left their sweep, and a sweep left with nothing
+    is not listed. One whose members were all replaced by newer targets *is* listed
+    — ``restorable`` false, replacements named — so the action never vanishes while
+    its stamp stays on rows no undo could reach, and acting on it releases them.
+    """
+    service = ProgressionEngineService(db)
+    return await service.list_prefill_sweeps(user_id=current_user.id, limit=limit)
+
+
 @router.post(
     "/prefill/bulk-disable",
     response_model=ProgressionBulkResult,
@@ -189,12 +215,40 @@ async def bulk_disable_prefill(
     """SPEC §58: omitting the ids switches off every target the screen lists.
 
     One tap after a training cycle instead of walking the list row by row. The
-    targets themselves are untouched — only the silent substitution stops.
+    targets themselves are untouched — only the silent substitution stops. What
+    this call switches off becomes one sweep, addressable for its undo through
+    ``GET /prefill/last-sweep`` rather than only through this response.
     """
     service = ProgressionEngineService(db)
     return await service.disable_prefill_bulk(
         user_id=current_user.id,
         recommendation_ids=payload.recommendation_ids if payload is not None else None,
+    )
+
+
+@router.post(
+    "/prefill/bulk-enable",
+    response_model=ProgressionBulkResult,
+    summary="Switch the automatic prefill back on for targets or whole sweeps",
+)
+async def bulk_enable_prefill(
+    payload: ProgressionPrefillBulkEnable,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """SPEC §58: undoes a bulk switch-off, addressed by targets or by sweeps.
+
+    The ids come from that action's ``changed_ids``, so a goal whose prefill was
+    switched off earlier stays off — undo restores what this action did, not
+    everything that happens to be switched off. Sweep ids address the same thing
+    from the other end: the server resolves what each sweep still holds, which is
+    what lets the whole undo journal come back in one tap.
+    """
+    service = ProgressionEngineService(db)
+    return await service.enable_prefill_bulk(
+        user_id=current_user.id,
+        recommendation_ids=payload.recommendation_ids,
+        sweep_ids=payload.sweep_ids,
     )
 
 

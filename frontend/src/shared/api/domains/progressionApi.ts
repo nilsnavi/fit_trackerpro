@@ -4,6 +4,7 @@ import type {
     ProgressionPolicyConfig,
     ProgressionPolicyUpdateRequest,
     ProgressionPrefillList,
+    ProgressionPrefillSweepList,
     ProgressionRecommendation,
     ProgressionScopeParams,
     ProgressionTargetBulkUpdateRequest,
@@ -83,6 +84,21 @@ export const progressionApi = {
         return api.get<ProgressionPrefillList>('/progression/prefill', params)
     },
 
+    /**
+     * SPEC-006 §58: the bulk switch-offs that can still be undone, newest first.
+     *
+     * Resolved server-side from the sweeps the targets were declined by, so an
+     * undo survives a reload and is offered on any device — instead of depending
+     * on a copy the browser had to keep — and a run of sweeps can be put back in
+     * any order, not only the newest one.
+     */
+    listPrefillSweeps(limit?: number): Promise<ProgressionPrefillSweepList> {
+        return api.get<ProgressionPrefillSweepList>(
+            '/progression/prefill/sweeps',
+            limit == null ? {} : { limit },
+        )
+    },
+
     /** SPEC-006 §58: turns the automatic prefill of one target back on. */
     enablePrefill(recommendationId: number): Promise<ProgressionRecommendation> {
         return api.post<ProgressionRecommendation>(
@@ -108,6 +124,26 @@ export const progressionApi = {
             '/progression/prefill/bulk-disable',
             recommendationIds == null ? {} : { recommendation_ids: recommendationIds },
         )
+    },
+
+    /**
+     * SPEC-006 §58: switches the prefill back on — the undo of a bulk switch-off.
+     *
+     * Addressed either to the exact targets one action changed or to whole sweeps,
+     * never both. The sweep address is what the journal uses: the server resolves
+     * what each sweep still holds, so one link (or the whole chain) is undone
+     * without the client re-stating a set of ids it merely read.
+     */
+    bulkEnablePrefill(payload: {
+        recommendationIds?: number[]
+        sweepIds?: string[]
+    }): Promise<ProgressionBulkResult> {
+        return api.post<ProgressionBulkResult>('/progression/prefill/bulk-enable', {
+            ...(payload.recommendationIds == null
+                ? {}
+                : { recommendation_ids: payload.recommendationIds }),
+            ...(payload.sweepIds == null ? {} : { sweep_ids: payload.sweepIds }),
+        })
     },
 
     /**

@@ -335,8 +335,10 @@ class WorkoutsService:
         user_id: int,
         workout_session_id: int,
         exercises_payload: list[dict],
+        carry_ids: set[int] | None = None,
     ) -> list[WorkoutSessionExercise]:
         rows: list[WorkoutSessionExercise] = []
+        claimed: set[int] = set()
         for ex_idx, raw_exercise in enumerate(exercises_payload):
             session_exercise = WorkoutSessionExercise(
                 user_id=user_id,
@@ -352,6 +354,24 @@ class WorkoutsService:
                 block_id=raw_exercise.get("block_id"),
                 block_order=raw_exercise.get("block_order"),
             )
+            # SPEC §58: the session's own JSON names its entries. A rebuilt row
+            # keeps the id its entry already carries — but only when that id is
+            # one of this session's current rows and no earlier entry of this
+            # very payload claimed it, so a forged or duplicated id from the
+            # payload can never steal another row's identity.
+            entry_id = (
+                self._session_entry_id(raw_exercise.get("id"))
+                if isinstance(raw_exercise, dict)
+                else None
+            )
+            if (
+                entry_id is not None
+                and carry_ids
+                and entry_id in carry_ids
+                and entry_id not in claimed
+            ):
+                session_exercise.id = entry_id
+                claimed.add(entry_id)
             sets_payload = raw_exercise.get("sets_completed") if isinstance(
                 raw_exercise, dict) else None
             if isinstance(sets_payload, list):
@@ -1344,18 +1364,20 @@ class WorkoutsService:
         stored_exercises = list(workout.exercises or [])
         workout.exercises = [ex.model_dump(
             mode="json") for ex in data.exercises]
-        # SPEC-006 §42/§58: a template-less session has no planned numbers, so an
-        # exercise added mid-session starts from the accepted user + exercise
-        # target (quick start). Only blank working sets are touched.
-        if workout.template_id is None:
-            workout.exercises = await self._seed_added_exercise_targets(
-                user_id=user_id,
-                stored_exercises=stored_exercises,
-                exercises=workout.exercises,
-            )
-            # The seeding rewrites nested set dicts in place; flag the column so
-            # SQLAlchemy does not skip the UPDATE for the same object.
-            flag_modified(workout, "exercises")
+        # SPEC-006 §42/§58: an exercise added mid-session starts from the accepted
+        # target of its own scope — the ``user + exercise`` scope without a
+        # template (quick start), the slot's scope inside one — so the two cases
+        # behave the same way. Only blank working sets are touched, and an
+        # exercise the session already stored is never seeded again.
+        workout.exercises = await self._seed_added_exercise_targets(
+            user_id=user_id,
+            stored_exercises=stored_exercises,
+            exercises=workout.exercises,
+            template_id=workout.template_id,
+        )
+        # The seeding rewrites nested set dicts in place; flag the column so
+        # SQLAlchemy does not skip the UPDATE for the same object.
+        flag_modified(workout, "exercises")
         # SPEC-006 §58: undoing a prefill is remembered, so the target does not
         # come back on its own — a newer accepted target switches it on again.
         reverted_prefills = self._reverted_prefill_recommendation_ids(
@@ -1388,6 +1410,13 @@ class WorkoutsService:
                 blocks_payload=data.blocks,
             )
             workout = await self.repository.commit_workout_update(workout)
+        # SPEC §58: the session's own JSON names its entries. The current row ids
+        # are what a rebuilt row may carry over.
+        current_rows = await self.repository.get_session_exercise_rows(
+            user_id=user_id,
+            workout_session_id=workout.id,
+        )
+        carry_ids = {int(row.id) for row in current_rows}
         await self.repository.replace_session_snapshot(
             user_id=user_id,
             workout_session_id=workout.id,
@@ -1395,6 +1424,7 @@ class WorkoutsService:
                 user_id=user_id,
                 workout_session_id=workout.id,
                 exercises_payload=workout.exercises or [],
+                carry_ids=carry_ids,
             ),
         )
         response_item = await self.get_workout_detail(
@@ -1471,6 +1501,12 @@ class WorkoutsService:
         await self._upsert_recovery_state(user_id=user_id, target_date=workout.date)
 
         await self.repository.commit_workout_completion(workout)
+        # Completion rebuilds the rows too; the ids the JSON already names are
+        # carried over.
+        current_rows = await self.repository.get_session_exercise_rows(
+            user_id=user_id,
+            workout_session_id=workout.id,
+        )
         await self.repository.replace_session_snapshot(
             user_id=user_id,
             workout_session_id=workout.id,
@@ -1478,6 +1514,7 @@ class WorkoutsService:
                 user_id=user_id,
                 workout_session_id=workout.id,
                 exercises_payload=workout.exercises or [],
+                carry_ids={int(row.id) for row in current_rows},
             ),
         )
         await invalidate_user_analytics_cache(user_id)
@@ -1627,40 +1664,105 @@ class WorkoutsService:
         user_id: int,
         stored_exercises: list[dict],
         exercises: list[dict],
+        template_id: Optional[int] = None,
     ) -> list[dict]:
         """Seed blank working sets of an exercise the user just added.
 
-        SPEC-006 §42/§58: a template-less session (quick start) has no planned
-        numbers, so a newly added exercise would otherwise start empty and the
-        accepted target would only ever be reachable by hand. Here the accepted
-        ``user + exercise`` target becomes the starting point — but only while
+        SPEC-006 §42/§58: a newly added exercise would otherwise start empty (a
+        template-less session has no planned numbers at all) and the accepted
+        target would only ever be reachable by hand. Here the accepted target of
+        the session's own scope becomes the starting point — ``user + exercise``
+        without a template, the program slot's scope inside one — but only while
         the exercise has no value of its own: anything in this payload or in the
-        stored one always wins, so nothing the user typed is overwritten.
+        stored one always wins, so nothing the user typed is overwritten and an
+        exercise the session already carries is never re-seeded.
+
+        Which exercises the session already carries is answered by the entries
+        themselves (SPEC §58), not by their position in the list: a planned
+        exercise the user deleted and added back where it stood is a new draft of
+        its own slot, so it is seeded from that slot again.
         """
         if not exercises:
             return exercises
+        carried_ids = self._carried_session_entry_ids(stored_exercises)
         candidates: set[int] = set()
         for index, exercise in enumerate(exercises):
             if not isinstance(exercise, dict):
                 continue
             if self._has_explicit_working_values(exercise):
                 continue
-            stored = stored_exercises[index] if index < len(stored_exercises) else None
-            if isinstance(stored, dict) and stored.get("exercise_id") == exercise.get("exercise_id"):
-                # Already in the session with sets of its own: never seeded
-                # again, so a revert (which clears the value) stays reverted.
-                if stored.get("sets_completed"):
-                    continue
+            if self._is_carried_session_entry(
+                exercise=exercise,
+                index=index,
+                stored_exercises=stored_exercises,
+                carried_ids=carried_ids,
+            ):
+                # The session already stores this very entry: never seeded again,
+                # so a revert (which clears the value) stays reverted.
+                continue
             candidates.add(index)
         if not candidates:
             return exercises
         return await self._apply_accepted_progression_targets(
             user_id=user_id,
-            template_id=None,
+            template_id=template_id,
             exercises=exercises,
             only_indexes=candidates,
             blanks_only=True,
         )
+
+    @staticmethod
+    def _session_entry_id(value: object) -> Optional[int]:
+        """The row id of a session exercise entry, when the payload carries one."""
+        try:
+            entry_id = int(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return None
+        return entry_id if entry_id > 0 else None
+
+    @staticmethod
+    def _carried_session_entry_ids(stored_exercises: list[dict]) -> set[int]:
+        """Row ids of the session entries the stored list already identifies."""
+        ids: set[int] = set()
+        for stored in stored_exercises:
+            if not isinstance(stored, dict):
+                continue
+            entry_id = WorkoutsService._session_entry_id(stored.get("id"))
+            if entry_id is not None:
+                ids.add(entry_id)
+        return ids
+
+    def _is_carried_session_entry(
+        self,
+        *,
+        exercise: dict,
+        index: int,
+        stored_exercises: list[dict],
+        carried_ids: set[int],
+    ) -> bool:
+        """Is this submitted draft an entry the session already carries (SPEC §58)?
+
+        An entry is identified by its row id, never by the place it happens to
+        occupy: a draft presenting an id the stored list carries *is* that entry,
+        wherever the list moved it, so «вернуть» and a cleared field stay as the
+        user left them. A draft presenting no id at all, with an identified stored
+        entry of the same exercise at the same index, is therefore a different
+        entry — the planned exercise the user deleted and added back where it
+        stood — and gets seeded from its slot again.
+
+        A stored entry without an id (a session written before the server began
+        stamping row ids into its own JSON) leaves position as the only evidence:
+        the entry then counts as carried, which is what such a client expects.
+        """
+        entry_id = self._session_entry_id(exercise.get("id"))
+        if entry_id is not None and entry_id in carried_ids:
+            return True
+        stored = stored_exercises[index] if index < len(stored_exercises) else None
+        if not isinstance(stored, dict):
+            return False
+        if stored.get("exercise_id") != exercise.get("exercise_id"):
+            return False
+        return self._session_entry_id(stored.get("id")) is None
 
     @staticmethod
     def _reverted_prefill_recommendation_ids(

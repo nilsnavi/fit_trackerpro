@@ -187,13 +187,16 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                     ) : null}
 
                     {/* SPEC-006 §58: the target stays accepted, its automatic
-                        prefill does not come back without a new decision. */}
+                        prefill does not come back without a new decision — a
+                        refusal belongs to the slot, so a target that replaces
+                        another one inherits it and says so right here. */}
                     {recommendation.prefill_declined ? (
                         <p
                             data-testid="progression-prefill-declined"
                             className="mt-2 text-xs font-bold text-telegram-hint"
                         >
-                            Автоподстановка выключена: цель не подставляется в новые тренировки сама.
+                            Автоподстановка выключена: цель не подставляется в новые тренировки
+                            сама — включить её можно на экране «Цели прогрессии».
                         </p>
                     ) : null}
 

@@ -278,6 +278,40 @@ export interface ProgressionRecommendation {
     exercise_name?: string | null
 }
 
+/** A sweep member a newer target replaced, so no undo can bring it back. */
+export interface ProgressionPrefillSweepSuperseded {
+    recommendation_id: number
+    superseded_by?: number | null
+}
+
+/**
+ * SPEC-006 §58: one bulk switch-off the server still holds.
+ *
+ * Resolved from the sweep stamp on the targets themselves, so it is the same on
+ * every device; ``changed_ids`` is exactly the set its undo brings back, and
+ * ``superseded`` names what it holds but can never switch back on — the entry is
+ * listed either way, so the action never disappears with its stamp.
+ */
+export interface ProgressionPrefillSweep {
+    sweep_id: string
+    declined_at?: string | null
+    /**
+     * False when every member it holds was replaced by a newer target, so its
+     * undo has nothing to switch back on. Optional only so a payload predating
+     * the flag still reads as a live entry instead of a spent one.
+     */
+    restorable?: boolean
+    updated: number
+    changed_ids: number[]
+    superseded?: ProgressionPrefillSweepSuperseded[]
+}
+
+/** SPEC-006 §58: the chain of bulk switch-offs that can still be undone. */
+export interface ProgressionPrefillSweepList {
+    sweeps: ProgressionPrefillSweep[]
+    total: number
+}
+
 /** SPEC-006 §58: accepted targets and their automatic-prefill state. */
 export interface ProgressionPrefillList {
     items: ProgressionRecommendation[]
@@ -307,11 +341,20 @@ export type ProgressionBulkSkipReason =
     | 'not_found'
     /** The target is fine — its automatic prefill is just already off. */
     | 'already_disabled'
+    /** The mirror case of an undo: this target's prefill was never off. */
+    | 'already_enabled'
+    /** Another selected target of the same slot is newer and took the edit. */
+    | 'superseded'
 
 /** SPEC-006 §58: one skipped target, named and explained. */
 export interface ProgressionBulkSkipped {
     recommendation_id: number
     reason: ProgressionBulkSkipReason
+    /**
+     * The target that owns this slot now, when the record was replaced by a newer
+     * one (`superseded`); null for every other reason.
+     */
+    superseded_by?: number | null
     /** Present only while the record still exists as an accepted target. */
     exercise_id?: number | null
     exercise_name?: string | null
@@ -324,8 +367,19 @@ export interface ProgressionBulkSkipped {
 /** SPEC-006 §58: outcome of a bulk change across accepted targets. */
 export interface ProgressionBulkResult {
     updated: number
+    /**
+     * Exactly the targets the change applied to — not the ids that were
+     * requested. Handing them back is what undoes the action.
+     */
+    changed_ids: number[]
     /** Targets the change did not apply to, each with the reason. */
     skipped: ProgressionBulkSkipped[]
+    /**
+     * Sweep members an undo released: targets a newer one replaced, so no undo
+     * could switch them back on. Their prefill stays off; only the sweep stamp
+     * was cleared, which is what stops the entry from holding them any longer.
+     */
+    released_ids?: number[]
     /** True when the request addressed every current target instead of a list. */
     applied_to_all: boolean
 }

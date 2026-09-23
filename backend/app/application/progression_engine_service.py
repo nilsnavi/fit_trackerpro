@@ -8,6 +8,7 @@ side-effect free (SPEC §4/§37).
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
@@ -15,7 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.telemetry.progression_metrics import record_progression_metric
-from app.domain.exceptions import ProgressionValidationError
+from app.domain.exceptions import (
+    ProgressionTargetSupersededError,
+    ProgressionValidationError,
+)
 from app.domain.progression.engine import evaluate_progression
 from app.domain.progression.equipment import resolve_increment_step
 from app.domain.progression.types import (
@@ -671,6 +675,17 @@ class ProgressionEngineService:
         recommendation_id: int,
         selected_value: Optional[float] = None,
     ) -> tuple[bool, dict[str, Any]]:
+        """Accept (or modify) a proposal, carrying the slot's prefill decision (§42/§43/§58).
+
+        Accepting is the explicit consent SPEC §42 requires for a target to be
+        applied — but not consent to start substituting silently in a slot where
+        the user switched that off. So a target that takes over a switched-off
+        slot inherits the refusal (and the sweep it belongs to), which is what
+        makes the decision last across training cycles instead of expiring with
+        the row it was made on; the switch itself is turned back on only on the
+        settings screen, where it is visible. The accept and the carry are one
+        transaction, so a failure leaves neither half applied.
+        """
         record = await self.repository.get_recommendation(
             user_id=user_id, recommendation_id=recommendation_id
         )
@@ -686,11 +701,28 @@ class ProgressionEngineService:
         else:
             lifecycle = RecommendationLifecycle.ACCEPTED
 
-        record = await self.repository.update_recommendation_lifecycle(
-            record=record,
-            lifecycle_status=lifecycle.value,
-            actual_selected_value=chosen,
-        )
+        # Who owns this slot *before* the accept: the accept itself may make this
+        # record the owner, so asking afterwards would only ever name the record
+        # in hand.
+        owner_before = (
+            await self.repository.current_target_ids(
+                user_id=user_id, scope_keys=[record.scope_key]
+            )
+        ).get(record.scope_key)
+        try:
+            record = await self.repository.update_recommendation_lifecycle(
+                record=record,
+                lifecycle_status=lifecycle.value,
+                actual_selected_value=chosen,
+                commit=False,
+            )
+            await self._carry_slot_prefill(
+                user_id=user_id, record=record, owner_before=owner_before
+            )
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
         event = (
             "recommendation_modified" if lifecycle is RecommendationLifecycle.MODIFIED
             else "recommendation_accepted"
@@ -713,16 +745,35 @@ class ProgressionEngineService:
     async def reject_recommendation(
         self, *, user_id: int, recommendation_id: int
     ) -> tuple[bool, dict[str, Any]]:
+        """Reject a proposal, dropping it from any sweep it still holds (§44/§58).
+
+        A rejected target is not a goal any more: it never prefills and can never
+        be switched back on through a sweep, so it must not keep holding one — the
+        journal would otherwise lose that sweep while its stamp stayed on a row
+        nobody can reach. The refusal itself is untouched: it belongs to the slot
+        and, with this row out of the way, stays on whichever goal owns the slot.
+        """
         record = await self.repository.get_recommendation(
             user_id=user_id, recommendation_id=recommendation_id
         )
         if record is None:
             return False, {}
-        record = await self.repository.update_recommendation_lifecycle(
-            record=record,
-            lifecycle_status=RecommendationLifecycle.REJECTED.value,
-            actual_selected_value=None,
-        )
+        try:
+            record = await self.repository.update_recommendation_lifecycle(
+                record=record,
+                lifecycle_status=RecommendationLifecycle.REJECTED.value,
+                actual_selected_value=None,
+                commit=False,
+            )
+            await self.repository.release_prefill_sweeps(
+                user_id=user_id,
+                recommendation_ids=[int(record.id)],
+                commit=False,
+            )
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
         logger.info(
             "recommendation_rejected",
             extra={
@@ -1105,21 +1156,21 @@ class ProgressionEngineService:
         next target and stays visible/accepted); only the silent substitution is
         switched off, and accepting a newer target turns it back on.
         """
-        declined = await self.repository.decline_prefill(
+        changed = await self.repository.decline_prefill(
             user_id=user_id, recommendation_ids=list(recommendation_ids)
         )
-        if declined:
+        if changed:
             logger.info(
                 "progression_prefill_declined",
                 extra={
                     "event": "progression_prefill_declined",
                     "user_id": user_id,
-                    "recommendation_ids": list(recommendation_ids),
-                    "declined": declined,
+                    "recommendation_ids": changed,
+                    "declined": len(changed),
                 },
             )
             record_progression_metric("progression_recommendations_total", "prefill_declined")
-        return declined
+        return len(changed)
 
     async def list_prefill_targets(
         self, *, user_id: int, declined_only: bool = False, limit: int = 50
@@ -1178,7 +1229,19 @@ class ProgressionEngineService:
     async def enable_prefill(
         self, *, user_id: int, recommendation_id: int
     ) -> tuple[bool, dict[str, Any]]:
-        """Turn an accepted target's automatic prefill back on (SPEC §58)."""
+        """Turn an accepted target's automatic prefill back on (SPEC §58).
+
+        Only the target that owns its slot *now* can be toggled: a record a newer
+        one replaced raises :class:`ProgressionTargetSupersededError` naming the
+        target to address instead, rather than flipping a switch on a row the
+        settings screen no longer shows and reporting a success nobody can see.
+        """
+        record = await self.repository.get_recommendation(
+            user_id=user_id, recommendation_id=recommendation_id
+        )
+        if record is None:
+            return False, {}
+        await self._assert_current(record, user_id=user_id)
         record = await self.repository.enable_prefill(
             user_id=user_id, recommendation_id=recommendation_id
         )
@@ -1203,8 +1266,16 @@ class ProgressionEngineService:
 
         The same state the in-session «вернуть» produces, just reachable from the
         settings screen: the target stays accepted and explainable, only the
-        silent substitution into new sessions stops.
+        silent substitution into new sessions stops. Like the edit path, the
+        switch only accepts the target that owns its slot now — a record a newer
+        one replaced is answered with the id to address instead (§58).
         """
+        record = await self.repository.get_recommendation(
+            user_id=user_id, recommendation_id=recommendation_id
+        )
+        if record is None:
+            return False, {}
+        await self._assert_current(record, user_id=user_id)
         record = await self.repository.disable_prefill(
             user_id=user_id, recommendation_id=recommendation_id
         )
@@ -1234,56 +1305,73 @@ class ProgressionEngineService:
     ) -> tuple[bool, dict[str, Any]]:
         """Edit an accepted target in place: its number and/or its policy (§58).
 
+        Only the target that owns its slot *now* is editable: a record a newer one
+        replaced raises :class:`ProgressionTargetSupersededError` naming the target
+        to address instead, instead of silently reaching a slot through a row the
+        settings screen no longer shows.
+
         The settings screen owns a target as a whole, so one call may move both
         the value new sessions start on and the policy the scope progresses by.
         The recommendation stays the same record — only an edited number moves
         its lifecycle from ``accepted`` to ``modified`` (SPEC §43) — and the
         policy row that produced it is never rewritten, so the history keeps
         being explainable (SPEC §27/§46). A switched-off automatic prefill stays
-        switched off: that switch is its own visible decision.
+        switched off: that switch is its own visible decision. The number and the
+        policy are one transaction: if either write fails, neither stays applied.
         """
         record = await self.repository.get_recommendation(
             user_id=user_id, recommendation_id=recommendation_id
         )
         if record is None:
             return False, {}
+        await self._assert_current(record, user_id=user_id)
 
-        if value is not None:
-            chosen = float(value)
-            recommended = _to_float(record.recommended_value)
-            previous = _to_float(record.previous_value)
-            record = await self.repository.update_recommendation_lifecycle(
-                record=record,
-                lifecycle_status=(
-                    RecommendationLifecycle.ACCEPTED.value
-                    if recommended is not None and abs(chosen - recommended) <= 1e-9
-                    else RecommendationLifecycle.MODIFIED.value
-                ),
-                actual_selected_value=chosen,
-                # The goal itself moved, so the stored delta follows the edited
-                # value instead of the proposal it was computed from.
-                difference=None if previous is None else chosen - previous,
-            )
-            logger.info(
-                "progression_target_value_updated",
-                extra={
-                    "event": "progression_target_value_updated",
-                    "user_id": user_id,
-                    "recommendation_id": int(record.id),
-                    "exercise_id": int(record.exercise_id),
-                    "scope_key": record.scope_key,
-                    "previous_value": previous,
-                    "actual_selected_value": chosen,
-                },
-            )
-        if any(field is not None for field in (policy_type, reps_min, reps_max)):
-            await self._apply_target_policy(
-                user_id=user_id,
-                record=record,
-                policy_type=policy_type,
-                reps_min=reps_min,
-                reps_max=reps_max,
-            )
+        # One transaction for the whole edit: the number and the policy are written
+        # without committing and the commit happens once, so a rejected policy edit
+        # rolls the number back with it instead of leaving half the change applied.
+        try:
+            if value is not None:
+                chosen = float(value)
+                recommended = _to_float(record.recommended_value)
+                previous = _to_float(record.previous_value)
+                record = await self.repository.update_recommendation_lifecycle(
+                    record=record,
+                    lifecycle_status=(
+                        RecommendationLifecycle.ACCEPTED.value
+                        if recommended is not None and abs(chosen - recommended) <= 1e-9
+                        else RecommendationLifecycle.MODIFIED.value
+                    ),
+                    actual_selected_value=chosen,
+                    # The goal itself moved, so the stored delta follows the edited
+                    # value instead of the proposal it was computed from.
+                    difference=None if previous is None else chosen - previous,
+                    commit=False,
+                )
+                logger.info(
+                    "progression_target_value_updated",
+                    extra={
+                        "event": "progression_target_value_updated",
+                        "user_id": user_id,
+                        "recommendation_id": int(record.id),
+                        "exercise_id": int(record.exercise_id),
+                        "scope_key": record.scope_key,
+                        "previous_value": previous,
+                        "actual_selected_value": chosen,
+                    },
+                )
+            if any(field is not None for field in (policy_type, reps_min, reps_max)):
+                await self._apply_target_policy(
+                    user_id=user_id,
+                    record=record,
+                    policy_type=policy_type,
+                    reps_min=reps_min,
+                    reps_max=reps_max,
+                    commit=False,
+                )
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
         record_progression_metric("progression_recommendations_total", "target_updated")
         return True, await self._recommendation_payload(record, user_id=user_id)
 
@@ -1344,22 +1432,27 @@ class ProgressionEngineService:
         user_id: int,
         entries: Sequence[tuple[int, ProgressionBulkSkipReason]],
         known: Mapping[int, ProgressionRecommendationRecord],
+        superseded_by: Mapping[int, Optional[int]] | None = None,
     ) -> list[dict[str, Any]]:
         """Explain every target a bulk action left alone (SPEC §58).
 
         A target that no longer exists — unknown id, someone else's record, or one
-        rejected/superseded since the screen was loaded — can only be reported by
-        its id; a target that still exists keeps its name, value and scope.
+        rejected since the screen was loaded — can only be reported by its id; a
+        target that still exists keeps its name, value and scope. A record a newer
+        one replaced also names the target that owns the slot now, so the report
+        says what to address instead of leaving the caller with a dead id.
         """
         summaries = await self._target_summaries(
             user_id=user_id,
             records=[known[value] for value, _ in entries if value in known],
         )
+        pointers = superseded_by or {}
         payloads: list[dict[str, Any]] = []
         for value, reason in entries:
             payload: dict[str, Any] = {
                 "recommendation_id": int(value),
                 "reason": reason.value,
+                "superseded_by": pointers.get(int(value)),
                 "exercise_id": None,
                 "exercise_name": None,
                 "value": None,
@@ -1378,9 +1471,17 @@ class ProgressionEngineService:
         ``recommendation_ids=None`` addresses every current target of the user —
         exactly the rows the settings screen lists, resolved server-side (newest
         accepted record per scope, bounded by :data:`BULK_TARGET_LIMIT`), so
-        «выключить всем» can never reach back into superseded history. Only the
-        silent substitution changes: values, lifecycles and policies stay put,
-        and accepting a newer target turns the prefill back on by itself.
+        «выключить всем» can never reach back into superseded history. An explicit
+        id list is held to the same rule: a record a newer one replaced is not
+        switched, it is reported as ``superseded`` with the id that owns its slot.
+        Only the silent substitution changes: values, lifecycles and policies stay
+        put, and accepting a newer target turns the prefill back on by itself.
+
+        Every target the call changes is stamped with one generated sweep id, so
+        the undo is addressable from the data itself (see
+        :meth:`latest_prefill_sweep`) rather than from whatever ids the caller
+        remembers — which is what makes it survive a reload and reach the same
+        answer on another device.
         """
         applied_to_all = recommendation_ids is None
         requested = [
@@ -1393,42 +1494,75 @@ class ProgressionEngineService:
                 user_id=user_id, recommendation_ids=requested
             )
         )
+        # Only the target that owns its slot *now* can be switched: a record a
+        # newer one replaced is reported with the id that owns the slot instead of
+        # being toggled silently through a row the screen no longer shows (§58).
+        current, superseded = await self._current_targets(user_id=user_id, records=targets)
         # Read the pre-call state before writing: the bulk UPDATE keeps the loaded
         # rows in sync, so afterwards every target looks already switched off.
         already_off = [
-            int(record.id) for record in targets if record.prefill_declined_at is not None
+            int(record.id) for record in current if record.prefill_declined_at is not None
         ]
         # Already-switched-off targets are left alone, so a repeated bulk sweep
         # does not rewrite "when was this switched off".
         to_decline = [
-            int(record.id) for record in targets if record.prefill_declined_at is None
+            int(record.id) for record in current if record.prefill_declined_at is None
         ]
-        updated = await self.repository.decline_prefill(
-            user_id=user_id, recommendation_ids=to_decline
-        )
+        # Only a sweep that really switched something off is a sweep: an action
+        # that changed nothing must not stamp over the previous undo.
+        sweep_id = str(uuid.uuid4()) if to_decline else None
+        # One transaction for the whole sweep: the UPDATE writes every target and
+        # the commit happens once, so a failure cannot leave half a chain applied.
+        try:
+            changed_ids = await self.repository.decline_prefill(
+                user_id=user_id,
+                recommendation_ids=to_decline,
+                sweep_id=sweep_id,
+                commit=False,
+            )
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
+        updated = len(changed_ids)
+        changed = set(changed_ids)
+        # A target the UPDATE did not change was switched off by a concurrent
+        # write between the read and the write: it is explained, not counted, so
+        # the response promises only what it actually did.
+        raced = [value for value in to_decline if value not in changed]
         # Every target left alone is explained by name and reason: «выключить
         # всем» already means a screen full of rows, and a bare count would not
         # tell the user whether those goals were already off or vanished from
-        # the list since it was loaded.
-        declinable = set(to_decline)
-        entries = (
-            [(value, ProgressionBulkSkipReason.ALREADY_DISABLED) for value in already_off]
-            if applied_to_all
-            else [
+        # the list since it was loaded. A stale record is the loudest of them: its
+        # id is not a way into the slot, so the entry names the target that owns
+        # the slot now rather than looking like a switch that did nothing.
+        entries: list[tuple[int, ProgressionBulkSkipReason]] = []
+        if applied_to_all:
+            entries += [
+                (value, ProgressionBulkSkipReason.ALREADY_DISABLED)
+                for value in already_off + raced
+            ]
+            entries += [
+                (value, ProgressionBulkSkipReason.SUPERSEDED) for value in superseded
+            ]
+        else:
+            entries += [
                 (
                     value,
-                    ProgressionBulkSkipReason.ALREADY_DISABLED
-                    if value in already_off
+                    ProgressionBulkSkipReason.SUPERSEDED
+                    if value in superseded
+                    else ProgressionBulkSkipReason.ALREADY_DISABLED
+                    if value in already_off or value in to_decline
                     else ProgressionBulkSkipReason.NOT_FOUND,
                 )
                 for value in requested
-                if value not in declinable
+                if value not in changed
             ]
-        )
         skipped = await self._bulk_skips(
             user_id=user_id,
             entries=entries,
             known={int(record.id): record for record in targets},
+            superseded_by=superseded,
         )
         if updated:
             logger.info(
@@ -1444,7 +1578,172 @@ class ProgressionEngineService:
             record_progression_metric(
                 "progression_recommendations_total", "prefill_bulk_disabled"
             )
-        return {"updated": updated, "skipped": skipped, "applied_to_all": applied_to_all}
+        return {
+            "updated": updated,
+            # The rows the UPDATE really changed (``RETURNING``) — the caller can
+            # undo exactly this, nothing wider.
+            "changed_ids": changed_ids,
+            "skipped": skipped,
+            "applied_to_all": applied_to_all,
+        }
+
+    async def enable_prefill_bulk(
+        self,
+        *,
+        user_id: int,
+        recommendation_ids: Optional[Sequence[int]] = None,
+        sweep_ids: Optional[Sequence[str]] = None,
+    ) -> dict[str, Any]:
+        """Switch the automatic prefill back on for these targets (SPEC §58).
+
+        The undo of a bulk switch-off, addressed one of two ways. By ids: the ones
+        one action reported as changed, so only goals the user just switched off
+        come back — a target whose prefill was off before that action stays off.
+        By sweeps: the caller asks for the sweeps it was shown (one link of the
+        chain, or the whole journal at once) and the server resolves what each one
+        still holds, so a long chain is still a single request and the undo does
+        not depend on the caller re-stating a set of ids it merely read.
+
+        There is no «всем» form in either case: switching the prefill on is always
+        the answer to a specific decision, never a sweep over everything, and
+        values/lifecycles/policies stay put just like in the switch-off. Idempotent
+        — a target that is already on is reported as skipped rather than rewritten
+        — and a record a newer target replaced is reported as ``superseded`` with
+        the id that owns the slot, never switched through silently. Such a member
+        is also *released* from its sweep in the same transaction: it can never be
+        switched back on through it, so the entry must not keep holding it (see
+        :meth:`ProgressionRepository.release_prefill_sweeps`).
+        """
+        if sweep_ids is not None:
+            targets = await self.repository.targets_by_prefill_sweeps(
+                user_id=user_id, sweep_ids=sweep_ids
+            )
+            ids = [int(record.id) for record in targets]
+        else:
+            ids = [int(value) for value in dict.fromkeys(recommendation_ids or []) if value]
+            targets = await self.repository.targets_by_ids(
+                user_id=user_id, recommendation_ids=ids
+            )
+        # Read the pre-call state before writing, exactly like the switch-off:
+        # the bulk UPDATE keeps the loaded rows in sync afterwards. The sweep
+        # address can resolve a record a newer target replaced — switching that one
+        # back on would be a change to a row that is not the slot's goal anymore,
+        # so it is reported with the target that owns the slot instead (§58).
+        current, superseded = await self._current_targets(user_id=user_id, records=targets)
+        already_on = [
+            int(record.id) for record in current if record.prefill_declined_at is None
+        ]
+        to_enable = [
+            int(record.id) for record in current if record.prefill_declined_at is not None
+        ]
+        # The members this address resolved to that a newer target owns instead:
+        # refusing to switch them on is half the answer, and the other half is to
+        # stop their sweep from holding them any longer.
+        replaced = [int(record.id) for record in targets if int(record.id) in superseded]
+        try:
+            changed_ids = await self.repository.enable_prefill_bulk(
+                user_id=user_id, recommendation_ids=to_enable, commit=False
+            )
+            released_ids = await self.repository.release_prefill_sweeps(
+                user_id=user_id, recommendation_ids=replaced, commit=False
+            )
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
+        updated = len(changed_ids)
+        changed = set(changed_ids)
+        entries = [
+            (
+                value,
+                ProgressionBulkSkipReason.SUPERSEDED
+                if value in superseded
+                else ProgressionBulkSkipReason.ALREADY_ENABLED
+                if value in already_on or value in to_enable
+                else ProgressionBulkSkipReason.NOT_FOUND,
+            )
+            for value in ids
+            if value not in changed
+        ]
+        skipped = await self._bulk_skips(
+            user_id=user_id,
+            entries=entries,
+            known={int(record.id): record for record in targets},
+            superseded_by=superseded,
+        )
+        if updated or released_ids:
+            logger.info(
+                "progression_prefill_bulk_enabled",
+                extra={
+                    "event": "progression_prefill_bulk_enabled",
+                    "user_id": user_id,
+                    "updated": updated,
+                    "released": released_ids,
+                    "skipped": [entry["recommendation_id"] for entry in skipped],
+                },
+            )
+            record_progression_metric(
+                "progression_recommendations_total", "prefill_bulk_enabled"
+            )
+        return {
+            "updated": updated,
+            "changed_ids": changed_ids,
+            "skipped": skipped,
+            "released_ids": released_ids,
+            "applied_to_all": False,
+        }
+
+    async def list_prefill_sweeps(
+        self, *, user_id: int, limit: int = 5
+    ) -> dict[str, Any]:
+        """The bulk switch-offs the server still holds, newest first (§58).
+
+        Resolved from the sweep stamp on the targets themselves, so the answer is
+        the same on every device and survives a reload: the caller does not have
+        to keep — or trust — a local copy of the last action's ids. Targets
+        switched on by hand have left their sweep, so only what is still switched
+        off comes back, and the whole chain is offered rather than just its last
+        link, which lets the actions be put back in any order.
+
+        A sweep whose members were all replaced by newer targets is listed too,
+        with ``restorable`` false and the replacements named: hiding it would make
+        the action invisible while its stamp stayed on rows no undo could ever
+        reach again. The entry is the honest answer — there is nothing to switch
+        back on — and acting on it is what releases those stamps.
+        """
+        groups = await self.repository.prefill_sweeps(user_id=user_id, limit=limit)
+        if not groups:
+            return {"sweeps": [], "total": 0}
+        # One owner lookup for the whole chain, not one per entry: which record
+        # still owns each scope is the same question the edit path asks.
+        members = [record for _sweep_id, _when, records in groups for record in records]
+        current, superseded = await self._current_targets(
+            user_id=user_id, records=members
+        )
+        restorable = {int(record.id) for record in current}
+        sweeps: list[dict[str, Any]] = []
+        for sweep_id, declined_at, records in groups:
+            # Order follows the rows the sweep holds (id asc), so the ids it hands
+            # back are stable across calls.
+            still_off = [record for record in records if int(record.id) in restorable]
+            replaced = [record for record in records if int(record.id) not in restorable]
+            sweeps.append(
+                {
+                    "sweep_id": sweep_id,
+                    "declined_at": declined_at,
+                    "restorable": bool(still_off),
+                    "updated": len(still_off),
+                    "changed_ids": [int(record.id) for record in still_off],
+                    "superseded": [
+                        {
+                            "recommendation_id": int(record.id),
+                            "superseded_by": superseded[int(record.id)],
+                        }
+                        for record in replaced
+                    ],
+                }
+            )
+        return {"sweeps": sweeps, "total": len(sweeps)}
 
     async def update_targets_bulk(
         self,
@@ -1466,42 +1765,80 @@ class ProgressionEngineService:
         keeps the policy of its own scope (SPEC §7): two slots of one exercise
         stay independent, and an inherited template/user row is materialized
         first instead of being overwritten.
+
+        A policy belongs to the *scope*, and a slot may hold several accepted
+        records at once — so the selection is reduced to the target that
+        represents each scope *now* (see :meth:`_current_targets`) before anything
+        is read or written. A record a newer one replaced is reported as
+        ``superseded`` with the id that owns the slot instead of editing it
+        silently, which also keeps one policy read and one write per slot.
         """
         ids = [int(value) for value in dict.fromkeys(recommendation_ids) if value]
         records = await self.repository.targets_by_ids(
             user_id=user_id, recommendation_ids=ids
         )
-        missing = [
-            (value, ProgressionBulkSkipReason.NOT_FOUND)
-            for value in ids
-            if value not in {int(record.id) for record in records}
+        # Which requested ids are real targets at all — decided before the split,
+        # so a replaced record is explained as replaced, not as missing.
+        returned = {int(record.id) for record in records}
+        current, superseded = await self._current_targets(
+            user_id=user_id, records=records
+        )
+        entries = [
+            *(
+                (value, ProgressionBulkSkipReason.NOT_FOUND)
+                for value in ids
+                if value not in returned
+            ),
+            *(
+                (value, ProgressionBulkSkipReason.SUPERSEDED)
+                for value in superseded
+            ),
         ]
-        if not records:
+        known = {int(record.id): record for record in records}
+        if not current:
             return {
                 "updated": 0,
+                "changed_ids": [],
                 "skipped": await self._bulk_skips(
-                    user_id=user_id, entries=missing, known={}
+                    user_id=user_id,
+                    entries=entries,
+                    known=known,
+                    superseded_by=superseded,
                 ),
                 "applied_to_all": False,
             }
         await self._validate_bulk_rep_range(
-            user_id=user_id, records=records, reps_min=reps_min, reps_max=reps_max
+            user_id=user_id, records=current, reps_min=reps_min, reps_max=reps_max
         )
-        for record in records:
-            await self._apply_target_policy(
-                user_id=user_id,
-                record=record,
-                policy_type=policy_type,
-                reps_min=reps_min,
-                reps_max=reps_max,
-            )
-        skipped = await self._bulk_skips(user_id=user_id, entries=missing, known={})
+        # One transaction for the whole selection: every policy is written without
+        # committing and the commit happens once, so a failure on any target rolls
+        # the batch back instead of leaving the selection half-edited.
+        try:
+            for record in current:
+                await self._apply_target_policy(
+                    user_id=user_id,
+                    record=record,
+                    policy_type=policy_type,
+                    reps_min=reps_min,
+                    reps_max=reps_max,
+                    commit=False,
+                )
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
+        skipped = await self._bulk_skips(
+            user_id=user_id,
+            entries=entries,
+            known=known,
+            superseded_by=superseded,
+        )
         logger.info(
             "progression_targets_bulk_updated",
             extra={
                 "event": "progression_targets_bulk_updated",
                 "user_id": user_id,
-                "updated": len(records),
+                "updated": len(current),
                 "skipped": [entry["recommendation_id"] for entry in skipped],
                 "policy": policy_type.value if policy_type is not None else None,
                 "reps_min": reps_min,
@@ -1511,7 +1848,97 @@ class ProgressionEngineService:
         record_progression_metric(
             "progression_recommendations_total", "targets_bulk_updated"
         )
-        return {"updated": len(records), "skipped": skipped, "applied_to_all": False}
+        return {
+            "updated": len(current),
+            # A policy edit is recorded per scope; the ids let the caller report
+            # (or revisit) exactly the rows the plan reached. One id per scope —
+            # the target that owns the slot now, never a record it replaced.
+            "changed_ids": [int(record.id) for record in current],
+            "skipped": skipped,
+            "applied_to_all": False,
+        }
+
+    async def _assert_current(
+        self, record: ProgressionRecommendationRecord, *, user_id: int
+    ) -> None:
+        """Refuse to act on a record a newer target replaced (SPEC §58).
+
+        One record, one answer: if the slot's target is somebody else, the caller
+        gets :class:`ProgressionTargetSupersededError` carrying the id to address
+        instead. A record is only refused when a newer target can actually be
+        proved to exist, so a row nothing replaced stays usable.
+        """
+        _current, superseded = await self._current_targets(
+            user_id=user_id, records=[record]
+        )
+        if not superseded:
+            return
+        raise ProgressionTargetSupersededError(
+            "This target was replaced by a newer one for the same slot",
+            details={
+                "recommendation_id": int(record.id),
+                "superseded_by": superseded[int(record.id)],
+                "scope_key": record.scope_key,
+            },
+        )
+
+    async def _carry_slot_prefill(
+        self,
+        *,
+        user_id: int,
+        record: ProgressionRecommendationRecord,
+        owner_before: Optional[int],
+    ) -> None:
+        """Let the goal that replaced another one inherit its refusal (SPEC §58).
+
+        Called with the accept still pending, because the accept may or may not
+        make this record the slot's goal — and the refusal is a property of the
+        slot: a record that does not take it (an older proposal accepted from
+        history) inherits nothing, because the slot's own goal keeps its state.
+        """
+        if owner_before is None or int(owner_before) == int(record.id):
+            return
+        owner_after = (
+            await self.repository.current_target_ids(
+                user_id=user_id, scope_keys=[record.scope_key]
+            )
+        ).get(record.scope_key)
+        if owner_after is None or int(owner_after) != int(record.id):
+            return
+        await self.repository.carry_prefill_consent(
+            user_id=user_id,
+            source_id=int(owner_before),
+            target_id=int(record.id),
+            commit=False,
+        )
+
+    async def _current_targets(
+        self, *, user_id: int, records: Sequence[ProgressionRecommendationRecord]
+    ) -> tuple[list[ProgressionRecommendationRecord], dict[int, Optional[int]]]:
+        """Split accepted records into the slots' current target and the rest (§58).
+
+        A slot keeps several accepted records once a cycle is re-accepted, while a
+        policy is configured per *scope* (SPEC §7): writing through a record a
+        newer one replaced would change the slot from a row the settings screen
+        does not even show, and would hand the caller back an id that is not the
+        goal anymore. The returned map names what replaced each stale record, so a
+        caller can point at it instead; a record is only treated as stale when a
+        newer target for its scope can actually be proved to exist.
+        """
+        if not records:
+            return [], {}
+        owners = await self.repository.current_target_ids(
+            user_id=user_id, scope_keys=[record.scope_key for record in records]
+        )
+        current: list[ProgressionRecommendationRecord] = []
+        superseded: dict[int, Optional[int]] = {}
+        for record in records:
+            owner = owners.get(record.scope_key)
+            if owner is None or int(owner) == int(record.id):
+                current.append(record)
+            else:
+                superseded[int(record.id)] = int(owner)
+        return current, superseded
 
     async def _validate_bulk_rep_range(
         self,
@@ -1568,6 +1995,7 @@ class ProgressionEngineService:
         policy_type: Optional[ProgressionPolicy],
         reps_min: Optional[int],
         reps_max: Optional[int],
+        commit: bool = True,
     ) -> None:
         """Write an edited policy into the scope the target belongs to (SPEC §7).
 
@@ -1607,7 +2035,9 @@ class ProgressionEngineService:
                 "reps_min must not be greater than reps_max for this target"
             )
 
-        await self.repository.upsert_policy(user_id=user_id, scope=scope, values=values)
+        await self.repository.upsert_policy(
+            user_id=user_id, scope=scope, values=values, commit=commit
+        )
         logger.info(
             "progression_target_policy_updated",
             extra={
