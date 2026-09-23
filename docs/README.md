@@ -21,6 +21,8 @@
 ## Deployment & Operations
 
 - **Production deployment (канон)**: `./DEPLOYMENT.md`
+- **Launch runbook P0 (WS1-7…WS1-11, WS1-15, для владельца)**: `./LAUNCH_RUNBOOK.md`
+- **Smoke против реального API (секреты, ротация init_data)**: `./testing/real-api-smoke.md`
 - **Local development**: `./local-development.md`
 - **Environment variables / setup**: `./ENVIRONMENT_SETUP.md`, `./env-matrix.md`
 - **Rollback**: `./ROLLBACK_STRATEGY.md`, `./ROLLBACK_ONCALL_CHEATSHEET.md`
