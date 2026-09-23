@@ -6,7 +6,6 @@
  * - Цель по весу с прогрессом
  * - Витрина достижений
  * - Настройки профиля
- * - Доступ для тренера
  * - Экспорт данных
  */
 import React, { useEffect, useState } from 'react';
@@ -18,16 +17,12 @@ import {
     Settings,
     LogOut,
     Download,
-    User as UserIcon,
     Bell,
     Ruler,
-    Share2,
     ChevronRight,
     X,
     Check,
     Save,
-    Trash2,
-    Plus,
     Calendar,
     Flame,
     Activity,
@@ -38,7 +33,6 @@ import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { ProgressBar } from '@shared/ui/ProgressBar';
-import { Modal } from '@shared/ui/Modal';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import { useAchievements } from '@features/achievements/hooks/useAchievements';
 import {
@@ -396,14 +390,10 @@ export const ProfilePage: React.FC = () => {
     const {
         profile,
         stats,
-        coachAccesses,
         isLoading,
-        isGeneratingCoachCode,
         updateProfile,
         updateSettings,
         getWeightProgress,
-        generateCoachCode,
-        revokeCoachAccess,
         exportData,
     } = useProfile();
     const bodyMeasurementsQuery = useBodyMeasurementsQuery({ latest: true });
@@ -411,17 +401,8 @@ export const ProfilePage: React.FC = () => {
 
     const [, setShowAllAchievements] = useState(false);
     const [, setShowSettings] = useState(false);
-    const [showCoachModal, setShowCoachModal] = useState(false);
-    const [accessCode, setAccessCode] = useState('');
 
-    const generateAccessCode = async () => {
-        const code = await generateCoachCode();
-        if (code) setAccessCode(code);
-    };
 
-    const revokeAccess = async (accessId: string) => {
-        await revokeCoachAccess(accessId);
-    };
 
     const latestBodyMeasurements = (bodyMeasurementsQuery.data?.items || []).reduce(
         (acc, measurement) => {
@@ -732,30 +713,6 @@ export const ProfilePage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Coach Access */}
-            <div className="bg-telegram-secondary-bg rounded-2xl p-4">
-                <SectionHeader
-                    icon={<Share2 className="w-5 h-5" />}
-                    title="Доступ для тренера"
-                    action={{
-                        label: 'Управление',
-                        onClick: () => setShowCoachModal(true)
-                    }}
-                />
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <UserIcon className="w-4 h-4 text-telegram-hint" />
-                        <span className="text-sm text-telegram-text">
-                            {coachAccesses.length > 0
-                                ? `${coachAccesses.length} активных доступов`
-                                : 'Нет активных доступов'
-                            }
-                        </span>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-telegram-hint" />
-                </div>
-            </div>
-
             {/* Emergency contacts (safety feature) */}
             <EmergencyContactsSection />
 
@@ -808,64 +765,6 @@ export const ProfilePage: React.FC = () => {
                 FitTracker Pro v1.0.0
             </div>
 
-            {/* Coach Access Modal */}
-            <Modal
-                isOpen={showCoachModal}
-                onClose={() => setShowCoachModal(false)}
-                title="Доступ для тренера"
-                size="md"
-            >
-                <div className="space-y-4">
-                    <p className="text-sm text-telegram-hint">
-                        Сгенерируйте код доступа, чтобы ваш тренер мог просматривать ваш прогресс и планировать тренировки.
-                    </p>
-
-                    {accessCode ? (
-                        <div className="bg-primary/10 rounded-xl p-4 text-center">
-                            <p className="text-sm text-telegram-hint mb-2">Код доступа</p>
-                            <p className="text-3xl font-mono font-bold text-primary tracking-wider">{accessCode}</p>
-                            <p className="text-xs text-telegram-hint mt-2">
-                                Код действителен 24 часа
-                            </p>
-                        </div>
-                    ) : (
-                        <Button
-                            variant="primary"
-                            fullWidth
-                            leftIcon={<Plus className="w-5 h-5" />}
-                            onClick={generateAccessCode}
-                            isLoading={isGeneratingCoachCode}
-                        >
-                            Сгенерировать код
-                        </Button>
-                    )}
-
-                    {coachAccesses.length > 0 && (
-                        <div className="space-y-2">
-                            <p className="text-sm font-medium text-telegram-text">Активные доступы</p>
-                            {coachAccesses.map((access) => (
-                                <div
-                                    key={access.id}
-                                    className="flex items-center justify-between p-3 bg-telegram-bg rounded-xl"
-                                >
-                                    <div>
-                                        <p className="font-medium text-telegram-text">{access.coach_name}</p>
-                                        <p className="text-xs text-telegram-hint">
-                                            До {new Date(access.expires_at || '').toLocaleDateString('ru-RU')}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => revokeAccess(access.id)}
-                                        className="p-2 rounded-lg text-danger hover:bg-danger/10"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </Modal>
         </div>
     );
 };

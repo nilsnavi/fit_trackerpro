@@ -418,7 +418,7 @@ describe('сам детектор', () => {
             "import { getAnalyticsMuscleLoadTable } from '../api/analyticsDomain'",
         )).toHaveLength(1)
         expect(findOwnershipViolations(
-            'features/workouts/hooks/useActiveWorkout.ts',
+            'features/workouts/active/hooks/useWorkoutSetWrites.ts',
             "import { workoutsApi } from '../api/workouts.api'",
         )).toEqual([])
         expect(findOwnershipViolations('features/analytics/lib/helpers.ts', "import { cn } from '@shared/lib/cn'")).toEqual([])

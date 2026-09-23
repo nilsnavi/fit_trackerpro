@@ -18152,8 +18152,8 @@
     },
     "/api/v1/users/coach-access": {
       "get": {
-        "description": "Coach access sharing is not implemented yet.\nKeep the endpoint to avoid breaking the profile UI.",
-        "operationId": "list_coach_access_api_v1_users_coach_access_get",
+        "description": "Доступ тренера не реализован (WS2-5).\n\nРаньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий\nдоступ. Пока нет механизма просмотра данных тренером и аудита доступа\n(WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.",
+        "operationId": "coach_access_unavailable_api_v1_users_coach_access_get",
         "responses": {
           "200": {
             "content": {
@@ -18169,7 +18169,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "List Coach Access",
+        "summary": "Coach Access Unavailable",
         "tags": [
           "Users"
         ]
@@ -18177,8 +18177,8 @@
     },
     "/api/v1/users/coach-access/generate": {
       "post": {
-        "description": "Generate a short-lived share code (stub for MVP UI wiring).",
-        "operationId": "generate_coach_access_api_v1_users_coach_access_generate_post",
+        "description": "Доступ тренера не реализован (WS2-5).\n\nРаньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий\nдоступ. Пока нет механизма просмотра данных тренером и аудита доступа\n(WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.",
+        "operationId": "coach_access_unavailable_api_v1_users_coach_access_generate_post",
         "responses": {
           "200": {
             "content": {
@@ -18194,7 +18194,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Generate Coach Access",
+        "summary": "Coach Access Unavailable",
         "tags": [
           "Users"
         ]
@@ -18202,31 +18202,11 @@
     },
     "/api/v1/users/coach-access/{access_id}": {
       "delete": {
-        "operationId": "revoke_coach_access_api_v1_users_coach_access__access_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "access_id",
-            "required": true,
-            "schema": {
-              "title": "Access Id",
-              "type": "string"
-            }
-          }
-        ],
+        "description": "Доступ тренера не реализован (WS2-5).\n\nРаньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий\nдоступ. Пока нет механизма просмотра данных тренером и аудита доступа\n(WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.",
+        "operationId": "coach_access_unavailable_api_v1_users_coach_access__access_id__delete",
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "security": [
@@ -18234,7 +18214,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Revoke Coach Access",
+        "summary": "Coach Access Unavailable",
         "tags": [
           "Users"
         ]
@@ -18357,7 +18337,7 @@
     },
     "/api/v1/users/me/stats": {
       "get": {
-        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "description": "Lightweight user stats for `ProfilePage` (окно — 30 дней).\n\nЗначения считаются по реальной истории: `active_days` — уникальные дни\nс тренировками, остальное — из сводки аналитики. Калории не считаются,\nпоэтому поля `total_calories` в ответе нет.",
         "operationId": "get_user_stats_api_v1_users_me_stats_get",
         "responses": {
           "200": {
@@ -18382,7 +18362,7 @@
     },
     "/api/v1/users/stats": {
       "get": {
-        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "description": "Lightweight user stats for `ProfilePage` (окно — 30 дней).\n\nЗначения считаются по реальной истории: `active_days` — уникальные дни\nс тренировками, остальное — из сводки аналитики. Калории не считаются,\nпоэтому поля `total_calories` в ответе нет.",
         "operationId": "get_user_stats_api_v1_users_stats_get",
         "responses": {
           "200": {

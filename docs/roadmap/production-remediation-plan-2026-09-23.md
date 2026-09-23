@@ -22,6 +22,11 @@
 | WS1-14 | Правовой минимум: политика и согласие | ✅ сделано | Страницы `/legal/privacy` и `/legal/consent`, обязательный чек-бокс в онбординге (без него кнопка выключена, а бэкенд отвечает 400 `consent_required`), согласие пишется в `users.profile.consent` с версией текста и датой (дата не перезаписывается при повторном онбординге), процедуры и ответственные — `docs/legal/privacy-and-data.md`. Проверка: `pytest app/tests/test_health_data_consent.py` (4 теста), `jest onboardingConsent` (4 теста) |
 | WS1-5 | Обновление dev-цепочки (vite/eslint/openapi-tooling) | ✅ сделано | `vite` 5.4.21 → **7.3.6**, `@typescript-eslint/*` 6.21.0 → **8.70.1**, override `js-yaml@^4.3.2` для `@redocly/openapi-core`; **`npm audit` → 0 уязвимостей** (было 9 high / 1 moderate), `tsc`/`eslint`/`jest` 70 suites / 482 теста, `build` + `bundle:check` (entry 119.42 KiB из 120), `api:contract:check` — зелёные. eslint 8.57.1 оставлен осознанно: flat config (eslint 9) — отдельная задача |
 | WS1-6 | `E2E Smoke Real API`: честный пропуск без секретов | ✅ сделано (вариант B) | Workflow не падает, когда staging не настроен: шаг «Check smoke environment» выставляет `configured=false`, все прогонные шаги под `if:`, в конце — `notice`/`warning` и статус skipped. Полный прогон (вариант A) включается секретами `E2E_*` без правок workflow — процедура и ротация `init_data` в `docs/testing/real-api-smoke.md`. Проверка: YAML валиден, поведение описано в job summary |
+| WS2-1 | `/health` на реальных данных вместо mockData | ✅ сделано | Мок-метрики (вес/шаги/пульс/калории) и нарисованный «график» удалены; экран собран из реальных блоков — вода, глюкоза, самочувствие/сон (существующие трекеры, каждый своим чанком) и замеры тела с реальными точками (`recharts`). Пустое состояние/ошибка/загрузка — честные. Проверка: `grep -rn "mockData" frontend/src/features/health` пусто; `jest src/features/health` 14 тестов; `bundle:check` OK (HealthPage 3.7 КиБ, трекеры 4.8–6.1 КиБ gzip) |
+| WS2-2 | Виджеты главной: смонтировать или удалить | ✅ сделано | Блок «Здоровье сегодня» на главной: вода (быстрое +250 мл с инвалидацией кэша), последний замер глюкозы и самочувствие за сегодня через новый `useHomeHealthWidgets`; состояния загрузка / ошибка с повтором / «Нет данных». Проверка: `jest src/features/home` 14 тестов, весь фронт 76 сьютов / 510 тестов; tsc и lint чисто; `bundle:check` OK (Home 11.52 КиБ, entry 116.65 КиБ gzip) |
+| WS2-3 | Убрать хардкод в статистике профиля | ✅ сделано | `active_days` считается по реальной истории (уникальные дни за 30 дней, новый `AnalyticsService.get_active_days`); `total_calories` убран из ответа и типов — калории в приложении не считаются, нулевая заглушка вводила в заблуждение. Проверка: `pytest app/tests/test_users.py` 12 passed/1 skipped (Postgres-only тест скипается на SQLite), весь бэкенд 471 passed/5 skipped; OpenAPI перегенерирован, `api:contract:check` OK |
+| WS2-4 | Закрыть TODO в ядре активной тренировки | ✅ сделано | Все 5 TODO жили в заброшенном дублирующем слое (`ActiveWorkoutContainer`, `useActiveWorkout`, `useWorkoutSession`, legacy `ActiveWorkoutScreen`/`ExerciseCard`), который никто не монтировал — он удалён вместе с осиротевшими файлами (11 всего, включая дубль-стор сессии). Живой флоу уже делает всё, чего просили TODO: добавление упражнения через `ActiveWorkoutModals` → `AddExerciseModal`, число подходов из данных (`countTotalSets`), debounce записей в `useWorkoutSetWrites`, состояние в `activeWorkoutStore`. Проверка: новый гвард-тест `noPlaceholderTodos` (TODO в фиче = 0, удалённые файлы не вернулись), весь фронт 77 сьютов / 513 тестов, entry 116.66 КиБ gzip |
+| WS2-5 | Coach-access: реализовать или скрыть | ✅ сделано (скрыто) | Секция «Доступ для тренера», модалка, хуки/мутации, API-методы, тип и ключ запроса удалены; эндпоинты больше не выдают код, который ничего не открывает, а отвечают 501 с понятным текстом. Реализация — после WS3-8 (аудит доступа к медданным). Проверка: `test_coach_access_endpoints_are_honest_501`, бэкенд 471 passed/5 skipped, фронт 77 сьютов / 513 тестов, OpenAPI перегенерирован (`api:contract:check` OK) |
 | WS1-7…WS1-11, WS1-15 | Инфраструктура, staging, релиз | 📘 runbook готов, ждём владельца | Из песочницы не выполняется (нужны доступы). Пошаговый runbook с командами, гейтами и откатом — `docs/LAUNCH_RUNBOOK.md`; deep-dive в `docs/DEPLOYMENT.md`, `docs/STAGING_DEPLOYMENT_REHEARSAL.md`, `docs/ROLLBACK_STRATEGY.md` |
 
 **Что это значит для CI.** После мержа: `Security` должен стать зелёным (прод-аудит чист, Python-аудит чист, полный аудит — report-only). `Test` нужно подтвердить в CI: локально зелёный, но 6 E2E-наборов (Playwright) в песочнице не запускались — браузер не скачивается.
@@ -372,6 +377,8 @@ curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo" | jq '.result.url, .
 
 ### WS2-1. `/health` на реальных данных вместо `mockData` · [#175](https://github.com/nilsnavi/fit_trackerpro/issues/175)
 
+**Статус:** ✅ сделано (2026-09-23). Экран больше не рисует выдуманных метрик: блоки воды, глюкозы и самочувствия — это существующие трекеры на реальных хуках (подгружаются отдельными чанками), замеры тела — новая карточка с серией и графиком по реальным точкам API. Чистые преобразования вынесены в `frontend/src/features/health/lib/bodyMeasurementSeries.ts` и покрыты тестами, карточка проверена на пустом/ошибочном/загруженном состоянии и на реальных значениях.
+
 **Оценка:** 2d · **Файлы:** `frontend/src/features/health/pages/HealthPage.tsx`, `.../components/*`, `.../hooks/useHealthQueries.ts`, `frontend/src/shared/api/domains/healthApi.ts`
 
 **Шаги:**
@@ -390,6 +397,8 @@ curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo" | jq '.result.url, .
 
 **Шаги:** подготовить данные (`mapHealthToDashboard` + `useHomeWaterQuery` уже есть), вставить блоки в дашборд `Home.tsx` с состояниями загрузки/пусто; либо, если продуктово решено не показывать — удалить виджеты и мёртвые хелперы. Промежуточный вариант (хуже всех) — оставить как есть.
 
+**Статус:** ✅ смонтировано на главной. Новый `HomeHealthSection` подключён в `Home.tsx` перед «Прогрессом» и показывает `WaterWidget`/`GlucoseWidget`/`WellnessWidget` на данных `useHomeHealthWidgets` → `useHomeWaterQuery` плюс последний замер глюкозы и отметка самочувствия за сегодня; `mapHealthToDashboard` дополнен `wellnessEntryToWellnessData`/`wellnessScoreToMood` (шкала API 0..100 без пересчёта). Виджеты получили `type="button"` и `data-testid`, у воды исправлена разметка (внешний `div[role=button]` вместо вложенных `<button>`). Покрытие: `src/features/home` 14 тестов (5 мапперы + 3 хук + 6 секция).
+
 **Готово, когда:** нет файлов без потребителей: `for f in <список>; do grep -rl "$(basename $f)" frontend/src | grep -v "$f"; done` даёт совпадения.
 
 ---
@@ -400,6 +409,8 @@ curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo" | jq '.result.url, .
 
 **Шаги:** посчитать `active_days` (число уникальных дней с тренировками за период) и `total_calories` (или честно убрать поле из ответа и из UI, если калории не считаются). Обновить тесты `test_users.py`, при изменении схемы — `npm run api:types:generate` + `api:contract:check`.
 
+**Статус:** ✅ сделано. `AnalyticsService.get_active_days(user_id, period)` считает уникальные дни с тренировками (окно совпадает с остальной сводкой, общая карта периодов `_PERIOD_DAYS`). `GET /users/me/stats` отдаёт реальные `active_days`; поле `total_calories` удалено из ответа и из FE-типа `UserStats` — калории нигде не считаются, нулевая заглушка вводила в заблуждение. Покрытие: unit-тест на подсчёт дней + integration на эндпоинт (Postgres-only, на SQLite скипается как остальные analytics-тесты).
+
 **Готово, когда:** значения не нулевые на аккаунте с историей; контракт FE↔BE синхронен.
 
 ---
@@ -409,6 +420,8 @@ curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo" | jq '.result.url, .
 **Оценка:** 1–2d · **Файлы:** `frontend/src/features/workouts/active/containers/ActiveWorkoutContainer.tsx:111`, `frontend/src/features/workouts/hooks/useActiveWorkout.ts:78`, `frontend/src/features/workouts/components/ExerciseCard.tsx:28`, `frontend/src/features/workouts/hooks/useWorkoutSession.ts:57,65`
 
 **Шаги:** подключить «добавить упражнение» к существующему флоу/модалке, закрыть debounce сохранений (защита от лишних мутаций при вводе веса/повторов), подтянуть `totalSets` из шаблона/метаданных, довести интеграцию с Zustand-store вместо дублирующего локального состояния.
+
+**Статус:** ✅ сделано (без нового кода — удалением дубля). Проверка показала, что все пять TODO стояли в заброшенном слое: `ActiveWorkoutContainer.tsx` не импортировался ниоткуда (это был «черновик» миграции, который так и не подключили), `hooks/useActiveWorkout.ts` + `hooks/useWorkoutSession.ts` тянулись только друг из друга, legacy `components/ActiveWorkoutScreen.tsx`/`ExerciseCard.tsx` — ниоткуда. Живой флоу (`pages/ActiveWorkoutPage.tsx` → `active/components/ActiveWorkoutScreen.tsx`) уже покрывает каждый пункт: добавление упражнения через `active/containers/ActiveWorkoutModals.tsx` → `AddExerciseModal`, число подходов из данных через `countTotalSets(workout)`, ограничение записей при быстром вводе через `useWorkoutSetWrites`/`useActiveWorkoutSync` (есть тесты), состояние сессии — в Zustand `activeWorkoutStore` вместо дублирующего локального. Удалено 11 файлов; архитектурные тесты переведены на живой путь-пример (`active/hooks/useWorkoutSetWrites.ts`).
 
 **Готово, когда:** все 5 TODO удалены, поведение покрыто тестами, при быстром вводе число сетевых запросов ограничено (проверить в Network).
 
@@ -421,6 +434,8 @@ curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo" | jq '.result.url, .
 **Проблема:** код доступа генерируется и хранится в `users.profile` JSON, но никакого механизма реального доступа тренера к данным нет — UI обещает возможность, которой не существует.
 
 **Шаги:** либо реализовать полноценно (таблица `coach_access`, эндпоинт «тренер смотрит данные по коду», аудит доступа, TTL, отзыв), либо скрыть секцию из профиля до реализации. Реализация — только с WS3-8 (аудит доступа к медданным).
+
+**Статус:** ✅ скрыто (выбран вариант «скрыть», реализация требует WS3-8). UI честно больше ничего не обещает: из `ProfilePage` убраны секция и модалка, из `useProfile` — запрос/мутации/`generateCoachCode`/`revokeCoachAccess`, из `usersApi` — три метода, из `types/profile.ts` — `CoachAccess`, из `queryKeys` — ключ, из `uiStore` — флаг модалки. Бэкенд вместо выдачи бесполезного кода отвечает **501 Not Implemented** на `GET/POST/DELETE /users/coach-access*` (методы сервиса, писавшие коды в `users.profile` JSON, удалены). Ранее выданные коды больше нигде не читаются и пользователю не показываются — чистить профили не нужно. Тест: `test_coach_access_endpoints_are_honest_501`.
 
 **Готово, когда:** UI не обещает несуществующего; если оставлено — доступ реально работает и логируется.
 
