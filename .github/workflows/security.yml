@@ -42,7 +42,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # dependency-review-action can only run when the repository has the
+      # Dependency Graph enabled (Settings -> Security -> Dependency graph).
+      # Without this preflight the job fails on every PR with "Dependency review
+      # is not supported on this repository", which looks like a dependency
+      # problem and hides the real cause. While the graph is off the review is
+      # skipped with a warning; once enabled it becomes blocking again.
+      - name: Check dependency graph availability
+        id: dependency-graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          # The SBOM endpoint answers 200 only when the dependency graph is on,
+          # and 404 when it is disabled (verified against this repository).
+          if gh api "repos/${GITHUB_REPOSITORY}/dependency-graph/sbom" >/dev/null 2>&1; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Dependency graph is enabled."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Dependency graph is disabled for this repository, so dependency review cannot run. Enable it in Settings -> Security -> Dependency graph to turn this check back on."
+          fi
+
       - name: Review dependencies
+        if: steps.dependency-graph.outputs.available == 'true'
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: moderate
