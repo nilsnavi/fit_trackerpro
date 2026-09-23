@@ -16,6 +16,7 @@ from app.domain.exceptions import (
     ChallengeValidationError,
     EmergencyValidationError,
 )
+from app.infrastructure.telegram_sender import TelegramDeliveryError
 from app.middleware.rate_limit import (
     POLICY_ANALYTICS,
     POLICY_AUTH,
@@ -159,16 +160,35 @@ def _contact(**overrides):
         "priority": 1,
         "created_at": now,
         "updated_at": now,
+        "telegram_chat_id": None,
+        "linked_at": None,
     }
     data.update(overrides)
+    data["is_linked"] = data["telegram_chat_id"] is not None
     return SimpleNamespace(**data)
+
+
+class _RecordingSender:
+    """Fake Telegram sender: only chat ids in ``fail_for`` raise."""
+
+    def __init__(self, fail_for=()):
+        self.fail_for = set(fail_for)
+        self.sent: list[tuple[int, str]] = []
+
+    async def send_message(self, chat_id: int, text: str) -> None:
+        if chat_id in self.fail_for:
+            raise TelegramDeliveryError("Telegram API rejected the message: chat not found")
+        self.sent.append((chat_id, text))
 
 
 @pytest.mark.asyncio
 async def test_emergency_service_covers_notification_branches():
+    """Counts must reflect real delivery: a username or phone is not a channel."""
     user = SimpleNamespace(id=5, first_name=None, username="runner")
+    sender = _RecordingSender(fail_for=(404,))
     service = object.__new__(EmergencyService)
     service.repository = _EmergencyRepo()
+    service._sender = sender
 
     with pytest.raises(EmergencyValidationError):
         await service.create_contact(5, EmergencyContactCreate(contact_name="No method"))
@@ -178,9 +198,10 @@ async def test_emergency_service_covers_notification_branches():
 
     service.repository = _EmergencyRepo(
         [
-            _contact(id=1, contact_username="helper"),
+            _contact(id=1, contact_username="helper", telegram_chat_id=101),
             _contact(id=2, phone="+100000000"),
             _contact(id=3),
+            _contact(id=4, telegram_chat_id=404),
         ]
     )
     created = await service.create_contact(
@@ -193,17 +214,26 @@ async def test_emergency_service_covers_notification_branches():
         user,
         EmergencyNotifyRequest(message="Need help", location="Gym"),
     )
-    assert notified.successful_count == 2
-    assert notified.failed_count == 1
+    assert notified.successful_count == 1
+    assert notified.failed_count == 3
     assert "runner" in notified.message_sent
+    assert [chat_id for chat_id, _ in sender.sent] == [101]
+    by_id = {result.contact_id: result for result in notified.results}
+    assert by_id[1].success is True
+    assert by_id[1].method == "telegram"
+    assert "не подключён" in (by_id[2].error or "")
+    assert by_id[2].method == "unlinked"
+    assert "Ошибка доставки" in (by_id[4].error or "")
 
     start = await service.notify_workout_start(user, workout_id=10, estimated_duration=45)
-    assert start.contacts_notified == 3
-    assert "estimated 45 min" in start.preview
+    assert start.contacts_notified == 1
+    assert start.contacts_failed == 3
+    assert "45 мин" in (start.preview or "")
+    assert "1 из 4" in start.message
 
     end = await service.notify_workout_end(user, workout_id=10, duration=30, completed_successfully=False)
-    assert end.contacts_notified == 3
-    assert "ended" in end.preview
+    assert end.contacts_notified == 1
+    assert "закончил" in (end.preview or "")
 
 
 def test_rate_limit_policy_resolution_covers_specific_tiers():

@@ -21,10 +21,11 @@ pydantic-settings==2.15.0
 email-validator==2.3.0
 
 # Authentication and Security
-# PyJWT instead of python-jose: jose pulls in ecdsa, which has known
-# vulnerabilities with no fix release (PYSEC-2026-1325); PyJWT covers the
-# same JWT needs (HS256) without it.
-PyJWT[crypto]==2.14.0
+# PyJWT instead of python-jose: python-jose 3.5.0 (the latest) pins `ecdsa`, which
+# is flagged by pip-audit (PYSEC-2026-1325) and cannot be updated independently.
+# Only HS256 is used (see app/core/security/tokens.py), so PyJWT + cryptography
+# covers every code path without the vulnerable transitive dependency.
+pyjwt==2.14.0
 passlib[bcrypt]==1.7.4
 python-telegram-bot==22.8
 

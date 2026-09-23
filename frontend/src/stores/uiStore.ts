@@ -23,8 +23,6 @@ interface UiState {
     healthQuickWaterMl: number
     setHealthQuickWaterMl: (quickWaterMl: number) => void
 
-    profileCoachModalOpen: boolean
-    setProfileCoachModalOpen: (open: boolean) => void
 
     exerciseCatalog: ExerciseCatalogState
     setExerciseCatalogSearch: (search: string) => void
@@ -45,9 +43,6 @@ export const useUiStore = create<UiState>()(
             healthQuickWaterMl: 250,
             setHealthQuickWaterMl: (healthQuickWaterMl) => set({ healthQuickWaterMl }),
 
-            profileCoachModalOpen: false,
-            setProfileCoachModalOpen: (profileCoachModalOpen) =>
-                set({ profileCoachModalOpen }),
 
             exerciseCatalog: { search: '', category: 'all' },
             setExerciseCatalogSearch: (search) =>

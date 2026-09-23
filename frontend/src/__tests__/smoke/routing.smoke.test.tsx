@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires -- intentional CommonJS module mocks in smoke tests */
 import type React from 'react'
 import { render, waitFor } from '@testing-library/react'
 import App from '@/App'

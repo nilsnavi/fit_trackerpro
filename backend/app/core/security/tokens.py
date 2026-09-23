@@ -6,6 +6,7 @@ from typing import Optional
 
 import jwt
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jwt import PyJWTError as JWTError
 
 from app.settings import settings
 
@@ -68,7 +69,7 @@ def verify_token(token: str, token_type: str = "access") -> Optional[int]:
 
         return user_id
 
-    except (jwt.PyJWTError, ValueError, TypeError):
+    except (JWTError, ValueError, TypeError):
         return None
 
 

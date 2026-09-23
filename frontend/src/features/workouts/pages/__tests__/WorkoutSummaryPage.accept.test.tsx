@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * SPEC-006 §42/§58: the summary is where the user accepts the next target.
  *

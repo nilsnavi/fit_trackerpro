@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * SPEC-006 §58: one screen lists every accepted target with its automatic
  * prefill state and switches that substitution on or off without touching the
