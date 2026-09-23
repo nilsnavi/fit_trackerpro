@@ -7,15 +7,15 @@ switched off — so the way back survives a reload and is the same on every devi
 instead of living in one browser's storage. A manual per-target flip leaves the
 column NULL: only a bulk action is a sweep.
 
-Revision ID: p9q0r1s2t3u4
-Revises: o8p9q0r1s2t3
+Revision ID: q0r1s2t3u4v5
+Revises: p9q0r1s2t3u4
 Create Date: 2026-09-19 00:00:00.000000
 """
 
 from alembic import op
 
-revision = "p9q0r1s2t3u4"
-down_revision = "o8p9q0r1s2t3"
+revision = "q0r1s2t3u4v5"
+down_revision = "p9q0r1s2t3u4"
 branch_labels = None
 depends_on = None
 
