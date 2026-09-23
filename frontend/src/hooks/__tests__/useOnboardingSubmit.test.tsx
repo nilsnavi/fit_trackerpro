@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 
+import { HEALTH_DATA_CONSENT_VERSION } from '@features/legal/versions'
 import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -39,6 +40,7 @@ describe('useOnboardingSubmit', () => {
                 displayName: '  Аня  ',
                 fitnessGoal: 'strength',
                 experienceLevel: 'beginner',
+                healthDataConsent: true,
             })
         })
 
@@ -46,6 +48,8 @@ describe('useOnboardingSubmit', () => {
         expect(api.post).toHaveBeenCalledWith('/users/auth/onboarding', {
             fitness_goal: 'strength',
             experience_level: 'beginner',
+            health_data_consent: true,
+            consent_version: HEALTH_DATA_CONSENT_VERSION,
         })
         expect(onDone).toHaveBeenCalledTimes(1)
         expect(result.current.error).toBeNull()
@@ -63,6 +67,7 @@ describe('useOnboardingSubmit', () => {
                 displayName: '   ',
                 fitnessGoal: 'endurance',
                 experienceLevel: 'advanced',
+                healthDataConsent: true,
             })
         })
 
@@ -81,6 +86,7 @@ describe('useOnboardingSubmit', () => {
                 displayName: 'Аня',
                 fitnessGoal: 'strength',
                 experienceLevel: 'beginner',
+                healthDataConsent: true,
             })
         })
 
@@ -106,6 +112,7 @@ describe('useOnboardingSubmit', () => {
                 displayName: 'Аня',
                 fitnessGoal: 'weight_loss',
                 experienceLevel: 'intermediate',
+                healthDataConsent: true,
             })
         })
 
@@ -117,6 +124,8 @@ describe('useOnboardingSubmit', () => {
         expect(JSON.parse(String((init as RequestInit).body))).toEqual({
             fitness_goal: 'weight_loss',
             experience_level: 'intermediate',
+            health_data_consent: true,
+            consent_version: HEALTH_DATA_CONSENT_VERSION,
         })
         expect(result.current.error).toBeNull()
     })
@@ -137,6 +146,7 @@ describe('useOnboardingSubmit', () => {
                 displayName: 'Аня',
                 fitnessGoal: 'strength',
                 experienceLevel: 'beginner',
+                healthDataConsent: true,
             })
         })
 

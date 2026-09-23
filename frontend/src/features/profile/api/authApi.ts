@@ -16,6 +16,10 @@ export interface TelegramAuthResponse {
 export interface SaveOnboardingRequest {
     fitness_goal: FitnessGoal
     experience_level: ExperienceLevel
+    /** Согласие на обработку данных о здоровье — обязательно (WS1-14). */
+    health_data_consent: boolean
+    /** Версия текста согласия, которую видел пользователь. */
+    consent_version: string
 }
 
 export const authApi = {

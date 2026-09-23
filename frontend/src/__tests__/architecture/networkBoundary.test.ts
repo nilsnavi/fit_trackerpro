@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires -- политика границы объявлена в CommonJS-модуле: его же требует конфиг ESLint */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as ts from 'typescript'
@@ -196,7 +195,7 @@ describe('компоненты не владеют сетью', () => {
             'features/workouts/active/components/ActiveWorkoutScreen.tsx',
             'app/components/ConnectivitySyncBar.tsx',
             'features/analytics/components/MuscleLoadTable.tsx',
-            'features/emergency/components/EmergencyMode.tsx',
+            'features/emergency/components/EmergencyContactsSection.tsx',
             'features/auth/components/TelegramAuthBootstrapGate.tsx',
             'components/Onboarding/OnboardingScreen.tsx',
         ]))
@@ -419,7 +418,7 @@ describe('сам детектор', () => {
             "import { getAnalyticsMuscleLoadTable } from '../api/analyticsDomain'",
         )).toHaveLength(1)
         expect(findOwnershipViolations(
-            'features/workouts/hooks/useActiveWorkout.ts',
+            'features/workouts/active/hooks/useWorkoutSetWrites.ts',
             "import { workoutsApi } from '../api/workouts.api'",
         )).toEqual([])
         expect(findOwnershipViolations('features/analytics/lib/helpers.ts', "import { cn } from '@shared/lib/cn'")).toEqual([])

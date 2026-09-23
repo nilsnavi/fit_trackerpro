@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires -- intentional CommonJS polyfills for jest setupFiles */
 /**
  * Jest global polyfills — executed via jest.config.js `setupFiles` BEFORE the test framework.
  * This file runs in Node.js scope and patches globals that jsdom 20 does not expose.
@@ -27,6 +26,30 @@ if (typeof (globalThis as unknown as Record<string, unknown>).crypto === 'undefi
             writable: true,
         })
     }
+}
+
+// Polyfill TextEncoder / TextDecoder.
+// react-router v7 (and its data APIs) touch TextEncoder at module import time;
+// jsdom 20 does not expose either class on the global scope, which breaks every
+// suite that imports react-router-dom. Node's util implementations are spec-compatible.
+try {
+    if (typeof (globalThis as unknown as Record<string, unknown>).TextEncoder === 'undefined') {
+        const nodeUtil = require('util') as typeof import('util')
+        Object.defineProperty(globalThis, 'TextEncoder', {
+            value: nodeUtil.TextEncoder,
+            configurable: true,
+            writable: true,
+            enumerable: true,
+        })
+        Object.defineProperty(globalThis, 'TextDecoder', {
+            value: nodeUtil.TextDecoder,
+            configurable: true,
+            writable: true,
+            enumerable: true,
+        })
+    }
+} catch {
+    // ignore
 }
 
 // Polyfill IndexedDB for jsdom (needed for offline persistence tests).

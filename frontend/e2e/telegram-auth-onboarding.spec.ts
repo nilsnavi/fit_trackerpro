@@ -137,7 +137,12 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
 
         await page.getByLabel('Выносливость').check()
         await page.getByLabel('Продвинутый').check()
-        await page.getByRole('button', { name: 'Сохранить и продолжить' }).click()
+        // Без согласия на обработку данных о здоровье онбординг не сохраняется (WS1-14).
+        const submit = page.getByRole('button', { name: 'Сохранить и продолжить' })
+        await expect(submit).toBeDisabled()
+        await page.getByRole('checkbox', { name: /обработку данных о здоровье/ }).check()
+        await expect(submit).toBeEnabled()
+        await submit.click()
 
         await expect(
             page.getByRole('heading', { name: 'Добро пожаловать в FitTracker Pro' }),
@@ -145,9 +150,11 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
         await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
 
         expect(profileCalls).toBeGreaterThanOrEqual(1)
-        expect(onboardingBody).toEqual({
+        expect(onboardingBody).toMatchObject({
             fitness_goal: 'endurance',
             experience_level: 'advanced',
+            health_data_consent: true,
         })
+        expect(typeof onboardingBody?.consent_version).toBe('string')
     })
 })

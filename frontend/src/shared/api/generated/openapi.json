@@ -3090,6 +3090,58 @@
         "title": "EmergencyContactCreate",
         "type": "object"
       },
+      "EmergencyContactLinkCodeResponse": {
+        "description": "One-time code that binds a contact's Telegram account to this record",
+        "properties": {
+          "code": {
+            "maxLength": 16,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          },
+          "command": {
+            "description": "Exact message the contact must send to the bot.",
+            "maxLength": 64,
+            "title": "Command",
+            "type": "string"
+          },
+          "contact_id": {
+            "title": "Contact Id",
+            "type": "integer"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "deep_link": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "t.me link that prefills the command; None if TELEGRAM_BOT_USERNAME is unset.",
+            "title": "Deep Link"
+          },
+          "is_linked": {
+            "default": false,
+            "description": "True when the contact is already linked (a new code re-links them).",
+            "title": "Is Linked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "contact_id",
+          "contact_name",
+          "code",
+          "command"
+        ],
+        "title": "EmergencyContactLinkCodeResponse",
+        "type": "object"
+      },
       "EmergencyContactListResponse": {
         "description": "List of emergency contacts response",
         "properties": {
@@ -3147,6 +3199,25 @@
           "is_active": {
             "title": "Is Active",
             "type": "boolean"
+          },
+          "is_linked": {
+            "default": false,
+            "description": "True when the contact linked their Telegram account, i.e. can receive alerts. Contacts without a linked account cannot be notified — the API says so instead of reporting a fake success.",
+            "title": "Is Linked",
+            "type": "boolean"
+          },
+          "linked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the contact linked their Telegram account.",
+            "title": "Linked At"
           },
           "notify_on_emergency": {
             "title": "Notify On Emergency",
@@ -3439,7 +3510,7 @@
         "type": "object"
       },
       "EmergencyNotifyResponse": {
-        "description": "Emergency notification response",
+        "description": "Emergency notification response\n\n``successful_count`` counts messages the Telegram Bot API accepted. It is 0\nwhen no contact is linked — the caller must not show \"help is on the way\"\nin that case, see ``results`` for per-contact reasons.",
         "properties": {
           "failed_count": {
             "title": "Failed Count",
@@ -3540,6 +3611,14 @@
       "EmergencyWorkoutNotifyResponse": {
         "description": "Result of workout start/end notify-to-contacts action",
         "properties": {
+          "contacts_failed": {
+            "default": 0,
+            "description": "Selected contacts that could not be reached (not linked or delivery error).",
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Contacts Failed",
+            "type": "integer"
+          },
           "contacts_notified": {
             "anyOf": [
               {
@@ -3551,6 +3630,7 @@
                 "type": "null"
               }
             ],
+            "description": "Contacts the message was actually delivered to.",
             "title": "Contacts Notified"
           },
           "message": {
@@ -4812,6 +4892,37 @@
         "title": "HealthDashboardPeriod",
         "type": "string"
       },
+      "HealthDataConsent": {
+        "description": "Proof that the user accepted a specific version of the legal texts.",
+        "properties": {
+          "accepted_at": {
+            "description": "When the consent was recorded (UTC).",
+            "format": "date-time",
+            "title": "Accepted At",
+            "type": "string"
+          },
+          "source": {
+            "default": "onboarding",
+            "description": "Where the consent was collected.",
+            "maxLength": 32,
+            "title": "Source",
+            "type": "string"
+          },
+          "version": {
+            "description": "Version of the consent text the user accepted.",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "accepted_at"
+        ],
+        "title": "HealthDataConsent",
+        "type": "object"
+      },
       "HealthStatsResponse": {
         "description": "Health statistics response",
         "properties": {
@@ -5335,6 +5446,19 @@
       "OnboardingRequest": {
         "description": "Request model for first-login onboarding.",
         "properties": {
+          "consent_version": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Version of the consent text the user saw; defaults to the current one.",
+            "title": "Consent Version"
+          },
           "experience_level": {
             "$ref": "#/components/schemas/ExperienceLevel",
             "description": "Current training level."
@@ -5342,6 +5466,12 @@
           "fitness_goal": {
             "$ref": "#/components/schemas/FitnessGoal",
             "description": "Primary fitness objective."
+          },
+          "health_data_consent": {
+            "default": false,
+            "description": "True when the user ticked the consent box for processing health data (pulse, glucose, weight, sleep, wellbeing). Without it onboarding is rejected.",
+            "title": "Health Data Consent",
+            "type": "boolean"
           }
         },
         "required": [
@@ -8149,6 +8279,17 @@
             ],
             "description": "Date of birth (string; format depends on client).",
             "title": "Birth Date"
+          },
+          "consent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HealthDataConsent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recorded health-data consent (version + timestamp) for audit."
           },
           "current_weight": {
             "anyOf": [
@@ -17173,6 +17314,102 @@
         ]
       }
     },
+    "/api/v1/system/emergency/contact/{contact_id}/link": {
+      "delete": {
+        "description": "Remove the delivery channel of a contact (e.g. they changed accounts).",
+        "operationId": "unlink_emergency_contact_api_v1_system_emergency_contact__contact_id__link_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyContactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlink Emergency Contact",
+        "tags": [
+          "Emergency"
+        ]
+      }
+    },
+    "/api/v1/system/emergency/contact/{contact_id}/link-code": {
+      "post": {
+        "description": "Invite code that binds a contact's Telegram account to this record.\n\nEmergency messages can only be delivered to chats that contacted the bot,\nso a contact is reachable after linking (``/link <code>`` or the t.me link).",
+        "operationId": "issue_emergency_contact_link_code_api_v1_system_emergency_contact__contact_id__link_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyContactLinkCodeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Issue Emergency Contact Link Code",
+        "tags": [
+          "Emergency"
+        ]
+      }
+    },
     "/api/v1/system/emergency/log": {
       "post": {
         "operationId": "log_emergency_event_api_v1_system_emergency_log_post",
@@ -17915,8 +18152,8 @@
     },
     "/api/v1/users/coach-access": {
       "get": {
-        "description": "Coach access sharing is not implemented yet.\nKeep the endpoint to avoid breaking the profile UI.",
-        "operationId": "list_coach_access_api_v1_users_coach_access_get",
+        "description": "Доступ тренера не реализован (WS2-5).\n\nРаньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий\nдоступ. Пока нет механизма просмотра данных тренером и аудита доступа\n(WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.",
+        "operationId": "coach_access_unavailable_api_v1_users_coach_access_get",
         "responses": {
           "200": {
             "content": {
@@ -17932,7 +18169,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "List Coach Access",
+        "summary": "Coach Access Unavailable",
         "tags": [
           "Users"
         ]
@@ -17940,8 +18177,8 @@
     },
     "/api/v1/users/coach-access/generate": {
       "post": {
-        "description": "Generate a short-lived share code (stub for MVP UI wiring).",
-        "operationId": "generate_coach_access_api_v1_users_coach_access_generate_post",
+        "description": "Доступ тренера не реализован (WS2-5).\n\nРаньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий\nдоступ. Пока нет механизма просмотра данных тренером и аудита доступа\n(WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.",
+        "operationId": "coach_access_unavailable_api_v1_users_coach_access_generate_post",
         "responses": {
           "200": {
             "content": {
@@ -17957,7 +18194,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Generate Coach Access",
+        "summary": "Coach Access Unavailable",
         "tags": [
           "Users"
         ]
@@ -17965,31 +18202,11 @@
     },
     "/api/v1/users/coach-access/{access_id}": {
       "delete": {
-        "operationId": "revoke_coach_access_api_v1_users_coach_access__access_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "access_id",
-            "required": true,
-            "schema": {
-              "title": "Access Id",
-              "type": "string"
-            }
-          }
-        ],
+        "description": "Доступ тренера не реализован (WS2-5).\n\nРаньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий\nдоступ. Пока нет механизма просмотра данных тренером и аудита доступа\n(WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.",
+        "operationId": "coach_access_unavailable_api_v1_users_coach_access__access_id__delete",
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "security": [
@@ -17997,7 +18214,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Revoke Coach Access",
+        "summary": "Coach Access Unavailable",
         "tags": [
           "Users"
         ]
@@ -18120,7 +18337,7 @@
     },
     "/api/v1/users/me/stats": {
       "get": {
-        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "description": "Lightweight user stats for `ProfilePage` (окно — 30 дней).\n\nЗначения считаются по реальной истории: `active_days` — уникальные дни\nс тренировками, остальное — из сводки аналитики. Калории не считаются,\nпоэтому поля `total_calories` в ответе нет.",
         "operationId": "get_user_stats_api_v1_users_me_stats_get",
         "responses": {
           "200": {
@@ -18145,7 +18362,7 @@
     },
     "/api/v1/users/stats": {
       "get": {
-        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "description": "Lightweight user stats for `ProfilePage` (окно — 30 дней).\n\nЗначения считаются по реальной истории: `active_days` — уникальные дни\nс тренировками, остальное — из сводки аналитики. Калории не считаются,\nпоэтому поля `total_calories` в ответе нет.",
         "operationId": "get_user_stats_api_v1_users_stats_get",
         "responses": {
           "200": {
@@ -19893,7 +20110,7 @@
     },
     "/telegram/webhook": {
       "post": {
-        "description": "Handle incoming Telegram webhook updates\n\nThis endpoint receives updates from Telegram when using webhook mode.\nOnly used in production environment.",
+        "description": "Handle incoming Telegram webhook updates\n\nThis endpoint receives updates from Telegram when using webhook mode.\nOnly used in production environment.\n\nWhen ``TELEGRAM_WEBHOOK_SECRET`` is configured the request must carry the\nmatching ``X-Telegram-Bot-Api-Secret-Token`` header (Telegram echoes the value\npassed to ``setWebhook``). The check happens before the body is parsed so\nforged updates never reach the dispatcher. The reverse proxy intentionally\nskips rate limiting for this path, which makes the secret the only gate.",
         "operationId": "telegram_webhook_telegram_webhook_post",
         "responses": {
           "200": {

@@ -6,6 +6,7 @@ import {
     type FitnessGoal,
     type SaveOnboardingRequest,
 } from '@features/profile/api/authApi'
+import { HEALTH_DATA_CONSENT_VERSION } from '@features/legal/versions'
 import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { getErrorMessage } from '@shared/errors'
 import { getAuthTokens } from '@/stores/authStore'
@@ -14,6 +15,8 @@ export interface OnboardingAnswers {
     displayName: string
     fitnessGoal: FitnessGoal
     experienceLevel: ExperienceLevel
+    /** Согласие на обработку данных о здоровье — без него профиль не сохраняется (WS1-14). */
+    healthDataConsent: boolean
 }
 
 /** Резервный канал: тот же POST, если клиент API недоступен. */
@@ -48,8 +51,14 @@ export function useOnboardingSubmit(onDone: () => void) {
     const [error, setError] = useState<string | null>(null)
 
     const submit = useCallback(
-        async ({ displayName, fitnessGoal, experienceLevel }: OnboardingAnswers) => {
+        async ({ displayName, fitnessGoal, experienceLevel, healthDataConsent }: OnboardingAnswers) => {
             setError(null)
+            if (!healthDataConsent) {
+                setError(
+                    'Отметьте согласие на обработку данных о здоровье — без него приложение не может их хранить.',
+                )
+                return
+            }
             setIsSubmitting(true)
             try {
                 const trimmed = displayName.trim()
@@ -65,6 +74,8 @@ export function useOnboardingSubmit(onDone: () => void) {
                 const payload: SaveOnboardingRequest = {
                     fitness_goal: fitnessGoal,
                     experience_level: experienceLevel,
+                    health_data_consent: healthDataConsent,
+                    consent_version: HEALTH_DATA_CONSENT_VERSION,
                 }
                 try {
                     await authApi.saveOnboarding(payload)

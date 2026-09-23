@@ -115,6 +115,25 @@ function main() {
         errors.push('TELEGRAM_WEBAPP_URL must be an HTTPS URL')
     }
 
+    // The webhook secret is what protects /telegram/webhook (nginx skips rate limiting
+    // for that path). Required whenever the bot runtime is enabled, mirroring the
+    // backend guard in Settings.reject_insecure_defaults_in_production.
+    const botEnabled = (env.TELEGRAM_BOT_ENABLED ?? '').trim().toLowerCase() === 'true'
+    if (botEnabled) {
+        if (!addRequiredError(errors, env, 'TELEGRAM_WEBHOOK_SECRET')) {
+            if (env.TELEGRAM_WEBHOOK_SECRET.length < 16) {
+                errors.push('TELEGRAM_WEBHOOK_SECRET must be at least 16 characters long')
+            }
+            if (!/^[A-Za-z0-9_-]+$/.test(env.TELEGRAM_WEBHOOK_SECRET)) {
+                errors.push("TELEGRAM_WEBHOOK_SECRET may only contain A-Z, a-z, 0-9, '_' and '-'")
+            }
+        }
+    } else {
+        warnings.push(
+            'TELEGRAM_BOT_ENABLED is not "true": the Telegram bot runtime stays off in production',
+        )
+    }
+
     validateAllowedOrigins(errors, env.ALLOWED_ORIGINS)
     validateApiUrl(errors, env, 'API_URL')
     validateApiUrl(errors, env, 'VITE_API_URL')

@@ -1,2 +1,2 @@
-export { EmergencyMode } from './EmergencyMode'
-export { default } from './EmergencyMode'
+export { EmergencyButton } from './EmergencyButton'
+export { EmergencyContactsSection } from './EmergencyContactsSection'

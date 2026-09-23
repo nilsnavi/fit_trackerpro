@@ -1418,6 +1418,49 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/emergency/contact/{contact_id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unlink Emergency Contact
+         * @description Remove the delivery channel of a contact (e.g. they changed accounts).
+         */
+        delete: operations["unlink_emergency_contact_api_v1_system_emergency_contact__contact_id__link_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/emergency/contact/{contact_id}/link-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Emergency Contact Link Code
+         * @description Invite code that binds a contact's Telegram account to this record.
+         *
+         *     Emergency messages can only be delivered to chats that contacted the bot,
+         *     so a contact is reachable after linking (``/link <code>`` or the t.me link).
+         */
+        post: operations["issue_emergency_contact_link_code_api_v1_system_emergency_contact__contact_id__link_code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/emergency/log": {
         parameters: {
             query?: never;
@@ -1737,11 +1780,14 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * List Coach Access
-         * @description Coach access sharing is not implemented yet.
-         *     Keep the endpoint to avoid breaking the profile UI.
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
          */
-        get: operations["list_coach_access_api_v1_users_coach_access_get"];
+        get: operations["coach_access_unavailable_api_v1_users_coach_access_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1760,10 +1806,14 @@ export type paths = {
         get?: never;
         put?: never;
         /**
-         * Generate Coach Access
-         * @description Generate a short-lived share code (stub for MVP UI wiring).
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
          */
-        post: operations["generate_coach_access_api_v1_users_coach_access_generate_post"];
+        post: operations["coach_access_unavailable_api_v1_users_coach_access_generate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1780,8 +1830,15 @@ export type paths = {
         get?: never;
         put?: never;
         post?: never;
-        /** Revoke Coach Access */
-        delete: operations["revoke_coach_access_api_v1_users_coach_access__access_id__delete"];
+        /**
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
+         */
+        delete: operations["coach_access_unavailable_api_v1_users_coach_access__access_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1844,12 +1901,11 @@ export type paths = {
         };
         /**
          * Get User Stats
-         * @description Lightweight user stats for `ProfilePage`.
+         * @description Lightweight user stats for `ProfilePage` (окно — 30 дней).
          *
-         *     The frontend expects:
-         *       { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-         *
-         *     For MVP we map from analytics summary; calories are not tracked yet.
+         *     Значения считаются по реальной истории: `active_days` — уникальные дни
+         *     с тренировками, остальное — из сводки аналитики. Калории не считаются,
+         *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_me_stats_get"];
         put?: never;
@@ -1869,12 +1925,11 @@ export type paths = {
         };
         /**
          * Get User Stats
-         * @description Lightweight user stats for `ProfilePage`.
+         * @description Lightweight user stats for `ProfilePage` (окно — 30 дней).
          *
-         *     The frontend expects:
-         *       { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-         *
-         *     For MVP we map from analytics summary; calories are not tracked yet.
+         *     Значения считаются по реальной истории: `active_days` — уникальные дни
+         *     с тренировками, остальное — из сводки аналитики. Калории не считаются,
+         *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_stats_get"];
         put?: never;
@@ -2351,6 +2406,12 @@ export type paths = {
          *
          *     This endpoint receives updates from Telegram when using webhook mode.
          *     Only used in production environment.
+         *
+         *     When ``TELEGRAM_WEBHOOK_SECRET`` is configured the request must carry the
+         *     matching ``X-Telegram-Bot-Api-Secret-Token`` header (Telegram echoes the value
+         *     passed to ``setWebhook``). The check happens before the body is parsed so
+         *     forged updates never reach the dispatcher. The reverse proxy intentionally
+         *     skips rate limiting for this path, which makes the secret the only gate.
          */
         post: operations["telegram_webhook_telegram_webhook_post"];
         delete?: never;
@@ -3651,6 +3712,34 @@ export type components = {
             relationship_type?: components["schemas"]["EmergencyRelationship"] | null;
         };
         /**
+         * EmergencyContactLinkCodeResponse
+         * @description One-time code that binds a contact's Telegram account to this record
+         */
+        EmergencyContactLinkCodeResponse: {
+            /** Code */
+            code: string;
+            /**
+             * Command
+             * @description Exact message the contact must send to the bot.
+             */
+            command: string;
+            /** Contact Id */
+            contact_id: number;
+            /** Contact Name */
+            contact_name: string;
+            /**
+             * Deep Link
+             * @description t.me link that prefills the command; None if TELEGRAM_BOT_USERNAME is unset.
+             */
+            deep_link?: string | null;
+            /**
+             * Is Linked
+             * @description True when the contact is already linked (a new code re-links them).
+             * @default false
+             */
+            is_linked: boolean;
+        };
+        /**
          * EmergencyContactListResponse
          * @description List of emergency contacts response
          */
@@ -3680,6 +3769,17 @@ export type components = {
             id: number;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Is Linked
+             * @description True when the contact linked their Telegram account, i.e. can receive alerts. Contacts without a linked account cannot be notified — the API says so instead of reporting a fake success.
+             * @default false
+             */
+            is_linked: boolean;
+            /**
+             * Linked At
+             * @description When the contact linked their Telegram account.
+             */
+            linked_at?: string | null;
             /** Notify On Emergency */
             notify_on_emergency: boolean;
             /** Notify On Workout End */
@@ -3774,6 +3874,10 @@ export type components = {
         /**
          * EmergencyNotifyResponse
          * @description Emergency notification response
+         *
+         *     ``successful_count`` counts messages the Telegram Bot API accepted. It is 0
+         *     when no contact is linked — the caller must not show "help is on the way"
+         *     in that case, see ``results`` for per-contact reasons.
          */
         EmergencyNotifyResponse: {
             /** Failed Count */
@@ -3823,7 +3927,16 @@ export type components = {
          * @description Result of workout start/end notify-to-contacts action
          */
         EmergencyWorkoutNotifyResponse: {
-            /** Contacts Notified */
+            /**
+             * Contacts Failed
+             * @description Selected contacts that could not be reached (not linked or delivery error).
+             * @default 0
+             */
+            contacts_failed: number;
+            /**
+             * Contacts Notified
+             * @description Contacts the message was actually delivered to.
+             */
             contacts_notified?: number | null;
             /** Message */
             message: string;
@@ -4289,6 +4402,29 @@ export type components = {
          */
         HealthDashboardPeriod: "7d" | "30d" | "90d" | "1y";
         /**
+         * HealthDataConsent
+         * @description Proof that the user accepted a specific version of the legal texts.
+         */
+        HealthDataConsent: {
+            /**
+             * Accepted At
+             * Format: date-time
+             * @description When the consent was recorded (UTC).
+             */
+            accepted_at: string;
+            /**
+             * Source
+             * @description Where the consent was collected.
+             * @default onboarding
+             */
+            source: string;
+            /**
+             * Version
+             * @description Version of the consent text the user accepted.
+             */
+            version: string;
+        };
+        /**
          * HealthStatsResponse
          * @description Health statistics response
          */
@@ -4478,10 +4614,21 @@ export type components = {
          * @description Request model for first-login onboarding.
          */
         OnboardingRequest: {
+            /**
+             * Consent Version
+             * @description Version of the consent text the user saw; defaults to the current one.
+             */
+            consent_version?: string | null;
             /** @description Current training level. */
             experience_level: components["schemas"]["ExperienceLevel"];
             /** @description Primary fitness objective. */
             fitness_goal: components["schemas"]["FitnessGoal"];
+            /**
+             * Health Data Consent
+             * @description True when the user ticked the consent box for processing health data (pulse, glucose, weight, sleep, wellbeing). Without it onboarding is rejected.
+             * @default false
+             */
+            health_data_consent: boolean;
         };
         /**
          * OnboardingResponse
@@ -5670,6 +5817,8 @@ export type components = {
              * @description Date of birth (string; format depends on client).
              */
             birth_date?: string | null;
+            /** @description Recorded health-data consent (version + timestamp) for audit. */
+            consent?: components["schemas"]["HealthDataConsent"] | null;
             /**
              * Current Weight
              * @description Current body weight in kilograms.
@@ -10145,6 +10294,68 @@ export interface operations {
             };
         };
     };
+    unlink_emergency_contact_api_v1_system_emergency_contact__contact_id__link_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmergencyContactResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_emergency_contact_link_code_api_v1_system_emergency_contact__contact_id__link_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmergencyContactLinkCodeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     log_emergency_event_api_v1_system_emergency_log_post: {
         parameters: {
             query?: never;
@@ -10656,7 +10867,7 @@ export interface operations {
             };
         };
     };
-    list_coach_access_api_v1_users_coach_access_get: {
+    coach_access_unavailable_api_v1_users_coach_access_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -10676,7 +10887,7 @@ export interface operations {
             };
         };
     };
-    generate_coach_access_api_v1_users_coach_access_generate_post: {
+    coach_access_unavailable_api_v1_users_coach_access_generate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -10696,13 +10907,11 @@ export interface operations {
             };
         };
     };
-    revoke_coach_access_api_v1_users_coach_access__access_id__delete: {
+    coach_access_unavailable_api_v1_users_coach_access__access_id__delete: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                access_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -10713,15 +10922,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };
