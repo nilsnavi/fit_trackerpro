@@ -1,5 +1,11 @@
+from datetime import date, timedelta
+
 import pytest
 from httpx import AsyncClient
+
+from app.application.analytics_service import AnalyticsService
+from app.domain.workout_log import WorkoutLog
+from app.settings import settings
 
 
 @pytest.mark.unit
@@ -50,13 +56,71 @@ async def test_profile_patch_persists_between_requests(authenticated_client: Asy
 
 @pytest.mark.unit
 async def test_get_user_stats(authenticated_client: AsyncClient):
-    """Stats endpoint returns analytics-backed shape."""
+    """Stats endpoint returns analytics-backed shape without untracked calories."""
     response = await authenticated_client.get("/api/v1/users/me/stats")
     assert response.status_code == 200
     data = response.json()
     assert "total_workouts" in data
     assert "total_duration" in data
     assert "current_streak" in data
+    assert "active_days" in data
+    # WS2-3: калории не считаются — поля в ответе нет, а не нулевая заглушка.
+    assert "total_calories" not in data
+
+
+async def _seed_workout_history(db_session, user_id: int) -> None:
+    """Два активных дня внутри 30-дневного окна и один — за его пределами."""
+    today = date.today()
+    db_session.add_all(
+        [
+            WorkoutLog(user_id=user_id, date=today, duration=45, status="completed"),
+            # Вторая тренировка в тот же день не должна удваивать активный день.
+            WorkoutLog(user_id=user_id, date=today, duration=30, status="completed"),
+            WorkoutLog(user_id=user_id, date=today - timedelta(days=2), duration=50, status="completed"),
+            WorkoutLog(user_id=user_id, date=today - timedelta(days=45), duration=60, status="completed"),
+        ]
+    )
+    await db_session.commit()
+
+
+@pytest.mark.unit
+async def test_get_active_days_counts_distinct_days(authenticated_client: AsyncClient, db_session):
+    """WS2-3: active_days — уникальные дни с тренировками за окно, а не заглушка."""
+    me = await authenticated_client.get("/api/v1/users/me")
+    assert me.status_code == 200, me.text
+    user_id = me.json()["id"]
+
+    service = AnalyticsService(db_session)
+    assert await service.get_active_days(user_id=user_id, period="30d") == 0
+
+    await _seed_workout_history(db_session, user_id)
+
+    assert await service.get_active_days(user_id=user_id, period="30d") == 2
+    assert await service.get_active_days(user_id=user_id, period="all") == 3
+
+
+@pytest.mark.integration
+async def test_user_stats_active_days_reflects_history(
+    authenticated_client: AsyncClient,
+    db_session,
+):
+    """WS2-3: эндпоинт статистики отдаёт реальные дни/объём, а не нули."""
+    if str(settings.DATABASE_URL).startswith("sqlite"):
+        pytest.skip(
+            "Stats summary relies on PostgreSQL JSON/CTE features; skipped on SQLite."
+        )
+
+    me = await authenticated_client.get("/api/v1/users/me")
+    assert me.status_code == 200, me.text
+    await _seed_workout_history(db_session, me.json()["id"])
+
+    response = await authenticated_client.get("/api/v1/users/me/stats")
+    assert response.status_code == 200, response.text
+    data = response.json()
+
+    assert data["active_days"] == 2
+    assert data["total_workouts"] == 3
+    assert data["total_duration"] == 125
 
 
 @pytest.mark.unit

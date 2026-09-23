@@ -85,22 +85,21 @@ async def get_user_stats(
     db: AsyncSession = Depends(get_async_db),
 ):
     """
-    Lightweight user stats for `ProfilePage`.
+    Lightweight user stats for `ProfilePage` (окно — 30 дней).
 
-    The frontend expects:
-      { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-
-    For MVP we map from analytics summary; calories are not tracked yet.
+    Значения считаются по реальной истории: `active_days` — уникальные дни
+    с тренировками, остальное — из сводки аналитики. Калории не считаются,
+    поэтому поля `total_calories` в ответе нет.
     """
     analytics = AnalyticsService(db)
     summary = await analytics.get_analytics_summary(user_id=current_user.id, period="30d")
+    active_days = await analytics.get_active_days(user_id=current_user.id, period="30d")
     return {
-        "active_days": 0,
+        "active_days": active_days,
         "total_workouts": int(summary.total_workouts or 0),
         "current_streak": int(summary.current_streak or 0),
         "longest_streak": int(summary.longest_streak or 0),
         "total_duration": int(summary.total_duration or 0),
-        "total_calories": 0,
     }
 
 

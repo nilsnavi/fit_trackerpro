@@ -1887,12 +1887,11 @@ export type paths = {
         };
         /**
          * Get User Stats
-         * @description Lightweight user stats for `ProfilePage`.
+         * @description Lightweight user stats for `ProfilePage` (окно — 30 дней).
          *
-         *     The frontend expects:
-         *       { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-         *
-         *     For MVP we map from analytics summary; calories are not tracked yet.
+         *     Значения считаются по реальной истории: `active_days` — уникальные дни
+         *     с тренировками, остальное — из сводки аналитики. Калории не считаются,
+         *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_me_stats_get"];
         put?: never;
@@ -1912,12 +1911,11 @@ export type paths = {
         };
         /**
          * Get User Stats
-         * @description Lightweight user stats for `ProfilePage`.
+         * @description Lightweight user stats for `ProfilePage` (окно — 30 дней).
          *
-         *     The frontend expects:
-         *       { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-         *
-         *     For MVP we map from analytics summary; calories are not tracked yet.
+         *     Значения считаются по реальной истории: `active_days` — уникальные дни
+         *     с тренировками, остальное — из сводки аналитики. Калории не считаются,
+         *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_stats_get"];
         put?: never;

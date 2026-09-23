@@ -18357,7 +18357,7 @@
     },
     "/api/v1/users/me/stats": {
       "get": {
-        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "description": "Lightweight user stats for `ProfilePage` (окно — 30 дней).\n\nЗначения считаются по реальной истории: `active_days` — уникальные дни\nс тренировками, остальное — из сводки аналитики. Калории не считаются,\nпоэтому поля `total_calories` в ответе нет.",
         "operationId": "get_user_stats_api_v1_users_me_stats_get",
         "responses": {
           "200": {
@@ -18382,7 +18382,7 @@
     },
     "/api/v1/users/stats": {
       "get": {
-        "description": "Lightweight user stats for `ProfilePage`.\n\nThe frontend expects:\n  { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }\n\nFor MVP we map from analytics summary; calories are not tracked yet.",
+        "description": "Lightweight user stats for `ProfilePage` (окно — 30 дней).\n\nЗначения считаются по реальной истории: `active_days` — уникальные дни\nс тренировками, остальное — из сводки аналитики. Калории не считаются,\nпоэтому поля `total_calories` в ответе нет.",
         "operationId": "get_user_stats_api_v1_users_stats_get",
         "responses": {
           "200": {

@@ -176,6 +176,10 @@ def compute_intensity_weekly_chart(
     return points
 
 
+#: Окна периодов для «лёгкой» статистики профиля (WS2-3).
+_PERIOD_DAYS: dict[str, int] = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 36500}
+
+
 class AnalyticsService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = AnalyticsRepository(db)
@@ -1121,9 +1125,15 @@ class AnalyticsService:
             workouts_with_rpe_count=int(intensity_metrics.get("workouts_with_rpe_count") or 0),
         )
 
+    async def get_active_days(self, user_id: int, period: str = "30d") -> int:
+        """Уникальные дни с тренировками за период — для «лёгкой» статистики профиля (WS2-3)."""
+        days = _PERIOD_DAYS.get(period, 30)
+        date_from = date.today() - timedelta(days=days)
+        workout_dates = await self.repository.get_workout_dates(user_id=user_id, date_from=date_from)
+        return len(workout_dates)
+
     async def get_analytics_summary(self, user_id: int, period: str) -> AnalyticsSummaryResponse:
-        days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 36500}
-        days = days_map.get(period, 30)
+        days = _PERIOD_DAYS.get(period, 30)
         date_from = date.today() - timedelta(days=days)
 
         muscle_signals_enabled = await FeatureFlagsRepository(self.repository.db).is_enabled(
