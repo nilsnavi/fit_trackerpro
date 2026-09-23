@@ -54,7 +54,7 @@
     "lucide-react": "^0.330.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0",
+    "react-router-dom": "^7.18.4",
     "recharts": "^3.8.1",
     "tailwind-merge": "^2.2.1",
     "zustand": "^4.5.0"
@@ -87,5 +87,9 @@
     "vite": "^5.1.0",
     "vite-plugin-mkcert": "^1.17.3",
     "vite-plugin-pwa": "^1.2.0"
+  },
+  "overrides": {
+    "valibot": "1.5.0",
+    "minimatch": "^10.1.1"
   }
 }

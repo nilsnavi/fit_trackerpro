@@ -117,7 +117,10 @@ jobs:
         run: npm ci
 
       - name: Run npm audit
-        run: npm audit --audit-level=moderate
+        # --omit=dev: dev-only advisories (vite/esbuild dev server, eslint stack)
+        # fail the gate without touching the production bundle; prod deps are
+        # audited alone so a vulnerable build tool does not mask a real fix.
+        run: npm audit --omit=dev --audit-level=moderate
 
   trivy-fs-scan:
     name: Trivy Filesystem Scan

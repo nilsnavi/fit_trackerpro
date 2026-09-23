@@ -29,6 +29,28 @@ if (typeof (globalThis as unknown as Record<string, unknown>).crypto === 'undefi
     }
 }
 
+// Polyfill TextEncoder/TextDecoder (required by react-router v7, which references
+// them at module scope; jsdom 20 does not expose them).
+try {
+    if (typeof (globalThis as unknown as Record<string, unknown>).TextEncoder === 'undefined') {
+        const nodeUtil = require('util') as typeof import('util')
+        Object.defineProperty(globalThis, 'TextEncoder', {
+            value: nodeUtil.TextEncoder,
+            configurable: true,
+            writable: true,
+            enumerable: false,
+        })
+        Object.defineProperty(globalThis, 'TextDecoder', {
+            value: nodeUtil.TextDecoder,
+            configurable: true,
+            writable: true,
+            enumerable: false,
+        })
+    }
+} catch {
+    // ignore
+}
+
 // Polyfill IndexedDB for jsdom (needed for offline persistence tests).
 try {
     if (typeof (globalThis as unknown as Record<string, unknown>).indexedDB === 'undefined') {
