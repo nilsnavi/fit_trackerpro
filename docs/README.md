@@ -35,6 +35,12 @@
   - implementation notes: `./testing/golden-path-e2e-implementation.md`
   - completion checklist (архив): `./archive/e2e-completion-checklist.md`
 
+## Legal & Data
+
+- **Данные и приватность (процедуры, согласие, ответственные)**: `./legal/privacy-and-data.md`
+- Тексты документов для пользователя живут в приложении: `frontend/src/features/legal/content.ts`
+  (версии обязаны совпадать с `backend/app/core/legal.py`)
+
 ## Roadmap
 
 - **Roadmap index**: `./roadmap/README.md`

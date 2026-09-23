@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import {
     authApi,
@@ -7,6 +8,7 @@ import {
 } from '@features/profile/api/authApi'
 import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { getErrorMessage } from '@shared/errors'
+import { HEALTH_DATA_CONSENT_VERSION } from '@features/legal/versions'
 import { Button } from '@shared/ui/Button'
 import { Card } from '@shared/ui/Card'
 import { getAuthTokens } from '@/stores/authStore'
@@ -21,6 +23,8 @@ export type OnboardingScreenProps = {
 async function saveOnboardingFetch(payload: {
     fitness_goal: FitnessGoal
     experience_level: ExperienceLevel
+    health_data_consent: boolean
+    consent_version: string
 }): Promise<void> {
     const { accessToken } = getAuthTokens()
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -52,6 +56,8 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
     const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('beginner')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    // Согласие на обработку данных о здоровье обязательно (WS1-14).
+    const [consentAccepted, setConsentAccepted] = useState(false)
 
     const goalOptions = useMemo(
         () => [
@@ -73,6 +79,10 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
 
     const handleSubmit = useCallback(async () => {
         setError(null)
+        if (!consentAccepted) {
+            setError('Отметьте согласие на обработку данных о здоровье — без него приложение не может их хранить.')
+            return
+        }
         setIsSubmitting(true)
         try {
             const trimmed = displayName.trim()
@@ -85,7 +95,12 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
                 }
             }
 
-            const payload = { fitness_goal: fitnessGoal, experience_level: experienceLevel }
+            const payload = {
+                fitness_goal: fitnessGoal,
+                experience_level: experienceLevel,
+                health_data_consent: consentAccepted,
+                consent_version: HEALTH_DATA_CONSENT_VERSION,
+            }
             try {
                 await authApi.saveOnboarding(payload)
             } catch {
@@ -97,7 +112,7 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
         } finally {
             setIsSubmitting(false)
         }
-    }, [displayName, experienceLevel, fitnessGoal, onDone])
+    }, [displayName, experienceLevel, fitnessGoal, consentAccepted, onDone])
 
     return (
         <div className="flex min-h-dvh items-center justify-center p-4">
@@ -167,6 +182,32 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
                     </div>
                 </fieldset>
 
+                <label className="mt-4 flex items-start gap-2 rounded-lg border border-border px-3 py-2">
+                    <input
+                        type="checkbox"
+                        name="health_data_consent"
+                        checked={consentAccepted}
+                        onChange={(e) => setConsentAccepted(e.target.checked)}
+                        className="mt-1"
+                        required
+                    />
+                    <span className="text-xs leading-relaxed text-telegram-hint">
+                        Я согласен(на) на{' '}
+                        <Link
+                            to="/legal/consent"
+                            className="text-primary underline"
+                            data-testid="consent-link"
+                        >
+                            обработку данных о здоровье
+                        </Link>{' '}
+                        (пульс, глюкоза, вес, сон, самочувствие) и принимаю{' '}
+                        <Link to="/legal/privacy" className="text-primary underline">
+                            политику конфиденциальности
+                        </Link>
+                        . Версия документа: {HEALTH_DATA_CONSENT_VERSION}.
+                    </span>
+                </label>
+
                 {error && (
                     <p className="mt-3 text-sm text-danger" role="alert">
                         {error}
@@ -176,8 +217,10 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
                 <Button
                     type="button"
                     className="mt-4 w-full"
+                    disabled={!consentAccepted}
                     isLoading={isSubmitting}
                     onClick={() => void handleSubmit()}
+                    data-testid="onboarding-submit"
                 >
                     Сохранить и продолжить
                 </Button>

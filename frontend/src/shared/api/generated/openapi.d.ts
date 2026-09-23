@@ -4141,6 +4141,29 @@ export type components = {
          */
         HealthDashboardPeriod: "7d" | "30d" | "90d" | "1y";
         /**
+         * HealthDataConsent
+         * @description Proof that the user accepted a specific version of the legal texts.
+         */
+        HealthDataConsent: {
+            /**
+             * Accepted At
+             * Format: date-time
+             * @description When the consent was recorded (UTC).
+             */
+            accepted_at: string;
+            /**
+             * Source
+             * @description Where the consent was collected.
+             * @default onboarding
+             */
+            source: string;
+            /**
+             * Version
+             * @description Version of the consent text the user accepted.
+             */
+            version: string;
+        };
+        /**
          * HealthStatsResponse
          * @description Health statistics response
          */
@@ -4330,10 +4353,21 @@ export type components = {
          * @description Request model for first-login onboarding.
          */
         OnboardingRequest: {
+            /**
+             * Consent Version
+             * @description Version of the consent text the user saw; defaults to the current one.
+             */
+            consent_version?: string | null;
             /** @description Current training level. */
             experience_level: components["schemas"]["ExperienceLevel"];
             /** @description Primary fitness objective. */
             fitness_goal: components["schemas"]["FitnessGoal"];
+            /**
+             * Health Data Consent
+             * @description True when the user ticked the consent box for processing health data (pulse, glucose, weight, sleep, wellbeing). Without it onboarding is rejected.
+             * @default false
+             */
+            health_data_consent: boolean;
         };
         /**
          * OnboardingResponse
@@ -5075,6 +5109,8 @@ export type components = {
              * @description Date of birth (string; format depends on client).
              */
             birth_date?: string | null;
+            /** @description Recorded health-data consent (version + timestamp) for audit. */
+            consent?: components["schemas"]["HealthDataConsent"] | null;
             /**
              * Current Weight
              * @description Current body weight in kilograms.

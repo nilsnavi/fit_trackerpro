@@ -96,3 +96,11 @@ Checklist for releasing current FitTracker Pro stack.
 - [ ] `API_URL` and `VITE_API_URL` include `/api/v1`
 - [ ] `TELEGRAM_BOT_USERNAME` is set for frontend runtime config
 - [ ] `NGINX_SSL_DIR` and `BACKUPS_DIR` point to host directories outside the repository when running production
+
+## 11) Legal minimum (WS1-14)
+
+- [ ] Тексты политики конфиденциальности и согласия на обработку данных о здоровье доступны по `/legal/privacy` и `/legal/consent`
+- [ ] Версии документов совпадают: `frontend/src/features/legal/versions.ts` ↔ `backend/app/core/legal.py`
+- [ ] Онбординг без согласия отклоняется (400 `consent_required`), согласие сохраняется в `users.profile.consent` с версией и датой
+- [ ] В `docs/legal/privacy-and-data.md` заполнен оператор персональных данных и канал для запросов субъектов данных
+- [ ] Ссылка на политику добавлена в описание бота (@BotFather)

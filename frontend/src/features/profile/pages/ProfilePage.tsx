@@ -33,6 +33,7 @@ import {
     ScanLine
 } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
+import { Link } from 'react-router-dom';
 import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
@@ -740,6 +741,30 @@ export const ProfilePage: React.FC = () => {
 
             {/* Emergency contacts (safety feature) */}
             <EmergencyContactsSection />
+
+            {/* Legal documents */}
+            <div className="bg-telegram-secondary-bg rounded-2xl p-4 space-y-2">
+                <h3 className="text-sm font-semibold text-telegram-text">
+                    Данные и приватность
+                </h3>
+                <Link
+                    to="/legal/privacy"
+                    className="flex items-center justify-between text-sm text-telegram-text"
+                >
+                    Политика конфиденциальности
+                    <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                </Link>
+                <Link
+                    to="/legal/consent"
+                    className="flex items-center justify-between text-sm text-telegram-text"
+                >
+                    Согласие на обработку данных о здоровье
+                    <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                </Link>
+                <p className="text-[11px] text-telegram-hint">
+                    Экспорт и удаление данных — в разделе ниже.
+                </p>
+            </div>
 
             {/* Account Actions */}
             <div className="space-y-3">
