@@ -4,8 +4,8 @@ JWT encoding/decoding and HTTP Bearer scheme (no FastAPI route dependencies).
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import jwt
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
 
 from app.settings import settings
 
@@ -68,7 +68,7 @@ def verify_token(token: str, token_type: str = "access") -> Optional[int]:
 
         return user_id
 
-    except (JWTError, ValueError, TypeError):
+    except (jwt.PyJWTError, ValueError, TypeError):
         return None
 
 
