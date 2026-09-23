@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires -- у ESLint 8 нет своих типов, конфиг берём тем же модулем, что и CLI */
 import * as path from 'node:path'
 
 /**

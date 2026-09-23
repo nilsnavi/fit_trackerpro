@@ -109,6 +109,14 @@ class ChallengeForbiddenError(DomainError):
     default_message = "Forbidden"
 
 
+class ConsentRequiredError(DomainError):
+    """Health-data processing was requested without the user's consent."""
+
+    code = "consent_required"
+    http_status = 400
+    default_message = "Consent to health data processing is required"
+
+
 class NotImplementedFeatureError(DomainError):
     """Feature exists in API but is not implemented yet."""
 

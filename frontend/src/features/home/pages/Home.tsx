@@ -12,6 +12,7 @@ import { useWorkoutSessionDraftStore } from '@/state/local'
 import { useHideAppShellHeader, useHideAppShellNavigation } from '@app/layouts/AppShellLayoutContext'
 import { cn } from '@shared/lib/cn'
 import { StartWorkoutSheet } from '@features/home/components/StartWorkoutSheet'
+import { EmergencyButton } from '@features/emergency/components'
 import type { HomeWorkoutTemplate } from '@shared/types'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
@@ -452,6 +453,8 @@ export function Home() {
                         </div>
                     </div>
                 </section>
+                <EmergencyButton className="mt-[12px]" />
+
                 <div className="mt-auto flex justify-center pt-8">
                     <div className="h-[5px] w-[155px] rounded-full bg-white" />
                 </div>

@@ -50,7 +50,8 @@ import type {
     BodyMeasurementType,
 } from '@features/health/types/metrics';
 import { useProfile } from '@features/profile/hooks/useProfile';
-import { ProfileShowcase } from '@features/achievements/components';
+import { ProfileShowcase } from '@features/achievements/components'
+import { EmergencyContactsSection } from '@features/emergency/components';
 import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
 
 // ============================================
@@ -753,6 +754,33 @@ export const ProfilePage: React.FC = () => {
                     </div>
                     <ChevronRight className="w-5 h-5 text-telegram-hint" />
                 </div>
+            </div>
+
+            {/* Emergency contacts (safety feature) */}
+            <EmergencyContactsSection />
+
+            {/* Legal documents */}
+            <div className="bg-telegram-secondary-bg rounded-2xl p-4 space-y-2">
+                <h3 className="text-sm font-semibold text-telegram-text">
+                    Данные и приватность
+                </h3>
+                <Link
+                    to="/legal/privacy"
+                    className="flex items-center justify-between text-sm text-telegram-text"
+                >
+                    Политика конфиденциальности
+                    <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                </Link>
+                <Link
+                    to="/legal/consent"
+                    className="flex items-center justify-between text-sm text-telegram-text"
+                >
+                    Согласие на обработку данных о здоровье
+                    <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                </Link>
+                <p className="text-[11px] text-telegram-hint">
+                    Экспорт и удаление данных — в разделе ниже.
+                </p>
             </div>
 
             {/* Account Actions */}
