@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires -- политика границы объявлена в CommonJS-модуле: его же требует конфиг ESLint */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as ts from 'typescript'
