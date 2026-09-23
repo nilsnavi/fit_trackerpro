@@ -8,6 +8,7 @@ import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery'
 import { useUserStatsQuery } from '@features/profile/hooks/useUserStatsQuery'
 import { useHomeWorkoutTemplatesQuery } from '@features/home/hooks'
+import { HomeHealthSection } from '@features/home/components'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { useHideAppShellHeader, useHideAppShellNavigation } from '@app/layouts/AppShellLayoutContext'
 import { cn } from '@shared/lib/cn'
@@ -411,6 +412,8 @@ export function Home() {
                         )}
                     </div>
                 </section>
+
+                <HomeHealthSection />
 
                 <section className="mt-[12px] rounded-[12px] border border-[#171e28] bg-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]">
                     <div className="flex items-center justify-between">

@@ -1,3 +1,4 @@
+export { HomeHealthSection } from './HomeHealthSection'
 export { GlucoseWidget } from './GlucoseWidget'
 export { WellnessWidget } from './WellnessWidget'
 export { WaterWidget } from './WaterWidget'
