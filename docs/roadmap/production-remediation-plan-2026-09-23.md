@@ -1,7 +1,7 @@
 # План исправлений до продакшена (Production Remediation Plan)
 
 **Дата:** 2026-09-23
-**Базовая точка:** `main` @ `e8fee2e` (ветка работы: `arena/01a0b3cd-fit-trackerpro`)
+**Базовая точка:** `main` @ `e8fee2e`; 2026-09-23 в рабочую ветку влит `main` @ `3765b93` (ветка работы: `arena/01a0b3cd-fit-trackerpro`)
 **Источник проблем:** `docs/reports/production-gap-analysis-2026-09-18.md`
 **Цель плана:** довести приложение от «код готов, но не запускался» до «стабильно работает в проде и обслуживается».
 
@@ -20,12 +20,17 @@
 | WS1-12 | Секрет Telegram-вебхука + бот в проде | ✅ сделано | `X-Telegram-Bot-Api-Secret-Token` проверяется через `hmac.compare_digest` до парсинга; `secret_token` в `set_webhook`; +4 HTTP-теста и +8 тестов конфигурации; `validate-production-env.mjs` требует секрет при включённом боте |
 | WS1-13 | Emergency: реальная доставка вместо заглушки | ✅ сделано | Контакт получает уведомление только после подключения в боте (`/link <код>` или t.me-ссылка); ответ API содержит результат по каждому контакту, `successful_count` считает только принятые Bot API сообщения; UI («Мне плохо» на главной + раздел контактов в профиле) показывает реальный статус и не обещает вызов скорой. Проверка: `grep -rn "экстренной помощи отправлен" frontend/src` пусто; backend 320 тестов, frontend 51 suite / 320 тестов |
 | WS1-14 | Правовой минимум: политика и согласие | ✅ сделано | Страницы `/legal/privacy` и `/legal/consent`, обязательный чек-бокс в онбординге (без него кнопка выключена, а бэкенд отвечает 400 `consent_required`), согласие пишется в `users.profile.consent` с версией текста и датой (дата не перезаписывается при повторном онбординге), процедуры и ответственные — `docs/legal/privacy-and-data.md`. Проверка: `pytest app/tests/test_health_data_consent.py` (4 теста), `jest onboardingConsent` (4 теста) |
-| WS1-5 | Обновление dev-цепочки (vite/eslint/openapi-tooling) | ⏳ не начато | Требует отдельного PR: мажорный апгрейд vite/eslint |
-| WS1-6…WS1-11, WS1-15 | Инфраструктура, staging, релиз | ⏳ не начато | Требуются доступы владельца (сервер, secrets, GitHub Environments) |
+| WS1-5 | Обновление dev-цепочки (vite/eslint/openapi-tooling) | ✅ сделано | `vite` 5.4.21 → **7.3.6**, `@typescript-eslint/*` 6.21.0 → **8.70.1**, override `js-yaml@^4.3.2` для `@redocly/openapi-core`; **`npm audit` → 0 уязвимостей** (было 9 high / 1 moderate), `tsc`/`eslint`/`jest` 70 suites / 482 теста, `build` + `bundle:check` (entry 119.42 KiB из 120), `api:contract:check` — зелёные. eslint 8.57.1 оставлен осознанно: flat config (eslint 9) — отдельная задача |
+| WS1-6 | `E2E Smoke Real API`: честный пропуск без секретов | ✅ сделано (вариант B) | Workflow не падает, когда staging не настроен: шаг «Check smoke environment» выставляет `configured=false`, все прогонные шаги под `if:`, в конце — `notice`/`warning` и статус skipped. Полный прогон (вариант A) включается секретами `E2E_*` без правок workflow — процедура и ротация `init_data` в `docs/testing/real-api-smoke.md`. Проверка: YAML валиден, поведение описано в job summary |
+| WS1-7…WS1-11, WS1-15 | Инфраструктура, staging, релиз | ⏳ не начато | Требуются доступы владельца (сервер, secrets, GitHub Environments) |
 
 **Что это значит для CI.** После мержа: `Security` должен стать зелёным (прод-аудит чист, Python-аудит чист, полный аудит — report-only). `Test` нужно подтвердить в CI: локально зелёный, но 6 E2E-наборов (Playwright) в песочнице не запускались — браузер не скачивается.
 
 **Изменение контракта.** Docstring `/telegram/webhook` попал в OpenAPI, поэтому `frontend/src/shared/api/generated/*` перегенерированы (`npm run api:types:generate`); `npm run api:contract:check` проходит.
+
+**Найдено в процессе (сведение с main).** 1) WS1-13 и SPEC-006 завели миграции с одним и тем же `revision id` (`n7o8p9q0r1s2`) — в merge-коммите миграция экстренных контактов перевешена на актуальный head `o8p9q0r1s2t3` и переименована в `p9q0r1s2t3u4_emergency_contact_telegram_link.py`; это чинило падавшие в CI «DB migrations (fresh/rollback)». 2) Новый `app/infrastructure/telegram_sender.py` ронял baseline покрытия пакета `infrastructure` — закрыт юнит-тестами (`app/tests/test_telegram_sender.py`). 3) Экран онбординга переехал на `useOnboardingSubmit`, поэтому согласие WS1-14 живёт в хуке. 4) Архитектурный тест `networkBoundary` ссылался на удалённый `EmergencyMode.tsx` — заменён на `EmergencyContactsSection.tsx`.
+
+**Состояние CI.** Конфликт с `main` (был в `OnboardingScreen.tsx`) не давал GitHub создать merge-commit, поэтому прогоны вообще не запускались — после merge PR mergeable, а «Test» зелёный по всем джобам, кроме backend-baseline покрытия, который закрыт коммитом с тестами.
 
 **Найдено в процессе.** Апгрейд на react-router v7 ломает Jest-окружение: модуль обращается к `TextEncoder` на этапе импорта, а jsdom его не предоставляет. Полифилл добавлен в `frontend/src/__mocks__/jest.globals.ts`; относительные редиректы (`Navigate to=".." relative="path"`) закрыты тестом `workoutsRelativeRedirects.test.tsx`.
 
