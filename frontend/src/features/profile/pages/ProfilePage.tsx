@@ -49,7 +49,8 @@ import type {
     BodyMeasurementType,
 } from '@features/health/types/metrics';
 import { useProfile } from '@features/profile/hooks/useProfile';
-import { ProfileShowcase } from '@features/achievements/components';
+import { ProfileShowcase } from '@features/achievements/components'
+import { EmergencyContactsSection } from '@features/emergency/components';
 import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
 
 // ============================================
@@ -736,6 +737,9 @@ export const ProfilePage: React.FC = () => {
                     <ChevronRight className="w-5 h-5 text-telegram-hint" />
                 </div>
             </div>
+
+            {/* Emergency contacts (safety feature) */}
+            <EmergencyContactsSection />
 
             {/* Account Actions */}
             <div className="space-y-3">

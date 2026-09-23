@@ -3004,6 +3004,58 @@
         "title": "EmergencyContactCreate",
         "type": "object"
       },
+      "EmergencyContactLinkCodeResponse": {
+        "description": "One-time code that binds a contact's Telegram account to this record",
+        "properties": {
+          "code": {
+            "maxLength": 16,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          },
+          "command": {
+            "description": "Exact message the contact must send to the bot.",
+            "maxLength": 64,
+            "title": "Command",
+            "type": "string"
+          },
+          "contact_id": {
+            "title": "Contact Id",
+            "type": "integer"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "deep_link": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "t.me link that prefills the command; None if TELEGRAM_BOT_USERNAME is unset.",
+            "title": "Deep Link"
+          },
+          "is_linked": {
+            "default": false,
+            "description": "True when the contact is already linked (a new code re-links them).",
+            "title": "Is Linked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "contact_id",
+          "contact_name",
+          "code",
+          "command"
+        ],
+        "title": "EmergencyContactLinkCodeResponse",
+        "type": "object"
+      },
       "EmergencyContactListResponse": {
         "description": "List of emergency contacts response",
         "properties": {
@@ -3061,6 +3113,25 @@
           "is_active": {
             "title": "Is Active",
             "type": "boolean"
+          },
+          "is_linked": {
+            "default": false,
+            "description": "True when the contact linked their Telegram account, i.e. can receive alerts. Contacts without a linked account cannot be notified — the API says so instead of reporting a fake success.",
+            "title": "Is Linked",
+            "type": "boolean"
+          },
+          "linked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the contact linked their Telegram account.",
+            "title": "Linked At"
           },
           "notify_on_emergency": {
             "title": "Notify On Emergency",
@@ -3353,7 +3424,7 @@
         "type": "object"
       },
       "EmergencyNotifyResponse": {
-        "description": "Emergency notification response",
+        "description": "Emergency notification response\n\n``successful_count`` counts messages the Telegram Bot API accepted. It is 0\nwhen no contact is linked — the caller must not show \"help is on the way\"\nin that case, see ``results`` for per-contact reasons.",
         "properties": {
           "failed_count": {
             "title": "Failed Count",
@@ -3454,6 +3525,14 @@
       "EmergencyWorkoutNotifyResponse": {
         "description": "Result of workout start/end notify-to-contacts action",
         "properties": {
+          "contacts_failed": {
+            "default": 0,
+            "description": "Selected contacts that could not be reached (not linked or delivery error).",
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Contacts Failed",
+            "type": "integer"
+          },
           "contacts_notified": {
             "anyOf": [
               {
@@ -3465,6 +3544,7 @@
                 "type": "null"
               }
             ],
+            "description": "Contacts the message was actually delivered to.",
             "title": "Contacts Notified"
           },
           "message": {
@@ -14983,6 +15063,102 @@
           }
         ],
         "summary": "Update Emergency Contact",
+        "tags": [
+          "Emergency"
+        ]
+      }
+    },
+    "/api/v1/system/emergency/contact/{contact_id}/link": {
+      "delete": {
+        "description": "Remove the delivery channel of a contact (e.g. they changed accounts).",
+        "operationId": "unlink_emergency_contact_api_v1_system_emergency_contact__contact_id__link_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyContactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlink Emergency Contact",
+        "tags": [
+          "Emergency"
+        ]
+      }
+    },
+    "/api/v1/system/emergency/contact/{contact_id}/link-code": {
+      "post": {
+        "description": "Invite code that binds a contact's Telegram account to this record.\n\nEmergency messages can only be delivered to chats that contacted the bot,\nso a contact is reachable after linking (``/link <code>`` or the t.me link).",
+        "operationId": "issue_emergency_contact_link_code_api_v1_system_emergency_contact__contact_id__link_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyContactLinkCodeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Issue Emergency Contact Link Code",
         "tags": [
           "Emergency"
         ]

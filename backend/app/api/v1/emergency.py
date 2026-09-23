@@ -14,6 +14,7 @@ from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.emergency import (
     EmergencyContactCreate,
+    EmergencyContactLinkCodeResponse,
     EmergencyContactListResponse,
     EmergencyContactResponse,
     EmergencyContactUpdate,
@@ -81,6 +82,38 @@ async def delete_emergency_contact(
     service = EmergencyService(db)
     await service.delete_contact(user_id=current_user.id, contact_id=contact_id)
     return None
+
+
+@router.post(
+    "/contact/{contact_id}/link-code",
+    response_model=EmergencyContactLinkCodeResponse,
+)
+async def issue_emergency_contact_link_code(
+    contact_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """Invite code that binds a contact's Telegram account to this record.
+
+    Emergency messages can only be delivered to chats that contacted the bot,
+    so a contact is reachable after linking (``/link <code>`` or the t.me link).
+    """
+    service = EmergencyService(db)
+    return await service.issue_link_code(user_id=current_user.id, contact_id=contact_id)
+
+
+@router.delete(
+    "/contact/{contact_id}/link",
+    response_model=EmergencyContactResponse,
+)
+async def unlink_emergency_contact(
+    contact_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """Remove the delivery channel of a contact (e.g. they changed accounts)."""
+    service = EmergencyService(db)
+    return await service.unlink_contact(user_id=current_user.id, contact_id=contact_id)
 
 
 @router.post("/notify", response_model=EmergencyNotifyResponse)

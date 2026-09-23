@@ -45,7 +45,7 @@
 | `POSTGRES_DB` | infrastructure | `docker-compose*.yml`, `backend/.env.production.example`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml`, `.github/workflows/migrate.yml` | `fittracker` / `test` | обязательно |
 | `GITHUB_REPOSITORY` | infrastructure/CI | `docker-compose.prod.yml`, `backend/.env.production.example`, `.github/workflows/deploy-environment.yml` | `owner/repo` | обязательно для prod-образов |
 | `IMAGE_TAG` | infrastructure/CI | `docker-compose.prod.yml`, `backend/.env.production.example`, `.github/workflows/deploy.yml`, `.github/workflows/deploy-environment.yml` | `v1.0.0` / `main-<sha>` | обязательно, не `latest` |
-| `TELEGRAM_BOT_USERNAME` | frontend runtime / CI bridge | `backend/.env.production.example`, `frontend/.env.example`, `docker-compose.prod.yml`, `.github/workflows/deploy-environment.yml` | `your_bot_username` | обязательно для Telegram Mini App |
+| `TELEGRAM_BOT_USERNAME` | backend + frontend runtime / CI bridge | `backend/.env*.example`, `backend/app/settings/config.py`, `frontend/.env.example`, `docker-compose*.yml`, `.github/workflows/deploy-environment.yml` | `your_bot_username` | обязательно для Telegram Mini App; в бэкенде — для invite-ссылок экстренных контактов (`t.me/<bot>?start=link_<код>`) |
 | `NGINX_SSL_DIR` | infrastructure | `docker-compose.prod.yml`, `backend/.env.production.example`, `docs/DEPLOYMENT.md` | `/etc/fittracker-pro/nginx/ssl` | обязательно на prod-хосте; может быть вне repo |
 | `BACKUPS_DIR` | infrastructure | `docker-compose.prod.yml`, `backend/.env.production.example`, `docs/DEPLOYMENT.md` | `/var/backups/fittracker-pro` | рекомендуется/обязательно для backup-процедуры; может быть вне repo |
 

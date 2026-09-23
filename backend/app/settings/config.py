@@ -40,6 +40,8 @@ _TELEGRAM_BOT_TOKEN_RE: Final[re.Pattern[str]] = re.compile(r"^\d+:[A-Za-z0-9_-]
 # Telegram Bot API: secret_token must be 1-256 chars of A-Z, a-z, 0-9, "_" and "-".
 _TELEGRAM_WEBHOOK_SECRET_RE: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9_-]{1,256}$")
 _TELEGRAM_WEBHOOK_SECRET_MIN_LENGTH: Final[int] = 16
+# Telegram bot usernames: 5-32 chars, letters, digits and underscores, must end with "bot".
+_TELEGRAM_BOT_USERNAME_RE: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z][A-Za-z0-9_]{3,30}[Bb][Oo][Tt]$")
 
 
 class Settings(BaseSettings):
@@ -169,6 +171,17 @@ class Settings(BaseSettings):
                 "X-Telegram-Bot-Api-Secret-Token header). Required in production when "
                 "TELEGRAM_BOT_ENABLED=true: without it anyone knowing the URL can post "
                 "fake updates. Allowed characters: A-Z, a-z, 0-9, '_' and '-'."
+            )
+        ),
+    ] = None
+
+    TELEGRAM_BOT_USERNAME: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Bot username without '@'. Used to build t.me deep links, e.g. the "
+                "emergency-contact invite link t.me/<username>?start=link_<code>. "
+                "Optional: without it the app shows the plain '/link <code>' command."
             )
         ),
     ] = None
@@ -323,6 +336,18 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "text"
 
+    @property
+    def telegram_bot_configured(self) -> bool:
+        """True only when a real Bot API token is configured.
+
+        The dev default is a syntactically valid placeholder, so checking the
+        token for emptiness is not enough: sending anything with it would fail
+        with a confusing Telegram error. Callers use this flag to report an
+        honest "bot is not configured" state instead of attempting delivery.
+        """
+        token = (self.TELEGRAM_BOT_TOKEN or "").strip()
+        return bool(token) and token != _DEV_TELEGRAM_BOT_TOKEN
+
     @field_validator(
         "DATABASE_URL",
         "TELEGRAM_BOT_TOKEN",
@@ -454,6 +479,21 @@ class Settings(BaseSettings):
             raise ValueError(
                 "TELEGRAM_WEBHOOK_SECRET may only contain A-Z, a-z, 0-9, '_' and '-' "
                 "(Telegram Bot API requirement)"
+            )
+        return normalized
+
+    @field_validator("TELEGRAM_BOT_USERNAME", mode="before")
+    @classmethod
+    def validate_telegram_bot_username(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip().lstrip("@")
+        if not normalized:
+            return None
+        if not _TELEGRAM_BOT_USERNAME_RE.fullmatch(normalized):
+            raise ValueError(
+                "TELEGRAM_BOT_USERNAME must be a Telegram bot username "
+                "(5-32 characters: letters, digits, underscores), without '@'"
             )
         return normalized
 

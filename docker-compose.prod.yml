@@ -99,6 +99,8 @@ services:
       # /telegram/webhook would accept forged updates (settings reject that combination in production).
       - TELEGRAM_BOT_ENABLED=${TELEGRAM_BOT_ENABLED:-false}
       - TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET:-}
+      # Used to build t.me invite links for emergency contacts (optional).
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-}
     # Readiness probe: checks DB, Redis, and external service connectivity.
     # Container receives traffic only when all dependencies are healthy.
     healthcheck:
