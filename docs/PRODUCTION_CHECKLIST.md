@@ -72,6 +72,7 @@ Checklist for releasing current FitTracker Pro stack.
 - [ ] `POSTGRES_DB`
 - [ ] `SECRET_KEY`
 - [ ] `TELEGRAM_BOT_TOKEN`
+- [ ] `TELEGRAM_WEBHOOK_SECRET` (обязателен при `TELEGRAM_BOT_ENABLED=true`)
 - [ ] `TELEGRAM_WEBAPP_URL`
 - [ ] `ALLOWED_ORIGINS`
 - [ ] `VITE_API_URL`
@@ -89,6 +90,7 @@ Checklist for releasing current FitTracker Pro stack.
 - [ ] `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` are set
 - [ ] `SECRET_KEY` is at least 32 characters
 - [ ] `TELEGRAM_BOT_TOKEN` is set
+- [ ] `TELEGRAM_WEBHOOK_SECRET` is set and at least 16 chars (required when the bot runtime is enabled)
 - [ ] `TELEGRAM_WEBAPP_URL` is HTTPS
 - [ ] `ALLOWED_ORIGINS` contains only HTTPS origins and no `*`
 - [ ] `API_URL` and `VITE_API_URL` include `/api/v1`

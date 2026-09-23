@@ -21,6 +21,7 @@
 | `ANALYTICS_DEFAULT_MAX_DATA_POINTS` | backend | `backend/.env*.example`, `backend/app/settings/config.py` | `120` | опционально |
 | `ANALYTICS_MAX_DATA_POINTS_HARD_LIMIT` | backend | `backend/.env*.example`, `backend/app/settings/config.py` | `365` | опционально |
 | `TELEGRAM_BOT_TOKEN` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml` | `your_bot_token_here` | обязательно для Telegram-функций |
+| `TELEGRAM_WEBHOOK_SECRET` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose.prod.yml`, `.github/workflows/deploy-environment.yml` | — | обязательно в production при `TELEGRAM_BOT_ENABLED=true`: иначе `/telegram/webhook` принимает поддельные updates |
 | `TELEGRAM_WEBAPP_URL` | backend/frontend bridge | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml` | `https://fittrackpro.ru` (prod) | обязательно в prod |
 | `SECRET_KEY` | backend | `backend/.env*.example`, `backend/app/settings/config.py`, `docker-compose*.yml`, `.github/workflows/test.yml`, `.github/workflows/deploy-environment.yml` | `your_secret_key_here...` | обязательно |
 | `ALGORITHM` | backend | `backend/.env.example`, `backend/app/settings/config.py` | `HS256` | опционально |
@@ -97,6 +98,7 @@
 - `POSTGRES_DB`
 - `SECRET_KEY`
 - `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET` (при включённом боте)
 - `TELEGRAM_WEBAPP_URL`
 - `ALLOWED_ORIGINS`
 - `VITE_API_URL`
