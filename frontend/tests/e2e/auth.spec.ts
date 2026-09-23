@@ -37,6 +37,9 @@ test.describe('@mvp-e2e auth (реальный API)', () => {
             })
             await page.getByLabel('Сила').check()
             await page.getByLabel('Начинающий').check()
+            // Согласие на обработку данных о здоровье обязательно (WS1-14):
+            // без него кнопка «Сохранить и продолжить» выключена.
+            await page.getByRole('checkbox', { name: /обработку данных о здоровье/ }).check()
             await page.getByRole('button', { name: 'Сохранить и продолжить' }).click()
             // Дашборд скрывает shell-навигацию — сигнал завершения онбординга это его контент.
             await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible({ timeout: 30_000 })
