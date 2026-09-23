@@ -417,6 +417,12 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, buildUserProfile())
         }
 
+        // Экстренные контакты: главная спрашивает список при загрузке (WS1-13).
+        // Явный ответ, чтобы сценарии не зависели от «пустого» фоллбэка ниже.
+        if (method === 'GET' && normalizedPath.endsWith('/system/emergency/contact')) {
+            return respond(200, { items: [], total: 0, active_count: 0 })
+        }
+
         // TelegramAuthGate exchanges the injected initData for a token; without this
         // handler the catch-all answer has no access_token and the app lands on its
         // "Ошибка авторизации" screen instead of the shell.
