@@ -137,3 +137,19 @@ class IdempotencyKeyInvalidError(DomainError):
     code = "idempotency_key_invalid"
     http_status = 400
     default_message = "Invalid Idempotency-Key"
+
+
+class ProgressionRecommendationNotFoundError(DomainError):
+    """Recommendation id does not exist for this user (SPEC-006 §41)."""
+
+    code = "progression_recommendation_not_found"
+    http_status = 404
+    default_message = "Progression recommendation not found"
+
+
+class ProgressionValidationError(DomainError):
+    """Inconsistent progression scope or policy payload (SPEC-006 §7)."""
+
+    code = "progression_validation"
+    http_status = 400
+    default_message = "Invalid progression request"

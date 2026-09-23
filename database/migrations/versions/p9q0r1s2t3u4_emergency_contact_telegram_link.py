@@ -5,8 +5,8 @@ A contact is only reachable through a bot if they have contacted the bot, so
 delivery needs an explicit chat id. This adds the delivery channel plus the
 one-time code used to bind a contact's Telegram account.
 
-Revision ID: n7o8p9q0r1s2
-Revises: m5n6o7p8q9r0
+Revision ID: p9q0r1s2t3u4
+Revises: o8p9q0r1s2t3
 Create Date: 2026-09-23 00:00:00.000000
 """
 
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision = "n7o8p9q0r1s2"
-down_revision = "m5n6o7p8q9r0"
+revision = "p9q0r1s2t3u4"
+down_revision = "o8p9q0r1s2t3"
 branch_labels = None
 depends_on = None
 

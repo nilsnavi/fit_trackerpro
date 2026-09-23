@@ -13,6 +13,8 @@ from typing import Optional
 
 # Above this rep count an e1RM estimate is considered unreliable (SPEC-005 §41).
 E1RM_MAX_REPS = 15
+# SPEC-006 §19: the progression engine defaults to a tighter, configurable window.
+E1RM_DEFAULT_PROGRESSION_MAX_REPS = 12
 
 
 def round_to_increment(value: float, increment: float) -> float:
@@ -22,9 +24,18 @@ def round_to_increment(value: float, increment: float) -> float:
     return round(round(value / increment) * increment, 2)
 
 
-def estimate_1rm(weight: float, reps: int) -> Optional[float]:
-    """Epley e1RM; returns None outside the usable rep range (1..E1RM_MAX_REPS)."""
-    if weight <= 0 or reps <= 0 or reps > E1RM_MAX_REPS:
+def estimate_1rm(
+    weight: float,
+    reps: int,
+    *,
+    max_reps: int = E1RM_MAX_REPS,
+) -> Optional[float]:
+    """Epley e1RM; returns None outside the usable rep range (1..``max_reps``).
+
+    Single source of truth for e1RM: callers may tighten the reliable rep
+    window (SPEC-006 §19 uses 1–12) without introducing a second formula.
+    """
+    if weight <= 0 or reps <= 0 or reps > max_reps:
         return None
     return round(weight * (1 + reps / 30.0), 2)
 

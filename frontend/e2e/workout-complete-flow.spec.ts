@@ -108,6 +108,47 @@ test.describe('complete workout flow @regression', () => {
         await expect(activeSetCompleteButton(page)).toBeVisible()
     })
 
+    test('keeps the completed set when the per-set write is refused', async ({ page }) => {
+        const workoutId = 7303
+        const session = activeSession(workoutId, [{ set_number: 1, reps: 5, weight: 80 }])
+        const state = buildWorkoutState({
+            historyItems: [session],
+            details: new Map([[workoutId, session]]),
+        })
+
+        await seedAuth(page)
+        await seedDraft(page, workoutId, 'E2E complete flow')
+        await mockWorkoutApi(page, state)
+        // The set endpoint refuses the write; the session endpoint keeps serving normally.
+        await page.route('**/api/v1/workouts/*/sets/*', (route) =>
+            route.fulfill({
+                status: 422,
+                contentType: 'application/json',
+                body: JSON.stringify({ detail: 'invalid set' }),
+            }),
+        )
+
+        await page.goto(`/workouts/active/${workoutId}`)
+        await dismissBlockingDialog(page)
+        const completeButton = activeSetCompleteButton(page)
+        await expect(completeButton).toBeVisible({ timeout: 60_000 })
+
+        const sessionSyncsBefore = state.updateSessionRequests.length
+        await completeActiveSet(page)
+        await expectSetCompleted(page, 1)
+
+        // The completion belongs to the session, so a refused set-level write must not undo it —
+        // the session sync is what carries the completed set to the server.
+        await expect.poll(() => state.updateSessionRequests.length, { timeout: 20_000 })
+            .toBeGreaterThan(sessionSyncsBefore)
+        type SyncedSet = { completed?: boolean }
+        type SyncedExercise = { sets_completed?: SyncedSet[] }
+        const syncedSets = ((state.updateSessionRequests.at(-1)?.payload.exercises ?? []) as SyncedExercise[])
+            .flatMap((exercise) => exercise.sets_completed ?? [])
+        expect(syncedSets.some((set) => set.completed)).toBe(true)
+        await expectSetCompleted(page, 1)
+    })
+
     test('quick start opens an empty workout and can add the first exercise', async ({ page }) => {
         const state = buildWorkoutState()
 
