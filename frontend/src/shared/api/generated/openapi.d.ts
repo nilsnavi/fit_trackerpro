@@ -1780,11 +1780,14 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * List Coach Access
-         * @description Coach access sharing is not implemented yet.
-         *     Keep the endpoint to avoid breaking the profile UI.
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
          */
-        get: operations["list_coach_access_api_v1_users_coach_access_get"];
+        get: operations["coach_access_unavailable_api_v1_users_coach_access_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1803,10 +1806,14 @@ export type paths = {
         get?: never;
         put?: never;
         /**
-         * Generate Coach Access
-         * @description Generate a short-lived share code (stub for MVP UI wiring).
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
          */
-        post: operations["generate_coach_access_api_v1_users_coach_access_generate_post"];
+        post: operations["coach_access_unavailable_api_v1_users_coach_access_generate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1823,8 +1830,15 @@ export type paths = {
         get?: never;
         put?: never;
         post?: never;
-        /** Revoke Coach Access */
-        delete: operations["revoke_coach_access_api_v1_users_coach_access__access_id__delete"];
+        /**
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
+         */
+        delete: operations["coach_access_unavailable_api_v1_users_coach_access__access_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -10853,7 +10867,7 @@ export interface operations {
             };
         };
     };
-    list_coach_access_api_v1_users_coach_access_get: {
+    coach_access_unavailable_api_v1_users_coach_access_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -10873,7 +10887,7 @@ export interface operations {
             };
         };
     };
-    generate_coach_access_api_v1_users_coach_access_generate_post: {
+    coach_access_unavailable_api_v1_users_coach_access_generate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -10893,13 +10907,11 @@ export interface operations {
             };
         };
     };
-    revoke_coach_access_api_v1_users_coach_access__access_id__delete: {
+    coach_access_unavailable_api_v1_users_coach_access__access_id__delete: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                access_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -10910,15 +10922,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };

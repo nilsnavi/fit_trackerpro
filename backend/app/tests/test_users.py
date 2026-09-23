@@ -204,26 +204,23 @@ async def test_get_user_by_id_returns_404_for_missing_user(client: AsyncClient):
 
 
 @pytest.mark.integration
-async def test_coach_access_generate_list_revoke(authenticated_client: AsyncClient):
+async def test_coach_access_endpoints_are_honest_501(authenticated_client: AsyncClient):
+    """
+    WS2-5: доступ тренера не реализован — эндпоинты отвечают 501.
+
+    Раньше здесь выдавался код, который ничего не открывал, и UI обещал рабочий
+    доступ к данным. Честнее не отдавать ничего, пока нет реального механизма.
+    """
     generated = await authenticated_client.post("/api/v1/users/coach-access/generate")
-    assert generated.status_code == 200, generated.text
-    generated_data = generated.json()
-    assert "code" in generated_data
-    assert "expires_at" in generated_data
+    assert generated.status_code == 501, generated.text
+    # Кода доступа в ответе нет — выдавать нечего.
+    assert "code" not in generated.json()
 
     listed = await authenticated_client.get("/api/v1/users/coach-access")
-    assert listed.status_code == 200, listed.text
-    listed_data = listed.json()
-    assert isinstance(listed_data, list)
-    assert len(listed_data) >= 1
-    access_id = listed_data[0]["id"]
+    assert listed.status_code == 501, listed.text
 
-    revoked = await authenticated_client.delete(f"/api/v1/users/coach-access/{access_id}")
-    assert revoked.status_code == 204, revoked.text
-
-    listed_after = await authenticated_client.get("/api/v1/users/coach-access")
-    assert listed_after.status_code == 200, listed_after.text
-    assert all(item["id"] != access_id for item in listed_after.json())
+    revoked = await authenticated_client.delete("/api/v1/users/coach-access/some-id")
+    assert revoked.status_code == 501, revoked.text
 
 
 @pytest.mark.integration

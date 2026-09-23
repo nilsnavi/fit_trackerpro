@@ -36,12 +36,6 @@ export interface UserStats {
     total_duration: number
 }
 
-export interface CoachAccess {
-    id: string
-    coach_name: string
-    created_at: string
-    expires_at?: string
-}
 
 export interface WeightProgress {
     current: number
