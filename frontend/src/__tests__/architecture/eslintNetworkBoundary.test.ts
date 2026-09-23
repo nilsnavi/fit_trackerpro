@@ -154,7 +154,7 @@ describe('ESLint: сетевой слой принадлежит явным вл
     })
 
     it('владелец клиентов API не берёт движок очереди, но берёт клиенты', async () => {
-        const hook = 'src/features/workouts/hooks/useActiveWorkout.ts'
+        const hook = 'src/features/workouts/active/hooks/useWorkoutSetWrites.ts'
 
         expect(await violations(hook, "import { workoutsApi } from '../api/workouts.api'", IMPORT_RULE)).toEqual([])
         expect(await violations(hook, "import { api } from '@shared/api/client'", IMPORT_RULE)).toEqual([])
