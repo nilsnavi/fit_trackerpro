@@ -2130,6 +2130,12 @@ export type paths = {
          *
          *     This endpoint receives updates from Telegram when using webhook mode.
          *     Only used in production environment.
+         *
+         *     When ``TELEGRAM_WEBHOOK_SECRET`` is configured the request must carry the
+         *     matching ``X-Telegram-Bot-Api-Secret-Token`` header (Telegram echoes the value
+         *     passed to ``setWebhook``). The check happens before the body is parsed so
+         *     forged updates never reach the dispatcher. The reverse proxy intentionally
+         *     skips rate limiting for this path, which makes the secret the only gate.
          */
         post: operations["telegram_webhook_telegram_webhook_post"];
         delete?: never;

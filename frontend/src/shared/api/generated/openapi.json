@@ -17708,7 +17708,7 @@
     },
     "/telegram/webhook": {
       "post": {
-        "description": "Handle incoming Telegram webhook updates\n\nThis endpoint receives updates from Telegram when using webhook mode.\nOnly used in production environment.",
+        "description": "Handle incoming Telegram webhook updates\n\nThis endpoint receives updates from Telegram when using webhook mode.\nOnly used in production environment.\n\nWhen ``TELEGRAM_WEBHOOK_SECRET`` is configured the request must carry the\nmatching ``X-Telegram-Bot-Api-Secret-Token`` header (Telegram echoes the value\npassed to ``setWebhook``). The check happens before the body is parsed so\nforged updates never reach the dispatcher. The reverse proxy intentionally\nskips rate limiting for this path, which makes the secret the only gate.",
         "operationId": "telegram_webhook_telegram_webhook_post",
         "responses": {
           "200": {

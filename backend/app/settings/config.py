@@ -37,6 +37,9 @@ _DEV_TELEGRAM_BOT_TOKEN: Final[str] = (
 )
 _DEV_TELEGRAM_WEBAPP_URL: Final[str] = "http://localhost:5173"
 _TELEGRAM_BOT_TOKEN_RE: Final[re.Pattern[str]] = re.compile(r"^\d+:[A-Za-z0-9_-]{20,}$")
+# Telegram Bot API: secret_token must be 1-256 chars of A-Z, a-z, 0-9, "_" and "-".
+_TELEGRAM_WEBHOOK_SECRET_RE: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9_-]{1,256}$")
+_TELEGRAM_WEBHOOK_SECRET_MIN_LENGTH: Final[int] = 16
 
 
 class Settings(BaseSettings):
@@ -157,6 +160,18 @@ class Settings(BaseSettings):
             )
         ),
     ] = False
+
+    TELEGRAM_WEBHOOK_SECRET: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Secret token for the Telegram webhook (Telegram sends it back in the "
+                "X-Telegram-Bot-Api-Secret-Token header). Required in production when "
+                "TELEGRAM_BOT_ENABLED=true: without it anyone knowing the URL can post "
+                "fake updates. Allowed characters: A-Z, a-z, 0-9, '_' and '-'."
+            )
+        ),
+    ] = None
 
     SECRET_KEY: Annotated[
         str,
@@ -427,6 +442,21 @@ class Settings(BaseSettings):
                 )
         return value
 
+    @field_validator("TELEGRAM_WEBHOOK_SECRET")
+    @classmethod
+    def validate_telegram_webhook_secret(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if not _TELEGRAM_WEBHOOK_SECRET_RE.fullmatch(normalized):
+            raise ValueError(
+                "TELEGRAM_WEBHOOK_SECRET may only contain A-Z, a-z, 0-9, '_' and '-' "
+                "(Telegram Bot API requirement)"
+            )
+        return normalized
+
     @field_validator("DEBUG")
     @classmethod
     def validate_debug_in_production(cls, value: bool, info: ValidationInfo) -> bool:
@@ -458,6 +488,19 @@ class Settings(BaseSettings):
 
         if self.TELEGRAM_WEBAPP_URL.strip() == _DEV_TELEGRAM_WEBAPP_URL:
             errors.append("TELEGRAM_WEBAPP_URL must be set to your public Mini App URL in production")
+
+        if self.TELEGRAM_BOT_ENABLED:
+            secret = (self.TELEGRAM_WEBHOOK_SECRET or "").strip()
+            if not secret:
+                errors.append(
+                    "TELEGRAM_WEBHOOK_SECRET is required in production when TELEGRAM_BOT_ENABLED=true "
+                    "(otherwise /telegram/webhook accepts forged updates)"
+                )
+            elif len(secret) < _TELEGRAM_WEBHOOK_SECRET_MIN_LENGTH:
+                errors.append(
+                    f"TELEGRAM_WEBHOOK_SECRET must be at least {_TELEGRAM_WEBHOOK_SECRET_MIN_LENGTH} "
+                    "characters in production"
+                )
 
         if self.AUTO_CREATE_DB_SCHEMA:
             errors.append(

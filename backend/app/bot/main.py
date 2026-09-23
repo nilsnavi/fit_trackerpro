@@ -382,9 +382,20 @@ async def start_bot_webhook(
         await set_webapp_menu_button(app)
         await set_bot_commands(app)
 
-        # Set webhook
-        await app.bot.set_webhook(url=webhook_url)
-        logger.info(f"Webhook set to: {webhook_url}")
+        # Set webhook. When a secret is configured Telegram echoes it back in the
+        # X-Telegram-Bot-Api-Secret-Token header, which /telegram/webhook verifies
+        # before parsing anything. Never log the secret itself.
+        webhook_secret = (settings.TELEGRAM_WEBHOOK_SECRET or "").strip() or None
+        await app.bot.set_webhook(url=webhook_url, secret_token=webhook_secret)
+        logger.info(
+            "Webhook set to: %s (secret_token: %s)",
+            webhook_url,
+            "enabled" if webhook_secret else "disabled",
+        )
+        if not webhook_secret:
+            logger.warning(
+                "TELEGRAM_WEBHOOK_SECRET is not set: /telegram/webhook accepts unsigned updates"
+            )
 
         # Start application (without updater for webhook mode)
         await app.start()

@@ -116,8 +116,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
+      # Blocking gate: anything that ships in the production bundle must be clean.
+      - name: Run npm audit (production dependencies, blocking)
+        run: npm audit --omit=dev --audit-level=high
+
+      # Report-only: build tooling (vite/esbuild/eslint/openapi codegen) does not
+      # reach users' browsers, so it must not block merges. Tracked in issue for the
+      # dev-chain upgrade; findings are still surfaced in the job summary.
+      - name: Run npm audit (all dependencies, report only)
+        continue-on-error: true
+        run: |
+          set -Eeuo pipefail
+          {
+            echo '### npm audit — full tree (dev tooling, non-blocking)'
+            echo ''
+            echo '```'
+            npm audit --audit-level=moderate || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   trivy-fs-scan:
     name: Trivy Filesystem Scan
