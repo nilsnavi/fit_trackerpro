@@ -22,6 +22,7 @@
     "coverage:baseline:update": "node scripts/coverage-baseline.mjs update",
     "api:types:generate": "node scripts/generate-openapi-types.mjs",
     "api:contract:check": "node scripts/check-openapi-types.mjs",
+    "api:contract:check:committed": "node scripts/check-committed-openapi.mjs",
     "e2e": "playwright test",
     "e2e:regression": "playwright test --grep @regression",
     "e2e:workout-flows": "playwright test --grep @workout-flows",

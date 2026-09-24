@@ -442,6 +442,20 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, [])
         }
 
+        // Health metrics for home dashboard widgets (WS2-2)
+        if (method === 'GET' && (normalizedPath.includes('/health-metrics/water/goal') || normalizedPath.includes('/health-metrics/water/reminder'))) {
+            return respond(200, { daily_goal: 2000, enabled: false })
+        }
+        if (method === 'GET' && normalizedPath.includes('/health-metrics/water/daily')) {
+            return respond(200, { total: 0, goal: 2000, entries: [] })
+        }
+        if (method === 'GET' && normalizedPath.includes('/health-metrics/water')) {
+            return respond(200, { items: [], total: 0, page: 1, page_size: 50, total_amount: 0 })
+        }
+        if (method === 'GET' && (normalizedPath.includes('/health-metrics/glucose') || normalizedPath.includes('/health-metrics/wellness'))) {
+            return respond(200, [])
+        }
+
         if (method === 'GET' && normalizedPath.endsWith('/exercises')) {
             return respond(200, {
                 items: state.exercises,
