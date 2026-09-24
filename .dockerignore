@@ -10,6 +10,7 @@ monitoring
 **/.coverage
 **/dist
 **/.venv
+**/.venv-openapi
 **/venv
 .idea
 .vscode

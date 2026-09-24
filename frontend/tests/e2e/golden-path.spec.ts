@@ -24,22 +24,24 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
 
         await page.goto('/')
 
-        const nav = page.getByRole('navigation', { name: 'Основная навигация' })
         const onboardingTitle = page.getByRole('heading', { name: 'Добро пожаловать в FitTracker Pro' })
-        await expect(onboardingTitle.or(nav).first()).toBeVisible({ timeout: 60_000 })
+        // Дашборд — сигнал авторизации: он скрывает shell-навигацию, поэтому контент,
+        // а не nav. К разделам переходим прямым goto (nav доступен только на секциях).
+        await expect(onboardingTitle.or(page.getByRole('heading', { name: 'Мои шаблоны' })).first()).toBeVisible({
+            timeout: 60_000,
+        })
 
         if (await onboardingTitle.isVisible().catch(() => false)) {
             await page.getByLabel('Сила').check()
             await page.getByLabel('Начинающий').check()
+            // Согласие на обработку данных о здоровье обязательно (WS1-14):
+            // без него кнопка «Сохранить и продолжить» выключена.
+            await page.getByRole('checkbox', { name: /обработку данных о здоровье/ }).check()
             await page.getByRole('button', { name: 'Сохранить и продолжить' }).click()
             await expect(onboardingTitle).toBeHidden({ timeout: 30_000 })
         }
 
-        await expect(nav).toBeVisible({
-            timeout: 60_000,
-        })
-
-        await nav.getByRole('link', { name: 'Тренировки' }).click()
+        await page.goto('/workouts')
         await expect(page).toHaveURL(/\/workouts/)
 
         // «Новая тренировка» в UI: быстрый старт по типу — плитка «Силовая» (не путать с подписью типа у шаблонов).
@@ -64,22 +66,26 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
         await page.getByTestId('save-and-start-btn').click()
         await expect(page).toHaveURL(/\/workouts\/active\/\d+/, { timeout: 45_000 })
 
-        await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
+        // Активный подход открыт в режиме редактирования сразу (поля inline).
         await page.getByLabel('Вес').first().fill('62.5')
         await page.getByLabel('Повторы').first().fill('8')
-        await page.getByRole('button', { name: 'Отметить подход 1 выполненным' }).click()
 
-        const skipRestTimer = page.getByRole('button', { name: 'Skip' })
-        if (await skipRestTimer.isVisible().catch(() => false)) {
-            await skipRestTimer.click()
-        }
+        await page.getByRole('button', { name: 'Завершить подход' }).first().click()
 
+        // §17: после завершения подхода стартует отдых; панель перекрывает нижнюю кнопку.
+        // Подход завершается локально и запись уходит фоном, поэтому здесь ждём видимое
+        // состояние интерфейса, а не ответ сети: синхронизацию доведёт завершение тренировки.
+        const skipRestTimer = page.getByRole('button', { name: 'Пропустить', exact: true })
+        await expect(skipRestTimer).toBeVisible({ timeout: 30_000 })
+        await skipRestTimer.click()
+
+        // Текущий контракт: кнопка «Завершить» (WorkoutBottomBar) закрывает сессию напрямую.
         await page.getByRole('button', { name: 'Завершить', exact: true }).click()
-        await expect(page.getByText('Завершить тренировку?')).toBeVisible()
-        await page.getByRole('button', { name: 'Завершить', exact: true }).last().click()
 
         await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary/, { timeout: 45_000 })
 
+        // На секционных роутах навигация видима — идём в историю через nav.
+        const nav = page.getByRole('navigation', { name: 'Основная навигация' })
         await nav.getByRole('link', { name: 'Тренировки' }).click()
         await expect(page.getByText(workoutTitle).first()).toBeVisible({ timeout: 25_000 })
     })

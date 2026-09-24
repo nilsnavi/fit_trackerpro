@@ -1,0 +1,570 @@
+{
+  "generated_at": "2026-09-23",
+  "source_plan": "docs/roadmap/production-remediation-plan-2026-09-23.md",
+  "context_report": "docs/reports/production-gap-analysis-2026-09-18.md",
+  "note": "Labels are validated against labels that exist in the repository; unknown ones are dropped. Priority/estimate are duplicated in fields because the creating token has no label permissions.",
+  "issues": [
+    {
+      "id": "WS1-1",
+      "priority": "P0",
+      "estimate": "S (1d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "ci",
+        "reliability",
+        "estimate-S"
+      ],
+      "title": "P0 — Security CI: разделить prod/dev аудит и закрыть уязвимости прод-зависимостей",
+      "body": "**Проблема.** Workflow `Security` красный на `main`: `npm audit --audit-level=moderate` даёт 17 уязвимостей, `pip-audit` — `ecdsa 0.19.2` (PYSEC-2026-1325) через `python-jose`. Красный security-гейт перестаёт быть сигналом.\n\n**Что сделать.**\n- Разделить аудит: `npm audit --omit=dev --audit-level=high` — блокирующий (прод-зависимости), полный `npm audit --audit-level=moderate` — report-only (`continue-on-error: true`) с выводом в job summary.\n- В `pip-audit` добавить временный ignore для `PYSEC-2026-1325` с комментарием «снять после WS1-4».\n- Убедиться, что падение только dev-аудита не требует ручного обхода ветки.\n\n**Готово, когда.** `Security` зелёный на PR и `main`; в логах виден список dev-адвизори с привязкой к задачам; прод-аудит блокирует мерж.\n\n**Проверка.** `gh run list --workflow=security.yml`; локально `npm audit --omit=dev --audit-level=high` и `pip-audit -r backend/requirements/prod.txt`.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-1. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.2.\n",
+      "github_issue": 160
+    },
+    {
+      "id": "WS1-2",
+      "priority": "P0",
+      "estimate": "S (1d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "frontend",
+        "estimate-S"
+      ],
+      "title": "P0 — Обновить react-router-dom до 7.18.4",
+      "body": "**Проблема.** `react-router-dom` ^6.22.0 уязвим: open redirect через `\\` в `<Link>`/`useNavigate` и constructor injection в `deserializeErrors()`. Патча в 6.x нет (6.30.6 — тоже уязвима), фикс только в `>=7.18.0`.\n\n**Что сделать.**\n- `npm i react-router-dom@7.18.4 -C frontend` (React 18.2 совместим).\n- В `frontend/src` нет data-router API (`createBrowserRouter`, `RouterProvider`, `useLoaderData`, `defer(`), используются декларативные `BrowserRouter`/`Routes`/`Route`/`Navigate`/`Outlet`/`useParams`/`useNavigate` — они сохранены в v7.\n- Проверить резолвинг относительных путей: сплэт-роуты, `Navigate to=\"..\"`, редиректы `RouteGuard` и `return_url_after_login`.\n- Прогнать `tsc`, `eslint`, `jest`, `npm run build`, `e2e:mvp`, `e2e:regression`.\n\n**Готово, когда.** Все тесты и E2E-наборы зелёные; `npm audit --omit=dev` не содержит `react-router`.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-2. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.2.\n",
+      "github_issue": 161
+    },
+    {
+      "id": "WS1-3",
+      "priority": "P0",
+      "estimate": "XS (0.5d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "frontend",
+        "estimate-S"
+      ],
+      "title": "P0 — Закрыть valibot (транзитивно через @telegram-apps/*)",
+      "body": "**Проблема.** `@telegram-apps/{sdk,bridge,transformers}` тянут `valibot <=1.4.1` (ReDoS в `EMOJI_REGEX`, некорректный `flatten()` для унаследованных свойств). Фикс — `valibot` 1.5.0.\n\n**Что сделать.**\n- Добавить в `frontend/package.json`: `\"overrides\": { \"valibot\": \"^1.5.0\" }`.\n- `npm install`; проверить `npm ls valibot` (1.5.0 во всех ветках) и что Telegram SDK инициализируется (тесты `telegramEnv`, `useTelegram`, smoke-роутинг).\n- Если override ломает SDK — обновить `@telegram-apps/*`; в крайнем случае зафиксировать адвизори как принятый риск с обоснованием в `docs/security.md`.\n\n**Готово, когда.** `npm audit --omit=dev` чист по `valibot`, тесты фронта и E2E зелёные.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-3. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.2.\n",
+      "github_issue": 162
+    },
+    {
+      "id": "WS1-4",
+      "priority": "P0",
+      "estimate": "S (0.5d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "backend",
+        "reliability",
+        "estimate-S"
+      ],
+      "title": "P0 — Заменить python-jose на PyJWT (устранение ecdsa)",
+      "body": "**Проблема.** `python-jose==3.5.0` — последняя версия и жёстко требует `ecdsa` (флагнутый `ecdsa 0.19.2`), обновлением не лечится. `jose` используется ровно в одном файле — `backend/app/core/security/tokens.py` (`jwt.encode/decode`, `JWTError`), алгоритм HS256, ECDSA не используется. PyJWT 2.14.0 использует `cryptography` и не тянет `ecdsa`.\n\n**Что сделать.**\n- `backend/requirements/base.txt`: `python-jose[cryptography]==3.5.0` → `pyjwt==2.14.0`.\n- `tokens.py`: `from jose import JWTError, jwt` → `import jwt` + `from jwt import PyJWTError as JWTError`; проверить, что `jwt.encode` возвращает `str`.\n- `grep -rn \"from jose\" backend` → пусто; HMAC-валидация initData (`hmac`/`hashlib`) не затронута.\n- Прогнать `test_auth.py`, `test_telegram_init_data_validation.py`; проверить совместимость со старыми токенами (payload без новых полей).\n- Снять временный ignore из WS1-1.\n\n**Готово, когда.** `pip-audit -r backend/requirements/prod.txt` чист; `pytest` зелёный; login → `/users/auth/me` работает.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-4. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.2.\n",
+      "github_issue": 163
+    },
+    {
+      "id": "WS1-5",
+      "priority": "P0",
+      "estimate": "M (1–2d)",
+      "depends_on": [
+        "WS1-1"
+      ],
+      "labels": [
+        "roadmap",
+        "P0",
+        "ci",
+        "frontend",
+        "estimate-M"
+      ],
+      "title": "P0 — Обновить dev-цепочку (vite/esbuild/eslint/typescript-eslint/openapi-tooling)",
+      "body": "**Проблема.** Дев-зависимости с адвизори: `vite` 5.1.0 (dev-server path traversal, `server.fs.deny` bypass, esbuild dev-proxy — затрагивает `<=6.4.2`), `@typescript-eslint/*` 6.x (`minimatch` ReDoS, фикс в parser 8.70.1), `@redocly/openapi-core → js-yaml`. В прод-бандл не попадает, но держит `npm audit` красным.\n\n**Что сделать.**\n- Поднять `vite` до актуальной мажорной; проверить совместимость `vite-plugin-pwa`, `vite-plugin-mkcert`, `vite.config.ts`, PWA-precache. Альтернатива при высоком риске — оставить vite 5 и опираться на WS1-1, зафиксировав решение.\n- `eslint`/`@typescript-eslint/*` → v8; починить появившиеся замечания (`npm run lint`).\n- Обновить `openapi-typescript`/`@redocly/*`; **обязательно** `npm run api:types:generate` и `npm run api:contract:check`.\n- Прогнать `BUNDLE_STATS=1 npm run build && npm run bundle:check`, `jest --ci`.\n\n**Готово, когда.** `npm audit` без high/moderate (кроме задокументированных); сборка, бюджеты, линт, тесты, контракт зелёные.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-5. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.2.\n",
+      "github_issue": 164
+    },
+    {
+      "id": "WS1-6",
+      "priority": "P0",
+      "estimate": "S (0.5d)",
+      "depends_on": [
+        "WS1-10"
+      ],
+      "labels": [
+        "roadmap",
+        "P0",
+        "ci",
+        "e2e",
+        "estimate-S"
+      ],
+      "title": "P0 — Починить или приземлить E2E Smoke Real API",
+      "body": "**Проблема.** Ночной workflow `E2E Smoke Real API` падает на первом шаге `Validate smoke environment`: не заданы секреты `E2E_BASE_URL`, `E2E_API_BASE_URL`, `E2E_TELEGRAM_INIT_DATA`. Падает ежедневно с 2026-09-15.\n\n**Что сделать.**\n- Вариант A (после WS1-10): завести секреты для staging (URL фронта, URL API, `init_data` тестового пользователя) + описать процедуру ротации `init_data` (ограничение `auth_date`) в `docs/testing/`.\n- Вариант B (пока staging нет): сделать job честно-скипающим при отсутствии секретов (предупреждение + skip, не failure), оставив `workflow_dispatch`.\n- Workflow не удалять: это единственная no-mock проверка живости прода.\n\n**Готово, когда.** Ночной workflow зелёный или явно skipped с предупреждением; при наличии staging — реально проходит golden path.\n\n**Проверка.** `gh run list --workflow=e2e-smoke-real.yml --limit 3`.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-6. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.2.\n",
+      "github_issue": 165
+    },
+    {
+      "id": "WS1-7",
+      "priority": "P0",
+      "estimate": "S (0.5d)",
+      "depends_on": [
+        "WS1-1",
+        "WS1-2",
+        "WS1-3",
+        "WS1-4",
+        "WS1-5"
+      ],
+      "labels": [
+        "roadmap",
+        "P0",
+        "devops",
+        "estimate-S"
+      ],
+      "title": "P0 — Собрать образы main и зафиксировать versioned тег",
+      "body": "**Проблема.** Последний `Build and Push` на `main` — `cancelled` (2026-09-16); для HEAD `e8fee2e` образа в GHCR нет, релизов нет. `deploy.yml` требует непустой versioned `image_tag` и запрещает `latest`.\n\n**Что сделать.**\n- После мержей WS1-1…WS1-5 запустить `Build and Push` на `main`; дождаться успеха (multi-arch + Trivy).\n- Зафиксировать тег вида `main-<short_sha>` (`type=sha,prefix={{branch}}-`).\n- Проверить наличие обоих образов и что digest совпадает с просканированным.\n\n**Готово, когда.** В GHCR есть `.../backend:main-<sha>` и `.../frontend:main-<sha>`, оба просканированы без critical.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-7. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.1.\n",
+      "github_issue": 166
+    },
+    {
+      "id": "WS1-8",
+      "priority": "P0",
+      "estimate": "S (0.5d, оператор)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "devops",
+        "estimate-S"
+      ],
+      "title": "P0 — Создать GitHub Environments staging/production и секреты",
+      "body": "**Проблема.** `gh api .../environments` → `total_count: 0`. `deploy.yml`/`rollback-production.yml` без environment не работают; `migrate.yml` жёстко зашит на `environment: production`. Ни один deploy-workflow не запускался ни разу.\n\n**Что сделать.**\n- Создать environment `staging`, затем `production`; для `production` включить required reviewers и ограничение ветки `main`.\n- Секреты в каждом: `DEPLOY_HOST`, `DEPLOY_USER`, `SSH_PRIVATE_KEY`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `SECRET_KEY` (≥32), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBAPP_URL` (HTTPS), `ALLOWED_ORIGINS` (HTTPS, без `*`), `VITE_API_URL` (с `/api/v1`), `VITE_TELEGRAM_BOT_USERNAME`; опционально `SENTRY_DSN`, `SLACK_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET` (WS1-12).\n- Проверить доступ `DEPLOY_USER` к `~/fittracker-pro` и беспарольность ключа для CI.\n- Прогнать `scripts/staging-rehearsal.ps1` без `-Dispatch`.\n\n**Готово, когда.** Оба environment видны в API; все обязательные имена секретов присутствуют (значения не логируются).\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-8. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.1.\n",
+      "github_issue": 167
+    },
+    {
+      "id": "WS1-9",
+      "priority": "P0",
+      "estimate": "S (0.5d, оператор)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "devops",
+        "estimate-S"
+      ],
+      "title": "P0 — Подготовить staging и production серверы",
+      "body": "**Что сделать.**\n- Docker + Compose, git, curl; каталог деплоя `~/fittracker-pro` на нужном теге.\n- TLS: `NGINX_SSL_DIR` с `fullchain.pem`/`privkey.pem` + автопродление.\n- `BACKUPS_DIR` вне репозитория, права для пользователя деплоя.\n- Firewall: только 22/80/443; Postgres/Redis наружу не публикуются.\n- Домен + DNS; `TELEGRAM_WEBAPP_URL` = `https://<domain>/`; BotFather Menu Button.\n- **Staging отдельно:** другой каталог, домен/сертификат, БД и бот — чтобы не путать данные и вебхуки.\n\n**Готово, когда.** `docker compose -f docker-compose.prod.yml config --quiet` проходит на сервере, порт 443 отвечает, каталоги вне репозитория.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-9. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.1.\n",
+      "github_issue": 168
+    },
+    {
+      "id": "WS1-10",
+      "priority": "P0",
+      "estimate": "M (1d, оператор)",
+      "depends_on": [
+        "WS1-7",
+        "WS1-8",
+        "WS1-9"
+      ],
+      "labels": [
+        "roadmap",
+        "P0",
+        "devops",
+        "estimate-M"
+      ],
+      "title": "P0 — Staging deploy rehearsal (первый полный выкат)",
+      "body": "**Что сделать.**\n- `gh workflow run deploy.yml -f environment=staging -f image_tag=main-<sha> -f rollback_restore_db=false`.\n- Проследить DAG: pre-deploy-validate → backup БД → `alembic upgrade head` → `seed_reference_data apply` → `up -d` → readiness `/api/v1/system/ready` → verify smoke → запись stable-тега.\n- Проверить артефакты `.rollback-meta.env` (`DB_BACKUP_PATH`) и `.last-stable-deploy.env`.\n- Вручную: Mini App в Telegram, вход, шаблон → старт → подходы → завершение, аналитика, офлайн-режим (авиарежим → подход → сеть).\n\n**Готово, когда.** Staging healthy, smoke зелёные, ручной golden path пройден, логи приложены.\n\n**Проверка.**\n```bash\ncurl -fsS \"https://<staging>/api/v1/system/health\"   # {\"status\":\"healthy\"}\ncurl -fsS \"https://<staging>/api/v1/system/ready\"    # status=ready, postgres=ok, redis=ok\ncurl -fsS \"https://<staging>/api/v1/system/version\"\ncurl -fsS \"https://<staging>/healthz\"\n```\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-10. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.1.\n",
+      "github_issue": 169
+    },
+    {
+      "id": "WS1-11",
+      "priority": "P0",
+      "estimate": "M (1d, оператор)",
+      "depends_on": [
+        "WS1-10"
+      ],
+      "labels": [
+        "roadmap",
+        "P0",
+        "devops",
+        "reliability",
+        "database",
+        "estimate-M"
+      ],
+      "title": "P0 — Репетиция rollback и восстановления БД на staging",
+      "body": "**Обоснование.** `docs/ROLLBACK_STRATEGY.md` описывает 3 сценария (image-only / image+downgrade / image+restore), но ни один не исполнялся — от этого зависит MTTR реального инцидента.\n\n**Что сделать.**\n- Сценарий A: `gh workflow run rollback-production.yml -f environment=staging -f rollback_image_tag=<предыдущий> -f rollback_restore_db=false -f confirm=ROLLBACK`; проверить подъём и smoke.\n- Сценарий C: восстановить `DB_BACKUP_PATH` в **тестовую** БД под другим именем; сверить количество строк в ключевых таблицах.\n- Сценарий B: проверить `alembic downgrade -1` на staging с живыми данными.\n- Записать фактические тайминги в `docs/ROLLBACK_ONCALL_CHEATSHEET.md`.\n\n**Готово, когда.** Все три сценария пройдены, тайминги задокументированы, повторный deploy возвращает актуальный тег.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-11. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.1.\n",
+      "github_issue": 170
+    },
+    {
+      "id": "WS1-12",
+      "priority": "P0",
+      "estimate": "S (1d)",
+      "depends_on": [
+        "WS1-8",
+        "WS1-10"
+      ],
+      "labels": [
+        "roadmap",
+        "P0",
+        "backend",
+        "reliability",
+        "estimate-S"
+      ],
+      "title": "P0 — Защитить Telegram-вебхук секретом и включить бота в проде",
+      "body": "**Проблема (двойная).**\n1. `POST /telegram/webhook` (`backend/app/main.py:296`) не проверяет `X-Telegram-Bot-Api-Secret-Token`, а `start_bot_webhook()` (`backend/app/bot/main.py:356`) не ставит `secret_token` при `set_webhook` — при том что nginx отключает для этого пути rate-limit. Любой может слать поддельные updates.\n2. `docker-compose.prod.yml:98` жёстко `TELEGRAM_BOT_ENABLED=false` → в проде бот не работает вообще (`/start`, `/help`, `/stats`, Menu Button).\n\n**Что сделать.**\n- `TELEGRAM_WEBHOOK_SECRET` в `backend/app/settings/config.py`, обязателен в production.\n- Передавать `secret_token` в `set_webhook`; сверять заголовок через `hmac.compare_digest` **до** парсинга JSON, иначе 403; секрет не логировать.\n- Прокинуть секрет в `docker-compose.prod.yml` и в обязательные секреты `deploy-environment.yml` (`pre-deploy-validate`).\n- `TELEGRAM_BOT_ENABLED=${TELEGRAM_BOT_ENABLED:-false}` → `true` сначала на staging, затем на prod.\n- Тесты: без заголовка → 403, неверный → 403, верный → 200.\n\n**Готово, когда.** Поддельный POST получает 403; реальные updates обрабатываются; бот отвечает в staging и проде.\n\n**Проверка.**\n```bash\ncurl -s -o /dev/null -w \"%{http_code}\\n\" -X POST https://<host>/telegram/webhook -H 'content-type: application/json' -d '{\"update_id\":1}'  # 403\ncurl -s \"https://api.telegram.org/bot$TOKEN/getWebhookInfo\" | jq '.result.url, .result.last_error_message'\n```\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-12. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.3.\n",
+      "github_issue": 171
+    },
+    {
+      "id": "WS1-13",
+      "priority": "P0",
+      "estimate": "M (1–2d) / XS при скрытии",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "frontend",
+        "feature",
+        "ux",
+        "estimate-M"
+      ],
+      "title": "P0 — Emergency: честный флоу или скрытие из UI",
+      "body": "**Проблема (на обеих сторонах).** Фронт `EmergencyButton.tsx` показывает «Вызов экстренной помощи отправлен», не вызывая API, и не рендерится ни на одном маршруте; `EmergencyMode.tsx` не подключён. Бэкенд `emergency_service._send_emergency_notification_impl` ставит `success=True` просто при наличии `contact_username`/`phone`, ничего не отправляя; у контактов нет `telegram_id` → реальная доставка невозможна без миграции.\n\n**Вариант «реализовать» (минимум).**\n- Миграция: `telegram_id`/`chat_id` у `emergency_contacts` (или статус «подтверждён»).\n- Реальная доставка через `python-telegram-bot`; для неподключённых контактов — честный статус «не доставлено».\n- Лог исхода по каждому контакту (`log_emergency_event` — дополнить).\n- UI: проверка наличия контактов, дисклеймер «приложение не вызывает скорую», кнопка вызова экстренных служб, состояния success/partial/failed.\n\n**Вариант «скрыть».** Удалить `EmergencyButton` из бандла, не монтировать `EmergencyMode`, эндпоинты пометить как не реализованные, задачу на реализацию — в P2.\n\n**Готово, когда.** В UI нет утверждения об отправке уведомления без реальной отправки (`grep -rn \"экстренной помощи отправлен\" frontend/src` → пусто).\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-13. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.5.\n",
+      "github_issue": 172
+    },
+    {
+      "id": "WS1-14",
+      "priority": "P0",
+      "estimate": "S (1d, включая текст)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P0",
+        "documentation",
+        "estimate-S"
+      ],
+      "title": "P0 — Политика конфиденциальности и согласие на обработку данных о здоровье",
+      "body": "**Обоснование.** Хранятся пульс, глюкоза, вес, сон, самочувствие — чувствительные данные. В репозитории нет политики, согласия и описания сроков хранения.\n\n**Что сделать.**\n- Текст политики (что собираем, зачем, где храним, сроки, как удалить) + текст согласия на обработку данных о здоровье.\n- Размещение: страницы `/legal/privacy`, `/legal/consent` в Mini App (или документ в боте), ссылки из профиля и онбординга.\n- Обязательный чек-бокс согласия в онбординге; факт согласия фиксировать на бэке (версия текста + дата) — доказуемость.\n- Описать существующие `GET /users/export` и `DELETE /users/me` в политике; добавить раздел «данные и приватность» в `docs/`.\n\n**Готово, когда.** Политика и согласие доступны в приложении, согласие записывается в БД с версией и timestamp, процедура удаления проверена вручную.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-14. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.4.\n",
+      "github_issue": 173
+    },
+    {
+      "id": "WS1-15",
+      "priority": "P0",
+      "estimate": "S (1d, оператор)",
+      "depends_on": [
+        "WS1-1",
+        "WS1-2",
+        "WS1-3",
+        "WS1-4",
+        "WS1-5",
+        "WS1-6",
+        "WS1-7",
+        "WS1-8",
+        "WS1-9",
+        "WS1-10",
+        "WS1-11",
+        "WS1-12",
+        "WS1-13",
+        "WS1-14"
+      ],
+      "labels": [
+        "roadmap",
+        "P0",
+        "devops",
+        "estimate-S"
+      ],
+      "title": "P0 — Первый релиз v1.0.0 в production",
+      "body": "**Что сделать.**\n- Пройти `docs/PRODUCTION_CHECKLIST.md` и Go/No-Go чеклист из плана — без исключений.\n- Создать GitHub Release `v1.0.0` на коммите, прошедшем staging (release → build → deploy-pipeline в `production` с required reviewers).\n- Подтвердить деплой, дождаться verify.\n- Сразу после: `TELEGRAM_WEBAPP_URL` и Menu Button в BotFather, `/start` в боте.\n- Ручная приёмка: вход, шаблон → старт → подходы → завершение, история/аналитика, офлайн-подход с возвратом сети, профиль (замеры/экспорт), удаление тестового аккаунта.\n- Зафиксировать stable-тег, провести пост-релизный разбор.\n\n**Готово, когда.** Прод отдаёт health/ready/version, Mini App работает вживую, бот отвечает, Sentry получает события, pre-migrate бэкап есть.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS1-15 и Go/No-Go чеклист. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 3.1.\n",
+      "github_issue": 174
+    },
+    {
+      "id": "WS2-1",
+      "priority": "P1",
+      "estimate": "M (2d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "frontend",
+        "feature",
+        "estimate-M"
+      ],
+      "title": "P1 — Экран /health на реальных данных вместо mockData",
+      "body": "**Проблема.** `frontend/src/features/health/pages/HealthPage.tsx` (маршрут `/health`) целиком на объекте `mockData` (вес 75.5, шаги 8432, пульс 72) и `Mock Chart Placeholder`. При этом готовые `GlucoseTracker`, `WaterTracker`, `WellnessCheckin` с реальными query/mutation не подключены ни к одному маршруту, а бэкенд `/health-metrics/*` покрыт тестами (`test_water.py` — 100%).\n\n**Что сделать.**\n- Убрать `mockData` (строки 17/56) и плейсхолдер графика (строка 100).\n- Собрать экран из реальных блоков: замеры тела, вода, глюкоза, самочувствие/сон — на существующих хуках `useHealthQueries`.\n- Состояния: skeleton, пусто («нет данных за период»), ошибка с ретраем; график на реальных точках (`recharts` уже есть).\n- Юнит-тесты на маппинг данных и пустое состояние.\n\n**Готово, когда.** Пустой аккаунт показывает корректные пустые состояния, заполненный — реальные значения; `grep -rn \"mockData\" frontend/src/features/health` пусто.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-1. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.1.\n",
+      "github_issue": 175
+    },
+    {
+      "id": "WS2-2",
+      "priority": "P1",
+      "estimate": "S (1d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "frontend",
+        "estimate-S"
+      ],
+      "title": "P1 — Виджеты главной: смонтировать или удалить",
+      "body": "**Проблема.** `GlucoseWidget`, `WaterWidget`, `WellnessWidget`, `EmergencyButton` экспортируются из `features/home/components/index.ts`, но `Home.tsx` их не импортирует; `mapHealthToDashboard.ts` и `useHomeWaterQuery.ts` без потребителей.\n\n**Что сделать.** Либо смонтировать блоки в дашборд `Home.tsx` с состояниями загрузки/пусто (данные уже готовятся хелперами), либо удалить виджеты и мёртвые хелперы. Оставить как есть — не вариант.\n\n**Готово, когда.** Нет файлов без потребителей: `for f in <список>; do grep -rl \"$(basename $f)\" frontend/src | grep -v \"$f\"; done` даёт совпадения.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-2. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.2.\n",
+      "github_issue": 176
+    },
+    {
+      "id": "WS2-3",
+      "priority": "P1",
+      "estimate": "XS (0.5d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "backend",
+        "estimate-S"
+      ],
+      "title": "P1 — Убрать хардкод в GET /users/stats (active_days, total_calories)",
+      "body": "**Проблема.** `backend/app/api/v1/users.py:83-105`: `active_days` и `total_calories` всегда 0 (хардкод), остальное считается корректно через `AnalyticsService`.\n\n**Что сделать.** Посчитать `active_days` (уникальные дни с тренировками за период); для `total_calories` либо считать, либо честно убрать поле из ответа и из UI (сейчас не считается нигде). Обновить `test_users.py`; при изменении схемы — `npm run api:types:generate` + `npm run api:contract:check`.\n\n**Готово, когда.** На аккаунте с историей значения не нулевые; контракт FE↔BE синхронен.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-3. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.3.\n",
+      "github_issue": 177
+    },
+    {
+      "id": "WS2-4",
+      "priority": "P1",
+      "estimate": "M (1–2d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "frontend",
+        "workouts",
+        "estimate-M"
+      ],
+      "title": "P1 — Закрыть TODO в ядре активной тренировки",
+      "body": "**Проблема.** TODO в критичном флоу: `ActiveWorkoutContainer.tsx:111` (интеграция добавления упражнения), `useActiveWorkout.ts:78` (debounce), `ExerciseCard.tsx:28` (`totalSets` из шаблона), `useWorkoutSession.ts:57,65` (интеграция с Zustand-store).\n\n**Что сделать.** Подключить «добавить упражнение» к существующему флоу/модалке; закрыть debounce сохранений (лишние мутации при вводе веса/повторов); подтянуть `totalSets`; довести интеграцию со store.\n\n**Готово, когда.** Все 5 TODO удалены, поведение покрыто тестами, при быстром вводе число сетевых запросов ограничено (проверить в Network).\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-4. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.4.\n",
+      "github_issue": 178
+    },
+    {
+      "id": "WS2-5",
+      "priority": "P1",
+      "estimate": "S (0.25d скрыть / 2d реализовать)",
+      "depends_on": [
+        "WS3-8"
+      ],
+      "labels": [
+        "roadmap",
+        "P1",
+        "backend",
+        "frontend",
+        "estimate-S"
+      ],
+      "title": "P1 — Coach-access: реализовать или скрыть из профиля",
+      "body": "**Проблема.** `users_service.py:50-125` генерирует код доступа и хранит его в `users.profile` (JSON), но механизма реального доступа тренера к данным нет — UI обещает возможность, которой не существует.\n\n**Что сделать.** Либо реализовать (таблица `coach_access`, эндпоинт просмотра данных по коду, TTL, отзыв, аудит доступа), либо скрыть секцию из `ProfilePage` до реализации. Реализация — только вместе с аудитом доступа к медданным (WS3-8).\n\n**Готово, когда.** UI не обещает несуществующего; если оставлено — доступ реально работает и логируется.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-5. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.3.\n",
+      "github_issue": 179
+    },
+    {
+      "id": "WS2-6",
+      "priority": "P1",
+      "estimate": "XS (0.5d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "devops",
+        "estimate-S"
+      ],
+      "title": "P1 — Разобрать PR #148 и висящие dependabot-PR",
+      "body": "**Проблема.** PR #148 (`codex/production-readiness-p0`, 2026-09-04, статус `CONFLICTING`, ~60 файлов: analytics, auth, health-check, coverage) висит и маскирует часть работ. Также открыты #147/#146 (gunicorn 26.x) и #140/#138 (pre-commit 4.6.2).\n\n**Что сделать.** Разобрать #148 по частям (что уже перекрыто SPEC-005 и PR #154) → отдельные PR или закрытие с обоснованием; dependabot-PR — обновить или закрыть.\n\n**Готово, когда.** Нет открытых PR старше двух недель: каждый смержен либо закрыт с комментарием «почему».\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-6. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.6.\n",
+      "github_issue": 180
+    },
+    {
+      "id": "WS2-7",
+      "priority": "P1",
+      "estimate": "XS (0.25d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "frontend",
+        "estimate-S"
+      ],
+      "title": "P1 — Удалить неиспользуемые зависимости фронтенда",
+      "body": "**Проблема.** `@tonconnect/ui-react` в `frontend/package.json` не используется ни в одном файле `src/` (0 ссылок) — лишний вес и поверхность supply-chain.\n\n**Что сделать.** Удалить `@tonconnect/ui-react`; прогнать `npx depcheck` и убрать остальные мёртвые зависимости (`recharts`, `date-fns`, `clsx`, `tailwind-merge` используются — не трогать). Затем `npm ci && npm run build && jest --ci`.\n\n**Готово, когда.** Прод-зависимости соответствуют реальному импорту; сборка и тесты зелёные.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-7. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.6.\n",
+      "github_issue": 181
+    },
+    {
+      "id": "WS2-8",
+      "priority": "P1",
+      "estimate": "S (1d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "documentation",
+        "estimate-S"
+      ],
+      "title": "P1 — Актуализировать документацию (CI, версии, устаревшие отчёты)",
+      "body": "**Что расходится с реальностью.**\n- `frontend/e2e/README.md` ссылается на GitLab CI (`e2e_mvp_golden_path` job) — в проекте GitHub Actions.\n- `README.md` обещает удаление legacy-алиасов в `v1.2.0` к 2026-06-30 — дата прошла, алиасы на месте, версия 1.0.0.\n- `docs/reports/FRONTEND_BACKEND_API_AUDIT.md` утверждает, что water API отсутствует — оно реализовано и покрыто тестами.\n\n**Что сделать.** Исправить ссылки на CI и имена job'ов; перенести/увязать план удаления алиасов; помечать устаревшие снимки со ссылкой на актуальный отчёт; свести «известные ограничения» в один живой документ.\n\n**Готово, когда.** В документации нет утверждений, противоречащих коду; ссылки на CI корректны.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-8. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.6.\n",
+      "github_issue": 182
+    },
+    {
+      "id": "WS2-9",
+      "priority": "P1",
+      "estimate": "XS (0.5d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "frontend",
+        "test",
+        "estimate-S"
+      ],
+      "title": "P1 — Тест-пустышка useWorkoutSessionDraftCloudSync.test.ts",
+      "body": "**Проблема.** `frontend/src/__tests__/shared/useWorkoutSessionDraftCloudSync.test.ts` состоит из TODO-комментариев и создаёт ложное впечатление покрытия cloud-sync черновика сессии.\n\n**Что сделать.** Либо реализовать 4 описанных кейса (гидрация из облака, разрешение конфликтов по `updatedAt`, удаление при отсутствии сессии, немедленный флеш по событиям), либо удалить файл.\n\n**Готово, когда.** В файле есть исполняемые проверки либо файла нет; `jest --ci` зелёный.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS2-9. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 4.5.\n",
+      "github_issue": 183
+    },
+    {
+      "id": "WS3-1",
+      "priority": "P1",
+      "estimate": "M (1d, оператор)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "devops",
+        "reliability",
+        "database",
+        "estimate-M"
+      ],
+      "title": "P1 — Регулярные бэкапы БД, offsite-копия и проверка восстановления",
+      "body": "**Проблема.** Автобэкап существует только перед миграцией (`scripts/backup_before_migrate.sh` внутри deploy-пайплайна). Если схемы не менялись неделями — свежего дампа нет.\n\n**Что сделать.**\n- systemd-timer/cron на хосте: `pg_dump -Fc` → `$BACKUPS_DIR`, ротация (7 дней / 4 недели / 3 месяца), проверка непустоты и размера.\n- Offsite-копия (rclone/rsync/S3) + алерт при неудаче (WS3-3).\n- `restore_test`: раз в неделю восстанавливает дамп в одноразовую БД и делает `SELECT count(*)` по ключевым таблицам.\n- Зафиксировать RTO/RPO, обновить `docs/ROLLBACK_ONCALL_CHEATSHEET.md` фактической процедурой.\n\n**Готово, когда.** 7 дней подряд есть дампы во всех трёх уровнях ротации, offsite подтверждён, автотест восстановления зелёный.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS3-1, WS3-2. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 5.1.\n",
+      "github_issue": 184
+    },
+    {
+      "id": "WS3-2",
+      "priority": "P1",
+      "estimate": "M (2d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "devops",
+        "reliability",
+        "estimate-M"
+      ],
+      "title": "P1 — Мониторинг в эксплуатацию: pinned образы, алерты, дашборды",
+      "body": "**Проблема.** `monitoring/docker-compose.monitoring.yml` поднимается вручную, образы `prom/prometheus:latest`, `grafana:latest` (расходится с политикой pinned-by-digest прод-стека), `alertmanager` падает без `TELEGRAM_CHAT_ID`, дашбордов по ключевым метрикам нет.\n\n**Что сделать.**\n- Пинning образов по digest, зафиксировать версии.\n- Документированный запуск рядом с прод-стеком (отдельный compose + runbook), `TELEGRAM_CHAT_ID`/`TELEGRAM_BOT_TOKEN` в env.\n- Алерты: `readiness != ready` > 2 мин, 5xx > 1%, p95 API > 1.5 c, недоступность `/healthz`, диск > 85%, провал бэкапа, рестарты контейнеров.\n- Дашборд: RPS, латентность по маршрутам, 5xx, пул БД, Redis, ошибки offline-синхронизации.\n- Проверка доставки: искусственно уронить Redis на staging.\n\n**Готово, когда.** Алерт приходит в Telegram < 2 мин, дашборд открывается, образы запинены.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS3-3. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 5.2.\n",
+      "github_issue": 185
+    },
+    {
+      "id": "WS3-3",
+      "priority": "P1",
+      "estimate": "S (0.5d)",
+      "depends_on": [
+        "WS1-8"
+      ],
+      "labels": [
+        "roadmap",
+        "P1",
+        "devops",
+        "reliability",
+        "estimate-S"
+      ],
+      "title": "P1 — Sentry: DSN, релизы и алерты",
+      "body": "**Проблема.** Код инициализации Sentry готов, но без DSN и алертов ошибки прода невидимы.\n\n**Что сделать.** Завести проекты backend/frontend; прописать `SENTRY_DSN`/`VITE_SENTRY_DSN` в секреты environment; включить `SENTRY_RELEASE` (тег образа) для привязки ошибок к релизу; настроить алерты (новая ошибка, рост частоты, > 1% сессий); отправить тестовое событие и убедиться, что теги окружения и релиза корректны.\n\n**Готово, когда.** Тестовое событие из прода видно в Sentry с release/environment; алерт доставляется.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS3-4. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 5.3.\n",
+      "github_issue": 186
+    },
+    {
+      "id": "WS3-4",
+      "priority": "P1",
+      "estimate": "S (0.5d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "backend",
+        "reliability",
+        "estimate-S"
+      ],
+      "title": "P1 — Пул соединений БД через переменные окружения",
+      "body": "**Проблема.** `backend/app/infrastructure/database.py:12` — `create_async_engine(settings.DATABASE_URL, echo=False)` без `pool_size`/`max_overflow`/`pool_pre_ping`/`pool_recycle`. При gunicorn с N воркерами это неявные лимиты и «залипшие» соединения после рестарта Postgres.\n\n**Что сделать.** Добавить `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_TIMEOUT`, `DB_POOL_RECYCLE`, `DB_POOL_PRE_PING` в настройки (дефолты для dev/тестов, для прода — расчёт `workers × (pool + overflow) ≤ max_connections`), передать в `create_async_engine`, задокументировать в `docs/env-matrix.md`. Для SQLite/тестов сохранить текущее поведение.\n\n**Готово, когда.** Параметры применяются (видно в `pg_stat_activity`), при рестарте Postgres приложение восстанавливает соединения без ручного вмешательства.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS3-5. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 5.4.\n",
+      "github_issue": 187
+    },
+    {
+      "id": "WS3-5",
+      "priority": "P1",
+      "estimate": "M (2d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "backend",
+        "reliability",
+        "estimate-M"
+      ],
+      "title": "P1 — Отзываемые refresh-сессии",
+      "body": "**Проблема.** Refresh-токен stateless с TTL 7 дней; `logout` (`auth_service.py:231-238`) только пишет аудит; удаление аккаунта не инвалидирует выданные токены; ротации refresh нет. Для данных о здоровье это существенно.\n\n**Что сделать.**\n- Миграция `refresh_sessions` (`id`, `user_id`, `token_hash`, `family_id`, `issued_at`, `expires_at`, `revoked_at`, `user_agent`, `ip`).\n- Одноразовое использование с ротацией; повторное использование «сгоревшего» токена → отзыв всей семьи + алерт.\n- `logout` — отзыв сессии/всех; `DELETE /users/me` — отзыв всех + `token_version` в JWT.\n- Проверка `token_version` при валидации access-токена (30 минут оставить).\n- Тесты: ротация, повторное использование, logout, удаление аккаунта, истёкшая сессия, миграция вверх/вниз.\n\n**Готово, когда.** После logout и удаления аккаунта старые токены не работают (тест + ручная проверка); есть очистка истёкших сессий.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS3-6. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 5.5.\n",
+      "github_issue": 188
+    },
+    {
+      "id": "WS3-6",
+      "priority": "P1",
+      "estimate": "M (1–2d)",
+      "depends_on": [
+        "WS1-10"
+      ],
+      "labels": [
+        "roadmap",
+        "P1",
+        "backend",
+        "reliability",
+        "estimate-M"
+      ],
+      "title": "P1 — Нагрузочный прогон профиля активной тренировки",
+      "body": "**Проблема.** E2E-наборы есть, но нет ни одного нагрузочного сценария на профиль «много мелких мутаций подряд» — именно он даст узкое место (пересчёт аналитики на каждую мутацию).\n\n**Что сделать.** Сценарий (k6/locust) на staging: вход → старт сессии → 20–40 мелких мутаций подходов с интервалом 3–10 с → завершение; N=100–500 параллельных пользователей. Снять p50/p95/p99, ошибки, поведение пула БД, CPU/RAM, влияние на readiness. Узкие места оформить задачами (например, кэш/материализация аналитики).\n\n**Готово, когда.** Есть отчёт с цифрами и списком узких мест; определён предел приемлемой латентности.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS3-7. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 5.6.\n",
+      "github_issue": 189
+    },
+    {
+      "id": "WS3-7",
+      "priority": "P1",
+      "estimate": "S (1d)",
+      "depends_on": [
+        "WS3-2"
+      ],
+      "labels": [
+        "roadmap",
+        "P1",
+        "reliability",
+        "backend",
+        "estimate-S"
+      ],
+      "title": "P1 — Алерты и аудит доступа к медицинским данным",
+      "body": "**Что сделать.** Алёрты по доле ошибок синхронизации offline-очереди (телеметрия `workoutSyncTelemetry` уже эмитится), по всплеску 401/403 на auth, по неудачам доставки emergency-уведомлений. Аудит-лог чтения медданных (замеры тела, глюкоза, wellness) в хранилище логов; процедура расследования доступа.\n\n**Готово, когда.** События видны в Grafana/Loki, алерты настроены, доступ к медданным можно расследовать постфактум.\n\n**План:** `docs/roadmap/production-remediation-plan-2026-09-23.md` → WS3-8. **Контекст:** `docs/reports/production-gap-analysis-2026-09-18.md` → 5.7, 3.4.\n",
+      "github_issue": 190
+    }
+  ],
+  "created_at": "2026-09-23",
+  "issue_numbers": {
+    "WS1-1": 160,
+    "WS1-2": 161,
+    "WS1-3": 162,
+    "WS1-4": 163,
+    "WS1-5": 164,
+    "WS1-6": 165,
+    "WS1-7": 166,
+    "WS1-8": 167,
+    "WS1-9": 168,
+    "WS1-10": 169,
+    "WS1-11": 170,
+    "WS1-12": 171,
+    "WS1-13": 172,
+    "WS1-14": 173,
+    "WS1-15": 174,
+    "WS2-1": 175,
+    "WS2-2": 176,
+    "WS2-3": 177,
+    "WS2-4": 178,
+    "WS2-5": 179,
+    "WS2-6": 180,
+    "WS2-7": 181,
+    "WS2-8": 182,
+    "WS2-9": 183,
+    "WS3-1": 184,
+    "WS3-2": 185,
+    "WS3-3": 186,
+    "WS3-4": 187,
+    "WS3-5": 188,
+    "WS3-6": 189,
+    "WS3-7": 190
+  }
+}

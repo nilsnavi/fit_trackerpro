@@ -174,8 +174,18 @@ export function useExerciseProgress({ exerciseId, dateFrom, dateTo }: UseExercis
         }
     }, [exerciseId, historyQuery.data])
 
+    if (!progressData) {
+        return {
+            data: null as ExerciseProgressData | null,
+            isLoading: historyQuery.isLoading,
+            isError: historyQuery.isError,
+            error: historyQuery.error,
+            refetch: historyQuery.refetch,
+        }
+    }
+
     return {
-        ...progressData,
+        data: progressData,
         isLoading: historyQuery.isLoading,
         isError: historyQuery.isError,
         error: historyQuery.error,

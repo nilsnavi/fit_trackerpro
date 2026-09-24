@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import Response as FastApiResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,59 +85,42 @@ async def get_user_stats(
     db: AsyncSession = Depends(get_async_db),
 ):
     """
-    Lightweight user stats for `ProfilePage`.
+    Lightweight user stats for `ProfilePage` (окно — 30 дней).
 
-    The frontend expects:
-      { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-
-    For MVP we map from analytics summary; calories are not tracked yet.
+    Значения считаются по реальной истории: `active_days` — уникальные дни
+    с тренировками, остальное — из сводки аналитики. Калории не считаются,
+    поэтому поля `total_calories` в ответе нет.
     """
     analytics = AnalyticsService(db)
     summary = await analytics.get_analytics_summary(user_id=current_user.id, period="30d")
+    active_days = await analytics.get_active_days(user_id=current_user.id, period="30d")
     return {
-        "active_days": 0,
+        "active_days": active_days,
         "total_workouts": int(summary.total_workouts or 0),
         "current_streak": int(summary.current_streak or 0),
         "longest_streak": int(summary.longest_streak or 0),
         "total_duration": int(summary.total_duration or 0),
-        "total_calories": 0,
     }
 
 
 @protected_users_router.get("/coach-access")
-async def list_coach_access(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db),
-):
-    """
-    Coach access sharing is not implemented yet.
-    Keep the endpoint to avoid breaking the profile UI.
-    """
-    service = UsersService(db)
-    return await service.list_coach_access(current_user)
-
-
 @protected_users_router.post("/coach-access/generate")
-async def generate_coach_access(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db),
-):
-    """
-    Generate a short-lived share code (stub for MVP UI wiring).
-    """
-    service = UsersService(db)
-    return await service.generate_coach_access(current_user)
-
-
 @protected_users_router.delete("/coach-access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def revoke_coach_access(
-    access_id: str,
+async def coach_access_unavailable(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
-    service = UsersService(db)
-    await service.revoke_coach_access(current_user, access_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    """
+    Доступ тренера не реализован (WS2-5).
+
+    Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+    доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+    (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Coach access is not implemented yet",
+    )
 
 
 @protected_users_router.get("/export")

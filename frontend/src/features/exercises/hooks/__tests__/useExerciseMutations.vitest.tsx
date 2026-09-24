@@ -1,14 +1,13 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { useCreateCustomExerciseMutation } from '../useExerciseMutations'
 import { exercisesApi } from '@shared/api/domains/exercisesApi'
 
-vi.mock('@shared/api/domains/exercisesApi', () => ({
+jest.mock('@shared/api/domains/exercisesApi', () => ({
     exercisesApi: {
-        createCustom: vi.fn(),
+        createCustom: jest.fn(),
     },
 }))
 
@@ -20,7 +19,7 @@ describe('useCreateCustomExerciseMutation', () => {
     }
 
     beforeEach(() => {
-        vi.mocked(exercisesApi.createCustom).mockReset()
+        jest.mocked(exercisesApi.createCustom).mockReset()
     })
 
     it('calls exercisesApi.createCustom and invalidates exercises list query on success', async () => {
@@ -31,8 +30,8 @@ describe('useCreateCustomExerciseMutation', () => {
             },
         })
 
-        const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
-        vi.mocked(exercisesApi.createCustom).mockResolvedValue({
+        const invalidateSpy = jest.spyOn(qc, 'invalidateQueries')
+        jest.mocked(exercisesApi.createCustom).mockResolvedValue({
             id: 1,
             name: 'My custom exercise',
             description: 'Some description',

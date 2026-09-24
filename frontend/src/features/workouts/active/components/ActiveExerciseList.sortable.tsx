@@ -57,19 +57,6 @@ export interface ActiveExerciseListProps {
     onSelectExerciseIndex: (exerciseIndex: number) => void
 }
 
-function getPreviousSetForDisplay(exercise: CompletedExercise, setNumber: number): Partial<CompletedSet> | undefined {
-    const previousSet = exercise.sets_completed[setNumber - 2]
-    if (previousSet) {
-        return {
-            weight: previousSet.weight,
-            reps: previousSet.reps,
-            duration: previousSet.duration,
-            distance: previousSet.distance,
-        }
-    }
-    return undefined
-}
-
 export const ActiveExerciseListSortable = memo(function ActiveExerciseListSortable({
     incrementScopePrefix,
     exercises,
@@ -257,7 +244,6 @@ export const ActiveExerciseListSortable = memo(function ActiveExerciseListSortab
                                                 </div>
                                                 {exercise.sets_completed.map((set) => {
                                                     const isCurrentSet = isCurrentExercise && set.set_number - 1 === currentSetIndex
-                                                    const previousSetValues = getPreviousSetForDisplay(exercise, set.set_number)
                                                     return (
                                                         <ExerciseSetRow
                                                             key={set.set_number}
@@ -265,7 +251,6 @@ export const ActiveExerciseListSortable = memo(function ActiveExerciseListSortab
                                                             exerciseIndex={exerciseIndex}
                                                             isCurrent={isCurrentSet}
                                                             previousBestLabel={previousBestLabel}
-                                                            previousSetValues={previousSetValues}
                                                             onFocusSet={onSetCurrentPosition}
                                                             onToggleCompleted={onToggleSetCompleted}
                                                             onSkipSet={onSkipSet}

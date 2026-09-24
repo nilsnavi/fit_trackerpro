@@ -3,6 +3,7 @@ import type {
     WorkoutCompleteRequest,
     WorkoutStartRequest,
     WorkoutSessionUpdateRequest,
+    WorkoutSetPatchRequest,
     WorkoutTemplateCreateRequest,
 } from '@features/workouts/types/workouts'
 import { WORKOUT_SYNC_KINDS } from './workoutKinds'
@@ -30,6 +31,15 @@ export async function executeWorkoutSyncOp(kind: string, payload: unknown): Prom
         case WORKOUT_SYNC_KINDS.START: {
             const p = payload as WorkoutStartRequest
             await workoutsApi.startWorkout(p)
+            return
+        }
+        case WORKOUT_SYNC_KINDS.SET_UPDATE: {
+            const { workoutId, setId, body } = payload as {
+                workoutId: number
+                setId: number
+                body: WorkoutSetPatchRequest
+            }
+            await workoutsApi.patchWorkoutSet(workoutId, setId, body)
             return
         }
         case WORKOUT_SYNC_KINDS.SESSION_UPDATE:
