@@ -9,7 +9,7 @@ import { cn } from '@shared/lib/cn'
 import { getErrorMessage } from '@shared/errors'
 import { toast } from '@shared/stores/toastStore'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-import { useSyncQueueWithRetry } from '@shared/hooks/useSyncQueueWithRetry'
+import { useSyncQueue } from '@shared/hooks/useSyncQueue'
 import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { queryKeys } from '@shared/api/queryKeys'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
@@ -34,6 +34,15 @@ import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveW
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
+import {
+    useAcceptProgressionRecommendation,
+    useExerciseProgressionRecommendation,
+    useProgressionRecommendation,
+    useRejectProgressionRecommendation,
+} from '@features/workouts/active/hooks/useProgressionRecommendation'
+import { useWakeLock } from '@features/workouts/active/hooks/useWakeLock'
+import { findPreviousResult } from '@features/workouts/active/lib/previousResult'
+import { revertProgressionPrefill } from '@features/workouts/active/lib/progressionPrefill'
 
 import {
     useActiveWorkoutActions,
@@ -56,7 +65,6 @@ import { useActiveWorkoutExerciseActions } from '@features/workouts/active/hooks
 import { useActiveWorkoutRestFlow } from '@features/workouts/active/hooks/useActiveWorkoutRestFlow'
 import { useActiveWorkoutStats } from '@features/workouts/active/hooks/useActiveWorkoutStats'
 import { useActiveWorkoutHistoryInsights } from '@features/workouts/active/hooks/useActiveWorkoutHistoryInsights'
-import { FloatingRestTimer } from '@features/workouts/active/components/FloatingRestTimer'
 import { useActiveWorkoutCatalogSuggestions } from '@features/workouts/active/hooks/useActiveWorkoutCatalogSuggestions'
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -163,7 +171,7 @@ export function ActiveWorkoutPage() {
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
-    const { pendingItems: syncPendingItems } = useSyncQueueWithRetry()
+    const { pendingItems: syncPendingItems } = useSyncQueue()
     const { conflict: conflictInfo, isOpen: isConflictOpen, closeConflict } = useConflictResolution()
 
     const restPresetScopeKey = useMemo(() => {
@@ -356,6 +364,95 @@ export function ActiveWorkoutPage() {
         recommendationExercise?.exercise_id ?? 0,
         Boolean(isActiveDraft && recommendationExercise?.exercise_id && hasPreviousSetWithRpe),
     )
+
+    // SPEC-005 §8: previous completed result for the active exercise.
+    const previousResult = useMemo(
+        () =>
+            recommendationExercise
+                ? findPreviousResult(historyData?.items, workout?.id, recommendationExercise)
+                : null,
+        [historyData?.items, recommendationExercise, workout?.id],
+    )
+
+    // SPEC-006 §41/§45: persisted next target for the active exercise.
+    const {
+        data: storedProgressionRecommendation,
+        isLoading: isStoredProgressionLoading,
+    } = useExerciseProgressionRecommendation({
+        exerciseId: recommendationExercise?.exercise_id ?? 0,
+        templateId: workout?.template_id ?? null,
+        enabled: Boolean(isActiveDraft && recommendationExercise?.exercise_id),
+    })
+
+    // SPEC-005 §37: read-only preview, used when nothing is stored yet.
+    const {
+        data: progressionPreview,
+        isLoading: isPreviewLoading,
+        isError: isPreviewError,
+    } = useProgressionRecommendation({
+        exerciseId: recommendationExercise?.exercise_id ?? 0,
+        policy: 'DOUBLE_PROGRESSION',
+        enabled: Boolean(
+            isActiveDraft &&
+                recommendationExercise?.exercise_id &&
+                !storedProgressionRecommendation,
+        ),
+    })
+
+    const progressionRecommendation = storedProgressionRecommendation ?? progressionPreview
+    const isProgressionLoading = isStoredProgressionLoading || isPreviewLoading
+    const isProgressionError = isPreviewError && !storedProgressionRecommendation
+
+    // SPEC-006 §42–§44: accepting/modifying/rejecting is always explicit.
+    const acceptProgression = useAcceptProgressionRecommendation()
+    const rejectProgression = useRejectProgressionRecommendation()
+    const handleAcceptProgression = useCallback(
+        (recommendation: { id?: number | null; recommended_value?: number | null }, selectedValue?: number) => {
+            if (!recommendation.id) return
+            acceptProgression.mutate(
+                {
+                    recommendationId: recommendation.id,
+                    selectedValue: selectedValue ?? recommendation.recommended_value ?? undefined,
+                },
+                {
+                    onSuccess: (updated) => {
+                        toast.success(
+                            `Следующая цель: ${updated.actual_selected_value ?? updated.recommended_value ?? '—'} кг`,
+                        )
+                    },
+                    onError: () => toast.error('Не удалось сохранить рекомендацию'),
+                },
+            )
+        },
+        [acceptProgression],
+    )
+    const handleRejectProgression = useCallback(
+        (recommendation: { id?: number | null }) => {
+            if (!recommendation.id) return
+            rejectProgression.mutate(
+                { recommendationId: recommendation.id },
+                {
+                    onSuccess: () => toast.info('Рекомендация отклонена'),
+                    onError: () => toast.error('Не удалось отклонить рекомендацию'),
+                },
+            )
+        },
+        [rejectProgression],
+    )
+    // SPEC-006 §46: the "Почему?" sheet explains the recommendation with the
+    // previous session's working sets (warm-ups already excluded upstream).
+    const previousCompletedSets = useMemo(
+        () =>
+            (previousResult?.sets ?? [])
+                .filter((set) => set.completed)
+                .map((set) => ({
+                    set_number: set.set_number,
+                    reps: set.reps ?? null,
+                    weight: set.weight ?? null,
+                    duration: set.duration ?? null,
+                })),
+        [previousResult],
+    )
     const legacyWeightRecommendation = useMemo(
         () =>
             weightRecommendation
@@ -388,6 +485,56 @@ export function ActiveWorkoutPage() {
         : isError
             ? getErrorMessage(queryError)
             : null
+
+    // SPEC-005 §49: keep the screen awake during an active session (graceful fallback).
+    useWakeLock(Boolean(isActiveDraft))
+
+    // SPEC-005 §26: skip / un-skip exercise for the current session only.
+    const handleSkipExercise = useCallback(
+        (exerciseIndex: number) => {
+            if (!workout) return
+            tg.hapticFeedback({ type: 'impact', style: 'light' })
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? { ...exercise, status: 'skipped' } : exercise,
+                ),
+            }))
+            toast.info('Упражнение пропущено')
+        },
+        [patchItem, tg, workout],
+    )
+
+    // SPEC-006 §58: undo the accepted target that seeded this exercise's sets.
+    const handleRevertProgressionPrefill = useCallback(
+        (exerciseIndex: number) => {
+            tg.hapticFeedback({ type: 'impact', style: 'light' })
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? revertProgressionPrefill(exercise) : exercise,
+                ),
+            }))
+            toast.success(
+                'Вернули значение из плана — больше не подставляем его автоматически',
+            )
+        },
+        [patchItem, tg],
+    )
+
+    const handleUnskipExercise = useCallback(
+        (exerciseIndex: number) => {
+            if (!workout) return
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? { ...exercise, status: null } : exercise,
+                ),
+            }))
+            toast.info('Упражнение возвращено в тренировку')
+        },
+        [patchItem, workout],
+    )
 
     const isLoading: boolean = isValidWorkoutId && isFetching
 
@@ -562,8 +709,15 @@ export function ActiveWorkoutPage() {
         setFinishWarning(null)
         await flushWorkoutSync()
 
-        const current = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey) ?? workout
-        const hasCompletedSet = current.exercises.some((exercise) =>
+        // Единственный владелец сессии — оптимистичный кэш детали: он и только он знает
+        // текущее состояние подходов (устаревший ответ PATCH его больше не откатывает).
+        const session = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey) ?? workout
+        if (!session) {
+            setFinishWarning('Нет данных тренировки')
+            return
+        }
+
+        const hasCompletedSet = session.exercises.some((exercise) =>
             exercise.sets_completed.some((set) => set.completed),
         )
 
@@ -573,7 +727,7 @@ export function ActiveWorkoutPage() {
         }
 
         const metrics = computeWorkoutSessionSummaryMetrics(
-            current,
+            session,
             elapsedSeconds,
             currentExerciseIndex,
             currentSetIndex,
@@ -585,11 +739,11 @@ export function ActiveWorkoutPage() {
                 workoutId,
                 payload: {
                     duration: durationMinutes,
-                    exercises: current.exercises,
-                    comments: current.comments,
-                    tags: current.tags ?? [],
-                    glucose_before: current.glucose_before,
-                    glucose_after: current.glucose_after,
+                    exercises: session.exercises,
+                    comments: session.comments,
+                    tags: session.tags ?? [],
+                    glucose_before: session.glucose_before,
+                    glucose_after: session.glucose_after,
                 },
             })
 
@@ -606,6 +760,9 @@ export function ActiveWorkoutPage() {
                     workoutTitle,
                     durationMinutes,
                     finishedAt: data.completed_at,
+                    // SPEC-005 §51: server-computed PRs + next targets.
+                    personalRecords: data.personal_records ?? [],
+                    progressionRecommendations: data.progression_recommendations ?? [],
                 },
             })
         } catch (error) {
@@ -826,15 +983,6 @@ export function ActiveWorkoutPage() {
                         isFinishPending={completeMutation.isPending}
                         finishErrorMessage={completion.sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
                         syncState={syncState}
-                        isOnline={isOnline}
-                        onRetryFinish={() => {
-                            completeMutation.reset()
-                            completion.handleConfirmFinishFromSheet()
-                        }}
-                        onSaveLocalFinish={() => {
-                            completeMutation.reset()
-                            completion.saveCompleteLocallyAndExit()
-                        }}
                         onCloseFinish={completion.closeFinishSheet}
                         onConfirmFinish={completion.handleConfirmFinishFromSheet}
                         onChangeTagsDraft={completion.setFinishTagsDraft}
@@ -916,6 +1064,17 @@ export function ActiveWorkoutPage() {
                         currentExerciseIndex={currentExerciseIndex}
                         currentSetIndex={currentSetIndex}
                         previousBestByExercise={previousBestByExercise}
+                        previousResult={previousResult}
+                        progressionRecommendation={progressionRecommendation}
+                        onRevertProgressionPrefill={handleRevertProgressionPrefill}
+                        isProgressionLoading={isProgressionLoading}
+                        isProgressionError={isProgressionError}
+                        onAcceptProgression={handleAcceptProgression}
+                        onRejectProgression={handleRejectProgression}
+                        isProgressionDeciding={
+                            acceptProgression.isPending || rejectProgression.isPending
+                        }
+                        progressionPreviousSets={previousCompletedSets}
                         weightRecommendation={weightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
@@ -930,6 +1089,8 @@ export function ActiveWorkoutPage() {
                         onSetLastCompletedSet={setLastCompletedSet}
                         onAddExercise={() => exerciseActions.resetAddItemForm('exercise')}
                         onFinishWorkout={handleFinishWorkoutDirect}
+                        onSkipExercise={handleSkipExercise}
+                        onUnskipExercise={handleUnskipExercise}
                     />
 
                     {renderLegacyActiveWorkoutDebug ? (
@@ -1158,7 +1319,6 @@ export function ActiveWorkoutPage() {
             {renderLegacyActiveWorkoutDebug && isActiveDraft && !isLoading && !errorMessage && workout && (
                 <>
                     <WorkoutSessionRestOverlay onTimerEnd={handleRestTimerEnd} />
-                    <FloatingRestTimer workout={workout} onUpdateSet={updateSet} />
                     <ActiveWorkoutBottomActions
                         isActiveDraft={isActiveDraft}
                         restPresets={restPresets}

@@ -5,9 +5,12 @@ import type { CompletedExercise } from '@features/workouts/types/workouts'
 export type ActiveWorkoutSyncState = 'idle' | 'syncing' | 'synced' | 'error' | 'offline-queued'
 | 'saved-locally' | 'conflict'
 
+/**
+ * Legacy rest-timer slice of the session store: written by `startRestTimer` and read
+ * by `useActiveWorkoutRestFlow`. The live countdown UI lives in
+ * `workoutSessionUiStore.sessionRestTimer` (SPEC-005 §17).
+ */
 export interface ActiveWorkoutRestTimerState {
-    isRunning: boolean
-    isPaused: boolean
     remainingSeconds: number
     durationSeconds: number
 }
@@ -20,6 +23,7 @@ interface ActiveWorkoutState {
     elapsedSeconds: number
     restTimer: ActiveWorkoutRestTimerState
     restDefaultSeconds: number
+    lastCompletedSet: { exerciseIndex: number; setNumber: number } | null
     exercises: CompletedExercise[]
     syncState: ActiveWorkoutSyncState
 
@@ -31,21 +35,15 @@ interface ActiveWorkoutState {
     setCurrentPosition: (exerciseIndex: number, setIndex: number) => void
     setElapsedSeconds: (elapsedSeconds: number) => void
     startRestTimer: (durationSeconds: number) => void
-    tickRestTimer: () => void
-    pauseRestTimer: () => void
-    resumeRestTimer: () => void
-    restartRestTimer: () => void
     skipRestTimer: () => void
-    stopRestTimer: () => void
     setRestDefaultSeconds: (seconds: number) => void
+    setLastCompletedSet: (value: { exerciseIndex: number; setNumber: number } | null) => void
     setExercises: (exercises: CompletedExercise[]) => void
     setSyncState: (syncState: ActiveWorkoutSyncState) => void
     reset: () => void
 }
 
 const initialRestTimerState: ActiveWorkoutRestTimerState = {
-    isRunning: false,
-    isPaused: false,
     remainingSeconds: 0,
     durationSeconds: 0,
 }
@@ -58,6 +56,7 @@ const initialState = {
     elapsedSeconds: 0,
     restTimer: initialRestTimerState,
     restDefaultSeconds: 90,
+    lastCompletedSet: null as { exerciseIndex: number; setNumber: number } | null,
     exercises: [] as CompletedExercise[],
     syncState: 'idle' as ActiveWorkoutSyncState,
 }
@@ -78,6 +77,7 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set) => ({
                 currentSetIndex: 0,
                 restTimer: initialRestTimerState,
                 restDefaultSeconds: 90,
+                lastCompletedSet: null,
                 exercises,
                 syncState: 'idle',
             }
@@ -92,70 +92,17 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set) => ({
         const nextDuration = Math.max(0, Math.floor(durationSeconds))
         set({
             restTimer: {
-                isRunning: nextDuration > 0,
-                isPaused: false,
                 durationSeconds: nextDuration,
                 remainingSeconds: nextDuration,
             },
         })
     },
 
-    tickRestTimer: () =>
-        set((state) => {
-            if (!state.restTimer.isRunning) return state
-            const remainingSeconds = Math.max(0, state.restTimer.remainingSeconds - 1)
-            return {
-                restTimer: {
-                    ...state.restTimer,
-                    remainingSeconds,
-                    isPaused: false,
-                    isRunning: remainingSeconds > 0,
-                },
-            }
-        }),
-
-    pauseRestTimer: () =>
-        set((state) => {
-            if (!state.restTimer.isRunning) return state
-            return {
-                restTimer: {
-                    ...state.restTimer,
-                    isRunning: false,
-                    isPaused: true,
-                },
-            }
-        }),
-
-    resumeRestTimer: () =>
-        set((state) => {
-            if (!state.restTimer.isPaused || state.restTimer.remainingSeconds <= 0) return state
-            return {
-                restTimer: {
-                    ...state.restTimer,
-                    isRunning: true,
-                    isPaused: false,
-                },
-            }
-        }),
-
-    restartRestTimer: () =>
-        set((state) => {
-            if (state.restTimer.durationSeconds <= 0) return state
-            return {
-                restTimer: {
-                    ...state.restTimer,
-                    isRunning: true,
-                    isPaused: false,
-                    remainingSeconds: state.restTimer.durationSeconds,
-                },
-            }
-        }),
-
     skipRestTimer: () => set({ restTimer: initialRestTimerState }),
 
-    stopRestTimer: () => set({ restTimer: initialRestTimerState }),
-
     setRestDefaultSeconds: (seconds) => set({ restDefaultSeconds: Math.max(15, Math.floor(seconds)) }),
+
+    setLastCompletedSet: (value) => set({ lastCompletedSet: value }),
 
     setExercises: (exercises) => set({ exercises }),
 
@@ -182,6 +129,7 @@ export function useActiveWorkoutStateSlice() {
             syncState: s.syncState,
             restTimer: s.restTimer,
             restDefaultSeconds: s.restDefaultSeconds,
+            lastCompletedSet: s.lastCompletedSet,
         })),
     )
 }
@@ -202,13 +150,9 @@ export function useActiveWorkoutActions() {
             setExercises: s.setExercises,
             setRestDefaultSeconds: s.setRestDefaultSeconds,
             startRestTimer: s.startRestTimer,
-            tickRestTimer: s.tickRestTimer,
-            pauseRestTimer: s.pauseRestTimer,
-            resumeRestTimer: s.resumeRestTimer,
-            restartRestTimer: s.restartRestTimer,
             skipRestTimer: s.skipRestTimer,
-            stopRestTimer: s.stopRestTimer,
             reset: s.reset,
+            setLastCompletedSet: s.setLastCompletedSet,
         })),
     )
 }

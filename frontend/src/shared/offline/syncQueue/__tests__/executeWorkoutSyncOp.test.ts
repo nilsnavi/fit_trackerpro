@@ -9,6 +9,7 @@ jest.mock('@shared/api/domains/workoutsApi', () => ({
         startWorkout: jest.fn(),
         updateWorkoutSession: jest.fn(),
         completeWorkout: jest.fn(),
+        patchWorkoutSet: jest.fn(),
     },
 }))
 
@@ -17,6 +18,22 @@ const mockedWorkoutsApi = workoutsApi as jest.Mocked<typeof workoutsApi>
 describe('executeWorkoutSyncOp', () => {
     beforeEach(() => {
         jest.clearAllMocks()
+    })
+
+    it('executes a queued set completion', async () => {
+        mockedWorkoutsApi.patchWorkoutSet.mockResolvedValue({} as never)
+
+        await executeWorkoutSyncOp(WORKOUT_SYNC_KINDS.SET_UPDATE, {
+            workoutId: 13,
+            setId: 77,
+            body: { weight: 80, reps: 8, completed: true },
+        })
+
+        expect(mockedWorkoutsApi.patchWorkoutSet).toHaveBeenCalledWith(13, 77, {
+            weight: 80,
+            reps: 8,
+            completed: true,
+        })
     })
 
     it('executes legacy active-session update queue items', async () => {

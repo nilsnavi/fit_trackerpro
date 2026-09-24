@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNetworkOnline } from '@shared/hooks/useNetworkOnline'
-import { useSyncQueueUiState } from '@shared/hooks/useSyncQueueUiState'
-import { getSyncQueueEngine } from '@shared/offline/syncQueue'
+import { useSyncQueue } from '@shared/hooks/useSyncQueue'
 import { toast } from '@shared/stores/toastStore'
 
 type SyncToastState = 'idle' | 'offline' | 'syncing' | 'queued' | 'failed'
@@ -11,7 +10,13 @@ type SyncToastState = 'idle' | 'offline' | 'syncing' | 'queued' | 'failed'
  */
 export function SyncStatusToastBridge() {
     const online = useNetworkOnline()
-    const { queuedCount, failedCount, isFlushing, retryInSec } = useSyncQueueUiState()
+    const {
+        totalCount: queuedCount,
+        failedCount,
+        isFlushing,
+        retryInSec,
+        retryAllFailed,
+    } = useSyncQueue()
 
     const prevStateRef = useRef<SyncToastState>('idle')
 
@@ -31,22 +36,9 @@ export function SyncStatusToastBridge() {
         if (failedCount > 0) {
             toast.syncStatus('failed', {
                 failedCount,
+                // Действие читающей поверхности: повторяет упавшее и подталкивает отправку.
                 onRetryNow: () => {
-                    const engine = getSyncQueueEngine()
-                    const failedItems = engine
-                        .getAllItems()
-                        .filter((item) => item.status === 'failed')
-
-                    if (failedItems.length === 0) {
-                        void engine.flush()
-                        return
-                    }
-
-                    void (async () => {
-                        for (const item of failedItems) {
-                            await engine.retryItem(item.id)
-                        }
-                    })()
+                    void retryAllFailed()
                 },
             })
             prevStateRef.current = 'failed'
@@ -64,7 +56,7 @@ export function SyncStatusToastBridge() {
         }
 
         prevStateRef.current = 'idle'
-    }, [online, queuedCount, failedCount, isFlushing, retryInSec])
+    }, [online, queuedCount, failedCount, isFlushing, retryInSec, retryAllFailed])
 
     return null
 }

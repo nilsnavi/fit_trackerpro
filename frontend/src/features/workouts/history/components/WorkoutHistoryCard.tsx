@@ -3,6 +3,7 @@ import { ChevronRight, Clock, Dumbbell, Flame, Repeat } from 'lucide-react'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 import { cn } from '@shared/lib/cn'
 import { getWorkoutListTypeConfig } from '@features/workouts/config/workoutTypeConfigs'
+import type { WorkoutType } from '@shared/types'
 
 interface WorkoutHistoryCardProps {
     workout: WorkoutHistoryItem
@@ -14,7 +15,7 @@ export function WorkoutHistoryCard({ workout, onNavigate, onRepeat }: WorkoutHis
     const config = useMemo(() => {
         // Определяем тип тренировки на основе комментариев или тегов
         const type = workout.tags?.[0] || 'custom'
-        return getWorkoutListTypeConfig(type as any)
+        return getWorkoutListTypeConfig(type as WorkoutType)
     }, [workout.tags])
 
     const TypeIcon = config.icon

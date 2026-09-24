@@ -17,6 +17,7 @@ export {
     useUiStore,
     useWorkoutDraftStore,
     useWorkoutSessionDraftStore,
+    useWorkoutSessionUiStore,
 } from './local'
 export type { AnalyticsRange } from './local'
 export {
