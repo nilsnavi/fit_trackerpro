@@ -2366,8 +2366,6 @@ class TestPrefillEntryPointMatrix:
         C reorder carried rows, D carried keeps its occurrence/slot,
         E new blank does not receive occurrence 0 of a carried slot.
         """
-        service = workouts_service.WorkoutsService  # type: ignore[attr-defined]
-        # Prefer instance method via unbound call pattern used elsewhere.
         from app.application.workouts_service import WorkoutsService
 
         # Minimal fake service for unbound method binding
@@ -2435,8 +2433,11 @@ class TestPrefillEntryPointMatrix:
         so the accepted primary target is not applied to it.
         """
         from types import SimpleNamespace
+
+        from app.application.progression_engine_service import (
+            AcceptedProgressionTarget,
+        )
         from app.application.workouts_service import WorkoutsService
-        from app.application.progression_engine_service import AcceptedProgressionTarget
 
         captured: dict = {}
 
