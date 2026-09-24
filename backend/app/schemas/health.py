@@ -5,11 +5,211 @@ Pydantic models for health tracking endpoints
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 from app.schemas.enums import GlucoseMeasurementType, HealthDashboardPeriod
+
+BodyMeasurementType = Literal[
+    "chest",
+    "waist",
+    "hips",
+    "left_thigh",
+    "right_thigh",
+    "left_bicep",
+    "right_bicep",
+]
+
+
+class BodyMeasurementCreate(BaseModel):
+    """Request model for creating body circumference measurement."""
+
+    measurement_type: BodyMeasurementType = Field(
+        ...,
+        description="Body measurement type.",
+    )
+    value_cm: float = Field(
+        ...,
+        gt=0,
+        le=400,
+        description="Measurement value in centimeters.",
+    )
+    measured_at: date = Field(
+        ...,
+        description="Measurement date in YYYY-MM-DD format.",
+    )
+
+
+class BodyMeasurementUpdate(BaseModel):
+    """Request model for updating body circumference measurement."""
+
+    measurement_type: Optional[BodyMeasurementType] = Field(
+        None,
+        description="Body measurement type.",
+    )
+    value_cm: Optional[float] = Field(
+        None,
+        gt=0,
+        le=400,
+        description="Measurement value in centimeters.",
+    )
+    measured_at: Optional[date] = Field(
+        None,
+        description="Measurement date in YYYY-MM-DD format.",
+    )
+
+
+class BodyMeasurementResponse(BaseModel):
+    """Body measurement response."""
+
+    id: int
+    user_id: int
+    measurement_type: str
+    value_cm: float
+    measured_at: date
+    created_at: datetime
+    updated_at: datetime
+
+
+class BodyMeasurementHistoryResponse(BaseModel):
+    """Body measurements history response."""
+
+    items: List[BodyMeasurementResponse]
+    total: int
+    page: int
+    page_size: int
+    date_from: Optional[date]
+    date_to: Optional[date]
+
+
+class WaterEntryCreate(BaseModel):
+    """Request model for creating water entry"""
+    amount: int = Field(
+        ...,
+        ge=0,
+        le=10000,
+        description="Water amount in milliliters.",
+    )
+    recorded_at: Optional[datetime] = Field(
+        None,
+        description="When water was consumed (default: now)",
+    )
+
+
+class WaterEntryResponse(BaseModel):
+    """Water entry response"""
+    id: int
+    user_id: int
+    amount: int
+    recorded_at: datetime
+    created_at: datetime
+
+
+class WaterGoalCreate(BaseModel):
+    """Request model for creating/updating water goal"""
+    daily_goal: int = Field(
+        2000,
+        ge=500,
+        le=10000,
+        description="Daily water goal in milliliters.",
+    )
+    workout_increase: int = Field(
+        500,
+        ge=0,
+        le=3000,
+        description="Extra water on workout days.",
+    )
+    is_workout_day: bool = Field(
+        False,
+        description="Whether today is a workout day",
+    )
+
+
+class WaterGoalResponse(BaseModel):
+    """Water goal response"""
+    id: int
+    user_id: int
+    daily_goal: int
+    workout_increase: int
+    is_workout_day: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class WaterReminderCreate(BaseModel):
+    """Request model for creating/updating water reminder"""
+    enabled: bool = Field(True, description="Whether reminders are enabled")
+    interval_hours: int = Field(
+        2,
+        ge=1,
+        le=12,
+        description="Hours between reminders",
+    )
+    start_time: str = Field(
+        "08:00",
+        description="Reminder start time (HH:MM)",
+    )
+    end_time: str = Field(
+        "22:00",
+        description="Reminder end time (HH:MM)",
+    )
+    quiet_hours_start: Optional[str] = Field(
+        None,
+        description="Quiet hours start time (HH:MM)",
+    )
+    quiet_hours_end: Optional[str] = Field(
+        None,
+        description="Quiet hours end time (HH:MM)",
+    )
+    telegram_notifications: bool = Field(
+        True,
+        description="Send reminders via Telegram",
+    )
+
+
+class WaterReminderResponse(BaseModel):
+    """Water reminder response"""
+    id: int
+    user_id: int
+    enabled: bool
+    interval_hours: int
+    start_time: str
+    end_time: str
+    quiet_hours_start: Optional[str]
+    quiet_hours_end: Optional[str]
+    telegram_notifications: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class WaterDailyStats(BaseModel):
+    """Water daily statistics"""
+    date: date
+    total: int
+    goal: int
+    percentage: float
+    is_goal_reached: bool
+    entry_count: int
+
+
+class WaterWeeklyStats(BaseModel):
+    """Water weekly statistics"""
+    days: List[WaterDailyStats]
+    average: float
+    best_day: Optional[WaterDailyStats]
+    total_entries: int
+
+
+class WaterHistoryResponse(BaseModel):
+    """Water history response"""
+    items: List[WaterEntryResponse]
+    total: int
+    page: int
+    page_size: int
+    date_from: Optional[date]
+    date_to: Optional[date]
+    total_amount: int
 
 
 class GlucoseLogCreate(BaseModel):

@@ -106,4 +106,24 @@ describe('TelegramAuthGate', () => {
         expect(api.post).toHaveBeenCalledTimes(2)
         expect(useAuthStore.getState().accessToken).toBe('ok-token')
     })
+
+    it('shows a connectivity message when the exchange fails off-network', async () => {
+        const { api } = await import('@shared/api/client')
+        ;(api.post as jest.Mock).mockRejectedValue(new Error('Network down'))
+
+        setTelegramWebApp('query_id=1&hash=ab', { user: { first_name: 'Анна' } })
+
+        render(
+            <TelegramAuthGate>
+                <div data-testid="app">APP</div>
+            </TelegramAuthGate>,
+        )
+
+        await waitFor(() => {
+            expect(screen.getByRole('heading', { name: /ошибка авторизации/i })).toBeInTheDocument()
+        })
+
+        expect(screen.getByRole('alert')).toHaveTextContent(/проверьте соединение/i)
+        expect(screen.queryByTestId('app')).toBeNull()
+    })
 })

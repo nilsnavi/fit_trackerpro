@@ -6,10 +6,10 @@
  * - Цель по весу с прогрессом
  * - Витрина достижений
  * - Настройки профиля
- * - Доступ для тренера
  * - Экспорт данных
  */
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Edit2,
     Target,
@@ -17,29 +17,35 @@ import {
     Settings,
     LogOut,
     Download,
-    User as UserIcon,
     Bell,
     Ruler,
-    Share2,
     ChevronRight,
     X,
     Check,
-    Trash2,
-    Plus,
+    Save,
     Calendar,
     Flame,
-    Activity
+    Activity,
+    ScanLine
 } from 'lucide-react';
 import { cn } from '@shared/lib/cn';
 import { Button } from '@shared/ui/Button';
 import { Input } from '@shared/ui/Input';
 import { Chip, ChipGroup } from '@shared/ui/Chip';
 import { ProgressBar } from '@shared/ui/ProgressBar';
-import { Modal } from '@shared/ui/Modal';
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp';
 import { useAchievements } from '@features/achievements/hooks/useAchievements';
+import {
+    useAddBodyMeasurementMutation,
+    useBodyMeasurementsQuery,
+} from '@features/health/hooks/useHealthQueries';
+import type {
+    BodyMeasurement,
+    BodyMeasurementType,
+} from '@features/health/types/metrics';
 import { useProfile } from '@features/profile/hooks/useProfile';
-import { ProfileShowcase } from '@features/achievements/components';
+import { ProfileShowcase } from '@features/achievements/components'
+import { EmergencyContactsSection } from '@features/emergency/components';
 import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
 
 // ============================================
@@ -69,6 +75,16 @@ const LIMITATION_OPTIONS = [
     { value: 'neck', label: 'Шея', description: 'Проблемы с шеей' },
 ];
 
+const BODY_MEASUREMENT_FIELDS: Array<{ key: BodyMeasurementType; label: string }> = [
+    { key: 'chest', label: 'Обхват груди' },
+    { key: 'waist', label: 'Обхват талии' },
+    { key: 'hips', label: 'Обхват бедер' },
+    { key: 'left_thigh', label: 'Обхват левого бедра' },
+    { key: 'right_thigh', label: 'Обхват правого бедра' },
+    { key: 'left_bicep', label: 'Обхват левого бицепса' },
+    { key: 'right_bicep', label: 'Обхват правого бицепса' },
+];
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -79,6 +95,17 @@ const formatDate = (date: Date): string => {
         month: 'long',
     });
 };
+
+const formatMeasurementDate = (value?: string): string => {
+    if (!value) return 'Дата не указана';
+    const [year, month, day] = value.split('-');
+    if (year && month && day) return `${day}.${month}.${year}`;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('ru-RU');
+};
+
+const todayInputValue = (): string => new Date().toISOString().slice(0, 10);
 
 // ============================================
 // Components
@@ -194,6 +221,136 @@ const EditableField: React.FC<EditableFieldProps> = ({ value, onSave, type = 'te
     );
 };
 
+interface BodyMeasurementsListProps {
+    measurements: Partial<Record<BodyMeasurementType, BodyMeasurement>>;
+    onSave: (key: BodyMeasurementType, valueCm: number, measuredAt: string) => Promise<void>;
+}
+
+const BodyMeasurementsList: React.FC<BodyMeasurementsListProps> = ({ measurements, onSave }) => {
+    const [drafts, setDrafts] = useState<Record<BodyMeasurementType, { value: string; date: string }>>(() => {
+        const today = todayInputValue();
+        return BODY_MEASUREMENT_FIELDS.reduce(
+            (acc, field) => {
+                const measurement = measurements?.[field.key];
+                acc[field.key] = {
+                    value: measurement?.value_cm ? String(measurement.value_cm) : '',
+                    date: measurement?.measured_at || today,
+                };
+                return acc;
+            },
+            {} as Record<BodyMeasurementType, { value: string; date: string }>,
+        );
+    });
+    const [savingKey, setSavingKey] = useState<BodyMeasurementType | null>(null);
+
+    useEffect(() => {
+        const today = todayInputValue();
+        setDrafts((current) => {
+            const next = { ...current };
+            BODY_MEASUREMENT_FIELDS.forEach((field) => {
+                const measurement = measurements?.[field.key];
+                next[field.key] = {
+                    value: measurement?.value_cm ? String(measurement.value_cm) : current[field.key]?.value || '',
+                    date: measurement?.measured_at || current[field.key]?.date || today,
+                };
+            });
+            return next;
+        });
+    }, [measurements]);
+
+    const updateDraft = (key: BodyMeasurementType, patch: Partial<{ value: string; date: string }>) => {
+        setDrafts((current) => ({
+            ...current,
+            [key]: {
+                ...current[key],
+                ...patch,
+            },
+        }));
+    };
+
+    const saveMeasurement = async (key: BodyMeasurementType) => {
+        const draft = drafts[key];
+        const normalizedValue = draft.value.replace(',', '.').trim();
+        const value = Number(normalizedValue);
+        if (!Number.isFinite(value) || value <= 0 || !draft.date) return;
+
+        try {
+            setSavingKey(key);
+            await onSave(key, value, draft.date);
+        } finally {
+            setSavingKey(null);
+        }
+    };
+
+    return (
+        <div className="space-y-3">
+            {BODY_MEASUREMENT_FIELDS.map((field) => {
+                const saved = measurements?.[field.key];
+                const draft = drafts[field.key] || { value: '', date: todayInputValue() };
+                const value = Number(draft.value.replace(',', '.'));
+                const canSave = Number.isFinite(value) && value > 0 && Boolean(draft.date);
+
+                return (
+                    <div
+                        key={field.key}
+                        className="rounded-xl bg-telegram-bg p-3"
+                    >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-medium text-telegram-text">{field.label}</p>
+                                <p className="text-xs text-telegram-hint">
+                                    {saved
+                                        ? `${saved.value_cm} см, ${formatMeasurementDate(saved.measured_at)}`
+                                        : 'Не указано'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={!canSave || savingKey === field.key}
+                                onClick={() => void saveMeasurement(field.key)}
+                                className={cn(
+                                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                                    canSave
+                                        ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                                        : 'bg-telegram-secondary-bg text-telegram-hint opacity-60',
+                                )}
+                                aria-label={`Сохранить ${field.label.toLowerCase()}`}
+                            >
+                                {savingKey === field.key ? (
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                ) : (
+                                    <Save className="h-4 w-4" />
+                                )}
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-[minmax(0,1fr)_minmax(8.5rem,0.9fr)] gap-2">
+                            <Input
+                                type="number"
+                                value={draft.value}
+                                onChange={(event) => updateDraft(field.key, { value: event.target.value })}
+                                placeholder="см"
+                                className="bg-telegram-secondary-bg"
+                                aria-label={`${field.label}, значение в см`}
+                            />
+                            <input
+                                type="date"
+                                value={draft.date}
+                                onChange={(event) => updateDraft(field.key, { date: event.target.value })}
+                                className={cn(
+                                    'w-full rounded-xl bg-telegram-secondary-bg px-3 py-3',
+                                    'text-sm text-telegram-text transition-all duration-200',
+                                    'focus:outline-none focus:ring-2 focus:ring-primary/20',
+                                )}
+                                aria-label={`${field.label}, дата измерения`}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 /**
  * Section Header Component
  */
@@ -233,29 +390,38 @@ export const ProfilePage: React.FC = () => {
     const {
         profile,
         stats,
-        coachAccesses,
         isLoading,
-        isGeneratingCoachCode,
         updateProfile,
         updateSettings,
         getWeightProgress,
-        generateCoachCode,
-        revokeCoachAccess,
         exportData,
     } = useProfile();
+    const bodyMeasurementsQuery = useBodyMeasurementsQuery({ latest: true });
+    const addBodyMeasurementMutation = useAddBodyMeasurementMutation();
 
     const [, setShowAllAchievements] = useState(false);
     const [, setShowSettings] = useState(false);
-    const [showCoachModal, setShowCoachModal] = useState(false);
-    const [accessCode, setAccessCode] = useState('');
 
-    const generateAccessCode = async () => {
-        const code = await generateCoachCode();
-        if (code) setAccessCode(code);
-    };
 
-    const revokeAccess = async (accessId: string) => {
-        await revokeCoachAccess(accessId);
+
+    const latestBodyMeasurements = (bodyMeasurementsQuery.data?.items || []).reduce(
+        (acc, measurement) => {
+            acc[measurement.measurement_type] = measurement;
+            return acc;
+        },
+        {} as Partial<Record<BodyMeasurementType, BodyMeasurement>>,
+    );
+
+    const saveBodyMeasurement = async (
+        key: BodyMeasurementType,
+        valueCm: number,
+        measuredAt: string,
+    ) => {
+        await addBodyMeasurementMutation.mutateAsync({
+            measurement_type: key,
+            value_cm: valueCm,
+            measured_at: measuredAt,
+        });
     };
 
     const handleLogout = async () => {
@@ -400,6 +566,18 @@ export const ProfilePage: React.FC = () => {
                 </div>
             </div>
 
+            {/* Body Measurements */}
+            <div className="bg-telegram-secondary-bg rounded-2xl p-4">
+                <SectionHeader
+                    icon={<ScanLine className="w-5 h-5" />}
+                    title="Замеры тела"
+                />
+                <BodyMeasurementsList
+                    measurements={latestBodyMeasurements}
+                    onSave={saveBodyMeasurement}
+                />
+            </div>
+
             {/* Achievements Showcase */}
             {userStats && (
                 <div>
@@ -494,6 +672,23 @@ export const ProfilePage: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* SPEC-006 §58: accepted targets and their automatic-prefill state */}
+                    <Link
+                        to="/profile/progression-targets"
+                        className="flex items-center justify-between gap-3 py-2 border-t border-border"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Target className="w-4 h-4 text-telegram-hint" />
+                            <div>
+                                <span className="text-sm text-telegram-text">Цели прогрессии</span>
+                                <p className="text-xs text-telegram-hint">
+                                    Принятые веса и автоподстановка в тренировки
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                    </Link>
+
                     {/* Notifications */}
                     <div className="flex items-center justify-between py-2 border-t border-border">
                         <div className="flex items-center gap-2">
@@ -518,28 +713,31 @@ export const ProfilePage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Coach Access */}
-            <div className="bg-telegram-secondary-bg rounded-2xl p-4">
-                <SectionHeader
-                    icon={<Share2 className="w-5 h-5" />}
-                    title="Доступ для тренера"
-                    action={{
-                        label: 'Управление',
-                        onClick: () => setShowCoachModal(true)
-                    }}
-                />
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <UserIcon className="w-4 h-4 text-telegram-hint" />
-                        <span className="text-sm text-telegram-text">
-                            {coachAccesses.length > 0
-                                ? `${coachAccesses.length} активных доступов`
-                                : 'Нет активных доступов'
-                            }
-                        </span>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-telegram-hint" />
-                </div>
+            {/* Emergency contacts (safety feature) */}
+            <EmergencyContactsSection />
+
+            {/* Legal documents */}
+            <div className="bg-telegram-secondary-bg rounded-2xl p-4 space-y-2">
+                <h3 className="text-sm font-semibold text-telegram-text">
+                    Данные и приватность
+                </h3>
+                <Link
+                    to="/legal/privacy"
+                    className="flex items-center justify-between text-sm text-telegram-text"
+                >
+                    Политика конфиденциальности
+                    <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                </Link>
+                <Link
+                    to="/legal/consent"
+                    className="flex items-center justify-between text-sm text-telegram-text"
+                >
+                    Согласие на обработку данных о здоровье
+                    <ChevronRight className="w-4 h-4 text-telegram-hint" />
+                </Link>
+                <p className="text-[11px] text-telegram-hint">
+                    Экспорт и удаление данных — в разделе ниже.
+                </p>
             </div>
 
             {/* Account Actions */}
@@ -567,64 +765,6 @@ export const ProfilePage: React.FC = () => {
                 FitTracker Pro v1.0.0
             </div>
 
-            {/* Coach Access Modal */}
-            <Modal
-                isOpen={showCoachModal}
-                onClose={() => setShowCoachModal(false)}
-                title="Доступ для тренера"
-                size="md"
-            >
-                <div className="space-y-4">
-                    <p className="text-sm text-telegram-hint">
-                        Сгенерируйте код доступа, чтобы ваш тренер мог просматривать ваш прогресс и планировать тренировки.
-                    </p>
-
-                    {accessCode ? (
-                        <div className="bg-primary/10 rounded-xl p-4 text-center">
-                            <p className="text-sm text-telegram-hint mb-2">Код доступа</p>
-                            <p className="text-3xl font-mono font-bold text-primary tracking-wider">{accessCode}</p>
-                            <p className="text-xs text-telegram-hint mt-2">
-                                Код действителен 24 часа
-                            </p>
-                        </div>
-                    ) : (
-                        <Button
-                            variant="primary"
-                            fullWidth
-                            leftIcon={<Plus className="w-5 h-5" />}
-                            onClick={generateAccessCode}
-                            isLoading={isGeneratingCoachCode}
-                        >
-                            Сгенерировать код
-                        </Button>
-                    )}
-
-                    {coachAccesses.length > 0 && (
-                        <div className="space-y-2">
-                            <p className="text-sm font-medium text-telegram-text">Активные доступы</p>
-                            {coachAccesses.map((access) => (
-                                <div
-                                    key={access.id}
-                                    className="flex items-center justify-between p-3 bg-telegram-bg rounded-xl"
-                                >
-                                    <div>
-                                        <p className="font-medium text-telegram-text">{access.coach_name}</p>
-                                        <p className="text-xs text-telegram-hint">
-                                            До {new Date(access.expires_at || '').toLocaleDateString('ru-RU')}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => revokeAccess(access.id)}
-                                        className="p-2 rounded-lg text-danger hover:bg-danger/10"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </Modal>
         </div>
     );
 };

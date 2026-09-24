@@ -34,7 +34,12 @@ export interface UseActiveWorkoutRestFlowResult {
     handleSelectRestPreset: (seconds: number) => void
     handleSaveRestPresets: () => void
     getTrackedRestPatch: (exerciseIndex: number, setNumber: number) => Partial<CompletedSet>
-    handleToggleSetCompleted: (exerciseIndex: number, setNumber: number, nextCompleted: boolean) => void
+    handleToggleSetCompleted: (
+        exerciseIndex: number,
+        setNumber: number,
+        nextCompleted: boolean,
+        options?: { skipAutoRestTimer?: boolean },
+    ) => void
     handleStartQuickRest: () => void
 }
 
@@ -136,34 +141,44 @@ export function useActiveWorkoutRestFlow({
         }
     }, [restDefaultSeconds, restTimer.durationSeconds, restTimer.remainingSeconds, workout])
 
-    const handleToggleSetCompleted = useCallback((exerciseIndex: number, setNumber: number, nextCompleted: boolean) => {
-        tg.hapticFeedback({ type: 'selection' })
-        setCurrentPosition(exerciseIndex, setNumber - 1)
-        updateSet(exerciseIndex, setNumber, {
-            completed: nextCompleted,
-            ...(nextCompleted
-                ? {
-                      ...getTrackedRestPatch(exerciseIndex, setNumber),
-                      completed_at: new Date().toISOString(),
-                  }
-                : {
-                      completed_at: undefined,
-                      started_at: undefined,
-                  }),
-        })
-        if (nextCompleted) {
-            setLastCompletedSet({ exerciseIndex, setNumber })
-            startRestTimer(restDefaultSeconds)
-        }
-    }, [
-        getTrackedRestPatch,
-        restDefaultSeconds,
-        setCurrentPosition,
-        setLastCompletedSet,
-        startRestTimer,
-        tg,
-        updateSet,
-    ])
+    const handleToggleSetCompleted = useCallback(
+        (
+            exerciseIndex: number,
+            setNumber: number,
+            nextCompleted: boolean,
+            options?: { skipAutoRestTimer?: boolean },
+        ) => {
+            tg.hapticFeedback({ type: 'selection' })
+            setCurrentPosition(exerciseIndex, setNumber - 1)
+            updateSet(exerciseIndex, setNumber, {
+                completed: nextCompleted,
+                ...(nextCompleted
+                    ? {
+                          ...getTrackedRestPatch(exerciseIndex, setNumber),
+                          completed_at: new Date().toISOString(),
+                      }
+                    : {
+                          completed_at: undefined,
+                          started_at: undefined,
+                      }),
+            })
+            if (nextCompleted) {
+                setLastCompletedSet({ exerciseIndex, setNumber })
+                if (!options?.skipAutoRestTimer) {
+                    startRestTimer(restDefaultSeconds)
+                }
+            }
+        },
+        [
+            getTrackedRestPatch,
+            restDefaultSeconds,
+            setCurrentPosition,
+            setLastCompletedSet,
+            startRestTimer,
+            tg,
+            updateSet,
+        ],
+    )
 
     const handleStartQuickRest = useCallback(() => {
         tg.hapticFeedback({ type: 'selection' })

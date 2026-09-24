@@ -5,7 +5,8 @@ import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, normalizeError } from '@shared/errors'
 import { getAuthTokens, useAuthStore } from '@/stores/authStore'
 
-// TODO: Устаревшие алиасы бэкенда удаляются в v1.2.0 (2026-06-30)
+// NOTE: Backend deprecated aliases are scheduled for removal in v1.2.0 (2026-06-30).
+// Keep frontend calls on the canonical routes documented in the repo README (API v1 section).
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean }
 
@@ -178,8 +179,8 @@ class ApiService {
         return response.data
     }
 
-    async put<T>(url: string, data?: unknown) {
-        const response = await this.client.put<T>(url, data)
+    async put<T>(url: string, data?: unknown, params?: Record<string, unknown>) {
+        const response = await this.client.put<T>(url, data, { params })
         return response.data
     }
 

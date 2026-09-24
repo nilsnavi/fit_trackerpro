@@ -1,5 +1,33 @@
 /** Типы ответов health-metrics API (общие для API и UI). */
 
+export type BodyMeasurementType =
+    | 'chest'
+    | 'waist'
+    | 'hips'
+    | 'left_thigh'
+    | 'right_thigh'
+    | 'left_bicep'
+    | 'right_bicep'
+
+export interface BodyMeasurement {
+    id: number
+    user_id: number
+    measurement_type: BodyMeasurementType
+    value_cm: number
+    measured_at: string
+    created_at: string
+    updated_at: string
+}
+
+export interface BodyMeasurementHistory {
+    items: BodyMeasurement[]
+    total: number
+    page: number
+    page_size: number
+    date_from?: string | null
+    date_to?: string | null
+}
+
 export interface WaterEntry {
     id: number
     user_id: number

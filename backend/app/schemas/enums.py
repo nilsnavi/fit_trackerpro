@@ -11,6 +11,7 @@ class ExerciseCategory(StrEnum):
     FLEXIBILITY = "flexibility"
     BALANCE = "balance"
     SPORT = "sport"
+    REHAB = "rehab"
 
 
 class ExerciseStatus(StrEnum):
@@ -43,11 +44,78 @@ class WorkoutSessionType(StrEnum):
     CUSTOM = "custom"
 
 
+class WorkoutSessionSourceType(StrEnum):
+    QUICK_START = "quick_start"
+    PERSONAL_TEMPLATE = "personal_template"
+    SYSTEM_TEMPLATE = "system_template"
+    COMMUNITY_TEMPLATE = "community_template"
+    PROGRAM_DAY = "program_day"
+    PREVIOUS_SESSION = "previous_session"
+
+
 class WorkoutSetType(StrEnum):
     WARMUP = "warmup"
     WORKING = "working"
     DROPSET = "dropset"
     FAILURE = "failure"
+
+
+class WorkoutStatus(StrEnum):
+    """Lifecycle status of a WorkoutSession (SPEC-005 §3)."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class WorkoutBlockType(StrEnum):
+    """Training block grouping exercises within a session (SPEC-005 §24)."""
+
+    NORMAL = "NORMAL"
+    SUPERSET = "SUPERSET"
+    TRISET = "TRISET"
+    CIRCUIT = "CIRCUIT"
+
+
+class ProgressionPolicy(StrEnum):
+    """Supported progression policies (SPEC-005 §29)."""
+
+    MANUAL = "MANUAL"
+    LINEAR = "LINEAR"
+    DOUBLE_PROGRESSION = "DOUBLE_PROGRESSION"
+    RPE_BASED = "RPE_BASED"
+    RIR_BASED = "RIR_BASED"
+    PERCENT_1RM = "PERCENT_1RM"
+    TIME_PROGRESSION = "TIME_PROGRESSION"
+
+
+class ProgressionBulkSkipReason(StrEnum):
+    """Why a bulk action left one selected target alone (SPEC-006 §58)."""
+
+    # Unknown id, someone else's record, or one that is no longer an accepted
+    # target (rejected or superseded by a newer recommendation).
+    NOT_FOUND = "not_found"
+    # The target is accepted and fine — its automatic prefill is just already off.
+    ALREADY_DISABLED = "already_disabled"
+    # The mirror case when the prefill is switched back on: this target never
+    # had it off (SPEC §58 — undoing a bulk switch-off).
+    ALREADY_ENABLED = "already_enabled"
+    # Another selected target of the same scope is newer, and the edit reached
+    # that scope already: a policy belongs to the scope, not to a record, so the
+    # overlap is not edited (or named) a second time.
+    SUPERSEDED = "superseded"
+
+
+class PersonalRecordType(StrEnum):
+    """Personal record types tracked per exercise (SPEC-005 §40)."""
+
+    MAX_WEIGHT = "MAX_WEIGHT"
+    MAX_REPS_AT_WEIGHT = "MAX_REPS_AT_WEIGHT"
+    ESTIMATED_1RM = "ESTIMATED_1RM"
+    MAX_VOLUME = "MAX_VOLUME"
+    MAX_DURATION = "MAX_DURATION"
 
 
 class ChallengeType(StrEnum):

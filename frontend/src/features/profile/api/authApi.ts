@@ -5,11 +5,9 @@ export type FitnessGoal = 'strength' | 'weight_loss' | 'endurance'
 export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced'
 
 export interface TelegramAuthResponse {
-    success?: boolean
-    message?: string
-    /** JWT (preferred Mini App field). */
-    token?: string
-    access_token?: string
+    success: boolean
+    message: string
+    access_token: string
     refresh_token?: string | null
     is_new_user: boolean
     onboarding_required: boolean
@@ -18,17 +16,15 @@ export interface TelegramAuthResponse {
 export interface SaveOnboardingRequest {
     fitness_goal: FitnessGoal
     experience_level: ExperienceLevel
+    /** Согласие на обработку данных о здоровье — обязательно (WS1-14). */
+    health_data_consent: boolean
+    /** Версия текста согласия, которую видел пользователь. */
+    consent_version: string
 }
 
 export const authApi = {
     telegramLogin(initData: string): Promise<TelegramAuthResponse> {
-        return api.post<TelegramAuthResponse>('/users/auth/telegram', { initData })
-    },
-    telegramLookup(initData: string): Promise<{ registered: boolean }> {
-        return api.post<{ registered: boolean }>('/users/auth/lookup', { initData })
-    },
-    telegramRegister(initData: string): Promise<TelegramAuthResponse> {
-        return api.post<TelegramAuthResponse>('/users/auth/register', { initData })
+        return api.post<TelegramAuthResponse>('/users/auth/telegram', { init_data: initData })
     },
     getCurrentUser(): Promise<UserProfile> {
         return api.get<UserProfile>('/users/auth/me')

@@ -56,7 +56,6 @@ export function ActiveWorkoutSessionDetailsCollapsible({
                     completedSetCount={completedSetCount}
                     onDurationChange={onDurationChange}
                     onCommentsChange={onCommentsChange}
-                    showSessionOverview={false}
                 />
             </div>
         </details>

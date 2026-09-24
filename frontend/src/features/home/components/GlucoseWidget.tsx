@@ -42,6 +42,8 @@ export function GlucoseWidget({ data, onClick }: GlucoseWidgetProps) {
     if (!data) {
         return (
             <button
+                type="button"
+                data-testid="glucose-widget"
                 onClick={onClick}
                 className="flex-shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
             >
@@ -59,6 +61,8 @@ export function GlucoseWidget({ data, onClick }: GlucoseWidgetProps) {
 
     return (
         <button
+            type="button"
+            data-testid="glucose-widget"
             onClick={onClick}
             className={cn(
                 'flex-shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',

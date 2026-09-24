@@ -2,6 +2,8 @@
 
 Канонический production runbook для FitTracker Pro.
 
+Для первого ручного развёртывания на своём Ubuntu-сервере: [пошаговая инструкция и шаблоны](self-hosting/README.md). Она включает анализ ограничений текущей конфигурации, сборку из исходников, HTTPS, Telegram, backup/restore и откат. Это отдельный сценарий от описанного ниже GHCR/CI/CD.
+
 ## 1. Стратегия (без изменений)
 
 - Сборка и публикация образов: GitHub Actions, GHCR, versioned `IMAGE_TAG`.
@@ -15,6 +17,13 @@
 3. Рендер проходит: `docker compose -f docker-compose.prod.yml config --quiet`.
 4. Nginx конфиг валиден: `nginx -t` (см. workflow pre-deploy validate).
 5. Есть свежий pre-deploy backup БД.
+6. Для ручного/server deploy локальная копия `.env` проходит:
+
+```bash
+node scripts/validate-production-env.mjs .env
+```
+
+Скрипт проверяет обязательность и формат ключевых переменных без вывода значений секретов.
 
 ## 2.1. Host prerequisites (важно для production)
 

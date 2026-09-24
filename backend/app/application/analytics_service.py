@@ -30,7 +30,6 @@ from app.schemas.analytics import (
     AnalyticsPerformanceOverviewResponse,
     AnalyticsPerformanceTrendPoint,
     AnalyticsSummaryResponse,
-    AnalyticsWeeklyChartPoint,
     CalendarDayEntry,
     DataExportRequest,
     DataExportResponse,
@@ -175,6 +174,10 @@ def compute_intensity_weekly_chart(
             )
         )
     return points
+
+
+#: Окна периодов для «лёгкой» статистики профиля (WS2-3).
+_PERIOD_DAYS: dict[str, int] = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 36500}
 
 
 class AnalyticsService:
@@ -1006,53 +1009,6 @@ class AnalyticsService:
         _ = user_id
         raise AnalyticsNotFoundError("Export not found or expired")
 
-    @staticmethod
-    def _monday_of_week(day: date) -> date:
-        return day - timedelta(days=day.weekday())
-
-    @staticmethod
-    def _current_streak_days(sorted_workout_dates: List[date]) -> int:
-        if not sorted_workout_dates:
-            return 0
-        today = date.today()
-        yesterday = today - timedelta(days=1)
-        if sorted_workout_dates[-1] not in (today, yesterday):
-            return 0
-        current_streak = 0
-        for i in range(len(sorted_workout_dates) - 1, -1, -1):
-            if i == len(sorted_workout_dates) - 1:
-                current_streak = 1
-            elif (sorted_workout_dates[i + 1] - sorted_workout_dates[i]).days == 1:
-                current_streak += 1
-            else:
-                break
-        return current_streak
-
-    @staticmethod
-    def _build_dashboard_weekly_chart(
-        period: str,
-        daily_pairs: List[tuple[date, int]],
-        chart_start: date,
-        chart_end: date,
-    ) -> List[AnalyticsWeeklyChartPoint]:
-        day_map = {d: c for d, c in daily_pairs}
-        if period == "week":
-            out: List[AnalyticsWeeklyChartPoint] = []
-            d = chart_start
-            while d <= chart_end:
-                out.append(AnalyticsWeeklyChartPoint(date=d, count=day_map.get(d, 0)))
-                d += timedelta(days=1)
-            return out
-
-        weekly: dict[date, int] = defaultdict(int)
-        for d, c in daily_pairs:
-            if chart_start <= d <= chart_end:
-                weekly[AnalyticsService._monday_of_week(d)] += c
-        return [
-            AnalyticsWeeklyChartPoint(date=w, count=weekly[w])
-            for w in sorted(weekly.keys())
-        ]
-
     async def get_analytics_dashboard(self, user_id: int, period: str) -> AnalyticsDashboardResponse:
         today = date.today()
         if period == "week":
@@ -1169,9 +1125,15 @@ class AnalyticsService:
             workouts_with_rpe_count=int(intensity_metrics.get("workouts_with_rpe_count") or 0),
         )
 
+    async def get_active_days(self, user_id: int, period: str = "30d") -> int:
+        """Уникальные дни с тренировками за период — для «лёгкой» статистики профиля (WS2-3)."""
+        days = _PERIOD_DAYS.get(period, 30)
+        date_from = date.today() - timedelta(days=days)
+        workout_dates = await self.repository.get_workout_dates(user_id=user_id, date_from=date_from)
+        return len(workout_dates)
+
     async def get_analytics_summary(self, user_id: int, period: str) -> AnalyticsSummaryResponse:
-        days_map = {"7d": 7, "30d": 30, "90d": 90, "1y": 365, "all": 36500}
-        days = days_map.get(period, 30)
+        days = _PERIOD_DAYS.get(period, 30)
         date_from = date.today() - timedelta(days=days)
 
         muscle_signals_enabled = await FeatureFlagsRepository(self.repository.db).is_enabled(

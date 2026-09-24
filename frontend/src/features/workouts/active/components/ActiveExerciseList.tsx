@@ -1,30 +1,15 @@
-import { lazy, memo, Suspense, useMemo, useState } from 'react'
+import { lazy, memo, Suspense, useEffect, useState } from 'react'
 import { useScrollCurrentSetIntoView } from '@features/workouts/active/hooks/useScrollCurrentSetIntoView'
 import { ChevronDown, ChevronUp, Minus, PencilRuler, Plus, Trash2 } from 'lucide-react'
 import {
     formatExerciseStructureSummary,
     getExerciseSummaryMeta,
 } from '@features/workouts/lib/workoutDetailFormatters'
-import type { CompletedExercise, CompletedSet } from '@features/workouts/types/workouts'
 import { useWorkoutQuickIncrementsStore } from '@/state/local'
-import { ActiveExerciseNavigator } from './ActiveExerciseNavigator'
 import { ExerciseSetRow } from './ExerciseSetRow'
 import type { ActiveExerciseListProps } from './ActiveExerciseList.sortable'
 
 const QUICK_INCREMENT_BASE_OPTIONS = [0.5, 1, 1.25, 2.5]
-
-function getPreviousSetForDisplay(exercise: CompletedExercise, setNumber: number): Partial<CompletedSet> | undefined {
-    const previousSet = exercise.sets_completed[setNumber - 2]
-    if (previousSet) {
-        return {
-            weight: previousSet.weight,
-            reps: previousSet.reps,
-            duration: previousSet.duration,
-            distance: previousSet.distance,
-        }
-    }
-    return undefined
-}
 
 const ActiveExerciseListSortable = lazy(() =>
     import('./ActiveExerciseList.sortable').then((m) => ({ default: m.ActiveExerciseListSortable })),
@@ -176,24 +161,45 @@ function ActiveExerciseListStatic({
     weightRecommendation,
     isWeightRecLoading,
     isWeightRecError,
-    hasNextExercise,
-    hasPrevExercise,
-    onGoToNextExercise,
-    onGoToPreviousExercise,
-    onSelectExerciseIndex,
 }: ActiveExerciseListProps) {
     const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Record<string, true>>({})
     const getIncrementBase = useWorkoutQuickIncrementsStore((s) => s.getIncrementBase)
     const setIncrementBaseForScope = useWorkoutQuickIncrementsStore((s) => s.setIncrementBase)
     const activeSetsScrollRef = useScrollCurrentSetIntoView(currentExerciseIndex, currentSetIndex)
 
-    const exerciseNavigatorLabels = useMemo(
-        () => exercises.map((exercise, index) => ({
-            key: `${exercise.exercise_id}-${index}`,
-            name: exercise.name,
-        })),
-        [exercises],
-    )
+    useEffect(() => {
+        setCollapsedExerciseIds((prev) => {
+            const next: Record<string, true> = {}
+            const activeIds = new Set<string>()
+
+            exercises.forEach((exercise, index) => {
+                const itemId = `${exercise.exercise_id}-${index}`
+                activeIds.add(itemId)
+                const shouldCollapse = index !== currentExerciseIndex
+
+                if (!shouldCollapse) {
+                    return
+                }
+
+                if (prev[itemId]) {
+                    next[itemId] = true
+                    return
+                }
+
+                if (prev[itemId] === undefined) {
+                    next[itemId] = true
+                }
+            })
+
+            Object.keys(prev).forEach((itemId) => {
+                if (!activeIds.has(itemId)) {
+                    delete next[itemId]
+                }
+            })
+
+            return next
+        })
+    }, [currentExerciseIndex, exercises])
 
     const toggleCollapsed = (id: string) => {
         setCollapsedExerciseIds((prev) => {
@@ -213,11 +219,6 @@ function ActiveExerciseListStatic({
 
     return (
         <div ref={activeSetsScrollRef} className="space-y-3">
-            <ActiveExerciseNavigator
-                exerciseLabels={exerciseNavigatorLabels}
-                currentExerciseIndex={currentExerciseIndex}
-                onSelectExercise={onSelectExerciseIndex}
-            />
             {exercises.map((exercise, exerciseIndex) => {
                 const itemId = `${exercise.exercise_id}-${exerciseIndex}`
                 const summaryMeta = getExerciseSummaryMeta(exercise)
@@ -233,6 +234,9 @@ function ActiveExerciseListStatic({
                     Number((incrementBase * 2).toFixed(2)),
                     Number((incrementBase * 4).toFixed(2)),
                 ]
+                const currentSetNumber = currentSetIndex + 1
+                const currentSetExists =
+                    currentSetNumber >= 1 && currentSetNumber <= exercise.sets_completed.length
 
                 return (
                     <div
@@ -300,11 +304,38 @@ function ActiveExerciseListStatic({
 
                         {!isCollapsed && (
                             <>
-                                {/*
-                                  PR UX: убрали дублирующий блок «Повторить прошлый / ±вес» над списком подходов —
-                                  те же действия остаются в строке текущего подхода (меньше скролла и лишних тапов).
-                                */}
                                 <div className="mt-2 space-y-2">
+                                    {isCurrentExercise ? (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={!currentSetExists}
+                                                onClick={() => onCopyPreviousSet(exerciseIndex, currentSetNumber)}
+                                                className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                            >
+                                                Повторить прошлый
+                                            </button>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    disabled={!currentSetExists}
+                                                    onClick={() => onAdjustWeight(exerciseIndex, currentSetNumber, -incrementBase)}
+                                                    className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                                >
+                                                    -{incrementBase}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={!currentSetExists}
+                                                    onClick={() => onAdjustWeight(exerciseIndex, currentSetNumber, incrementBase)}
+                                                    className="min-h-[44px] touch-manipulation rounded-xl bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                                >
+                                                    +{incrementBase}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : null}
+
                                     <div className="flex items-center justify-between gap-2">
                                         <p className="text-[11px] font-medium uppercase tracking-wide text-telegram-hint">Подходы</p>
                                         <p className="text-[11px] text-telegram-hint">{exercise.sets_completed.length} шт</p>
@@ -324,7 +355,6 @@ function ActiveExerciseListStatic({
                                     </div>
                                     {exercise.sets_completed.map((set) => {
                                         const isCurrentSet = isCurrentExercise && set.set_number - 1 === currentSetIndex
-                                        const previousSetValues = getPreviousSetForDisplay(exercise, set.set_number)
                                         return (
                                             <ExerciseSetRow
                                                 key={set.set_number}
@@ -332,7 +362,6 @@ function ActiveExerciseListStatic({
                                                 exerciseIndex={exerciseIndex}
                                                 isCurrent={isCurrentSet}
                                                 previousBestLabel={previousBestLabel}
-                                                previousSetValues={previousSetValues}
                                                 onFocusSet={onSetCurrentPosition}
                                                 onToggleCompleted={onToggleSetCompleted}
                                                 onSkipSet={onSkipSet}
@@ -349,45 +378,25 @@ function ActiveExerciseListStatic({
                                 </div>
 
                                 {isCurrentExercise && (
-                                    <>
-                                        <div className="mt-2 grid grid-cols-2 gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={onRemoveSet}
-                                                disabled={exercise.sets_completed.length <= 1}
-                                                className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
-                                            >
-                                                <Minus className="h-3.5 w-3.5" />
-                                                Убрать подход
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={onAddSet}
-                                                className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
-                                            >
-                                                <Plus className="h-3.5 w-3.5" />
-                                                Добавить подход
-                                            </button>
-                                        </div>
-                                        <div className="mt-2 grid grid-cols-2 gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={onGoToPreviousExercise}
-                                                disabled={!hasPrevExercise}
-                                                className="flex min-h-[48px] touch-manipulation items-center justify-center rounded-xl border border-border bg-telegram-bg px-3 py-2.5 text-sm font-semibold text-telegram-text disabled:opacity-40"
-                                            >
-                                                ← Пред. упр.
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={onGoToNextExercise}
-                                                disabled={!hasNextExercise}
-                                                className="flex min-h-[48px] touch-manipulation items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary disabled:opacity-40"
-                                            >
-                                                След. упр. →
-                                            </button>
-                                        </div>
-                                    </>
+                                    <div className="mt-2 grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={onRemoveSet}
+                                            disabled={exercise.sets_completed.length <= 1}
+                                            className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-telegram-bg px-3 py-2 text-xs font-medium text-telegram-hint disabled:opacity-50"
+                                        >
+                                            <Minus className="h-3.5 w-3.5" />
+                                            Убрать подход
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={onAddSet}
+                                            className="flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
+                                        >
+                                            <Plus className="h-3.5 w-3.5" />
+                                            Добавить подход
+                                        </button>
+                                    </div>
                                 )}
 
                                 {isCurrentExercise || Boolean(exercise.notes?.trim()) ? (

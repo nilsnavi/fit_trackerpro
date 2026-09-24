@@ -4,9 +4,14 @@
  */
 import { test, expect } from '@playwright/test'
 import {
+    activeSetCompleteButton,
     buildExercise,
     buildWorkoutState,
+    completeActiveSet,
+    expectActiveSet,
+    finishActiveWorkout,
     mockWorkoutApi,
+    seedAuth,
 } from './helpers/workout-api-mock'
 
 const WORKOUT_TITLE = 'MVP Golden Path E2E'
@@ -45,15 +50,6 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             exercises: [buildExercise(9001, 'E2E Mock Exercise', 'strength')],
         })
 
-        // index.html подключает telegram-web-app.js — он сбрасывает initData в браузере; для E2E отдаём пустышку.
-        await page.route('**/telegram-web-app.js', (route) =>
-            route.fulfill({
-                status: 200,
-                contentType: 'application/javascript; charset=utf-8',
-                body: '/* playwright: skip official Telegram script */',
-            }),
-        )
-
         // Шаг 5 — мок каталога упражнений.
         // Ставим более специфичный роут до общего `mockWorkoutApi`, чтобы было явно видно правило в тесте.
         await page.route('**/api/v1/exercises/**', async (route) => {
@@ -73,29 +69,11 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
         })
 
         await page.addInitScript(() => {
-            const w = window as Window & {
-                Telegram?: { WebApp?: Record<string, unknown> }
-                __APP_CONFIG__?: Record<string, unknown>
-            }
-            w.Telegram = {
-                WebApp: {
-                    initData: 'mock',
-                    initDataUnsafe: { user: { id: 12345, first_name: 'Test' } },
-                    ready: () => {},
-                    expand: () => {},
-                    close: () => {},
-                    onEvent: () => {},
-                    offEvent: () => {},
-                    setHeaderColor: () => {},
-                    setBackgroundColor: () => {},
-                    enableClosingConfirmation: () => {},
-                    colorScheme: 'light',
-                    themeParams: {},
-                },
-            }
+            const w = window as Window & { __APP_CONFIG__?: Record<string, unknown> }
             w.__APP_CONFIG__ = { API_URL: '/api/v1' }
         })
 
+        await seedAuth(page)
         await mockWorkoutApi(page, state)
 
         // Шаг 7 — мок аналитики (тренировки).
@@ -111,48 +89,16 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
             })
         })
 
-        await page.route('**/api/v1/users/auth/lookup', async (route) => {
-            if (route.request().method() !== 'POST') {
-                return route.continue()
-            }
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json; charset=utf-8',
-                headers: { 'access-control-allow-origin': '*' },
-                body: JSON.stringify({ registered: true }),
-            })
-        })
-
-        // Шаг 2 — мок auth endpoint (Telegram).
-        await page.route('**/api/v1/users/auth/telegram', async (route) => {
-            if (route.request().method() !== 'POST') {
-                return route.continue()
-            }
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json; charset=utf-8',
-                headers: { 'access-control-allow-origin': '*' },
-                body: JSON.stringify({
-                    access_token: 'test-token',
-                    is_new_user: false,
-                    onboarding_required: false,
-                    user: { id: 1 },
-                }),
-            })
-        })
-
-        // Шаг 3 — главная страница загрузилась.
+        // Шаг 3 — главная страница загрузилась. Дашборд скрывает нижнюю навигацию оболочки,
+        // поэтому проверяем его собственный контент, а не навигацию.
         await page.goto('/')
-        await expect(page).toHaveURL(/\/$/)
+        await expect(page).toHaveURL(/\/home(?:[?#].*)?$/)
+        await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible({ timeout: 15_000 })
 
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
-        await expect(nav).toBeVisible()
 
-        // Шаг 4 — создать тренировку через UI (кнопки по тексту).
-        await page.getByRole('button', { name: /Записать тренировку/i }).click()
-        await expect(page).toHaveURL(/\/workouts/)
-
-        await page.getByRole('button', { name: /Силовая/i }).click()
+        // Шаг 4 — создать тренировку через UI режима.
+        await page.goto('/workouts/mode/strength')
         await expect(page).toHaveURL(/\/workouts\/mode\/\w+/)
 
         await page.getByLabel('Название тренировки').fill(WORKOUT_TITLE)
@@ -174,25 +120,18 @@ test.describe('MVP golden path (Telegram + route mocks)', () => {
         await page.locator('[data-testid="save-and-start-btn"]').click()
         await expect(page).toHaveURL(/\/workouts\/active\/\d+/, { timeout: 30_000 })
 
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
-        const setToggleButton = page.locator('[data-testid="set-toggle-btn"]').first()
-        await setToggleButton.click()
-        await expect(setToggleButton).toContainText(/Готово/)
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
+        await completeActiveSet(page)
+        await expectActiveSet(page, 2)
 
-        const finishBtn = page.locator('[data-testid="finish-workout-btn"]')
-        await expect(finishBtn).toBeVisible({ timeout: 10_000 })
-        await finishBtn.evaluate((el) => (el as HTMLButtonElement).click())
-
-        const confirmFinishBtn = page.locator('[data-testid="confirm-finish-btn"]')
-        await expect(confirmFinishBtn).toBeVisible({ timeout: 10_000 })
-        await confirmFinishBtn.evaluate((el) => (el as HTMLButtonElement).click())
-        await expect(page).not.toHaveURL(/\/workouts\/active\//, { timeout: 30_000 })
+        await finishActiveWorkout(page)
+        await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary/, { timeout: 30_000 })
 
         await nav.getByRole('link', { name: 'Прогресс' }).click()
         await expect(page).toHaveURL(/\/analytics/)
 
         await expect(page.getByRole('heading', { name: 'Аналитика' })).toBeVisible({ timeout: 15_000 })
         await expect(page.getByText('1 тренировка')).toBeVisible()
-        await expect(page.getByText(WORKOUT_TITLE)).toBeVisible()
+        await expect(page.getByRole('main').getByText(WORKOUT_TITLE)).toBeVisible()
     })
 })
