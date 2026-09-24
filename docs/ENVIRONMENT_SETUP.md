@@ -60,7 +60,7 @@ Then edit values for your environment.
 Used by `docker-compose.prod.yml` and GitHub `deploy.yml`:
 
 - DB: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
-- Backend: `SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBAPP_URL`, `ALLOWED_ORIGINS`, `SENTRY_DSN`
+- Backend: `SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` (при включённом боте), `TELEGRAM_WEBAPP_URL`, `ALLOWED_ORIGINS`, `SENTRY_DSN`
 - Frontend: `VITE_API_URL`, `VITE_TELEGRAM_BOT_USERNAME`
 - Registry metadata: `GITHUB_REPOSITORY`
 

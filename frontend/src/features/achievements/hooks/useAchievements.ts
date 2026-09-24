@@ -89,13 +89,6 @@ export function useAchievements(): UseAchievementsReturn {
         },
     })
 
-    const checkProgressMutation = useMutation({
-        mutationFn: () => achievementsApi.checkProgress(),
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
-        },
-    })
-
     const achievements = useMemo(() => achievementsQuery.data?.items ?? [], [achievementsQuery.data?.items])
     const userStats = userStatsQuery.data ?? null
 
@@ -120,12 +113,15 @@ export function useAchievements(): UseAchievementsReturn {
     )
 
     const checkProgress = useCallback(async () => {
+        // Прогресс achievements пересчитывается на backend при чтении статистики;
+        // выделенный эндпоинт прогресса в API отсутствует — тянем свежую статистику.
         try {
-            await checkProgressMutation.mutateAsync()
+            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
+            await userStatsQuery.refetch()
         } catch (err) {
             console.error('Failed to check progress:', err)
         }
-    }, [checkProgressMutation])
+    }, [queryClient, userStatsQuery])
 
     const getAchievementById = useCallback(
         (id: number): Achievement | undefined => achievements.find((a) => a.id === id),

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps.auth import get_current_user
 from app.application.auth_service import AuthService
 from app.core.audit import get_client_ip
+from app.core.limiter import limiter
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.auth import (
@@ -20,6 +21,7 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
+    TelegramLookupResponse,
     UserProfileResponse,
     UserProfileUpdate,
 )
@@ -32,11 +34,38 @@ protected_auth_router = APIRouter()
 
 
 @public_auth_router.post("/telegram", response_model=AuthResponse)
+@limiter.limit("10/minute")
 async def authenticate_telegram(
-    auth_request: TelegramAuthRequest,
     request: Request,
+    auth_request: TelegramAuthRequest,
     db: AsyncSession = Depends(get_async_db),
 ):
+    service = AuthService(db)
+    return await service.authenticate_telegram(
+        auth_request=auth_request,
+        client_ip=get_client_ip(request),
+    )
+
+
+@public_auth_router.post("/lookup", response_model=TelegramLookupResponse)
+@limiter.limit("30/minute")
+async def lookup_telegram_registration(
+    request: Request,
+    auth_request: TelegramAuthRequest,
+    db: AsyncSession = Depends(get_async_db),
+):
+    service = AuthService(db)
+    return await service.lookup_telegram_registration(auth_request=auth_request)
+
+
+@public_auth_router.post("/register", response_model=AuthResponse)
+@limiter.limit("10/minute")
+async def register_via_telegram(
+    request: Request,
+    auth_request: TelegramAuthRequest,
+    db: AsyncSession = Depends(get_async_db),
+):
+    """First-time registration: validates initData and returns JWT (same as POST /telegram)."""
     service = AuthService(db)
     return await service.authenticate_telegram(
         auth_request=auth_request,

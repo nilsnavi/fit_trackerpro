@@ -2,14 +2,14 @@ import type { ReactNode } from 'react'
 import { Loader2, UploadCloud, WifiOff } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { useNetworkOnline } from '@shared/hooks/useNetworkOnline'
-import { useSyncQueueUiState } from '@shared/hooks/useSyncQueueUiState'
+import { useSyncQueue } from '@shared/hooks/useSyncQueue'
 
 /**
  * Полоса под шапкой: офлайн и статус синхронизации очереди мутаций.
  */
 export function ConnectivitySyncBar() {
     const online = useNetworkOnline()
-    const { queuedCount, failedCount, isFlushing, retryInSec } = useSyncQueueUiState()
+    const { totalCount: queuedCount, failedCount, isFlushing, retryInSec } = useSyncQueue()
 
     const showBar = !online || queuedCount > 0 || failedCount > 0 || isFlushing
 

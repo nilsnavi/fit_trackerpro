@@ -4,6 +4,7 @@
 
 ## Index
 
+- **Production gap analysis (2026-09-18)**: `./production-gap-analysis-2026-09-18.md` — что осталось до продакшена (актуальный снимок)
 - **Architecture audit (2026-03-27)**: `./architecture-audit-2026-03-27.md`
 - **Project analysis report (2026-04-02)**: `./project-analysis-report-2026-04-02.md`
 - **Docs consolidation report (2026-04-09)**: `./docs-consolidation-report-2026-04-09.md`

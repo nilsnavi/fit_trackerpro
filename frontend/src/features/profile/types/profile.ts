@@ -34,15 +34,8 @@ export interface UserStats {
     current_streak: number
     longest_streak: number
     total_duration: number
-    total_calories: number
 }
 
-export interface CoachAccess {
-    id: string
-    coach_name: string
-    created_at: string
-    expires_at?: string
-}
 
 export interface WeightProgress {
     current: number

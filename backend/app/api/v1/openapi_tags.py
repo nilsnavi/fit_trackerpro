@@ -20,6 +20,7 @@ TAG_ANALYTICS = "Analytics"
 TAG_ACHIEVEMENTS = "Achievements"
 TAG_CHALLENGES = "Challenges"
 TAG_EMERGENCY = "Emergency"
+TAG_PROGRESSION = "Progression"
 
 OPENAPI_TAGS: list[dict[str, Any]] = [
     {
@@ -65,5 +66,12 @@ OPENAPI_TAGS: list[dict[str, Any]] = [
     {
         "name": TAG_EMERGENCY,
         "description": "Emergency and safety-related endpoints (e.g. SOS).",
+    },
+    {
+        "name": TAG_PROGRESSION,
+        "description": (
+            "Progression engine (SPEC-006): per-scope policies, explainable next-target "
+            "recommendations, and accept/modify/reject lifecycle."
+        ),
     },
 ]

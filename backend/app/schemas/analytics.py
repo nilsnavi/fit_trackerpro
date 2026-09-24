@@ -403,3 +403,60 @@ class WorkoutPostSummaryResponse(BaseModel):
     insights: List[WorkoutSessionInsightItem] = Field(default_factory=list)
     best_sets: List[ProgressInsightsBestSetItem] = Field(default_factory=list)
     pr_events: List[ProgressInsightsPRItem] = Field(default_factory=list)
+
+
+class AnalyticsWeeklyChartPoint(BaseModel):
+    """Single point for workout frequency chart (day or week bucket)."""
+
+    date: date
+    count: int
+
+
+class AnalyticsIntensityWeekPoint(BaseModel):
+    """Weekly aggregate for custom intensity score chart."""
+
+    date: date
+    intensity_score: Optional[float] = Field(
+        None,
+        description="avg_rpe × (completed_sets / avg_rest_minutes) for sets in the ISO week starting at date.",
+    )
+
+
+class AnalyticsDashboardResponse(BaseModel):
+    """Aggregated analytics for the main dashboard (period filter)."""
+
+    period: str = Field(..., description="Echo of requested window: week | month | all.")
+    total_workouts: int
+    total_duration_minutes: int
+    avg_duration: float = Field(
+        ...,
+        description="Mean workout duration in minutes within the selected period.",
+    )
+    workouts_this_week: int = Field(
+        ...,
+        description="Workouts logged in the current calendar week (Mon–Sun).",
+    )
+    workouts_this_month: int = Field(
+        ...,
+        description="Workouts logged in the current calendar month.",
+    )
+    favorite_exercise: Optional[str] = Field(
+        None,
+        description="Most frequent exercise name in the selected period.",
+    )
+    streak_days: int = Field(
+        ...,
+        description="Current consecutive-day workout streak (today or yesterday counts as active).",
+    )
+    weekly_chart: List[AnalyticsWeeklyChartPoint]
+    avg_rpe_per_workout: Optional[float] = None
+    avg_rpe_previous_period: Optional[float] = None
+    avg_rpe_trend: Optional[str] = Field(
+        None,
+        description="Direction of RPE change vs previous equivalent window: up | down | flat.",
+    )
+    avg_rest_time_seconds: Optional[float] = None
+    total_time_under_tension_seconds: Optional[float] = None
+    intensity_score: Optional[float] = None
+    intensity_weekly_chart: List[AnalyticsIntensityWeekPoint] = Field(default_factory=list)
+    workouts_with_rpe_count: int = 0

@@ -22,6 +22,12 @@ def compute_session_metrics(exercises: Optional[list[dict[str, Any]]], duration_
     if not exercises:
         return {
             "completed_sets": 0,
+            "warmup_sets": 0,
+            "working_sets": 0,
+            "total_reps": 0,
+            "total_volume": 0.0,
+            "exercise_count": 0,
+            "max_weight": None,
             "avg_rpe": None,
             "avg_rir": None,
             "total_rest_seconds": 0,
@@ -41,6 +47,11 @@ def compute_session_metrics(exercises: Optional[list[dict[str, Any]]], duration_
 
     total_volume = 0.0
     completed_sets = 0
+    warmup_sets = 0
+    working_sets = 0
+    total_reps = 0
+    exercise_count = 0
+    max_weight: Optional[float] = None
     rest_candidates = 0
     rest_values: list[float] = []
     rpe_values: list[float] = []
@@ -56,6 +67,10 @@ def compute_session_metrics(exercises: Optional[list[dict[str, Any]]], duration_
     for exercise in exercises:
         if not isinstance(exercise, dict):
             continue
+        # SPEC-005 §26: skipped exercises stay in the session but contribute nothing.
+        if str(exercise.get("status") or "") == "skipped":
+            continue
+        exercise_count += 1
         raw_sets = exercise.get("sets_completed")
         if not isinstance(raw_sets, list):
             continue
@@ -65,13 +80,23 @@ def compute_session_metrics(exercises: Optional[list[dict[str, Any]]], duration_
             if not isinstance(set_item, dict) or not bool(set_item.get("completed", False)):
                 continue
 
+            # SPEC-005 §10/§52: warm-up sets tracked separately, excluded from
+            # the working volume by default.
+            is_warmup = str(set_item.get("set_type") or "working") == "warmup"
+            if is_warmup:
+                warmup_sets += 1
+                continue
             completed_sets += 1
+            working_sets += 1
             completed_in_exercise += 1
 
             reps = _safe_float(set_item.get("reps"))
             weight = _safe_float(set_item.get("weight"))
             if reps is not None and weight is not None and reps >= 0 and weight >= 0:
                 total_volume += reps * weight
+                total_reps += int(reps)
+                if max_weight is None or weight > max_weight:
+                    max_weight = weight
 
             rpe = _safe_float(set_item.get("rpe"))
             if rpe is not None and 0 <= rpe <= 10:
@@ -129,6 +154,12 @@ def compute_session_metrics(exercises: Optional[list[dict[str, Any]]], duration_
 
     return {
         "completed_sets": completed_sets,
+        "warmup_sets": warmup_sets,
+        "working_sets": working_sets,
+        "total_reps": total_reps,
+        "total_volume": _round_or_none(total_volume, 2),
+        "exercise_count": exercise_count,
+        "max_weight": _round_or_none(max_weight, 2),
         "avg_rpe": _round_or_none(avg_rpe, 2),
         "avg_rir": _round_or_none(avg_rir, 2),
         "total_rest_seconds": total_rest_seconds,

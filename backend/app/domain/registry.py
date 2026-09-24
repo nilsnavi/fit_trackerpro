@@ -16,6 +16,10 @@ from app.domain.exercise import Exercise  # noqa: F401
 from app.domain.glucose_log import GlucoseLog  # noqa: F401
 from app.domain.idempotency_record import IdempotencyRecord  # noqa: F401
 from app.domain.muscle_load import MuscleLoad  # noqa: F401
+from app.domain.progression_policy import ProgressionPolicyRecord  # noqa: F401
+from app.domain.progression_recommendation import (  # noqa: F401
+    ProgressionRecommendationRecord,
+)
 from app.domain.recovery_state import RecoveryState  # noqa: F401
 from app.domain.reference_data import (  # noqa: F401
     RefEquipment,
@@ -28,6 +32,7 @@ from app.domain.template_exercise import TemplateExercise  # noqa: F401
 from app.domain.training_load_daily import TrainingLoadDaily  # noqa: F401
 from app.domain.user import User  # noqa: F401
 from app.domain.user_achievement import UserAchievement  # noqa: F401
+from app.domain.workout_block import WorkoutBlock  # noqa: F401
 from app.domain.workout_log import WorkoutLog  # noqa: F401
 from app.domain.workout_session_exercise import WorkoutSessionExercise  # noqa: F401
 from app.domain.workout_set import WorkoutSet  # noqa: F401
