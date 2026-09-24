@@ -34,7 +34,7 @@ export function useHomeHealthWidgets() {
     }, [glucoseQuery.data])
 
     const wellness = useMemo(() => {
-        const entries = wellnessQuery.data ?? []
+        const entries = Array.isArray(wellnessQuery.data) ? wellnessQuery.data : []
         const today = todayIso()
         const entry = entries.find((item) => item.date === today) ?? entries[0] ?? null
         return wellnessEntryToWellnessData(entry)

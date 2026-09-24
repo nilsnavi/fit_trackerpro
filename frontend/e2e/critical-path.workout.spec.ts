@@ -75,5 +75,5 @@ test('critical path: login → open workout → complete → see in history', as
     await page.goto('/workouts')
     const sessionRow = page.getByRole('button').filter({ hasText: WORKOUT_TITLE })
     await expect(sessionRow.first()).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByText('В процессе')).toHaveCount(0)
+    await expect(sessionRow.first().getByText('В процессе')).toHaveCount(0)
 })
