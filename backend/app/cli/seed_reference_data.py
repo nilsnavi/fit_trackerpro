@@ -99,41 +99,64 @@ async def _upsert_ref_table(
     await session.execute(text(sql), normalized)
 
 
+def _normalize_exercise_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one NDJSON row to columns supported by the existing model.
+
+    Dataset-specific fields intentionally stay in the generated NDJSON metadata;
+    the database contract only stores the fields already present on ``Exercise``.
+    Aliases are read from either the additive top-level field or the generator's
+    metadata object so older reference rows remain importable.
+    """
+
+    slug = row.get("slug")
+    if not slug or not isinstance(slug, str):
+        raise ValueError("exercises: each row must have string 'slug'")
+
+    metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+    raw_aliases = row.get("aliases") or metadata.get("aliases") or []
+    if isinstance(raw_aliases, str):
+        raw_aliases = [raw_aliases]
+    aliases = [str(alias).strip() for alias in raw_aliases if str(alias).strip()]
+    raw_muscle_groups = row.get("muscle_groups") or []
+    if isinstance(raw_muscle_groups, str):
+        raw_muscle_groups = [raw_muscle_groups]
+    muscle_groups = [str(group).strip() for group in raw_muscle_groups if str(group).strip()]
+    primary_muscle_group = row.get("muscle_group") or (muscle_groups[0] if muscle_groups else None)
+
+    return {
+        "slug": slug,
+        "name": row.get("name"),
+        "description": row.get("description"),
+        "category": row.get("category"),
+        "equipment": json.dumps(row.get("equipment") or []),
+        "muscle_groups": json.dumps(muscle_groups),
+        "muscle_group": primary_muscle_group,
+        "aliases": json.dumps(aliases),
+        "risk_flags": json.dumps(row.get("risk_flags") or {}),
+        "media_url": row.get("media_url"),
+        "status": row.get("status") or "active",
+    }
+
+
 async def _upsert_exercises(*, session, rows: list[dict[str, Any]]) -> dict[str, int]:
     if not rows:
         return {"upserted": 0, "archived": 0}
 
-    normalized: list[dict[str, Any]] = []
-    slugs: list[str] = []
-    for r in rows:
-        slug = r.get("slug")
-        if not slug or not isinstance(slug, str):
-            raise ValueError("exercises: each row must have string 'slug'")
-        slugs.append(slug)
-        normalized.append(
-            {
-                "slug": slug,
-                "name": r.get("name"),
-                "description": r.get("description"),
-                "category": r.get("category"),
-                "equipment": json.dumps(r.get("equipment") or []),
-                "muscle_groups": json.dumps(r.get("muscle_groups") or []),
-                "risk_flags": json.dumps(r.get("risk_flags") or {}),
-                "media_url": r.get("media_url"),
-                "status": r.get("status") or "active",
-                "metadata": json.dumps(r.get("metadata") or {}),
-            }
-        )
+    normalized = [_normalize_exercise_row(row) for row in rows]
+    slugs = [row["slug"] for row in normalized]
 
-    # Upsert system exercises by slug.
+    # Upsert system exercises by stable slug.  The generated catalog keeps the
+    # legacy rows, so existing workout/template foreign keys keep their IDs.
     upsert_sql = """
         INSERT INTO exercises (
             slug, source, name, description, category,
-            equipment, muscle_groups, risk_flags, media_url, status, author_user_id
+            equipment, muscle_groups, muscle_group, aliases,
+            risk_flags, media_url, status, author_user_id
         )
         VALUES (
             :slug, 'system', :name, :description, :category,
-            CAST(:equipment AS jsonb), CAST(:muscle_groups AS jsonb), CAST(:risk_flags AS jsonb),
+            CAST(:equipment AS jsonb), CAST(:muscle_groups AS jsonb), :muscle_group,
+            CAST(:aliases AS jsonb), CAST(:risk_flags AS jsonb),
             :media_url, :status, NULL
         )
         ON CONFLICT (slug) WHERE source = 'system' AND slug IS NOT NULL
@@ -143,6 +166,8 @@ async def _upsert_exercises(*, session, rows: list[dict[str, Any]]) -> dict[str,
             category = EXCLUDED.category,
             equipment = EXCLUDED.equipment,
             muscle_groups = EXCLUDED.muscle_groups,
+            muscle_group = EXCLUDED.muscle_group,
+            aliases = EXCLUDED.aliases,
             risk_flags = EXCLUDED.risk_flags,
             media_url = EXCLUDED.media_url,
             status = EXCLUDED.status,
@@ -151,11 +176,13 @@ async def _upsert_exercises(*, session, rows: list[dict[str, Any]]) -> dict[str,
     """
     await session.execute(text(upsert_sql), normalized)
 
-    # Archive system exercises missing from dataset.
+    # Only rows managed by this importer may be archived automatically.  Legacy
+    # system slugs (and user-linked history behind them) are never archived by a
+    # missing dataset row.
     archive_sql = """
         UPDATE exercises
         SET status = 'archived'
-        WHERE source = 'system' AND slug IS NOT NULL
+        WHERE source = 'system' AND slug LIKE 'exds-%'
           AND NOT (slug = ANY(:slugs))
           AND status != 'archived'
     """
