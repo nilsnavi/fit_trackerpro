@@ -14,8 +14,9 @@ from app.core.audit import (
     AUTH_TELEGRAM_LOGIN,
     audit_log,
 )
+from app.core.legal import HEALTH_DATA_CONSENT_VERSION
 from app.core.security import create_access_token, create_refresh_token, verify_token
-from app.domain.exceptions import AuthenticationError
+from app.domain.exceptions import AuthenticationError, ConsentRequiredError
 from app.domain.user import User
 from app.infrastructure.repositories.auth_repository import AuthRepository
 from app.infrastructure.telegram_auth import validate_and_get_user
@@ -27,6 +28,7 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     RefreshTokenResponse,
     TelegramAuthRequest,
+    TelegramLookupResponse,
     TelegramUserData,
     UserProfileData,
     UserProfileResponse,
@@ -84,6 +86,23 @@ class AuthService:
         await self.repository.commit_user_fields()
         return user, False
 
+    async def lookup_telegram_registration(
+        self,
+        auth_request: TelegramAuthRequest,
+    ) -> TelegramLookupResponse:
+        """Validate initData and report whether a user already exists (does not create a row)."""
+        is_valid, user_data, error = validate_and_get_user(
+            init_data=auth_request.init_data,
+            bot_token=settings.TELEGRAM_BOT_TOKEN,
+            max_age_seconds=300,
+        )
+        if not is_valid:
+            raise AuthenticationError(f"Authentication failed: {error}")
+
+        telegram_id = user_data["id"]
+        user = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
+        return TelegramLookupResponse(registered=user is not None)
+
     async def authenticate_telegram(
         self,
         auth_request: TelegramAuthRequest,
@@ -139,8 +158,27 @@ class AuthService:
         client_ip: str | None = None,
     ) -> OnboardingResponse:
         profile = dict(current_user.profile or {})
+        consent = profile.get("consent")
+        if not isinstance(consent, dict) or not consent.get("version"):
+            consent = None
+
+        if not payload.health_data_consent and consent is None:
+            raise ConsentRequiredError(
+                "Требуется согласие на обработку данных о здоровье: "
+                "без него приложение не может хранить пульс, глюкозу, вес и сон"
+            )
+
         profile["fitness_goal"] = payload.fitness_goal
         profile["experience_level"] = payload.experience_level
+        if consent is None:
+            # Record exactly the version the user accepted; never rewrite the
+            # original timestamp on a repeated onboarding call.
+            profile["consent"] = {
+                "version": (payload.consent_version or "").strip()
+                or HEALTH_DATA_CONSENT_VERSION,
+                "accepted_at": datetime.now(timezone.utc).isoformat(),
+                "source": "onboarding",
+            }
         profile["onboarding_completed"] = True
         profile["onboarding_completed_at"] = datetime.now(timezone.utc).isoformat()
         current_user.profile = profile
@@ -155,6 +193,7 @@ class AuthService:
             meta={
                 "fitness_goal": payload.fitness_goal,
                 "experience_level": payload.experience_level,
+                "consent_version": (profile.get("consent") or {}).get("version"),
             },
         )
 

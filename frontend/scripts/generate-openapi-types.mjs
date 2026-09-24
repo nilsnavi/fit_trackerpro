@@ -1,55 +1,20 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
-import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import openapiTS, { astToString } from 'openapi-typescript'
+/** Генерирует закоммиченные артефакты OpenAPI-контракта фронтенда из схемы backend. */
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import { describeInterpreter, resolvePinnedPython } from './lib/openapiPython.mjs'
+import { buildContract, relativePath, writeTextLf } from './lib/openapiTypes.mjs'
 
-const repoRoot = path.resolve(__dirname, '..', '..')
-const openapiJsonPath = path.join(repoRoot, 'frontend', 'src', 'shared', 'api', 'generated', 'openapi.json')
-const outTypesPath = path.join(repoRoot, 'frontend', 'src', 'shared', 'api', 'generated', 'openapi.d.ts')
+try {
+    const python = await resolvePinnedPython()
+    const artifacts = await buildContract(python)
 
-async function exportOpenApi() {
-  await new Promise((resolve, reject) => {
-    const child = spawn(
-      'python',
-      ['backend/tools/export_openapi.py', '--out', openapiJsonPath],
-      {
-        cwd: repoRoot,
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          ENVIRONMENT: 'test',
-          DEBUG: 'false',
-          DATABASE_URL: 'sqlite+aiosqlite:///:memory:',
-          SECRET_KEY: 'openapi-export-secret-key-32-chars',
-          TELEGRAM_BOT_TOKEN: '0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-          TELEGRAM_WEBAPP_URL: 'https://test.example.com',
-        },
-      },
+    for (const { path: artifactPath, text } of artifacts) {
+        await writeTextLf(artifactPath, text)
+    }
+
+    console.log(
+        `Wrote ${artifacts.map(({ path: artifactPath }) => relativePath(artifactPath)).join(' and ')} using ${describeInterpreter(python)}.`,
     )
-    child.on('error', reject)
-    child.on('exit', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`OpenAPI export failed (exit ${code ?? 'unknown'})`))
-    })
-  })
+} catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    process.exit(1)
 }
-
-async function generateTypes() {
-  const schemaText = await fs.readFile(openapiJsonPath, 'utf-8')
-  const schema = JSON.parse(schemaText)
-  const ast = await openapiTS(schema, {
-    exportType: true,
-    immutableTypes: true,
-  })
-  const dtsText = astToString(ast)
-  await fs.mkdir(path.dirname(outTypesPath), { recursive: true })
-  await fs.writeFile(outTypesPath, dtsText.trimEnd() + '\n', 'utf-8')
-}
-
-await exportOpenApi()
-await generateTypes()
-console.log(`Wrote ${path.relative(repoRoot, outTypesPath)}`)

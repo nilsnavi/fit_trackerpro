@@ -3,6 +3,7 @@ export const WORKOUT_SYNC_KINDS = {
     TEMPLATE_CREATE: 'workout.template.create',
     TEMPLATE_UPDATE: 'workout.template.update',
     START: 'workout.start',
+    SET_UPDATE: 'workout.set.update',
     SESSION_UPDATE: 'workout.session.update',
     SESSION_COMPLETE: 'workout.session.complete',
     COMPLETE: 'workout.complete',

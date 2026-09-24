@@ -1,46 +1,17 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
-import {
-    authApi,
-    type ExperienceLevel,
-    type FitnessGoal,
-} from '@features/profile/api/authApi'
-import { getPublicApiBaseUrl } from '@shared/config/runtime'
-import { getErrorMessage } from '@shared/errors'
+import { HEALTH_DATA_CONSENT_VERSION } from '@features/legal/versions'
+import type { ExperienceLevel, FitnessGoal } from '@features/profile/api/authApi'
 import { Button } from '@shared/ui/Button'
 import { Card } from '@shared/ui/Card'
-import { getAuthTokens } from '@/stores/authStore'
+import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit'
 
 export type OnboardingScreenProps = {
     onDone: () => void
     usedFallback?: boolean
     /** Pre-filled from Telegram `user.first_name` when available */
     defaultDisplayName?: string
-}
-
-async function saveOnboardingFetch(payload: {
-    fitness_goal: FitnessGoal
-    experience_level: ExperienceLevel
-}): Promise<void> {
-    const { accessToken } = getAuthTokens()
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (accessToken) {
-        headers.Authorization = `Bearer ${accessToken}`
-    }
-    const base = getPublicApiBaseUrl().replace(/\/$/, '')
-    const response = await fetch(`${base}/users/auth/onboarding`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-    })
-    if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { detail?: string; error?: { message?: string } }
-        const msg =
-            (typeof data.error === 'object' && data.error?.message) ||
-            data.detail ||
-            `HTTP ${response.status}`
-        throw new Error(String(msg))
-    }
 }
 
 /**
@@ -50,8 +21,9 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
     const [displayName, setDisplayName] = useState(defaultDisplayName)
     const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal>('strength')
     const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('beginner')
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const { submit, isSubmitting, error } = useOnboardingSubmit(onDone)
+    // Согласие на обработку данных о здоровье обязательно (WS1-14).
+    const [consentAccepted, setConsentAccepted] = useState(false)
 
     const goalOptions = useMemo(
         () => [
@@ -70,34 +42,6 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
         ],
         [],
     )
-
-    const handleSubmit = useCallback(async () => {
-        setError(null)
-        setIsSubmitting(true)
-        try {
-            const trimmed = displayName.trim()
-            if (trimmed.length > 0) {
-                try {
-                    await authApi.updateCurrentUser({ first_name: trimmed })
-                } catch (e) {
-                    setError(getErrorMessage(e))
-                    return
-                }
-            }
-
-            const payload = { fitness_goal: fitnessGoal, experience_level: experienceLevel }
-            try {
-                await authApi.saveOnboarding(payload)
-            } catch {
-                await saveOnboardingFetch(payload)
-            }
-            onDone()
-        } catch (e) {
-            setError(getErrorMessage(e))
-        } finally {
-            setIsSubmitting(false)
-        }
-    }, [displayName, experienceLevel, fitnessGoal, onDone])
 
     return (
         <div className="flex min-h-dvh items-center justify-center p-4">
@@ -167,6 +111,32 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
                     </div>
                 </fieldset>
 
+                <label className="mt-4 flex items-start gap-2 rounded-lg border border-border px-3 py-2">
+                    <input
+                        type="checkbox"
+                        name="health_data_consent"
+                        checked={consentAccepted}
+                        onChange={(e) => setConsentAccepted(e.target.checked)}
+                        className="mt-1"
+                        required
+                    />
+                    <span className="text-xs leading-relaxed text-telegram-hint">
+                        Я согласен(на) на{' '}
+                        <Link
+                            to="/legal/consent"
+                            className="text-primary underline"
+                            data-testid="consent-link"
+                        >
+                            обработку данных о здоровье
+                        </Link>{' '}
+                        (пульс, глюкоза, вес, сон, самочувствие) и принимаю{' '}
+                        <Link to="/legal/privacy" className="text-primary underline">
+                            политику конфиденциальности
+                        </Link>
+                        . Версия документа: {HEALTH_DATA_CONSENT_VERSION}.
+                    </span>
+                </label>
+
                 {error && (
                     <p className="mt-3 text-sm text-danger" role="alert">
                         {error}
@@ -176,8 +146,17 @@ export function OnboardingScreen({ onDone, usedFallback, defaultDisplayName = ''
                 <Button
                     type="button"
                     className="mt-4 w-full"
+                    disabled={!consentAccepted}
                     isLoading={isSubmitting}
-                    onClick={() => void handleSubmit()}
+                    onClick={() =>
+                        void submit({
+                            displayName,
+                            fitnessGoal,
+                            experienceLevel,
+                            healthDataConsent: consentAccepted,
+                        })
+                    }
+                    data-testid="onboarding-submit"
                 >
                     Сохранить и продолжить
                 </Button>

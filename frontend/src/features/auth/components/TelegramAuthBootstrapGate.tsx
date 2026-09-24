@@ -5,10 +5,10 @@ import { useTelegramContext } from '@app/providers/TelegramProvider'
 import { OnboardingScreen } from '@/components/Onboarding'
 import {
     exchangeTelegramInitData,
+    fetchCurrentUserProfile,
     lookupTelegramRegistration,
     type TelegramExchangeResult,
 } from '@/hooks/useTelegramAuth'
-import { authApi } from '@features/profile/api/authApi'
 import { getTelegramBotUsername } from '@shared/config/runtime'
 import { getErrorMessage } from '@shared/errors'
 import { cn } from '@shared/lib/cn'
@@ -63,7 +63,7 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
 
         if (isAuthenticated) {
             try {
-                const profile = await authApi.getCurrentUser()
+                const profile = await fetchCurrentUserProfile()
                 const onboardingCompleted = profile.profile?.onboarding_completed === true
                 setNeedsOnboarding(!onboardingCompleted)
                 setStatus('ready')
