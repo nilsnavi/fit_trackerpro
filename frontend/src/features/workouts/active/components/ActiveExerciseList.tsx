@@ -5,25 +5,11 @@ import {
     formatExerciseStructureSummary,
     getExerciseSummaryMeta,
 } from '@features/workouts/lib/workoutDetailFormatters'
-import type { CompletedExercise, CompletedSet } from '@features/workouts/types/workouts'
 import { useWorkoutQuickIncrementsStore } from '@/state/local'
 import { ExerciseSetRow } from './ExerciseSetRow'
 import type { ActiveExerciseListProps } from './ActiveExerciseList.sortable'
 
 const QUICK_INCREMENT_BASE_OPTIONS = [0.5, 1, 1.25, 2.5]
-
-function getPreviousSetForDisplay(exercise: CompletedExercise, setNumber: number): Partial<CompletedSet> | undefined {
-    const previousSet = exercise.sets_completed[setNumber - 2]
-    if (previousSet) {
-        return {
-            weight: previousSet.weight,
-            reps: previousSet.reps,
-            duration: previousSet.duration,
-            distance: previousSet.distance,
-        }
-    }
-    return undefined
-}
 
 const ActiveExerciseListSortable = lazy(() =>
     import('./ActiveExerciseList.sortable').then((m) => ({ default: m.ActiveExerciseListSortable })),
@@ -51,6 +37,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
     weightRecommendation,
     isWeightRecLoading,
     isWeightRecError,
+    hasNextExercise,
+    hasPrevExercise,
+    onGoToNextExercise,
+    onGoToPreviousExercise,
+    onSelectExerciseIndex,
 }: ActiveExerciseListProps) {
     if (canReorder) {
         return (
@@ -78,6 +69,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                         weightRecommendation={weightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
+                        hasNextExercise={hasNextExercise}
+                        hasPrevExercise={hasPrevExercise}
+                        onGoToNextExercise={onGoToNextExercise}
+                        onGoToPreviousExercise={onGoToPreviousExercise}
+                        onSelectExerciseIndex={onSelectExerciseIndex}
                     />
                 )}
             >
@@ -103,6 +99,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
                     weightRecommendation={weightRecommendation}
                     isWeightRecLoading={isWeightRecLoading}
                     isWeightRecError={isWeightRecError}
+                    hasNextExercise={hasNextExercise}
+                    hasPrevExercise={hasPrevExercise}
+                    onGoToNextExercise={onGoToNextExercise}
+                    onGoToPreviousExercise={onGoToPreviousExercise}
+                    onSelectExerciseIndex={onSelectExerciseIndex}
                 />
             </Suspense>
         )
@@ -131,6 +132,11 @@ export const ActiveExerciseList = memo(function ActiveExerciseList({
             weightRecommendation={weightRecommendation}
             isWeightRecLoading={isWeightRecLoading}
             isWeightRecError={isWeightRecError}
+            hasNextExercise={hasNextExercise}
+            hasPrevExercise={hasPrevExercise}
+            onGoToNextExercise={onGoToNextExercise}
+            onGoToPreviousExercise={onGoToPreviousExercise}
+            onSelectExerciseIndex={onSelectExerciseIndex}
         />
     )
 })
@@ -349,7 +355,6 @@ function ActiveExerciseListStatic({
                                     </div>
                                     {exercise.sets_completed.map((set) => {
                                         const isCurrentSet = isCurrentExercise && set.set_number - 1 === currentSetIndex
-                                        const previousSetValues = getPreviousSetForDisplay(exercise, set.set_number)
                                         return (
                                             <ExerciseSetRow
                                                 key={set.set_number}
@@ -357,7 +362,6 @@ function ActiveExerciseListStatic({
                                                 exerciseIndex={exerciseIndex}
                                                 isCurrent={isCurrentSet}
                                                 previousBestLabel={previousBestLabel}
-                                                previousSetValues={previousSetValues}
                                                 onFocusSet={onSetCurrentPosition}
                                                 onToggleCompleted={onToggleSetCompleted}
                                                 onSkipSet={onSkipSet}

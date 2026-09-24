@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.schemas.enums import ExperienceLevel, FitnessGoal, TokenKind, UserTheme, UserUnits
 
@@ -53,6 +53,10 @@ class UserProfileData(BaseModel):
     experience_level: Optional[ExperienceLevel] = Field(
         None,
         description="Training experience level selected during onboarding.",
+    )
+    consent: Optional[HealthDataConsent] = Field(
+        None,
+        description="Recorded health-data consent (version + timestamp) for audit.",
     )
     onboarding_completed: Optional[bool] = Field(
         None,
@@ -175,12 +179,24 @@ class UserSettingsPatch(BaseModel):
 class TelegramAuthRequest(BaseModel):
     """Request model for Telegram authentication"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     init_data: str = Field(
         ...,
         min_length=1,
         max_length=16384,
+        validation_alias=AliasChoices("initData", "init_data"),
         description="Raw initData string from Telegram WebApp",
         examples=["query_id=...&user={...}&auth_date=...&hash=..."],
+    )
+
+
+class TelegramLookupResponse(BaseModel):
+    """Whether a database user already exists for validated initData (no user creation)."""
+
+    registered: bool = Field(
+        ...,
+        description="True when a user row exists for this Telegram account.",
     )
 
 
@@ -250,11 +266,40 @@ class AuthResponse(BaseModel):
     )
 
 
+class HealthDataConsent(BaseModel):
+    """Proof that the user accepted a specific version of the legal texts."""
+
+    version: str = Field(
+        ...,
+        min_length=1,
+        max_length=32,
+        description="Version of the consent text the user accepted.",
+    )
+    accepted_at: datetime = Field(..., description="When the consent was recorded (UTC).")
+    source: str = Field(
+        default="onboarding",
+        max_length=32,
+        description="Where the consent was collected.",
+    )
+
+
 class OnboardingRequest(BaseModel):
     """Request model for first-login onboarding."""
 
     fitness_goal: FitnessGoal = Field(..., description="Primary fitness objective.")
     experience_level: ExperienceLevel = Field(..., description="Current training level.")
+    health_data_consent: bool = Field(
+        default=False,
+        description=(
+            "True when the user ticked the consent box for processing health data "
+            "(pulse, glucose, weight, sleep, wellbeing). Without it onboarding is rejected."
+        ),
+    )
+    consent_version: Optional[str] = Field(
+        default=None,
+        max_length=32,
+        description="Version of the consent text the user saw; defaults to the current one.",
+    )
 
 
 class OnboardingResponse(BaseModel):

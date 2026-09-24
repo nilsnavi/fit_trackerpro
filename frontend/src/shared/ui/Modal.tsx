@@ -89,6 +89,15 @@ export const Modal: React.FC<ModalProps> = ({
     const touchStartY = useRef<number>(0);
     const touchCurrentY = useRef<number>(0);
     const isDragging = useRef<boolean>(false);
+    /** Pending delayed onClose(); cancelled when the modal reopens or unmounts. */
+    const closeTimerRef = useRef<number | null>(null);
+
+    const clearCloseTimer = useCallback(() => {
+        if (closeTimerRef.current !== null) {
+            window.clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = null;
+        }
+    }, []);
 
     // Haptic feedback при открытии
     useEffect(() => {
@@ -104,6 +113,10 @@ export const Modal: React.FC<ModalProps> = ({
     // Монтирование компонента
     useEffect(() => {
         if (isOpen) {
+            // Reopening while the close animation is still pending must cancel its
+            // delayed onClose(): otherwise that stale callback closes the freshly
+            // opened modal (e.g. re-opening the exercise picker right after closing it).
+            clearCloseTimer();
             setIsMounted(true);
             setIsClosing(false);
             // Блокируем скролл body
@@ -132,16 +145,20 @@ export const Modal: React.FC<ModalProps> = ({
             window.clearTimeout(timeoutId);
             document.body.style.overflow = '';
         };
-    }, [isMounted, isOpen]);
+    }, [clearCloseTimer, isMounted, isOpen]);
 
     // Плавное закрытие
     const handleClose = useCallback(() => {
+        // Idempotent: a second close request (X + overlay, Escape during the exit
+        // animation, drag-to-dismiss) must not queue another onClose().
+        if (closeTimerRef.current !== null || isClosing) return;
         setIsClosing(true);
-        setTimeout(() => {
+        closeTimerRef.current = window.setTimeout(() => {
+            closeTimerRef.current = null;
             onClose();
             setIsMounted(false);
         }, 300);
-    }, [onClose]);
+    }, [isClosing, onClose]);
 
     // Обработка Escape
     const handleEscape = useCallback(
@@ -152,6 +169,9 @@ export const Modal: React.FC<ModalProps> = ({
         },
         [closeOnEscape, isOpen, handleClose]
     );
+
+    // Не оставлять висящий onClose() после ухода модалки со сцены
+    useEffect(() => clearCloseTimer, [clearCloseTimer]);
 
     useEffect(() => {
         document.addEventListener('keydown', handleEscape);

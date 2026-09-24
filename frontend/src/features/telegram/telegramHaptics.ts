@@ -34,7 +34,9 @@ function getHapticFeedback(): HapticFeedbackAPI | null {
         return null
     }
 
-    const tg = (window as any).Telegram?.WebApp
+    const tg = (
+        window as Window & { Telegram?: { WebApp?: { HapticFeedback?: HapticFeedbackAPI } } }
+    ).Telegram?.WebApp
     if (!tg || !tg.HapticFeedback) {
         return null
     }

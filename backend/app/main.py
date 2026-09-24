@@ -2,6 +2,7 @@
 FitTracker Pro - FastAPI Backend Application
 """
 import asyncio
+import hmac
 import html
 import logging
 import os
@@ -300,7 +301,23 @@ async def telegram_webhook(request: Request):
 
     This endpoint receives updates from Telegram when using webhook mode.
     Only used in production environment.
+
+    When ``TELEGRAM_WEBHOOK_SECRET`` is configured the request must carry the
+    matching ``X-Telegram-Bot-Api-Secret-Token`` header (Telegram echoes the value
+    passed to ``setWebhook``). The check happens before the body is parsed so
+    forged updates never reach the dispatcher. The reverse proxy intentionally
+    skips rate limiting for this path, which makes the secret the only gate.
     """
+    expected_secret = (settings.TELEGRAM_WEBHOOK_SECRET or "").strip()
+    if expected_secret:
+        provided_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if not hmac.compare_digest(provided_secret, expected_secret):
+            logger.warning(
+                "telegram_webhook_rejected",
+                extra={"event": "telegram_webhook_rejected", "reason": "invalid_secret_token"},
+            )
+            return Response(status_code=403)
+
     try:
         update_data = await request.json()
         await process_webhook_update(update_data)

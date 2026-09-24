@@ -101,7 +101,14 @@ export default defineConfig({
         {
             name: 'chromium-mvp-e2e',
             testDir: './tests/e2e',
-            use: { ...devices['Desktop Chrome'] },
+            use: {
+                ...devices['Desktop Chrome'],
+                // The Telegram PWA auto-applies a fresh service worker (`PwaUpdatePrompt`),
+                // and that reload races the app's first navigation:
+                // `page.goto` intermittently fails with net::ERR_ABORTED. The MVP specs
+                // exercise app logic, not the shell cache, so the worker is blocked.
+                serviceWorkers: 'block',
+            },
         },
     ],
 })

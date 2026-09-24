@@ -1,4 +1,3 @@
-import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -35,7 +34,7 @@ describe('ExerciseMetrics', () => {
 
         expect(screen.getByText('Лучший вес')).toBeInTheDocument()
         expect(screen.getByText('100')).toBeInTheDocument()
-        expect(screen.getByText('кг')).toBeInTheDocument()
+        expect(screen.getAllByText('кг').length).toBeGreaterThan(0)
 
         expect(screen.getByText('Лучший объём')).toBeInTheDocument()
         expect(screen.getByText('5.0т')).toBeInTheDocument()

@@ -1,12 +1,18 @@
 import { expect, test } from '@playwright/test'
 import { setupTelegramWebApp } from './helpers/telegram-mock'
 import {
+    activeSetCompleteButton,
     buildWorkoutState,
+    completeActiveSet,
+    dismissBlockingDialog,
+    expectActiveSet,
+    finishActiveWorkout,
     isoMinutesAgo,
     isoNow,
     mockWorkoutApi,
     seedAuth,
     seedDraft,
+    withSetIds,
     type WorkoutHistoryItem,
     type WorkoutTemplate,
 } from './helpers/workout-api-mock'
@@ -22,36 +28,24 @@ async function ensureMobileTelegramEnv(page: Parameters<typeof setupTelegramWebA
     })
 }
 
-async function expandActionRailIfCollapsed(page: import('@playwright/test').Page) {
-    const handle = page.getByRole('button', { name: /Показать панель управления|Скрыть панель управления/i }).first()
-    if ((await handle.count()) === 0) return
-    const label = await handle.getAttribute('aria-label')
-    if (label && /Показать панель управления/i.test(label)) {
-        await handle.click({ force: true })
+async function openActiveIfRedirectedToHub(page: import('@playwright/test').Page, workoutId: number) {
+    if (new RegExp(`/workouts/active/${workoutId}(?:\\?.*)?$`).test(page.url())) return
+    const openBtn = page.getByRole('button', { name: /^Открыть$/i }).first()
+    if (await openBtn.count()) {
+        await openBtn.click({ force: true })
+    } else {
+        const resumeBtn = page.getByRole('button', { name: /Продолжить тренировку/i }).first()
+        if (await resumeBtn.count()) {
+            await resumeBtn.click({ force: true })
+        }
     }
+    await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}(?:\\?.*)?$`), { timeout: 30_000 })
 }
-
-const firstSetButton = (page: import('@playwright/test').Page) =>
-    page.getByRole('button', { name: /Отметить подход 1 выполненным/ }).first()
 
 test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
     test.describe.configure({ timeout: 60_000, mode: 'serial' })
 
-    async function openActiveIfRedirectedToHub(page: import('@playwright/test').Page, workoutId: number) {
-        if (new RegExp(`/workouts/active/${workoutId}(?:\\?.*)?$`).test(page.url())) return
-        const openBtn = page.getByRole('button', { name: /^Открыть$/i }).first()
-        if (await openBtn.count()) {
-            await openBtn.click({ force: true })
-        } else {
-            const resumeBtn = page.getByRole('button', { name: /Продолжить тренировку/i }).first()
-            if (await resumeBtn.count()) {
-                await resumeBtn.click({ force: true })
-            }
-        }
-        await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}(?:\\?.*)?$`), { timeout: 30_000 })
-    }
-
-    test('start from template → adjust weight → complete set → add new set → finish workout', async ({ page }) => {
+    test('start from template → adjust weight → complete set → finish workout', async ({ page }) => {
         const fixedWorkoutId = 91000
         const template: WorkoutTemplate = {
             id: 9001,
@@ -79,32 +73,21 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await card.getByRole('button', { name: 'Начать по шаблону' }).click()
 
         await expect.poll(() => state.startRequests.length).toBe(1)
-        // Depending on the current hub state, the UI can redirect back to /workouts with a "resume/open" bar.
+        // Depending on the hub state the app can briefly return to /workouts with a resume bar.
         await openActiveIfRedirectedToHub(page, fixedWorkoutId)
-        // Ensure we are on the active workout screen (if we got redirected back to hub again).
-        await openActiveIfRedirectedToHub(page, fixedWorkoutId)
-        await expect(firstSetButton(page)).toBeVisible({ timeout: 30_000 })
-        await expandActionRailIfCollapsed(page)
+        await dismissBlockingDialog(page)
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
-        const weightInc = page.getByRole('button', { name: '+2.5' }).first()
-        await expect(weightInc).toBeVisible({ timeout: 10_000 })
-        await weightInc.click({ force: true })
+        // Weight adjustment happens through the quick controls of the active set (SPEC-005 §13).
+        const weightIncrement = page.getByRole('button', { name: '+2.5' }).first()
+        await expect(weightIncrement).toBeVisible({ timeout: 10_000 })
+        await weightIncrement.click()
 
-        // Complete the first planned set. Session sync is covered by focused sync/offline tests below.
-        await firstSetButton(page).click({ force: true })
+        await completeActiveSet(page)
+        await expect.poll(() => state.setPatchRequests.length, { timeout: 15_000 }).toBeGreaterThan(0)
 
-        // Finish workout via rail CTA (mobile primary path).
-        await expandActionRailIfCollapsed(page)
-        const finishBtn = page.getByRole('button', { name: 'Завершить' }).last()
-        await expect(finishBtn).toBeVisible({ timeout: 10_000 })
-        await finishBtn.evaluate((el) => (el as HTMLButtonElement).click())
-
-        const confirmFinishBtn = page.getByRole('dialog').getByRole('button', { name: 'Завершить' })
-        if (await confirmFinishBtn.count()) {
-            await confirmFinishBtn.click({ force: true })
-            await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary/, { timeout: 30_000 })
-            await expect.poll(() => state.completeRequests.length, { timeout: 15_000 }).toBeGreaterThan(0)
-        }
+        await finishActiveWorkout(page)
+        await expect.poll(() => state.completeRequests.length, { timeout: 15_000 }).toBeGreaterThan(0)
     })
 
     test('abandon workout clears draft and returns to workouts', async ({ page }) => {
@@ -113,13 +96,13 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
             id: workoutId,
             date: isoNow(),
             duration: undefined,
-            exercises: [
+            exercises: withSetIds(workoutId, [
                 {
                     exercise_id: 1002,
                     name: 'Жим лёжа',
                     sets_completed: [{ set_number: 1, reps: 8, weight: 70, completed: false }],
                 },
-            ],
+            ]),
             comments: 'E2E abandon workout',
             tags: ['strength'],
             created_at: isoMinutesAgo(8),
@@ -136,20 +119,21 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`/workouts/active/${workoutId}`)
-        await expect(firstSetButton(page)).toBeVisible({ timeout: 30_000 })
+        await dismissBlockingDialog(page)
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
         await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
         await expect(page).toHaveURL(/\/workouts(?:\?.*)?$/)
         await expect(page.getByRole('main')).toContainText('Последние сессии')
     })
 
-    test('rest timer overlay remains non-blocking (can still log sets) @mobile', async ({ page }) => {
+    test('rest timer overlay remains non-blocking (can still log sets)', async ({ page }) => {
         const workoutId = 9103
         const activeWorkout: WorkoutHistoryItem = {
             id: workoutId,
             date: isoNow(),
             duration: undefined,
-            exercises: [
+            exercises: withSetIds(workoutId, [
                 {
                     exercise_id: 1001,
                     name: 'Присед',
@@ -158,7 +142,7 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
                         { set_number: 2, reps: 5, weight: 80, completed: false },
                     ],
                 },
-            ],
+            ]),
             comments: 'E2E rest overlay non-blocking',
             tags: ['strength'],
             created_at: isoMinutesAgo(10),
@@ -175,19 +159,13 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`/workouts/active/${workoutId}`)
-        const firstToggle = firstSetButton(page)
-        await expect(firstToggle).toBeVisible({ timeout: 30_000 })
+        await dismissBlockingDialog(page)
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
-        // Start rest (opens overlay). Depending on layout it can be on summary card.
-        const restBtn = page.getByRole('button', { name: /^Отдых\b/i }).first()
-        if (await restBtn.count()) {
-            await restBtn.click()
-            await expect(page.getByText('Отдых').first()).toBeVisible({ timeout: 10_000 })
-        }
-
-        // Even with overlay, we should be able to mark set as done (no hard block).
-        await firstToggle.click({ force: true })
-        await expect(page.getByRole('button', { name: /Отметить подход 2 выполненным/ }).first()).toBeVisible({ timeout: 10_000 })
+        // Completing a set starts the rest timer; the next set stays loggable underneath it.
+        await completeActiveSet(page)
+        await expect(page.getByTestId('rest-minus-30')).toBeVisible({ timeout: 10_000 })
+        await expectActiveSet(page, 2)
     })
 
     test('sticky bottom action rail does not cover critical content on small mobile height', async ({ page }) => {
@@ -196,7 +174,7 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
             id: workoutId,
             date: isoNow(),
             duration: undefined,
-            exercises: [
+            exercises: withSetIds(workoutId, [
                 {
                     exercise_id: 1001,
                     name: 'Присед',
@@ -206,7 +184,7 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
                         { set_number: 3, reps: 5, weight: 80, completed: false },
                     ],
                 },
-            ],
+            ]),
             comments: 'E2E sticky rail overlap',
             tags: ['strength'],
             created_at: isoMinutesAgo(12),
@@ -224,28 +202,29 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`/workouts/active/${workoutId}`)
-        await expect(firstSetButton(page)).toBeVisible({ timeout: 30_000 })
-        await expandActionRailIfCollapsed(page)
+        await dismissBlockingDialog(page)
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
-        // Ensure last set action remains tappable and not hidden under the rail.
-        const lastSetToggle = page.getByRole('button', { name: /Отметить подход 3 выполненным/ }).first()
-        await lastSetToggle.scrollIntoViewIfNeeded()
-        await expect(lastSetToggle).toBeVisible()
+        // The last set row must stay reachable above the sticky finish bar.
+        const lastSetRow = page.locator('[data-testid="set-row-3"]')
+        await lastSetRow.scrollIntoViewIfNeeded()
+        await expect(lastSetRow).toBeVisible()
 
-        const railBtn = page.getByRole('button', { name: 'Завершить' }).last()
-        const railBox = await railBtn.boundingBox()
-        const toggleBox = await lastSetToggle.boundingBox()
+        // The screen pins "Упражнение"/"Завершить" to the bottom of the viewport.
+        const railButton = page.getByRole('button', { name: 'Завершить', exact: true }).last()
+        const railBox = await railButton.boundingBox()
+        const rowBox = await lastSetRow.boundingBox()
 
         expect(railBox).not.toBeNull()
-        expect(toggleBox).not.toBeNull()
+        expect(rowBox).not.toBeNull()
 
-        if (railBox && toggleBox) {
-            // The bottom edge of the toggle should be above the rail's top edge.
-            expect(toggleBox.y + toggleBox.height).toBeLessThan(railBox.y)
+        if (railBox && rowBox) {
+            // The bottom edge of the set row should be above the finish bar's top edge.
+            expect(rowBox.y + rowBox.height).toBeLessThan(railBox.y)
         }
     })
 
-    test('offline → local changes queued → reconnect syncs queue (mobile) @mobile @offline', async ({ page, context }) => {
+    test('offline → local changes queued → reconnect syncs queue (mobile) @offline', async ({ page, context }) => {
         const fixedWorkoutId = 92000
         const template: WorkoutTemplate = {
             id: 9201,
@@ -272,23 +251,25 @@ test.describe('telegram mini app: mobile hot paths @mobile @regression', () => {
             .click()
 
         await expect.poll(() => state.startRequests.length).toBe(1)
-        await expect(page).toHaveURL(new RegExp(`/workouts/active/${fixedWorkoutId}(?:\\?.*)?$`))
-        const firstToggle = firstSetButton(page)
-        await expect(firstToggle).toBeVisible({ timeout: 30_000 })
-        await expandActionRailIfCollapsed(page)
+        await openActiveIfRedirectedToHub(page, fixedWorkoutId)
+        await dismissBlockingDialog(page)
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
-        // Go offline and make local changes.
+        // Let the session baseline settle, so only the offline edit can be queued.
+        await page.waitForTimeout(3_000)
+        const syncedBefore = state.updateSessionRequests.length
+
+        // Go offline and make a local-only change (the new set inherits its predecessor).
         await context.setOffline(true)
-        await firstToggle.click({ force: true })
-        await expandActionRailIfCollapsed(page)
-        const addSet = page.getByRole('button', { name: /Добавить дополнительный подход/ }).first()
-        await addSet.click({ force: true })
+        await page.locator('[data-testid="add-set-btn"]').click()
 
         // API must not be called while offline; visible status wording can vary by shell state.
-        await expect.poll(() => state.updateSessionRequests.length).toBe(0)
+        await expect(page.getByText(/офлайн|Нет сети/i).first()).toBeVisible({ timeout: 12_000 })
+        await page.waitForTimeout(3_000)
+        expect(state.updateSessionRequests.length).toBe(syncedBefore)
 
         // Reconnect and ensure queue drains (update calls happen).
         await context.setOffline(false)
-        await expect.poll(() => state.updateSessionRequests.length, { timeout: 15_000 }).toBeGreaterThan(0)
+        await expect.poll(() => state.updateSessionRequests.length, { timeout: 20_000 }).toBeGreaterThan(syncedBefore)
     })
 })
