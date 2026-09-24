@@ -48,8 +48,12 @@ jobs:
           fi
 
       - name: Setup Node.js
+              dependabot/github_actions/actions/setup-node-7
+        uses: actions/setup-node@v7
+
         if: steps.config.outputs.configured == 'true'
         uses: actions/setup-node@v4
+         main
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
