@@ -1574,6 +1574,7 @@ class WorkoutsService:
         exercises: list[dict],
         only_indexes: Optional[set[int]] = None,
         blanks_only: bool = False,
+        occurrence_by_index: Optional[dict[int, int]] = None,
     ) -> list[dict]:
         """Prefill planned working sets with the user's accepted next target.
 
@@ -1594,6 +1595,7 @@ class WorkoutsService:
             user_id=user_id,
             template_id=template_id,
             exercises=exercises,
+            occurrence_by_index=occurrence_by_index,
         )
         if not targets:
             return exercises
@@ -1703,12 +1705,23 @@ class WorkoutsService:
             candidates.add(index)
         if not candidates:
             return exercises
+        # SPEC-006 §7/§58: slot identity follows the session entry, not the
+        # current list order. Carried rows keep the occurrence they had when
+        # stored; only brand-new candidates take the next free slot. That stops
+        # an insert-before / reorder of the same exercise_id from handing an
+        # existing slot's accepted target to a blank row via only_indexes.
+        occurrence_by_index = self._slot_occurrence_by_index(
+            exercises=exercises,
+            stored_exercises=stored_exercises,
+            carried_ids=carried_ids,
+        )
         return await self._apply_accepted_progression_targets(
             user_id=user_id,
             template_id=template_id,
             exercises=exercises,
             only_indexes=candidates,
             blanks_only=True,
+            occurrence_by_index=occurrence_by_index,
         )
 
     @staticmethod
@@ -1763,6 +1776,79 @@ class WorkoutsService:
         if stored.get("exercise_id") != exercise.get("exercise_id"):
             return False
         return self._session_entry_id(stored.get("id")) is None
+
+    def _slot_occurrence_by_index(
+        self,
+        *,
+        exercises: list[dict],
+        stored_exercises: list[dict],
+        carried_ids: set[int],
+    ) -> dict[int, int]:
+        """Map draft index → template-slot occurrence for the same exercise_id.
+
+        Carried session rows that are still present in the draft keep the
+        occurrence they had in the stored list (count of the same
+        ``exercise_id`` among earlier stored entries). Only those still-present
+        rows reserve a slot: a deleted-and-re-added blank at the old position
+        must be free to reclaim occurrence 0. Brand-new candidates then take
+        the next free occurrence in draft order. Indexes are live draft indexes
+        so seeding still mutates the correct row.
+        """
+        occurrence_by_index: dict[int, int] = {}
+
+        stored_occurrence_by_id: dict[int, int] = {}
+        seen_in_stored: dict[int, int] = {}
+        for stored in stored_exercises:
+            if not isinstance(stored, dict):
+                continue
+            entry_id = self._session_entry_id(stored.get("id"))
+            try:
+                exercise_id_int = int(stored.get("exercise_id"))  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                continue
+            if exercise_id_int < 1:
+                continue
+            occurrence = seen_in_stored.get(exercise_id_int, 0)
+            seen_in_stored[exercise_id_int] = occurrence + 1
+            if entry_id is not None and entry_id in carried_ids:
+                stored_occurrence_by_id[entry_id] = occurrence
+
+        # Reserve slots only for carried entries that the draft still presents.
+        taken: dict[int, set[int]] = {}
+        for index, exercise in enumerate(exercises):
+            if not isinstance(exercise, dict):
+                continue
+            try:
+                exercise_id_int = int(exercise.get("exercise_id"))  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                continue
+            if exercise_id_int < 1:
+                continue
+            entry_id = self._session_entry_id(exercise.get("id"))
+            if entry_id is None or entry_id not in stored_occurrence_by_id:
+                continue
+            occurrence = stored_occurrence_by_id[entry_id]
+            occurrence_by_index[index] = occurrence
+            taken.setdefault(exercise_id_int, set()).add(occurrence)
+
+        for index, exercise in enumerate(exercises):
+            if index in occurrence_by_index:
+                continue
+            if not isinstance(exercise, dict):
+                continue
+            try:
+                exercise_id_int = int(exercise.get("exercise_id"))  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                continue
+            if exercise_id_int < 1:
+                continue
+            claimed = taken.setdefault(exercise_id_int, set())
+            occurrence = 0
+            while occurrence in claimed:
+                occurrence += 1
+            claimed.add(occurrence)
+            occurrence_by_index[index] = occurrence
+        return occurrence_by_index
 
     @staticmethod
     def _reverted_prefill_recommendation_ids(

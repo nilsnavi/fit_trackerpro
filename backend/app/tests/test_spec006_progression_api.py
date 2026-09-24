@@ -2356,6 +2356,204 @@ class TestPrefillEntryPointMatrix:
         assert _working_weights(detail["exercises"][1]) == [None] * _MATRIX_WORKING_SETS
         assert _working_weights(detail["exercises"][0]) == [_SQUAT_PLAN_WEIGHT] * _MATRIX_WORKING_SETS
 
+
+
+    def test_slot_occurrence_keeps_carried_identity_on_insert_and_reorder(self):
+        """Unit: occurrence map follows session identity, not draft order (§58).
+
+        Covers review cases without the snapshot rebuild path:
+        A repeated exercise_id slots, B insert-before existing occurrence,
+        C reorder carried rows, D carried keeps its occurrence/slot,
+        E new blank does not receive occurrence 0 of a carried slot.
+        """
+        service = workouts_service.WorkoutsService  # type: ignore[attr-defined]
+        # Prefer instance method via unbound call pattern used elsewhere.
+        from app.application.workouts_service import WorkoutsService
+
+        # Minimal fake service for unbound method binding
+        svc = object.__new__(WorkoutsService)
+
+        stored = [
+            {"id": 10, "exercise_id": BENCH_PRESS, "name": "Bench A"},
+            {"id": 11, "exercise_id": BENCH_PRESS, "name": "Bench B"},
+            {"id": 12, "exercise_id": SQUAT, "name": "Squat"},
+        ]
+        carried_ids = {10, 11, 12}
+
+        # E + A: insert blank bench before two carried benches — blank is occ 2,
+        # carried keep 0 and 1 even though draft order put blank first.
+        draft_insert = [
+            {"exercise_id": BENCH_PRESS, "name": "Bench new"},
+            {"id": 10, "exercise_id": BENCH_PRESS, "name": "Bench A"},
+            {"id": 11, "exercise_id": BENCH_PRESS, "name": "Bench B"},
+            {"id": 12, "exercise_id": SQUAT, "name": "Squat"},
+        ]
+        occ = svc._slot_occurrence_by_index(
+            exercises=draft_insert,
+            stored_exercises=stored,
+            carried_ids=carried_ids,
+        )
+        assert occ[1] == 0  # carried A
+        assert occ[2] == 1  # carried B
+        assert occ[0] == 2  # new blank — not 0
+        assert occ[3] == 0  # squat alone
+
+        # C: reorder carried benches — still 0/1 by stored identity, not draft order.
+        draft_reorder = [
+            {"id": 11, "exercise_id": BENCH_PRESS, "name": "Bench B"},
+            {"id": 10, "exercise_id": BENCH_PRESS, "name": "Bench A"},
+            {"id": 12, "exercise_id": SQUAT, "name": "Squat"},
+        ]
+        occ_r = svc._slot_occurrence_by_index(
+            exercises=draft_reorder,
+            stored_exercises=stored,
+            carried_ids=carried_ids,
+        )
+        assert occ_r[0] == 1  # B still occurrence 1
+        assert occ_r[1] == 0  # A still occurrence 0
+
+        # Re-added blank at position of deleted carried A reclaims occurrence 0.
+        draft_readd = [
+            {"exercise_id": BENCH_PRESS, "name": "Bench re-added"},
+            {"id": 11, "exercise_id": BENCH_PRESS, "name": "Bench B"},
+            {"id": 12, "exercise_id": SQUAT, "name": "Squat"},
+        ]
+        occ_re = svc._slot_occurrence_by_index(
+            exercises=draft_readd,
+            stored_exercises=stored,
+            carried_ids=carried_ids,
+        )
+        assert occ_re[1] == 1  # carried B reserved
+        assert occ_re[0] == 0  # re-added free to take primary slot
+
+
+    async def test_seed_uses_session_occurrence_not_list_order(self, monkeypatch):
+        """Service: only_indexes seed resolves slots by session identity (§58).
+
+        Insert-before draft order would make the blank occurrence 0 under list
+        scanning; with occurrence_by_index the blank is occurrence 1 / no slot,
+        so the accepted primary target is not applied to it.
+        """
+        from types import SimpleNamespace
+        from app.application.workouts_service import WorkoutsService
+        from app.application.progression_engine_service import AcceptedProgressionTarget
+
+        captured: dict = {}
+
+        async def fake_resolve(*, user_id, template_id, exercises, occurrence_by_index=None):
+            captured["occurrence_by_index"] = dict(occurrence_by_index or {})
+            captured["exercises"] = exercises
+            # Simulate engine that still keys targets by draft index using the
+            # occurrence map the service passed — only index 0 (blank) is a
+            # candidate; if occurrence wrongly 0 it would match primary target.
+            targets = {}
+            occ = occurrence_by_index or {}
+            for index, exercise in enumerate(exercises):
+                if occ.get(index) == 0 and exercise.get("exercise_id") == BENCH_PRESS:
+                    targets[index] = AcceptedProgressionTarget(
+                        recommendation_id=99,
+                        scope_key="u1:t1:te1:e1",
+                        lifecycle_status="accepted",
+                        policy="DOUBLE_PROGRESSION",
+                        value=82.5,
+                        weight=82.5,
+                        duration=None,
+                    )
+            return targets
+
+        class FakeEngine:
+            def __init__(self, _db):
+                pass
+            resolve_accepted_targets = staticmethod(fake_resolve)
+
+        monkeypatch.setattr(
+            "app.application.workouts_service.ProgressionEngineService",
+            FakeEngine,
+        )
+        svc = object.__new__(WorkoutsService)
+        svc.repository = SimpleNamespace(db=None)
+
+        stored = [
+            {
+                "id": 10,
+                "exercise_id": BENCH_PRESS,
+                "name": "Bench",
+                "sets_completed": [
+                    {"set_number": 1, "set_type": "working", "weight": 82.5, "reps": 12, "completed": False}
+                ],
+                "progression_target": {"recommendation_id": 99, "value": 82.5},
+            }
+        ]
+        # blank first (insert-before), then carried bench
+        exercises = [
+            {
+                "exercise_id": BENCH_PRESS,
+                "name": "Bench new",
+                "sets_completed": [
+                    {"set_number": 1, "set_type": "working", "weight": None, "reps": 12, "completed": False}
+                ],
+            },
+            {
+                "id": 10,
+                "exercise_id": BENCH_PRESS,
+                "name": "Bench",
+                "sets_completed": [
+                    {"set_number": 1, "set_type": "working", "weight": 82.5, "reps": 12, "completed": False}
+                ],
+                "progression_target": {"recommendation_id": 99, "value": 82.5},
+            },
+        ]
+        result = await svc._seed_added_exercise_targets(
+            user_id=1,
+            stored_exercises=stored,
+            exercises=exercises,
+            template_id=1,
+        )
+        assert captured["occurrence_by_index"][0] == 1  # blank is not slot 0
+        assert captured["occurrence_by_index"][1] == 0  # carried keeps slot 0
+        # blank must not receive 82.5; carried untouched (not in only_indexes)
+        assert result[0]["sets_completed"][0]["weight"] is None
+        assert result[0].get("progression_target") is None
+        assert result[1]["sets_completed"][0]["weight"] == 82.5
+
+
+    async def test_reorder_existing_carried_rows_does_not_reassign_targets(
+        self, flow: ProgressionFlow
+    ):
+        """HTTP: reordering carried bench+squat keeps each entry's values."""
+        template_id, _ = await _prepare_two_lift_slot(flow)
+        session_id = await flow.start(template_id)
+        loaded = await _sync_loaded_session(flow, session_id)
+        bench, squat = loaded
+        detail = await _patch_exercises(flow, session_id, [squat, bench])
+        assert detail["exercises"][0]["id"] == squat["id"]
+        assert detail["exercises"][1]["id"] == bench["id"]
+        assert _working_weights(detail["exercises"][0]) == [
+            _SQUAT_PLAN_WEIGHT
+        ] * _MATRIX_WORKING_SETS
+        assert _working_weights(detail["exercises"][1]) == [82.5] * _MATRIX_WORKING_SETS
+
+    async def test_carried_existing_row_keeps_accepted_target_when_blank_added(
+        self, flow: ProgressionFlow
+    ):
+        """HTTP: append blank after carried bench — carried keeps 82.5, blank does not."""
+        template_id, target = await _prepare_two_lift_slot(flow)
+        session_id = await flow.start(template_id)
+        loaded = await _sync_loaded_session(flow, session_id)
+        bench = loaded[0]
+        detail = await _patch_exercises(
+            flow, session_id, [bench, _blank_bench_draft()]
+        )
+        kept, added = detail["exercises"]
+        assert kept.get("id") == bench.get("id")
+        assert _working_weights(kept) == [82.5] * _MATRIX_WORKING_SETS
+        assert kept.get("progression_target", {}).get("recommendation_id") == target["id"]
+        assert _working_weights(added) != [82.5] * _MATRIX_WORKING_SETS
+        assert added.get("progression_target") is None or (
+            added["progression_target"].get("recommendation_id") != target["id"]
+        )
+
+
     async def test_a_new_prefill_call_site_has_to_register_itself(self):
         """Guard: the table, not a promise, is what says the surface is covered.
 

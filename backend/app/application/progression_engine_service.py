@@ -362,6 +362,7 @@ class ProgressionEngineService:
         user_id: int,
         template_id: Optional[int],
         exercises: Sequence[Any],
+        occurrence_by_index: Optional[dict[int, int]] = None,
     ) -> dict[int, AcceptedProgressionTarget]:
         """Accepted next target per draft exercise, keyed by its list index.
 
@@ -376,6 +377,11 @@ class ProgressionEngineService:
         the ``user + exercise`` scope anchors it instead — the same scope such a
         session is evaluated into. Reading only; the caller decides what to
         write and reports the prefill.
+
+        ``occurrence_by_index`` optionally pins the N-th program slot for a draft
+        index (session identity). Without it, occurrence is the order of the
+        same ``exercise_id`` in ``exercises`` — correct for a fresh start list,
+        wrong for a mid-session reorder/insert of carried rows.
         """
         if not exercises:
             return {}
@@ -393,8 +399,11 @@ class ProgressionEngineService:
             exercise_id = _to_int(exercise.get("exercise_id"))
             if exercise_id is None or exercise_id < 1:
                 continue
-            occurrence = occurrences.get(exercise_id, 0)
-            occurrences[exercise_id] = occurrence + 1
+            if occurrence_by_index is not None and index in occurrence_by_index:
+                occurrence = int(occurrence_by_index[index])
+            else:
+                occurrence = occurrences.get(exercise_id, 0)
+                occurrences[exercise_id] = occurrence + 1
             scope = self.build_scope(
                 user_id=user_id,
                 exercise_id=exercise_id,
