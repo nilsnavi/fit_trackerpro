@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -50,6 +51,28 @@ class EmergencyContact(Base):
         String(50),
         nullable=True,
         comment="Phone number with country code"
+    )
+
+    # Telegram delivery channel: a contact becomes reachable only after they
+    # link their own Telegram account with a one-time code (see ``link_code``).
+    # A username is not enough — the Bot API cannot resolve @username to a chat:
+    # bots may only message users who contacted them first.
+    telegram_chat_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger,
+        nullable=True,
+        index=True,
+        comment="Telegram chat id of the linked contact (delivery channel)"
+    )
+    link_code: Mapped[Optional[str]] = mapped_column(
+        String(16),
+        nullable=True,
+        unique=True,
+        comment="One-time code the contact sends to the bot to get linked"
+    )
+    linked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When the contact linked their Telegram account"
     )
 
     # Relationship to user
@@ -136,6 +159,11 @@ class EmergencyContact(Base):
             name="ck_emergency_contacts_has_contact_channel",
         ),
     )
+
+    @property
+    def is_linked(self) -> bool:
+        """Whether this contact can actually receive Telegram messages."""
+        return self.telegram_chat_id is not None
 
     def __repr__(self) -> str:
         return f"<EmergencyContact(id={self.id}, user_id={self.user_id}, name={self.contact_name})>"

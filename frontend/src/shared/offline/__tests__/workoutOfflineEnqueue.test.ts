@@ -4,6 +4,7 @@ import {
     enqueueOfflineWorkoutStart,
     enqueueOfflineWorkoutSessionUpdate,
     enqueueOfflineWorkoutComplete,
+    enqueueOfflineWorkoutSetUpdate,
 } from '../workoutOfflineEnqueue'
 import { OfflineMutationQueuedError, WORKOUT_SYNC_KINDS } from '@shared/offline/syncQueue'
 import type { EnqueueResult, SyncQueueItem } from '@shared/offline/syncQueue'
@@ -94,6 +95,23 @@ describe('workoutOfflineEnqueue', () => {
             expect(call.kind).toBe(WORKOUT_SYNC_KINDS.SESSION_UPDATE)
             expect(call.dedupeKey).toBe('workout:update:99')
             expect(call.idempotencyKey).toMatch(/^session:update:99:/)
+        })
+    })
+
+    describe('enqueueOfflineWorkoutSetUpdate', () => {
+        it('keeps one pending write per set and throws OfflineMutationQueuedError', () => {
+            expect(() => enqueueOfflineWorkoutSetUpdate(99, 5, { weight: 80, reps: 8, completed: true }))
+                .toThrow(OfflineMutationQueuedError)
+
+            const call = mockEnqueue.mock.calls[0][0] as { dedupeKey: string; kind: string; payload: unknown }
+            expect(call.kind).toBe(WORKOUT_SYNC_KINDS.SET_UPDATE)
+            expect(call.dedupeKey).toBe('workout:set:99:5')
+            expect(call.payload).toEqual({
+                workoutId: 99,
+                setId: 5,
+                body: { weight: 80, reps: 8, completed: true },
+            })
+            expect(mockFlush).toHaveBeenCalledTimes(1)
         })
     })
 

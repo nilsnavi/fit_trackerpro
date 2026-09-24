@@ -47,6 +47,7 @@ const CATEGORY_WHITELIST = new Set<Exclude<ExerciseCategory, 'all'>>([
     'flexibility',
     'balance',
     'sport',
+    'rehab',
 ])
 
 function mapCategory(row: ExerciseApiItem): Exclude<ExerciseCategory, 'all'> {
@@ -58,6 +59,7 @@ function mapCategory(row: ExerciseApiItem): Exclude<ExerciseCategory, 'all'> {
 
 function inferDifficulty(row: ExerciseApiItem): DifficultyLevel {
     if (row.category === 'flexibility') return 'beginner'
+    if (row.category === 'rehab') return 'beginner'
     if (row.category === 'sport') return 'advanced'
     return 'intermediate'
 }

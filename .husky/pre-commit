@@ -1,6 +1,9 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# Prevent committing obvious secrets (env tokens, private keys).
+node scripts/check-no-secrets.mjs
+
 cd frontend || exit 1
 
 npm run lint:precommit

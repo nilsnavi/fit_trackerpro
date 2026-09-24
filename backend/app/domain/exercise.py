@@ -43,7 +43,7 @@ class Exercise(Base):
         String(50),
         nullable=False,
         index=True,
-        comment="Category: strength, cardio, flexibility, balance, sport"
+        comment="Category: strength, cardio, flexibility, balance, sport, rehab"
     )
 
     # Equipment needed stored as JSONB array
@@ -134,7 +134,7 @@ class Exercise(Base):
         Index('ix_exercises_created_at', 'created_at'),
         Index('ix_exercises_source', 'source'),
         CheckConstraint(
-            "category IN ('strength','cardio','flexibility','balance','sport')",
+            "category IN ('strength','cardio','flexibility','balance','sport','rehab')",
             name="ck_exercises_category_allowed",
         ),
         CheckConstraint(

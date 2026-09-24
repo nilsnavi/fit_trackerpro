@@ -28,6 +28,7 @@ if (existsSync(envTestPath)) {
  * В CI задают E2E_BASE_URL (например http://127.0.0.1:3000). Локально по умолчанию — http://localhost (Vite :3000).
  */
 const baseURL = process.env.E2E_BASE_URL || 'http://localhost'
+const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1'
 
 function devServerPortFromBaseURL(url: string): string {
     try {
@@ -66,18 +67,20 @@ export default defineConfig({
         video: 'retain-on-failure',
     },
 
-    webServer: {
-        command: `npm run dev -- --host 0.0.0.0 --port ${devPort} --strictPort`,
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        stdout: 'pipe',
-        stderr: 'pipe',
-        timeout: 120_000,
-        env: {
-            ...process.env,
-            VITE_API_URL: process.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api/v1',
-        },
-    },
+    webServer: skipWebServer
+        ? undefined
+        : {
+              command: `npm run dev -- --host 0.0.0.0 --port ${devPort} --strictPort`,
+              url: baseURL,
+              reuseExistingServer: !process.env.CI,
+              stdout: 'pipe',
+              stderr: 'pipe',
+              timeout: 120_000,
+              env: {
+                  ...process.env,
+                  VITE_API_URL: process.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api/v1',
+              },
+          },
 
     projects: [
         {
@@ -98,7 +101,14 @@ export default defineConfig({
         {
             name: 'chromium-mvp-e2e',
             testDir: './tests/e2e',
-            use: { ...devices['Desktop Chrome'] },
+            use: {
+                ...devices['Desktop Chrome'],
+                // The Telegram PWA auto-applies a fresh service worker (`PwaUpdatePrompt`),
+                // and that reload races the app's first navigation:
+                // `page.goto` intermittently fails with net::ERR_ABORTED. The MVP specs
+                // exercise app logic, not the shell cache, so the worker is blocked.
+                serviceWorkers: 'block',
+            },
         },
     ],
 })

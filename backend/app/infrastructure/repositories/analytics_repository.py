@@ -237,7 +237,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                   AND wl.date >= :date_from
                   AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
-                  AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
+                  AND (CAST(:exercise_id AS integer) IS NULL OR (exercise_item.item->>'exercise_id')::int = CAST(:exercise_id AS integer))
             ),
             limited_exercises AS (
                 SELECT exercise_id
@@ -307,7 +307,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                   AND wl.date >= :date_from
                   AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
-                  AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
+                  AND (CAST(:exercise_id AS integer) IS NULL OR (exercise_item.item->>'exercise_id')::int = CAST(:exercise_id AS integer))
             ),
             limited_exercises AS (
                 SELECT exercise_id
@@ -394,7 +394,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                   AND wl.date >= :date_from
                   AND wl.date <= :date_to
                   AND exercise_item.item ? 'exercise_id'
-                  AND (:exercise_id IS NULL OR (exercise_item.item->>'exercise_id')::int = :exercise_id)
+                  AND (CAST(:exercise_id AS integer) IS NULL OR (exercise_item.item->>'exercise_id')::int = CAST(:exercise_id AS integer))
             ),
             limited_exercises AS (
                 SELECT exercise_id
@@ -457,7 +457,8 @@ class AnalyticsRepository(SQLAlchemyRepository):
             select(
                 WorkoutLog.date.label("workout_date"),
                 func.count(WorkoutLog.id).label("workout_count"),
-                func.coalesce(func.sum(WorkoutLog.duration), 0).label("total_duration"),
+                func.coalesce(func.sum(WorkoutLog.duration),
+                              0).label("total_duration"),
                 func.bool_or(
                     or_(
                         WorkoutLog.glucose_before.isnot(None),
@@ -481,7 +482,9 @@ class AnalyticsRepository(SQLAlchemyRepository):
             WorkoutLog.date >= first_day,
             WorkoutLog.date <= last_day,
         )
-        tag_elements = func.jsonb_array_elements_text(cast(WorkoutLog.tags, JSONB)).table_valued("tag").alias("tag_elements")
+        tag_elements = func.jsonb_array_elements_text(
+            cast(WorkoutLog.tags, JSONB)
+        ).table_valued("tag").render_derived(name="tag_elements")
         result = await self.db.execute(
             select(
                 WorkoutLog.date.label("workout_date"),
@@ -518,7 +521,8 @@ class AnalyticsRepository(SQLAlchemyRepository):
         result = await self.db.execute(
             select(
                 func.count(WorkoutLog.id).label("total_workouts"),
-                func.coalesce(func.sum(WorkoutLog.duration), 0).label("total_duration"),
+                func.coalesce(func.sum(WorkoutLog.duration),
+                              0).label("total_duration"),
             ).where(
                 and_(
                     WorkoutLog.user_id == user_id,
@@ -532,14 +536,15 @@ class AnalyticsRepository(SQLAlchemyRepository):
         exercise_elements = (
             func.jsonb_array_elements(cast(WorkoutLog.exercises, JSONB))
             .table_valued("item")
-            .alias("exercise_elements")
+            .render_derived(name="exercise_elements")
         )
         exercise_id_expr = cast(
             exercise_elements.c.item.op("->>")("exercise_id"),
             Integer,
         )
         result = await self.db.execute(
-            select(func.count(func.distinct(exercise_id_expr)).label("total_exercises"))
+            select(func.count(func.distinct(exercise_id_expr)).label(
+                "total_exercises"))
             .select_from(WorkoutLog)
             .join(exercise_elements, true())
             .where(
@@ -574,7 +579,8 @@ class AnalyticsRepository(SQLAlchemyRepository):
 
     async def get_earliest_workout_date(self, user_id: int) -> Optional[date]:
         result = await self.db.execute(
-            select(func.min(WorkoutLog.date)).where(WorkoutLog.user_id == user_id)
+            select(func.min(WorkoutLog.date)).where(
+                WorkoutLog.user_id == user_id)
         )
         row = result.scalar()
         return row if row is not None else None
@@ -643,7 +649,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
         exercise_elements = (
             func.jsonb_array_elements(cast(WorkoutLog.exercises, JSONB))
             .table_valued("item")
-            .alias("exercise_elements")
+            .render_derived(name="exercise_elements")
         )
         exercise_id_expr = cast(
             exercise_elements.c.item.op("->>")("exercise_id"),
@@ -698,7 +704,7 @@ class AnalyticsRepository(SQLAlchemyRepository):
                     LIMIT 1
                     """
                 ),
-                {"user_id": str(user_id)},
+                {"user_id": user_id},
             )
         ).mappings().first()
         return dict(row) if row else None

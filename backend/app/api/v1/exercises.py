@@ -29,7 +29,7 @@ router = APIRouter()
 
 @router.get("/", response_model=ExerciseListResponse)
 async def get_exercises(
-    category: Optional[str] = Query(None, pattern="^(strength|cardio|flexibility|balance|sport)$"),
+    category: Optional[str] = Query(None, pattern="^(strength|cardio|flexibility|balance|sport|rehab)$"),
     muscle_group: Optional[str] = Query(None),
     equipment: Optional[str] = Query(None),
     search: Optional[str] = Query(None, max_length=100),

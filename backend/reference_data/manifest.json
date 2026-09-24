@@ -1,5 +1,5 @@
 {
-  "version": "2026-03-30",
+  "version": "2026-05-04",
   "datasets": [
     { "name": "ref_exercise_category", "file": "ref_exercise_category.json" },
     { "name": "ref_muscle_group", "file": "ref_muscle_group.json" },

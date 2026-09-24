@@ -40,10 +40,21 @@ export interface ApiAnalyticsSummaryResponse {
 }
 
 export interface ApiTrainingLoadDailyEntry {
+    id?: number
+    userId?: number
     date: ApiDate
     volume: number
     fatigueScore: number
     avgRpe: number | null
+}
+
+export interface ApiTrainingLoadDailyTableResponse {
+    items: ApiTrainingLoadDailyEntry[]
+    page: number
+    pageSize: number
+    total: number
+    dateFrom: string
+    dateTo: string
 }
 
 export interface ApiMuscleLoadEntry {
@@ -52,9 +63,38 @@ export interface ApiMuscleLoadEntry {
     loadScore: number
 }
 
+export interface ApiMuscleLoadTableEntry {
+    id: number
+    userId: number
+    muscleGroup: string
+    date: ApiDate
+    loadScore: number
+}
+
+export interface ApiMuscleLoadTableResponse {
+    items: ApiMuscleLoadTableEntry[]
+    page: number
+    pageSize: number
+    total: number
+    dateFrom: string
+    dateTo: string
+}
+
 export interface ApiRecoveryStateResponse {
+    id: number
+    userId: number
     fatigueLevel: number
     readinessScore: number
+}
+
+export interface ApiRecoveryStateRecalculateResponse {
+    id: number
+    userId: number
+    fatigueLevel: number
+    readinessScore: number
+    recalculatedForDate: string
+    dateFrom: string
+    dateTo: string
 }
 
 export interface ApiProgressInsightsVolumePoint {
@@ -189,12 +229,39 @@ export function getAnalyticsTrainingLoadDaily(params?: Record<string, unknown>) 
     return analyticsApi.getTrainingLoadDaily(params) as Promise<ApiTrainingLoadDailyEntry[]>
 }
 
+export function getAnalyticsTrainingLoadDailyTable(params: {
+    page?: number
+    page_size?: number
+    date_from?: string
+    date_to?: string
+}) {
+    return analyticsApi.getTrainingLoadDailyTable(params) as Promise<ApiTrainingLoadDailyTableResponse>
+}
+
 export function getAnalyticsMuscleLoad(params?: Record<string, unknown>) {
     return analyticsApi.getMuscleLoad(params) as Promise<ApiMuscleLoadEntry[]>
 }
 
+export function getAnalyticsMuscleLoadTable(params: {
+    page?: number
+    page_size?: number
+    date_from?: string
+    date_to?: string
+    muscle_group?: string
+}) {
+    return analyticsApi.getMuscleLoadTable(params) as Promise<ApiMuscleLoadTableResponse>
+}
+
 export function getAnalyticsRecoveryState() {
     return analyticsApi.getRecoveryState() as Promise<ApiRecoveryStateResponse>
+}
+
+export function recalculateRecoveryState(params?: {
+    target_date?: string
+    date_from?: string
+    date_to?: string
+}) {
+    return analyticsApi.recalculateRecoveryState(params) as Promise<ApiRecoveryStateRecalculateResponse>
 }
 
 export function getAnalyticsProgressInsights(params?: Record<string, unknown>) {

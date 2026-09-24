@@ -1,0 +1,18 @@
+[extend]
+# Use gitleaks built-in default rules as a base.
+useDefault = true
+
+[[allowlists]]
+description = "Allow token-looking examples in docs/templates"
+paths = [
+  '''(^|/)docs/''',
+  '''(^|/)\.git/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)frontend/node_modules/''',
+  '''\.md$''',
+  '''\.example$''',
+  '''(^|/)backend/\.env\.test$''',
+  '''(^|/)backend/app/tests/test_config_validation\.py$''',
+  '''(^|/)frontend/\.env\.test$''',
+]
+

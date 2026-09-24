@@ -5,14 +5,10 @@ import { goldenPathUser, scopeUserForPlaywrightWorker, type TelegramMiniAppUser 
 
 /**
  * Telegram WebApp: `installTelegramMiniAppMock` перехватывает `page.route()` на загрузку
- * `telegram-web-app.js` и инжектит `window.Telegram.WebApp` через `addInitScript` с initData из
- * `TEST_TELEGRAM_INIT_DATA` (frontend/.env.test) либо с подписью под текущего тестового пользователя.
+ * `telegram-web-app.js` и инжектит `window.Telegram.WebApp` через `addInitScript`
+ * с актуальной подписью под текущего тестового пользователя.
  */
 function telegramUserForWorker(testInfo: { workerIndex: number }): TelegramMiniAppUser {
-    const fromEnv = process.env.TEST_TELEGRAM_INIT_DATA?.trim()
-    if (fromEnv) {
-        return { id: 123, first_name: 'Test', username: 'u123', language_code: 'en' }
-    }
     return scopeUserForPlaywrightWorker(goldenPathUser, testInfo.workerIndex)
 }
 
@@ -23,24 +19,29 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
         page,
     }, testInfo) => {
         const user = telegramUserForWorker(testInfo)
-        const envInit = process.env.TEST_TELEGRAM_INIT_DATA?.trim()
 
-        await installTelegramMiniAppMock(page, { user, initDataOverride: envInit })
+        await installTelegramMiniAppMock(page, { user })
 
         await page.goto('/')
-        await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible({
+
+        const onboardingTitle = page.getByRole('heading', { name: 'Добро пожаловать в FitTracker Pro' })
+        // Дашборд — сигнал авторизации: он скрывает shell-навигацию, поэтому контент,
+        // а не nav. К разделам переходим прямым goto (nav доступен только на секциях).
+        await expect(onboardingTitle.or(page.getByRole('heading', { name: 'Мои шаблоны' })).first()).toBeVisible({
             timeout: 60_000,
         })
 
-        const onboardingTitle = page.getByRole('heading', { name: 'Добро пожаловать в FitTracker Pro' })
         if (await onboardingTitle.isVisible().catch(() => false)) {
             await page.getByLabel('Сила').check()
             await page.getByLabel('Начинающий').check()
+            // Согласие на обработку данных о здоровье обязательно (WS1-14):
+            // без него кнопка «Сохранить и продолжить» выключена.
+            await page.getByRole('checkbox', { name: /обработку данных о здоровье/ }).check()
             await page.getByRole('button', { name: 'Сохранить и продолжить' }).click()
             await expect(onboardingTitle).toBeHidden({ timeout: 30_000 })
         }
 
-        await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
+        await page.goto('/workouts')
         await expect(page).toHaveURL(/\/workouts/)
 
         // «Новая тренировка» в UI: быстрый старт по типу — плитка «Силовая» (не путать с подписью типа у шаблонов).
@@ -53,9 +54,10 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
         await page.getByTestId('add-exercise-btn').click()
         const sheet = page.locator('[role="dialog"]').last()
         await expect(sheet).toBeVisible()
-        await sheet.getByPlaceholder('Поиск упражнения...').fill('Bench')
-        await expect(sheet.getByRole('button', { name: /Bench Press/i })).toBeVisible({ timeout: 25_000 })
-        await sheet.getByRole('button', { name: /Bench Press/i }).first().click()
+        await sheet.getByPlaceholder('Поиск упражнения...').fill('Жим')
+        const exerciseResult = sheet.getByRole('button', { name: /Жим штанги лежа strength/i }).first()
+        await expect(exerciseResult).toBeVisible({ timeout: 25_000 })
+        await exerciseResult.click()
 
         const configDialog = page.locator('[role="dialog"]').last()
         await expect(configDialog.getByTestId('confirm-exercise-btn')).toBeVisible({ timeout: 15_000 })
@@ -64,18 +66,27 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
         await page.getByTestId('save-and-start-btn').click()
         await expect(page).toHaveURL(/\/workouts\/active\/\d+/, { timeout: 45_000 })
 
-        const weightInput = page.locator('[data-testid="set-weight-input"]').first()
-        await weightInput.fill('62.5')
-        await page.locator('label').filter({ hasText: 'Повторы' }).locator('input').first().fill('8')
-        await page.locator('[data-testid="set-toggle-btn"]').first().click()
+        // Активный подход открыт в режиме редактирования сразу (поля inline).
+        await page.getByLabel('Вес').first().fill('62.5')
+        await page.getByLabel('Повторы').first().fill('8')
 
-        await page.getByTestId('finish-workout-btn').click()
-        await expect(page.getByRole('heading', { name: 'Завершение тренировки' })).toBeVisible()
-        await page.getByTestId('confirm-finish-btn').click()
+        await page.getByRole('button', { name: 'Завершить подход' }).first().click()
 
-        await expect(page).toHaveURL(/\/workouts\/\d+/, { timeout: 45_000 })
+        // §17: после завершения подхода стартует отдых; панель перекрывает нижнюю кнопку.
+        // Подход завершается локально и запись уходит фоном, поэтому здесь ждём видимое
+        // состояние интерфейса, а не ответ сети: синхронизацию доведёт завершение тренировки.
+        const skipRestTimer = page.getByRole('button', { name: 'Пропустить', exact: true })
+        await expect(skipRestTimer).toBeVisible({ timeout: 30_000 })
+        await skipRestTimer.click()
 
-        await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
+        // Текущий контракт: кнопка «Завершить» (WorkoutBottomBar) закрывает сессию напрямую.
+        await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+
+        await expect(page).toHaveURL(/\/workouts\/active\/\d+\/summary/, { timeout: 45_000 })
+
+        // На секционных роутах навигация видима — идём в историю через nav.
+        const nav = page.getByRole('navigation', { name: 'Основная навигация' })
+        await nav.getByRole('link', { name: 'Тренировки' }).click()
         await expect(page.getByText(workoutTitle).first()).toBeVisible({ timeout: 25_000 })
     })
 })

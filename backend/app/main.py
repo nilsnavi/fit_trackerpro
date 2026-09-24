@@ -2,6 +2,7 @@
 FitTracker Pro - FastAPI Backend Application
 """
 import asyncio
+import hmac
 import html
 import logging
 import os
@@ -12,19 +13,18 @@ import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.exception_handlers import register_exception_handlers
 from app.api.v1.openapi_tags import OPENAPI_TAGS, TAG_INTEGRATIONS, TAG_SYSTEM
 from app.api.v1.registration import register_v1_routes
-from app.core.limiter import limiter
-from app.core.rate_limit_handlers import slowapi_rate_limit_exceeded_handler
 from app.api.v1.system import health_check_response
 from app.application.health_check_service import HealthCheckService
 from app.bot import process_webhook_update, setup_bot, start_bot, start_bot_webhook, stop_bot
+from app.core.limiter import limiter
 from app.core.logging import configure_logging
+from app.core.rate_limit_handlers import slowapi_rate_limit_exceeded_handler
 from app.core.telemetry import init_sentry, setup_prometheus_metrics
 from app.infrastructure.cache import close_cache
 from app.infrastructure.database import close_db, init_db
@@ -301,7 +301,23 @@ async def telegram_webhook(request: Request):
 
     This endpoint receives updates from Telegram when using webhook mode.
     Only used in production environment.
+
+    When ``TELEGRAM_WEBHOOK_SECRET`` is configured the request must carry the
+    matching ``X-Telegram-Bot-Api-Secret-Token`` header (Telegram echoes the value
+    passed to ``setWebhook``). The check happens before the body is parsed so
+    forged updates never reach the dispatcher. The reverse proxy intentionally
+    skips rate limiting for this path, which makes the secret the only gate.
     """
+    expected_secret = (settings.TELEGRAM_WEBHOOK_SECRET or "").strip()
+    if expected_secret:
+        provided_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if not hmac.compare_digest(provided_secret, expected_secret):
+            logger.warning(
+                "telegram_webhook_rejected",
+                extra={"event": "telegram_webhook_rejected", "reason": "invalid_secret_token"},
+            )
+            return Response(status_code=403)
+
     try:
         update_data = await request.json()
         await process_webhook_update(update_data)

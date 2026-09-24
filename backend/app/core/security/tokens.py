@@ -4,8 +4,9 @@ JWT encoding/decoding and HTTP Bearer scheme (no FastAPI route dependencies).
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import jwt
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import PyJWTError as JWTError
 
 from app.settings import settings
 
