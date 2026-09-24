@@ -13,6 +13,7 @@ export const CATEGORIES: { id: ExerciseCategory; label: string; icon: string }[]
     { id: 'flexibility', label: 'Гибкость', icon: '🧘' },
     { id: 'balance', label: 'Баланс', icon: '⚖️' },
     { id: 'sport', label: 'Спорт', icon: '🏀' },
+    { id: 'rehab', label: 'ЛФК', icon: '🩺' },
 ]
 
 export const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string }[] = [

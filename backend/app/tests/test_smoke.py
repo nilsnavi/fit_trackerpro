@@ -10,12 +10,18 @@ from app.main import app
 
 
 def _registered_paths(application: FastAPI) -> set[str]:
-    """Плоский список path из зарегистрированных маршрутов (как в OpenAPI)."""
-    return {
-        getattr(route, "path", None)
+    """Все зарегистрированные path: из OpenAPI-схемы и верхнего уровня маршрутов."""
+    # OpenAPI раскрывает include_router; инфра-зонды (/health и т.п.) объявлены
+    # с include_in_schema=False, поэтому добавляем и плоские маршруты приложения.
+    # Итерация по application.routes начиная со starlette>=0.50 не видит вложенные
+    # _IncludedRouter (у них нет атрибута path) — потому и нужен union.
+    paths = set(application.openapi()["paths"].keys())
+    paths.update(
+        route.path
         for route in application.routes
         if getattr(route, "path", None) is not None
-    }
+    )
+    return paths
 
 
 @pytest.mark.smoke

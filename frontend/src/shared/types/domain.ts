@@ -51,7 +51,7 @@ export interface ApiResponse<T> {
     message?: string
 }
 
-export type ExerciseCategory = 'all' | 'strength' | 'cardio' | 'flexibility' | 'balance' | 'sport'
+export type ExerciseCategory = 'all' | 'strength' | 'cardio' | 'flexibility' | 'balance' | 'sport' | 'rehab'
 export type EquipmentType =
     | 'none'
     | 'dumbbells'

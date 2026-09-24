@@ -1,5 +1,8 @@
 import { api } from '@shared/api/client'
 import type {
+    BodyMeasurement,
+    BodyMeasurementHistory,
+    BodyMeasurementType,
     GlucoseReading,
     GlucoseStats,
     HealthDashboardStats,
@@ -17,6 +20,36 @@ const getTodayDate = (): string => {
 }
 
 export const healthApi = {
+    getBodyMeasurements(params?: {
+        page?: number
+        page_size?: number
+        date_from?: string
+        date_to?: string
+        measurement_type?: BodyMeasurementType
+        latest?: boolean
+    }): Promise<BodyMeasurementHistory> {
+        return api.get<BodyMeasurementHistory>('/health/body-measurements', params)
+    },
+
+    addBodyMeasurement(payload: {
+        measurement_type: BodyMeasurementType
+        value_cm: number
+        measured_at: string
+    }): Promise<BodyMeasurement> {
+        return api.post<BodyMeasurement>('/health/body-measurements', payload)
+    },
+
+    updateBodyMeasurement(
+        measurementId: number,
+        payload: Partial<Pick<BodyMeasurement, 'measurement_type' | 'value_cm' | 'measured_at'>>,
+    ): Promise<BodyMeasurement> {
+        return api.patch<BodyMeasurement>(`/health/body-measurements/${measurementId}`, payload)
+    },
+
+    deleteBodyMeasurement(measurementId: number): Promise<void> {
+        return api.delete(`/health/body-measurements/${measurementId}`)
+    },
+
     getWaterGoal(): Promise<WaterGoal> {
         return api.get<WaterGoal>('/health-metrics/water/goal')
     },

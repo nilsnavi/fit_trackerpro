@@ -53,6 +53,13 @@ describe('useWorkoutSessionStarter', () => {
         expect(draft.workoutId).toBe(101)
         expect(draft.title).toBe('Тестовая тренировка')
         expect(draft.templateId).toBeNull()
+        expect(draft.activeSession).toMatchObject({
+            id: 101,
+            title: 'Тестовая тренировка',
+            templateId: null,
+            sourceType: 'quick_start',
+            sourceId: null,
+        })
     })
 
     it('applies patch payload and prefers explicit draft template id when server does not provide template', async () => {
@@ -87,6 +94,13 @@ describe('useWorkoutSessionStarter', () => {
         expect(draft.workoutId).toBe(202)
         expect(draft.title).toBe('Повтор custom')
         expect(draft.templateId).toBe(55)
+        expect(draft.activeSession).toMatchObject({
+            id: 202,
+            title: 'Повтор custom',
+            templateId: 55,
+            sourceType: 'personal_template',
+            sourceId: 77,
+        })
     })
 
     it('returns null and triggers callback when mutation is queued offline', async () => {

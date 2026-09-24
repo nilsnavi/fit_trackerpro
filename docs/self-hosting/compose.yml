@@ -1,0 +1,138 @@
+# Standalone single-server example. See README.md before use.
+# Run with: docker compose --env-file /etc/fittracker/app.env -p fittracker
+#   -f /opt/fittracker/deploy/compose.yml ...
+x-service: &service
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  postgres:
+    <<: *service
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:?required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: 1g
+
+  redis:
+    <<: *service
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    mem_limit: 512m
+
+  backend:
+    <<: *service
+    image: fittracker-backend:${IMAGE_TAG:?required}
+    build:
+      context: ${SOURCE_DIR:-/opt/fittracker/source}
+      dockerfile: backend/Dockerfile
+      args:
+        APP_VERSION: ${IMAGE_TAG:?required}
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:?required}
+        BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:?required}
+    read_only: true
+    cap_drop: [ALL]
+    init: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /app/logs:mode=1777
+    environment:
+      PYTHONPATH: /app
+      ENVIRONMENT: production
+      DEBUG: "false"
+      AUTO_CREATE_DB_SCHEMA: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?required}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?required}
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:?required}
+      TELEGRAM_BOT_ENABLED: "false"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?required}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-[]}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    networks: [data, web]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 1g
+
+  frontend:
+    <<: *service
+    image: fittracker-frontend:${IMAGE_TAG:?required}
+    build:
+      context: ${SOURCE_DIR:-/opt/fittracker/source}/frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: ${VITE_API_URL:?required}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:?required}
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:?required}
+      VITE_ADMIN_USER_IDS: ${FRONTEND_ADMIN_USER_IDS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: production
+      SENTRY_RELEASE: ${IMAGE_TAG}
+    networks: [web]
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    mem_limit: 256m
+
+  nginx:
+    <<: *service
+    image: nginx:alpine@sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203cd34cf6d1
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/fittracker/ssl:/etc/nginx/ssl:ro
+      - /var/lib/fittracker/acme:/var/www/certbot:ro
+    networks: [web]
+    depends_on:
+      frontend: {condition: service_healthy}
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/edge-health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    mem_limit: 128m
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  data:
+    internal: true
+  web:

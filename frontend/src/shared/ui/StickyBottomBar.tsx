@@ -1,8 +1,8 @@
 import { type ReactNode, useRef, useState } from 'react'
 import { cn } from '@shared/lib/cn'
 
-/** Visible strip when collapsed — ~44px for comfortable thumb hit area on the drag handle. */
-const HANDLE_VISIBLE_PX = 44
+/** Height in px of the always-visible drag handle strip when the bar is collapsed. */
+const HANDLE_H = 20
 
 export interface StickyBottomBarProps {
     children: ReactNode
@@ -29,8 +29,9 @@ export interface StickyBottomBarProps {
  * StickyBottomBar — fixed footer bar for primary CTAs (e.g. "Save", "Start
  * workout"). Stays above the bottom navigation and respects iOS safe areas.
  *
- * When `collapsible` is true the bar can start collapsed (thin strip) or
- * expanded (`defaultCollapsed`) and toggles via swipe or handle tap.
+ * When `collapsible` is true the bar starts collapsed (just a drag handle is
+ * visible) and expands/collapses via swipe-up / swipe-down or a tap on the
+ * handle.
  *
  * @example
  * <StickyBottomBar>
@@ -56,7 +57,7 @@ export function StickyBottomBar({
         return (
             <div
                 className={cn(
-                    /* z-40: above FloatingRestTimer (z-30); keep below bottom nav (z-50) */
+                    /* z-40: keep below the bottom nav (z-50) */
                     'fixed inset-x-0 bottom-0 z-40',
                     'border-t border-border bg-telegram-bg/90 backdrop-blur-sm',
                     'px-4 py-3',
@@ -92,7 +93,7 @@ export function StickyBottomBar({
             )}
             style={{
                 transform: collapsed
-                    ? `translateY(calc(100% - ${HANDLE_VISIBLE_PX}px))`
+                    ? `translateY(calc(100% - ${HANDLE_H}px))`
                     : 'translateY(0)',
                 transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
@@ -102,8 +103,8 @@ export function StickyBottomBar({
             {/* Drag handle — always visible, tap to toggle */}
             <button
                 type="button"
-                className="flex w-full min-h-11 items-center justify-center select-none touch-manipulation"
-                style={{ height: HANDLE_VISIBLE_PX }}
+                className="flex w-full items-center justify-center select-none"
+                style={{ height: HANDLE_H }}
                 onClick={() => setCollapsed((v) => !v)}
                 aria-label={collapsed ? 'Показать панель управления' : 'Скрыть панель управления'}
             >

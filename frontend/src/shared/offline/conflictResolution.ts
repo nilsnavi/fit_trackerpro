@@ -1,5 +1,4 @@
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
-import { notifyWorkoutSyncConflictDetected } from '@shared/offline/observability/workoutSyncTelemetry'
 
 /**
  * Conflict resolution strategy for offline-synced workouts.
@@ -70,7 +69,7 @@ export function mergeConflictedWorkout(
 }
 
 /**
- * Зафиксировать конфликт версий (телеметрия + Sentry при включённом DSN).
+ * Log conflict to analytics/storage for investigation.
  */
 export function logConflict(
   workoutId: number,
@@ -78,12 +77,32 @@ export function logConflict(
   serverVersion: number,
   reason: string,
 ): void {
-  notifyWorkoutSyncConflictDetected({
-    resource: 'workout',
-    resource_id: workoutId,
-    local_version: localVersion,
-    server_version: serverVersion,
+  console.warn(`[Conflict] Workout #${workoutId}:`, {
+    localVersion,
+    serverVersion,
     reason,
-    source: 'merge_util',
+    timestamp: new Date().toISOString(),
   })
+
+  // Could send to Sentry or metrics service.
+  const sentry =
+    typeof window !== 'undefined'
+      ? (window as unknown as { Sentry?: { captureMessage?: (msg: string, ctx: unknown) => void } }).Sentry
+      : undefined
+
+  if (sentry?.captureMessage) {
+    sentry.captureMessage(`Workout sync conflict`, {
+      level: 'warning',
+      tags: {
+        workoutId: String(workoutId),
+        localVersion,
+        serverVersion,
+      },
+      contexts: {
+        conflict: {
+          reason,
+        },
+      },
+    })
+  }
 }

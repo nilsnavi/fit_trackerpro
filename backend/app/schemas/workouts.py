@@ -8,9 +8,18 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from app.schemas.enums import WorkoutSessionType, WorkoutSetType, WorkoutTemplateType
+from app.schemas.enums import (
+    PersonalRecordType,
+    ProgressionPolicy,
+    WorkoutBlockType,
+    WorkoutSessionSourceType,
+    WorkoutSessionType,
+    WorkoutSetType,
+    WorkoutStatus,
+    WorkoutTemplateType,
+)
 
 
 class ExerciseInTemplate(BaseModel):
@@ -59,6 +68,26 @@ class ExerciseInTemplate(BaseModel):
     notes: Optional[str] = Field(
         None,
         max_length=500,
+    )
+
+
+class CompletedExerciseUpdate(BaseModel):
+    """PATCH payload for a session exercise (SPEC-005 §59)."""
+
+    status: Optional[str] = Field(
+        None,
+        description="Set to 'skipped' to skip the exercise for this session only.",
+    )
+    notes: Optional[str] = Field(None, max_length=1000)
+    target_order_index: Optional[int] = Field(
+        None, ge=0, description="Reposition the exercise within the session."
+    )
+    replacement_exercise_id: Optional[int] = Field(
+        None, ge=1, description="Replace the exercise (session-only) with this exercise.",
+    )
+    replacement_name: Optional[str] = Field(None, max_length=255)
+    source_exercise_id: Optional[int] = Field(
+        None, ge=1, description="Current exercise id used to resolve the row when several entries share it.",
     )
 
 
@@ -154,6 +183,40 @@ class CompletedSet(BaseModel):
         max_length=1000,
         description="Set-level notes/comments.",
     )
+    # SPEC-006 §42/§58: the value the plan had before an accepted progression
+    # target replaced it (None means the set was empty). Recorded once, so the
+    # UI can offer a one-tap revert to the planned number.
+    planned_weight: Optional[float] = Field(
+        None,
+        ge=0,
+        le=2000,
+        description="Weight planned before the progression target was applied.",
+    )
+    planned_duration: Optional[int] = Field(
+        None,
+        ge=0,
+        le=86400,
+        description="Duration planned before the progression target was applied.",
+    )
+
+
+class ProgressionTargetInfo(BaseModel):
+    """SPEC-006 §42/§58: accepted target a session's numbers were seeded from.
+
+    Present on an exercise only while the seeded value is still in place; the UI
+    labels the number and offers a revert to the planned one.
+    """
+
+    recommendation_id: int = Field(..., ge=1)
+    scope_key: str = Field(..., max_length=128)
+    value: float = Field(..., description="Accepted target: kg or seconds.")
+    unit: str = Field(
+        default="kg",
+        pattern="^(kg|seconds)$",
+        description="What ``value`` measures.",
+    )
+    policy: Optional[str] = Field(None, max_length=64)
+    lifecycle_status: Optional[str] = Field(None, max_length=32)
 
 
 class CompletedExercise(BaseModel):
@@ -174,6 +237,25 @@ class CompletedExercise(BaseModel):
         None,
         max_length=1000,
     )
+    # SPEC-005 §6: WorkoutSessionExercise row id for PATCH/DELETE targeting.
+    id: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Database row id of the session exercise, when persisted.",
+    )
+    # SPEC-005 §26: skipped exercises remain in session, excluded from volume.
+    status: Optional[str] = Field(
+        None,
+        description="Exercise status inside the session ('skipped' when skipped).",
+    )
+    # SPEC-005 §24: block membership (superset/triset/circuit).
+    block_id: Optional[int] = Field(None, ge=1)
+    block_type: Optional[WorkoutBlockType] = None
+    block_order: Optional[int] = Field(None, ge=0)
+    block_rounds: Optional[int] = Field(None, ge=1)
+    block_rest_seconds: Optional[int] = Field(None, ge=0)
+    # SPEC-006 §58: set when the accepted target seeded this exercise's sets.
+    progression_target: Optional[ProgressionTargetInfo] = None
 
 
 class SessionFatigueTrend(BaseModel):
@@ -191,6 +273,13 @@ class SessionEffortDistribution(BaseModel):
 
 class WorkoutSessionMetrics(BaseModel):
     completed_sets: int = 0
+    # SPEC-005 §52: extended session metrics.
+    warmup_sets: int = 0
+    working_sets: int = 0
+    total_reps: int = 0
+    total_volume: Optional[float] = None
+    exercise_count: int = 0
+    max_weight: Optional[float] = None
     avg_rpe: Optional[float] = None
     avg_rir: Optional[float] = None
     total_rest_seconds: int = 0
@@ -289,6 +378,31 @@ class WorkoutStartFromTemplateRequest(BaseModel):
     overrides: Optional[StartWorkoutTemplateOverrides] = None
 
 
+class WorkoutSessionCreateRequest(BaseModel):
+    """Canonical request for creating a WorkoutSession from any start source."""
+
+    source_type: WorkoutSessionSourceType = Field(
+        default=WorkoutSessionSourceType.QUICK_START,
+        description="Canonical start source for the workout session.",
+    )
+    source_id: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Source entity ID. Required for all sources except quick_start.",
+    )
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    type: WorkoutSessionType = Field(default=WorkoutSessionType.CUSTOM)
+    overrides: Optional[StartWorkoutTemplateOverrides] = None
+
+    @model_validator(mode="after")
+    def validate_source_id(self) -> "WorkoutSessionCreateRequest":
+        if self.source_type == WorkoutSessionSourceType.QUICK_START:
+            return self
+        if self.source_id is None:
+            raise ValueError("source_id is required for this source_type")
+        return self
+
+
 class WorkoutTemplateFromWorkoutCreate(BaseModel):
     """Create template from completed workout session."""
 
@@ -326,6 +440,8 @@ class WorkoutStartResponse(BaseModel):
     id: int
     user_id: int
     template_id: Optional[int]
+    source_type: WorkoutSessionSourceType = WorkoutSessionSourceType.QUICK_START
+    source_id: Optional[int] = None
     date: date
     start_time: datetime
     status: str = "in_progress"
@@ -333,6 +449,22 @@ class WorkoutStartResponse(BaseModel):
         default="Workout started successfully",
         max_length=500,
     )
+    # SPEC-005 §3: lifecycle status of the created/restored session.
+    session_status: WorkoutStatus = WorkoutStatus.ACTIVE
+
+
+class WorkoutBlockPayload(BaseModel):
+    """Block definition attached to a session create/update (SPEC-005 §24)."""
+
+    client_id: Optional[str] = Field(
+        None,
+        max_length=64,
+        description="Client-side identifier to correlate exercises with the block.",
+    )
+    type: WorkoutBlockType = WorkoutBlockType.NORMAL
+    order: int = Field(0, ge=0)
+    rounds: int = Field(1, ge=1, le=50)
+    rest_seconds: Optional[int] = Field(None, ge=0, le=3600)
 
 
 class WorkoutSessionUpdateRequest(BaseModel):
@@ -372,6 +504,17 @@ class WorkoutSessionUpdateRequest(BaseModel):
         None,
         ge=1,
         description="Expected workout version for optimistic locking.",
+    )
+    # SPEC-005 §3: pause/resume lifecycle transitions.
+    status: Optional[WorkoutStatus] = Field(
+        None,
+        description="Lifecycle transition target: 'active' (resume) or 'paused'.",
+    )
+    # SPEC-005 §24: blocks for superset/triset/circuit support.
+    blocks: Optional[List[WorkoutBlockPayload]] = Field(
+        None,
+        max_length=100,
+        description="Full replacement list of session blocks (when provided).",
     )
 
 
@@ -429,6 +572,8 @@ class WorkoutCompleteResponse(BaseModel):
     id: int
     user_id: int
     template_id: Optional[int]
+    source_type: WorkoutSessionSourceType = WorkoutSessionSourceType.QUICK_START
+    source_id: Optional[int] = None
     date: date
     duration: int
     exercises: List[CompletedExercise]
@@ -443,12 +588,19 @@ class WorkoutCompleteResponse(BaseModel):
         default="Workout completed successfully",
         max_length=500,
     )
+    # SPEC-005 §40/§51: PRs achieved during this session.
+    personal_records: List[PersonalRecordEntry] = Field(default_factory=list)
+    # SPEC-005 §51: next targets recommended by the progression engine.
+    progression_recommendations: List[ProgressionRecommendation] = Field(default_factory=list)
 
 
 class WorkoutHistoryItem(BaseModel):
     """Single workout history entry"""
 
     id: int
+    template_id: Optional[int] = None
+    source_type: WorkoutSessionSourceType = WorkoutSessionSourceType.QUICK_START
+    source_id: Optional[int] = None
     date: date
     duration: Optional[int]
     exercises: List[CompletedExercise]
@@ -459,6 +611,11 @@ class WorkoutHistoryItem(BaseModel):
     session_metrics: Optional[WorkoutSessionMetrics] = None
     version: int
     created_at: datetime
+    # SPEC-005 §3/§48: lifecycle status for session restore.
+    status: WorkoutStatus = WorkoutStatus.ACTIVE
+    started_at: Optional[datetime] = None
+    # SPEC-005 §24: superset/triset/circuit blocks of the session.
+    blocks: List["WorkoutBlockResponse"] = Field(default_factory=list)
 
 
 class WorkoutHistoryResponse(BaseModel):
@@ -479,6 +636,8 @@ class WorkoutSetPatchRequest(BaseModel):
     rpe: Optional[Decimal] = Field(
         None, ge=1, le=10, max_digits=3, decimal_places=1)
     rest_seconds: Optional[int] = Field(None, ge=0, le=3600)
+    # SPEC-005 §20: timed sets persist the actual duration instead of reps.
+    duration: Optional[int] = Field(None, ge=0, le=86400)
     completed: Optional[bool] = None
     notes: Optional[str] = Field(None, max_length=1000)
 
@@ -493,8 +652,168 @@ class WorkoutSetResponse(BaseModel):
     weight: Optional[Decimal] = None
     rpe: Optional[Decimal] = None
     rest_seconds: Optional[int] = None
+    # SPEC-005 §20: timed sets report duration instead of reps.
+    duration: Optional[int] = None
     completed: bool = True
     notes: Optional[str] = None
+    # SPEC-005 §40: PR detected by this set (null when none).
+    personal_records: Optional[List["PersonalRecordEntry"]] = None
+
+
+class WorkoutExercisePatchRequest(BaseModel):
+    """PATCH payload for a session exercise row (SPEC-005 §6/§25-28)."""
+
+    status: Optional[str] = Field(
+        None,
+        description="Set to 'skipped' to skip the exercise for this session only.",
+    )
+    notes: Optional[str] = Field(None, max_length=1000)
+    target_order_index: Optional[int] = Field(
+        None, ge=0, description="Reposition the exercise within the session."
+    )
+    replacement_exercise_id: Optional[int] = Field(
+        None, ge=1, description="Replace the exercise (session-only) with this exercise.",
+    )
+    replacement_name: Optional[str] = Field(None, max_length=255)
+
+
+class WorkoutCancelRequest(BaseModel):
+    """Request model for cancelling an in-progress session (SPEC-005 §3)."""
+
+    comments: Optional[str] = Field(None, max_length=1000)
+    idempotency_key: Optional[str] = Field(
+        None, min_length=1, max_length=128,
+        description="Optional idempotency key for replay-safe cancellation.",
+    )
+
+
+class WorkoutCancelResponse(BaseModel):
+    """Response after cancelling a session."""
+
+    id: int
+    status: WorkoutStatus = WorkoutStatus.CANCELLED
+    message: str = Field(
+        default="Workout cancelled. This session is excluded from analytics.",
+        max_length=500,
+    )
+
+
+class WorkoutBlockResponse(BaseModel):
+    """Persisted session block (SPEC-005 §24)."""
+
+    id: int
+    type: WorkoutBlockType = WorkoutBlockType.NORMAL
+    order: int = 0
+    rounds: int = 1
+    rest_seconds: Optional[int] = None
+
+
+class WorkoutSessionListResponse(BaseModel):
+    """Lightweight response for incomplete session restore (SPEC-005 §48)."""
+
+    id: int
+    name: Optional[str] = None
+    status: WorkoutStatus
+    date: date
+    elapsed_seconds: Optional[int] = Field(
+        None, ge=0, description="Elapsed time derived from started_at.",
+    )
+    exercise_count: int = 0
+    completed_exercise_count: int = 0
+    created_at: datetime
+
+
+class PlateCalculationRequest(BaseModel):
+    """Plate calculator request (SPEC-005 §42–43)."""
+
+    target_weight: float = Field(..., ge=0, le=2000)
+    bar_weight: float = Field(20, ge=0, le=100)
+    available_plates: List[float] = Field(
+        default_factory=lambda: [25, 20, 15, 10, 5, 2.5, 1.25],
+        description="Available plate weights in kg.",
+    )
+
+
+class PlateCalculationResponse(BaseModel):
+    """Plate calculator result per side (SPEC-005 §42–43)."""
+
+    achievable: bool
+    plates_per_side: List[float] = Field(default_factory=list)
+    exact_weight: Optional[float] = None
+    nearest_weight: Optional[float] = None
+    remainder: float = 0.0
+
+
+class SmartRestRecommendation(BaseModel):
+    """Smart rest recommendation (SPEC-005 §19)."""
+
+    recommended_rest_seconds: int
+    reason_code: str
+    reason_text: str
+
+
+class ProgressionRecommendation(BaseModel):
+    """Explainable progression recommendation (SPEC-005 §37–38, SPEC-006 §8).
+
+    SPEC-006 fields are additive: existing consumers keep reading the original
+    keys, while the card can now show status, lifecycle and the persisted id.
+    """
+
+    # SPEC-006 §8/§9/§10 — persisted recommendation identity + lifecycle.
+    id: Optional[int] = None
+    exercise_id: Optional[int] = None
+    scope_key: Optional[str] = None
+    template_id: Optional[int] = None
+    template_exercise_id: Optional[int] = None
+    status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    policy_version: Optional[str] = None
+    actual_selected_value: Optional[float] = None
+    previous_reps: Optional[int] = None
+    recommended_reps: Optional[int] = None
+    reps_min: Optional[int] = None
+    reps_max: Optional[int] = None
+    previous_duration: Optional[int] = None
+    recommended_duration: Optional[int] = None
+    failure_streak: int = 0
+    recovery_warning: Optional[str] = None
+
+    recommended_value: Optional[float] = None
+    previous_value: Optional[float] = None
+    difference: Optional[float] = None
+    policy: ProgressionPolicy = ProgressionPolicy.MANUAL
+    reason_code: str = "NO_DATA"
+    reason_text: str = ""
+    confidence: str = Field("low", pattern="^(low|medium|high)$")
+    source_session_id: Optional[int] = None
+
+
+class ProgressionRecommendationRequest(BaseModel):
+    """Optional overrides when asking for a progression recommendation."""
+
+    exercise_id: int = Field(..., ge=1)
+    policy: Optional[ProgressionPolicy] = None
+    increment: Optional[float] = Field(None, gt=0, le=200)
+    rep_range_min: Optional[int] = Field(None, ge=0, le=100)
+    rep_range_max: Optional[int] = Field(None, ge=0, le=100)
+    target_rpe: Optional[float] = Field(None, ge=1, le=10)
+    target_rir: Optional[float] = Field(None, ge=0, le=10)
+    percent_1rm: Optional[float] = Field(None, gt=0, le=200)
+    time_increment_seconds: Optional[int] = Field(None, ge=1, le=3600)
+
+
+class PersonalRecordEntry(BaseModel):
+    """Personal record achieved or matched (SPEC-005 §40)."""
+
+    record_type: PersonalRecordType
+    exercise_id: int
+    exercise_name: str
+    value: float
+    unit: str = "kg"
+    is_new_record: bool = True
+    previous_value: Optional[float] = None
+    set_number: Optional[int] = None
+    achieved_at: Optional[datetime] = None
 
 
 # Ensure Pydantic v2 resolves postponed annotations for OpenAPI export tooling.

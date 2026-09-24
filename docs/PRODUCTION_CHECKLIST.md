@@ -14,17 +14,20 @@ Checklist for releasing current FitTracker Pro stack.
 
 - [ ] Server has root project folder `~/fittracker-pro`
 - [ ] Root `.env` exists with production values
+- [ ] Root `.env` is not committed to git; only `*.example` files are tracked
+- [ ] `node scripts/validate-production-env.mjs .env` passes on the server/operator copy
 - [ ] GitHub secrets configured (deploy + migrations)
 - [ ] `SECRET_KEY` rotated/strong
 - [ ] `ALLOWED_ORIGINS` restricted to production domains
+- [ ] `API_URL` and `VITE_API_URL` include `/api/v1`
 - [ ] Telegram bot and Mini App URL configured in BotFather
 
 ## 3) Infrastructure
 
 - [ ] Docker and Docker Compose installed
-- [ ] SSL certificate issued and copied to `nginx/ssl`
+- [ ] SSL certificate issued; `NGINX_SSL_DIR` points to the host certificate directory
 - [ ] Firewall allows only 22/80/443
-- [ ] DB backups directory created (`~/fittracker-pro/backups`)
+- [ ] DB backups directory created; `BACKUPS_DIR` points to the host backup directory
 
 ## 4) Deploy
 
@@ -69,7 +72,35 @@ Checklist for releasing current FitTracker Pro stack.
 - [ ] `POSTGRES_DB`
 - [ ] `SECRET_KEY`
 - [ ] `TELEGRAM_BOT_TOKEN`
+- [ ] `TELEGRAM_WEBHOOK_SECRET` (обязателен при `TELEGRAM_BOT_ENABLED=true`)
 - [ ] `TELEGRAM_WEBAPP_URL`
 - [ ] `ALLOWED_ORIGINS`
 - [ ] `VITE_API_URL`
 - [ ] `VITE_TELEGRAM_BOT_USERNAME`
+
+## 9) Optional GitHub secrets
+
+- [ ] `SENTRY_DSN` (optional error tracking; empty is allowed)
+- [ ] `SLACK_WEBHOOK_URL` (optional deploy notifications; empty disables Slack notification delivery)
+
+## 10) Production `.env` keys for manual/server deploy
+
+- [ ] `IMAGE_TAG` is set to a versioned tag and is not `latest`
+- [ ] `GITHUB_REPOSITORY` matches the GHCR repository owner/name
+- [ ] `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` are set
+- [ ] `SECRET_KEY` is at least 32 characters
+- [ ] `TELEGRAM_BOT_TOKEN` is set
+- [ ] `TELEGRAM_WEBHOOK_SECRET` is set and at least 16 chars (required when the bot runtime is enabled)
+- [ ] `TELEGRAM_WEBAPP_URL` is HTTPS
+- [ ] `ALLOWED_ORIGINS` contains only HTTPS origins and no `*`
+- [ ] `API_URL` and `VITE_API_URL` include `/api/v1`
+- [ ] `TELEGRAM_BOT_USERNAME` is set for frontend runtime config
+- [ ] `NGINX_SSL_DIR` and `BACKUPS_DIR` point to host directories outside the repository when running production
+
+## 11) Legal minimum (WS1-14)
+
+- [ ] Тексты политики конфиденциальности и согласия на обработку данных о здоровье доступны по `/legal/privacy` и `/legal/consent`
+- [ ] Версии документов совпадают: `frontend/src/features/legal/versions.ts` ↔ `backend/app/core/legal.py`
+- [ ] Онбординг без согласия отклоняется (400 `consent_required`), согласие сохраняется в `users.profile.consent` с версией и датой
+- [ ] В `docs/legal/privacy-and-data.md` заполнен оператор персональных данных и канал для запросов субъектов данных
+- [ ] Ссылка на политику добавлена в описание бота (@BotFather)

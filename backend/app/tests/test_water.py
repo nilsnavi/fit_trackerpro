@@ -13,11 +13,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
 
-from app.domain.water_entry import WaterEntry
-from app.domain.water_goal import WaterGoal
-from app.domain.water_reminder import WaterReminder
 from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
 

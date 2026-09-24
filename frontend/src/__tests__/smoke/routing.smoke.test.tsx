@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import type React from 'react'
 import { render, waitFor } from '@testing-library/react'
 import App from '@/App'
+import { useAuthStore } from '@/stores/authStore'
 
 // Smoke tests should verify routing + mount stability, not the correctness of every feature page.
 // We mock lazy-loaded screens to avoid pulling real feature dependencies (API, offline queue, etc.)
@@ -83,9 +83,29 @@ jest.mock('@app/layouts/AppShell', () => {
     }
 })
 
-jest.mock('@app/providers/QueryProvider', () => ({
-    QueryProvider: ({ children }: { children: React.ReactNode }) => children,
-}))
+// The app root mounts react-query consumers (session restore gate), so a bare
+// pass-through would be inaccurate: provide a real client, minus the offline persister.
+jest.mock('@app/providers/QueryProvider', () => {
+    const React = require('react')
+    const { QueryClient, QueryClientProvider } = require('@tanstack/react-query')
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return {
+        QueryProvider: ({ children }: { children: React.ReactNode }) =>
+            React.createElement(QueryClientProvider, { client: queryClient }, children),
+    }
+})
+
+// Session restore looks for open sessions on mount; smoke tests stay offline.
+jest.mock('@shared/api/domains/workoutsApi', () => {
+    const actual = jest.requireActual('@shared/api/domains/workoutsApi')
+    return {
+        ...actual,
+        workoutsApi: {
+            ...actual.workoutsApi,
+            listIncompleteSessions: jest.fn().mockResolvedValue([]),
+        },
+    }
+})
 
 jest.mock('@app/sentry', () => ({
     initSentry: jest.fn(),
@@ -123,6 +143,7 @@ async function expectNoCrashFallback() {
 
 describe('smoke: app routing', () => {
     beforeEach(() => {
+        useAuthStore.getState().clear()
         void (console.error as jest.Mock).mockClear?.()
         void (console.warn as jest.Mock).mockClear?.()
     })
@@ -135,8 +156,23 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
+    it('opens home as the authenticated start screen', async () => {
+        useAuthStore.getState().setTokens({ accessToken: 'test-token' })
+
+        renderAt('/')
+        await expectAppShellVisible()
+        await expectNoCrashFallback()
+
+        await waitFor(() => {
+            expect(window.location.pathname).toBe('/home')
+        })
+
+        expect(console.error).not.toHaveBeenCalled()
+    })
+
     it.each([
         '/',
+        '/home',
         '/workouts',
         '/workouts/templates',
         '/workouts/templates/new',
@@ -161,13 +197,13 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
-    it('redirects unknown route to home', async () => {
+    it('redirects unknown route to the home screen', async () => {
         renderAt('/__unknown__')
         await expectAppShellVisible()
         await expectNoCrashFallback()
 
         await waitFor(() => {
-            expect(window.location.pathname).toBe('/')
+            expect(window.location.pathname).toBe('/home')
         })
 
         expect(console.error).not.toHaveBeenCalled()

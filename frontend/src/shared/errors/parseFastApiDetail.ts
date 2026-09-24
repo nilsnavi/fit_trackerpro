@@ -46,15 +46,15 @@ export function parseFastApiDetail(detail: unknown): {
         if (typeof o.message === 'string') {
             return { message: o.message }
         }
-        const nestedError = o.error
-        if (nestedError && typeof nestedError === 'object' && nestedError !== null) {
-            const msg = (nestedError as { message?: unknown }).message
-            if (typeof msg === 'string') {
-                return { message: msg }
-            }
-        }
         if (typeof o.error === 'string') {
             return { message: o.error }
+        }
+        // Backend unified envelope: { error: { code, message, details? }, request_id }
+        if (o.error && typeof o.error === 'object') {
+            const err = o.error as Record<string, unknown>
+            if (typeof err.message === 'string') {
+                return { message: err.message }
+            }
         }
     }
 

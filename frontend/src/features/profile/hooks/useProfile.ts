@@ -14,7 +14,6 @@ import { queryKeys } from '@shared/api/queryKeys'
 import { authApi } from '@features/profile/api/authApi'
 import { usersApi } from '@shared/api/domains/usersApi'
 import type {
-    CoachAccess,
     UserProfile,
     UserStats,
     WeightProgress,
@@ -23,7 +22,6 @@ import type {
 export type {
     UserProfile,
     UserStats,
-    CoachAccess,
     WeightProgress,
 } from '@features/profile/types/profile'
 
@@ -46,16 +44,12 @@ const calculateGoalDate = (current: number, target: number, weeklyChange: number
 export interface UseProfileReturn {
     profile: UserProfile | null
     stats: UserStats | null
-    coachAccesses: CoachAccess[]
     isLoading: boolean
-    isGeneratingCoachCode: boolean
     error: string | null
     updateProfile: (updates: Partial<UserProfile['profile']>) => Promise<void>
     updateSettings: (updates: Partial<UserProfile['settings']>) => Promise<void>
     updateWeight: (current: number, target?: number) => Promise<void>
     getWeightProgress: () => WeightProgress | null
-    generateCoachCode: () => Promise<string | null>
-    revokeCoachAccess: (accessId: string) => Promise<void>
     exportData: () => Promise<void>
     refresh: () => Promise<void>
 }
@@ -72,11 +66,6 @@ export function useProfile(): UseProfileReturn {
     const statsQuery = useQuery({
         queryKey: queryKeys.profile.stats,
         queryFn: () => usersApi.getStats(),
-    })
-
-    const coachAccessQuery = useQuery({
-        queryKey: queryKeys.profile.coachAccess,
-        queryFn: () => usersApi.getCoachAccess(),
     })
 
     const updateProfileMutation = useMutation({
@@ -101,26 +90,9 @@ export function useProfile(): UseProfileReturn {
         },
     })
 
-    const generateCoachMutation = useMutation({
-        mutationFn: () => usersApi.generateCoachAccess(),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.profile.coachAccess })
-        },
-    })
-
-    const revokeCoachMutation = useMutation({
-        mutationFn: (accessId: string) => usersApi.revokeCoachAccess(accessId),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.profile.coachAccess })
-        },
-    })
-
     const profile = profileQuery.data ?? null
     const stats = statsQuery.data ?? null
-    const coachAccesses = useMemo(() => coachAccessQuery.data ?? [], [coachAccessQuery.data])
-
-    const isLoading =
-        profileQuery.isPending || statsQuery.isPending || coachAccessQuery.isPending
+    const isLoading = profileQuery.isPending || statsQuery.isPending
 
     const error =
         profileQuery.error != null
@@ -183,30 +155,6 @@ export function useProfile(): UseProfileReturn {
         }
     }, [profile])
 
-    const generateCoachCode = useCallback(async (): Promise<string | null> => {
-        try {
-            const res = await generateCoachMutation.mutateAsync()
-            hapticFeedback({ type: 'notification', notificationType: 'success' })
-            return res.code
-        } catch (err) {
-            console.error('Failed to generate coach code:', err)
-            return null
-        }
-    }, [generateCoachMutation, hapticFeedback])
-
-    const revokeCoachAccess = useCallback(
-        async (accessId: string) => {
-            try {
-                await revokeCoachMutation.mutateAsync(accessId)
-                hapticFeedback({ type: 'notification', notificationType: 'success' })
-            } catch (err) {
-                console.error('Failed to revoke access:', err)
-                throw err
-            }
-        },
-        [revokeCoachMutation, hapticFeedback],
-    )
-
     const exportData = useCallback(async () => {
         try {
             const response = await usersApi.exportData()
@@ -227,7 +175,6 @@ export function useProfile(): UseProfileReturn {
         await Promise.all([
             queryClient.invalidateQueries({ queryKey: queryKeys.profile.me }),
             queryClient.invalidateQueries({ queryKey: queryKeys.profile.stats }),
-            queryClient.invalidateQueries({ queryKey: queryKeys.profile.coachAccess }),
         ])
     }, [queryClient])
 
@@ -235,32 +182,24 @@ export function useProfile(): UseProfileReturn {
         () => ({
             profile,
             stats,
-            coachAccesses,
             isLoading,
-            isGeneratingCoachCode: generateCoachMutation.isPending,
             error,
             updateProfile,
             updateSettings,
             updateWeight,
             getWeightProgress,
-            generateCoachCode,
-            revokeCoachAccess,
             exportData,
             refresh,
         }),
         [
             profile,
             stats,
-            coachAccesses,
             isLoading,
-            generateCoachMutation.isPending,
             error,
             updateProfile,
             updateSettings,
             updateWeight,
             getWeightProgress,
-            generateCoachCode,
-            revokeCoachAccess,
             exportData,
             refresh,
         ],
