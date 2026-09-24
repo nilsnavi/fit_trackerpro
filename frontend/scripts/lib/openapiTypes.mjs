@@ -48,6 +48,7 @@ export async function readTextLf(filePath) {
 
 /** Записывает LF-текст атомарно: временный файл рядом и rename поверх целевого. */
 export async function writeTextLf(filePath, text) {
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
     const tmpPath = `${filePath}.tmp-${process.pid}`
     await fs.writeFile(tmpPath, toLf(text), 'utf-8')
     await fs.rename(tmpPath, filePath)

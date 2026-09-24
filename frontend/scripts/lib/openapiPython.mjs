@@ -129,8 +129,13 @@ async function collectPins(filePath, pins, seen) {
     let text
     try {
         text = await fs.readFile(filePath, 'utf-8')
-    } catch {
-        return
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error)
+        throw new Error(
+            `Cannot read requirements file ${displayPath(filePath)}: ${reason}. ` +
+                'Pinned environment resolution is fail-closed; missing or unreadable ' +
+                'requirements (including recursive -r includes) must not be skipped.',
+        )
     }
 
     for (const rawLine of text.split(/\r?\n/)) {
