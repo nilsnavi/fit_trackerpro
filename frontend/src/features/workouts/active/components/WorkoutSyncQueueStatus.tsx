@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-// Note: useMemo kept for derived status calculation only
 import { useNetworkOnline } from '@shared/hooks/useNetworkOnline'
-import { useSyncQueueUiState } from '@shared/hooks/useSyncQueueUiState'
-import { getSyncQueueEngine, type SyncQueueItem } from '@shared/offline/syncQueue'
+import { useSyncQueue } from '@shared/hooks/useSyncQueue'
 import { cn } from '@shared/lib/cn'
+
+/** Форма элемента очереди — ровно то, что отдаёт читающий хук. */
+type QueueRowItem = ReturnType<typeof useSyncQueue>['items'][number]
 
 interface WorkoutSyncQueueStatusProps {
     workoutId: number
@@ -28,43 +29,31 @@ export function WorkoutSyncQueueStatus({
     showDetails = false,
 }: WorkoutSyncQueueStatusProps) {
     const online = useNetworkOnline()
-    const { queuedCount, failedCount, isFlushing, retryInSec } = useSyncQueueUiState()
-    const [allItems, setAllItems] = useState<SyncQueueItem[]>([])
+    // Вся очередь приходит из одной читающей поверхности: движок синхронизации
+    // компоненту не нужен, а вторая подписка дублировала бы его состояние.
+    const {
+        items,
+        failedItems,
+        pendingItems,
+        processingItems,
+        totalCount,
+        failedCount,
+        isFlushing,
+        retryInSec,
+        retryItem,
+        retryAllFailed,
+    } = useSyncQueue({ workoutId })
     const [isExpanded, setIsExpanded] = useState(false)
     const [hideSynced, setHideSynced] = useState(false)
-
-    // Подписаться на изменения очереди
-    useEffect(() => {
-        const engine = getSyncQueueEngine()
-        const handleChange = () => {
-            const items = engine.getAllItems()
-            // Фильтруем по текущей тренировке
-            const filtered = items.filter((item) => {
-                const payload = item.payload as Record<string, unknown>
-                return payload?.workoutId === workoutId
-            })
-            setAllItems(filtered)
-        }
-
-        handleChange() // Initial load
-        const unsubscribe = engine.subscribe(handleChange)
-        return () => unsubscribe()
-    }, [workoutId])
-
-    // allItems is already filtered by workoutId inside handleChange — no need
-    // to re-filter here (Bug 4: duplicate filter removed).
-    const failedItems = useMemo(() => allItems.filter((item) => item.status === 'failed'), [allItems])
-    const pendingItems = useMemo(() => allItems.filter((item) => item.status === 'pending'), [allItems])
-    const processingItems = useMemo(() => allItems.filter((item) => item.status === 'processing'), [allItems])
 
     // Определяем статус
     const statusType = useMemo(() => {
         if (!online) return 'offline' as const
         if (isFlushing || processingItems.length > 0) return 'syncing' as const
         if (failedItems.length > 0) return 'error' as const
-        if (pendingItems.length > 0 || queuedCount > 0) return 'queued' as const
+        if (pendingItems.length > 0) return 'queued' as const
         return 'synced' as const
-    }, [online, isFlushing, processingItems.length, failedItems.length, pendingItems.length, queuedCount])
+    }, [online, isFlushing, processingItems.length, failedItems.length, pendingItems.length])
 
     // Auto-hide synced badge через 3 секунды, показать сразу при других статусах
     useEffect(() => {
@@ -114,19 +103,6 @@ export function WorkoutSyncQueueStatus({
 
     const config = statusConfig[statusType]
 
-    const handleRetryItem = async (itemId: string) => {
-        const engine = getSyncQueueEngine()
-        await engine.retryItem(itemId)
-    }
-
-    const handleRetryAll = async () => {
-        const engine = getSyncQueueEngine()
-        // Повторить все failed items
-        for (const item of failedItems) {
-            await engine.retryItem(item.id)
-        }
-    }
-
     return (
         <div className={cn('flex flex-col gap-2', className)}>
             {/* Главный бадж статуса */}
@@ -140,11 +116,11 @@ export function WorkoutSyncQueueStatus({
             >
                 <span>{config.icon}</span>
                 <span className="text-sm font-medium">{config.label}</span>
-                {(queuedCount > 0 || failedCount > 0) && (
+                {(totalCount > 0 || failedCount > 0) && (
                     <span className="ml-auto text-xs font-bold">
                         {failedCount > 0 && <span className="text-red-200">{failedCount} ошибок</span>}
-                        {failedCount === 0 && queuedCount > 0 && (
-                            <span className="text-yellow-100">{queuedCount} в очереди</span>
+                        {failedCount === 0 && totalCount > 0 && (
+                            <span className="text-yellow-100">{totalCount} в очереди</span>
                         )}
                     </span>
                 )}
@@ -154,7 +130,7 @@ export function WorkoutSyncQueueStatus({
             {statusType === 'error' && (
                 <button
                     type="button"
-                    onClick={handleRetryAll}
+                    onClick={retryAllFailed}
                     className="px-3 py-2 text-sm font-medium bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                 >
                     Повторить все ({failedItems.length})
@@ -162,14 +138,14 @@ export function WorkoutSyncQueueStatus({
             )}
 
             {/* Список элементов если развёрнут */}
-            {isExpanded && showDetails && allItems.length > 0 && (
+            {isExpanded && showDetails && items.length > 0 && (
                 <div className="mt-2 border rounded-lg p-3 bg-gray-50 space-y-2">
                     <div className="text-xs font-semibold text-gray-600 uppercase">Элементы очереди</div>
-                    {allItems.map((item) => (
+                    {items.map((item) => (
                         <SyncQueueItemRow
                             key={item.id}
                             item={item}
-                            onRetry={() => handleRetryItem(item.id)}
+                            onRetry={() => retryItem(item.id)}
                         />
                     ))}
                 </div>
@@ -189,7 +165,7 @@ export function WorkoutSyncQueueStatus({
 }
 
 interface SyncQueueItemRowProps {
-    item: SyncQueueItem
+    item: QueueRowItem
     onRetry: () => void
 }
 

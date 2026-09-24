@@ -61,6 +61,19 @@ export function mapStartTypeToCalendarWorkoutType(type?: WorkoutStartType): Work
     }
 }
 
+export function getStartTemplateId(payload: WorkoutStartRequest): number | undefined {
+    if (payload.template_id != null) return payload.template_id
+    if (
+        payload.source_id != null &&
+        (payload.source_type === 'personal_template' ||
+            payload.source_type === 'system_template' ||
+            payload.source_type === 'community_template')
+    ) {
+        return payload.source_id
+    }
+    return undefined
+}
+
 export function buildCalendarEntryFromStartPayload(
     tempId: number,
     payload: WorkoutStartRequest,
@@ -68,7 +81,7 @@ export function buildCalendarEntryFromStartPayload(
 ): CalendarWorkout {
     const title =
         payload.name?.trim() ||
-        (payload.template_id != null ? `Шаблон #${payload.template_id}` : 'Тренировка')
+        (getStartTemplateId(payload) != null ? `Шаблон #${getStartTemplateId(payload)}` : 'Тренировка')
     return {
         id: tempId,
         title,
@@ -87,7 +100,7 @@ export function calendarEntryFromStartResponse(
         typeof res.start_time === 'string' ? res.start_time : new Date(res.start_time).toISOString()
     const title =
         payload.name?.trim() ||
-        (payload.template_id != null ? `Шаблон #${payload.template_id}` : 'Тренировка')
+        (getStartTemplateId(payload) != null ? `Шаблон #${getStartTemplateId(payload)}` : 'Тренировка')
     return {
         id: res.id,
         title,

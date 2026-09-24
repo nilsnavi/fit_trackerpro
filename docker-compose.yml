@@ -82,6 +82,7 @@ services:
       # Keep empty here so backend/.env can control it (env_ignore_empty=true)
       - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL:-}
       - TELEGRAM_BOT_ENABLED=${TELEGRAM_BOT_ENABLED:-false}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-}
       - ADMIN_USER_IDS=${ADMIN_USER_IDS:-}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DEBUG=${DEBUG:-true}

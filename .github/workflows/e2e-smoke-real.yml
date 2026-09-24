@@ -1,5 +1,9 @@
 name: E2E Smoke Real API
 
+# No-mock smoke против живого контура (staging/prod) — единственная проверка,
+# что прод реально отвечает. Пока staging не поднят (WS1-10) и секреты не
+# заведены, job честно пропускает прогон с предупреждением, а не падает:
+# ежедневный красный workflow превращается в шум, к которому привыкают.
 on:
   workflow_dispatch:
   schedule:
@@ -22,40 +26,67 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      - name: Check smoke environment
+        id: config
+        run: |
+          set -Eeuo pipefail
+          missing=()
+          for key in E2E_BASE_URL E2E_API_BASE_URL E2E_TELEGRAM_INIT_DATA; do
+            if [ -z "${!key:-}" ]; then
+              missing+=("${key}")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::warning::Smoke против реального API пропущен: не заданы секреты ${missing[*]}. \
+          Заведите их (WS1-6 вариант A) — процедура в docs/testing/real-api-smoke.md."
+            echo "configured=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "configured=true" >> "${GITHUB_OUTPUT}"
+          fi
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+              dependabot/github_actions/actions/setup-node-7
+        uses: actions/setup-node@v7
+
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+         main
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ./frontend/package-lock.json
 
-      - name: Validate smoke environment
-        run: |
-          set -Eeuo pipefail
-          for key in E2E_BASE_URL E2E_API_BASE_URL E2E_TELEGRAM_INIT_DATA; do
-            val="${!key:-}"
-            if [ -z "${val}" ]; then
-              echo "::error::Missing required secret: ${key}"
-              exit 1
-            fi
-          done
-
       - name: Install dependencies
+        if: steps.config.outputs.configured == 'true'
         run: npm ci
 
       - name: Install Playwright browsers
+        if: steps.config.outputs.configured == 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Run smoke golden path (real API)
+        if: steps.config.outputs.configured == 'true'
         run: npm run e2e:smoke:real
 
       - name: Upload smoke artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
+        if: always() && steps.config.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
         with:
           name: e2e-smoke-real-report
           path: |
             ./frontend/playwright-report
             ./frontend/test-results
+
+      - name: Report result
+        if: always()
+        run: |
+          set -Eeuo pipefail
+          if [ "${{ steps.config.outputs.configured }}" = "true" ]; then
+            echo "Smoke against the real API ran (see the step above for the verdict)."
+          else
+            echo "skipped: staging not configured — секреты E2E_* не заведены, прогон не выполнялся."
+            echo "::notice::E2E Smoke Real API skipped: staging secrets are not configured."
+          fi

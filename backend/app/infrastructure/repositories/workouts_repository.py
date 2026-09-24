@@ -13,6 +13,7 @@ from app.domain.muscle_load import MuscleLoad
 from app.domain.recovery_state import RecoveryState
 from app.domain.template_exercise import TemplateExercise
 from app.domain.training_load_daily import TrainingLoadDaily
+from app.domain.workout_block import WorkoutBlock
 from app.domain.workout_log import WorkoutLog
 from app.domain.workout_session_exercise import WorkoutSessionExercise
 from app.domain.workout_set import WorkoutSet
@@ -137,6 +138,18 @@ class WorkoutsRepository(SQLAlchemyRepository):
         )
         return result.scalar_one_or_none()
 
+    async def get_public_template(self, template_id: int) -> Optional[WorkoutTemplate]:
+        result = await self.db.execute(
+            select(WorkoutTemplate).where(
+                and_(
+                    WorkoutTemplate.id == template_id,
+                    WorkoutTemplate.is_public.is_(True),
+                    WorkoutTemplate.is_archived.is_(False),
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def update_template_with_expected_version(
         self,
         *,
@@ -210,6 +223,20 @@ class WorkoutsRepository(SQLAlchemyRepository):
             )
         )
         return result.scalar_one_or_none()
+
+    async def list_incomplete_workouts(self, user_id: int) -> List[WorkoutLog]:
+        """Open sessions (draft/active/paused) for the restore prompt (SPEC-005 §48)."""
+        result = await self.db.execute(
+            select(WorkoutLog)
+            .where(
+                and_(
+                    WorkoutLog.user_id == user_id,
+                    WorkoutLog.status.in_(["draft", "active", "paused"]),
+                )
+            )
+            .order_by(desc(WorkoutLog.updated_at))
+        )
+        return list(result.scalars().all())
 
     async def get_completed_workout(self, user_id: int, workout_id: int) -> Optional[WorkoutLog]:
         result = await self.db.execute(
@@ -364,7 +391,16 @@ class WorkoutsRepository(SQLAlchemyRepository):
         user_id: int,
         workout_session_id: int,
         session_exercises: list[WorkoutSessionExercise],
-    ) -> None:
+    ) -> list[WorkoutSessionExercise]:
+        """Rebuild the snapshot rows, re-using the ids the rows already carry (SPEC §58).
+
+        The rows are deleted and re-created on every rebuild. A rebuilt row whose
+        ``id`` is already set is inserted **with that id** (explicit primary key),
+        so a row keeps its identity across rebuilds; rows without an id get fresh
+        ones from the sequence. The service stamps the ids into the session's own
+        JSON right after, which is what lets the session recognize its entries
+        without relying on the client echoing them.
+        """
         await self.db.execute(
             delete(WorkoutSet).where(
                 and_(
@@ -381,9 +417,20 @@ class WorkoutsRepository(SQLAlchemyRepository):
                 )
             )
         )
+        # Core DELETE bypasses the ORM: drop whatever the identity map still
+        # holds for these rows, so re-created rows re-using a carried id are not
+        # shadowed by a stale object with the previous payload's columns.
+        # Only the snapshot rows expire — a blanket ``expire_all()`` would also
+        # expire the session's own ``WorkoutLog``, whose next attribute read
+        # (``workout.exercises``) then tries a synchronous lazy refresh and
+        # dies with ``MissingGreenlet`` in async context.
+        for workout_set in list(self.db.identity_map.values()):
+            if isinstance(workout_set, (WorkoutSet, WorkoutSessionExercise)):
+                self.db.expunge(workout_set)
         for row in session_exercises:
             self.add(row)
         await self.commit()
+        return session_exercises
 
     def add_training_load_daily(self, row: TrainingLoadDaily) -> None:
         self.add(row)
@@ -400,6 +447,96 @@ class WorkoutsRepository(SQLAlchemyRepository):
     async def commit_workout_completion(self, workout: WorkoutLog) -> None:
         await self.commit()
         await self.refresh(workout)
+
+    async def replace_session_blocks(
+        self,
+        *,
+        user_id: int,
+        workout_session_id: int,
+        blocks: list[WorkoutBlock],
+    ) -> list[WorkoutBlock]:
+        """Replace the block layout of a session and return rows with ids (SPEC-005 §24)."""
+        await self.db.execute(
+            delete(WorkoutBlock).where(
+                and_(
+                    WorkoutBlock.user_id == user_id,
+                    WorkoutBlock.workout_session_id == workout_session_id,
+                )
+            )
+        )
+        for row in blocks:
+            self.add(row)
+        await self.commit()
+        for row in blocks:
+            await self.refresh(row)
+        return blocks
+
+    async def get_session_exercise_rows(
+        self,
+        *,
+        user_id: int,
+        workout_session_id: int,
+    ) -> List[WorkoutSessionExercise]:
+        result = await self.db.execute(
+            select(WorkoutSessionExercise)
+            .where(
+                and_(
+                    WorkoutSessionExercise.user_id == user_id,
+                    WorkoutSessionExercise.workout_session_id == workout_session_id,
+                )
+            )
+            .order_by(WorkoutSessionExercise.order_index)
+        )
+        return list(result.scalars().all())
+
+    async def list_session_blocks(
+        self,
+        *,
+        user_id: int,
+        workout_session_id: int,
+    ) -> List[WorkoutBlock]:
+        """Blocks of one session ordered by layout position (SPEC-005 §24)."""
+        result = await self.db.execute(
+            select(WorkoutBlock)
+            .where(
+                and_(
+                    WorkoutBlock.user_id == user_id,
+                    WorkoutBlock.workout_session_id == workout_session_id,
+                )
+            )
+            .order_by(WorkoutBlock.order, WorkoutBlock.id)
+        )
+        return list(result.scalars().all())
+
+    async def list_recent_exercise_history(
+        self,
+        *,
+        user_id: int,
+        exercise_id: int,
+        limit: int = 10,
+    ) -> List[WorkoutLog]:
+        """Latest completed sessions containing the exercise (newest first)."""
+        result = await self.db.execute(
+            select(WorkoutLog)
+            .where(
+                and_(
+                    WorkoutLog.user_id == user_id,
+                    WorkoutLog.duration.is_not(None),
+                )
+            )
+            .order_by(desc(WorkoutLog.date))
+            .limit(50)
+        )
+        workouts = list(result.scalars().all())
+        matched = [
+            workout
+            for workout in workouts
+            if any(
+                isinstance(exercise, dict) and int(exercise.get("exercise_id") or 0) == exercise_id
+                for exercise in (workout.exercises or [])
+            )
+        ]
+        return matched[:limit]
 
     async def get_idempotency_record(
         self,

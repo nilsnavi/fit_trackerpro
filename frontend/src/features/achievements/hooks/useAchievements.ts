@@ -113,12 +113,15 @@ export function useAchievements(): UseAchievementsReturn {
     )
 
     const checkProgress = useCallback(async () => {
+        // Прогресс achievements пересчитывается на backend при чтении статистики;
+        // выделенный эндпоинт прогресса в API отсутствует — тянем свежую статистику.
         try {
+            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
             await userStatsQuery.refetch()
         } catch (err) {
             console.error('Failed to check progress:', err)
         }
-    }, [userStatsQuery])
+    }, [queryClient, userStatsQuery])
 
     const getAchievementById = useCallback(
         (id: number): Achievement | undefined => achievements.find((a) => a.id === id),

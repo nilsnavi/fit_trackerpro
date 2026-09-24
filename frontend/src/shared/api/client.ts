@@ -179,8 +179,8 @@ class ApiService {
         return response.data
     }
 
-    async put<T>(url: string, data?: unknown) {
-        const response = await this.client.put<T>(url, data)
+    async put<T>(url: string, data?: unknown, params?: Record<string, unknown>) {
+        const response = await this.client.put<T>(url, data, { params })
         return response.data
     }
 

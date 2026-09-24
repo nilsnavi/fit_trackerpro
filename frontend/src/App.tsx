@@ -6,9 +6,9 @@ import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
 import { HealthCheckGate } from './app/providers/HealthCheckGate'
 import { TelegramAuthBootstrapGate } from '@features/auth/components/TelegramAuthBootstrapGate'
-import { TelegramInitDataErrorBoundary } from '@features/auth/components/TelegramInitDataErrorBoundary'
 import { Toaster } from '@shared/ui/Toaster'
 import { AppRoutes } from './app/routes/AppRoutes'
+import { IncompleteWorkoutGate } from './app/components/IncompleteWorkoutGate'
 
 function SentryErrorFallback({
     resetError,
@@ -41,11 +41,10 @@ export default function App() {
                         <ThemeProvider>
                             <BrowserRouter>
                                 <PwaUpdatePrompt />
-                                <TelegramInitDataErrorBoundary>
-                                    <TelegramAuthBootstrapGate>
-                                        <AppRoutes />
-                                    </TelegramAuthBootstrapGate>
-                                </TelegramInitDataErrorBoundary>
+                                <TelegramAuthBootstrapGate>
+                                    <AppRoutes />
+                                    <IncompleteWorkoutGate />
+                                </TelegramAuthBootstrapGate>
                                 <Toaster />
                             </BrowserRouter>
                         </ThemeProvider>

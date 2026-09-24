@@ -12,6 +12,8 @@ export { useUiStore } from '../stores/uiStore'
 export type { AnalyticsRange } from '../stores/uiStore'
 export { useWorkoutDraftStore } from '../stores/workoutDraftStore'
 export { useWorkoutSessionDraftStore } from '../stores/workoutSessionDraftStore'
+export { useWorkoutSessionUiStore } from '../stores/workoutSessionUiStore'
+export type { SessionRestTimerState } from '../stores/workoutSessionUiStore'
 export { useWorkoutTemplatePinsStore } from '../stores/workoutTemplatePinsStore'
 export { useWorkoutRestPresetsStore } from '../stores/workoutRestPresetsStore'
 export { useWorkoutQuickIncrementsStore } from '../stores/workoutQuickIncrementsStore'
@@ -21,4 +23,3 @@ export {
     useActiveWorkoutStateSlice,
     useActiveWorkoutActions,
 } from '../stores/activeWorkoutStore'
-export { useWorkoutSessionUiStore } from '../stores/workoutSessionUiStore'

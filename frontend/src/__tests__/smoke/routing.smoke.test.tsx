@@ -83,9 +83,29 @@ jest.mock('@app/layouts/AppShell', () => {
     }
 })
 
-jest.mock('@app/providers/QueryProvider', () => ({
-    QueryProvider: ({ children }: { children: React.ReactNode }) => children,
-}))
+// The app root mounts react-query consumers (session restore gate), so a bare
+// pass-through would be inaccurate: provide a real client, minus the offline persister.
+jest.mock('@app/providers/QueryProvider', () => {
+    const React = require('react')
+    const { QueryClient, QueryClientProvider } = require('@tanstack/react-query')
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return {
+        QueryProvider: ({ children }: { children: React.ReactNode }) =>
+            React.createElement(QueryClientProvider, { client: queryClient }, children),
+    }
+})
+
+// Session restore looks for open sessions on mount; smoke tests stay offline.
+jest.mock('@shared/api/domains/workoutsApi', () => {
+    const actual = jest.requireActual('@shared/api/domains/workoutsApi')
+    return {
+        ...actual,
+        workoutsApi: {
+            ...actual.workoutsApi,
+            listIncompleteSessions: jest.fn().mockResolvedValue([]),
+        },
+    }
+})
 
 jest.mock('@app/sentry', () => ({
     initSentry: jest.fn(),
@@ -136,7 +156,7 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
-    it('opens workouts as the authenticated start screen', async () => {
+    it('opens home as the authenticated start screen', async () => {
         useAuthStore.getState().setTokens({ accessToken: 'test-token' })
 
         renderAt('/')
@@ -144,7 +164,7 @@ describe('smoke: app routing', () => {
         await expectNoCrashFallback()
 
         await waitFor(() => {
-            expect(window.location.pathname).toBe('/workouts')
+            expect(window.location.pathname).toBe('/home')
         })
 
         expect(console.error).not.toHaveBeenCalled()
@@ -177,14 +197,13 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 
-    it('redirects unknown route through workouts auth gate', async () => {
+    it('redirects unknown route to the home screen', async () => {
         renderAt('/__unknown__')
         await expectAppShellVisible()
         await expectNoCrashFallback()
 
         await waitFor(() => {
-            expect(window.location.pathname).toBe('/login')
-            expect(window.location.search).toContain('from=%2Fworkouts')
+            expect(window.location.pathname).toBe('/home')
         })
 
         expect(console.error).not.toHaveBeenCalled()

@@ -44,6 +44,8 @@ export function WellnessWidget({ data, onClick }: WellnessWidgetProps) {
     if (!data) {
         return (
             <button
+                type="button"
+                data-testid="wellness-widget"
                 onClick={onClick}
                 className="flex-shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
             >
@@ -61,6 +63,8 @@ export function WellnessWidget({ data, onClick }: WellnessWidgetProps) {
 
     return (
         <button
+            type="button"
+            data-testid="wellness-widget"
             onClick={onClick}
             className="flex-shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform border-l-4 border-purple-500"
         >
@@ -73,7 +77,7 @@ export function WellnessWidget({ data, onClick }: WellnessWidgetProps) {
 
             <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-telegram-text">{data.score}</span>
-                <span className="text-xs text-telegram-hint">/10</span>
+                <span className="text-xs text-telegram-hint">/100</span>
             </div>
 
             <span className={cn('text-xs font-medium', mood.color)}>{mood.label}</span>

@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-
-interface UseRestTimerParams {
-    isRunning: boolean
-    isPaused: boolean
-    remainingSeconds: number
-    durationSeconds: number
-    tick: () => void
-    onComplete?: () => void
-    soundEnabled?: boolean
-    vibrationEnabled?: boolean
-}
+import { useWorkoutSessionUiStore } from '@/state/local'
 
 /**
  * Creates an audio context for playing timer completion sounds.
@@ -66,26 +56,27 @@ function createCompletionSound(): void {
 }
 
 /**
- * Advanced rest timer hook with sound, vibration, and visual feedback.
- * Provides automatic notifications when timer completes.
+ * Live rest timer (SPEC-005 §17) with sound, vibration and visual feedback.
+ * Single owner: `workoutSessionUiStore.sessionRestTimer`.
  */
-export function useRestTimer({ 
-    isRunning, 
-    isPaused,
-    remainingSeconds, 
-    durationSeconds,
-    tick, 
-    onComplete,
-    soundEnabled = true,
-    vibrationEnabled = true,
-}: UseRestTimerParams) {
+export function useRestTimer() {
     const tg = useTelegramWebApp()
+    const timer = useWorkoutSessionUiStore((s) => s.sessionRestTimer)
+    const tick = useWorkoutSessionUiStore((s) => s.tickSessionRestTimer)
+    const skip = useWorkoutSessionUiStore((s) => s.skipSessionRestTimer)
+    const reset = useWorkoutSessionUiStore((s) => s.restartSessionRestTimer)
+    const start = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
+    // SPEC-005 §17: [-30 сек] / [+30 сек] quick controls on the running timer.
+    const adjust = useWorkoutSessionUiStore((s) => s.adjustSessionRestTimer)
+    const isRunning = Boolean(timer?.active && timer.remaining > 0)
+    const remainingSeconds = timer?.remaining ?? 0
+    const durationSeconds = timer?.total ?? 0
     const previousRemainingRef = useRef<number>(remainingSeconds)
     const hasNotifiedRef = useRef<boolean>(false)
     
     // Timer tick interval
     useEffect(() => {
-        if (!isRunning || isPaused) return
+        if (!isRunning) return
         
         const interval = window.setInterval(() => {
             tick()
@@ -94,7 +85,7 @@ export function useRestTimer({
         return () => {
             window.clearInterval(interval)
         }
-    }, [isRunning, isPaused, tick])
+    }, [isRunning, tick])
     
     // Check for timer completion and trigger notifications
     useEffect(() => {
@@ -106,12 +97,10 @@ export function useRestTimer({
             hasNotifiedRef.current = true
             
             // Play sound
-            if (soundEnabled) {
-                createCompletionSound()
-            }
+            createCompletionSound()
             
             // Trigger vibration via Telegram API
-            if (vibrationEnabled && tg.hapticFeedback) {
+            if (tg.hapticFeedback) {
                 // Strong vibration for completion
                 tg.hapticFeedback({ type: 'impact', style: 'heavy' })
                 
@@ -122,11 +111,6 @@ export function useRestTimer({
                     }
                 }, 200)
             }
-            
-            // Call completion callback
-            if (onComplete) {
-                onComplete()
-            }
         }
         
         // Reset notification flag when timer is restarted
@@ -135,11 +119,11 @@ export function useRestTimer({
         }
         
         // Warning vibration at 3 seconds remaining
-        if (remainingSeconds === 3 && prevRemaining === 4 && vibrationEnabled && tg.hapticFeedback) {
+        if (remainingSeconds === 3 && prevRemaining === 4 && tg.hapticFeedback) {
             tg.hapticFeedback({ type: 'impact', style: 'light' })
         }
         
-    }, [remainingSeconds, durationSeconds, onComplete, soundEnabled, vibrationEnabled, tg])
+    }, [remainingSeconds, durationSeconds, tg])
     
     // Format time as MM:SS
     const formatRestTime = useMemo(() => {
@@ -153,5 +137,16 @@ export function useRestTimer({
     
     return {
         formatRestTime,
+        timer,
+        isVisible: timer != null,
+        isRunning,
+        remainingLabel: formatRestTime(timer?.remaining ?? 0),
+        progressPercent: timer && timer.total > 0
+            ? Math.max(0, Math.min(100, (timer.remaining / timer.total) * 100))
+            : 0,
+        start,
+        skip,
+        reset,
+        adjust,
     }
 }

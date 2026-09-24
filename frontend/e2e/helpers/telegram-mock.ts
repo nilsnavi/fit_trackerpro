@@ -98,6 +98,14 @@ export async function setupTelegramWebApp(page: Page, config?: TelegramWebAppCon
     // Note: Real Telegram Mini Apps receive initData as a complete query string.
     // For testing, we can provide the parsed version directly.
 
+    // index.html loads telegram-web-app.js from telegram.org. Outside a real Mini App that
+    // script replaces window.Telegram with a WebApp whose initData is empty, overwriting the
+    // stub below and sending the app to its "Открой в Telegram" screen. Serve an empty script
+    // so the stub stays authoritative on the dev server, the built image and in CI alike.
+    await page.route('**/telegram-web-app.js', (route) =>
+        route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }),
+    )
+
     await page.addInitScript(
         (data) => {
             const w = window as Window & { Telegram?: { WebApp?: Record<string, unknown> } }
