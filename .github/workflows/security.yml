@@ -65,8 +65,12 @@ jobs:
           fi
 
       - name: Review dependencies
+              dependabot/github_actions/actions/dependency-review-action-5
+        uses: actions/dependency-review-action@v5
+
         if: steps.dependency-graph.outputs.available == 'true'
         uses: actions/dependency-review-action@v4
+        main
         with:
           fail-on-severity: moderate
 
