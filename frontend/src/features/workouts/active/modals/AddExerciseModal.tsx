@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ArrowLeft, Minus, Plus, Search, X } from 'lucide-react'
 import { Skeleton } from '@shared/ui/Skeleton'
 import type { Exercise as CatalogExercise } from '@features/exercises/types/catalogUi'
@@ -180,7 +181,10 @@ export function AddExerciseModal({
 
     const exerciseName = selectedExercise?.name ?? ''
 
-    return (
+    // Portalled like the shared Modal: rendered in the page tree this sheet would sit *under*
+    // the app's bottom navigation (also z-50, but later in the DOM), which would swallow taps
+    // on the fixed "Добавить упражнение" action below.
+    return createPortal(
         <div className="fixed inset-0 z-50 flex flex-col bg-[#090D12]">
             {/* ── Header ── */}
             <div className="flex shrink-0 items-center gap-2 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3">
@@ -405,6 +409,7 @@ export function AddExerciseModal({
                     Добавить упражнение
                 </button>
             </div>
-        </div>
+        </div>,
+        document.body,
     )
 }

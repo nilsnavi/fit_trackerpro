@@ -19,12 +19,21 @@ ENV HUSKY=0
 ENV NODE_ENV=development
 
 # NODE_ENV must not be production during install (devDependencies include Vite).
+# npm ci (not `npm install`) so the lockfile tree is reproduced verbatim, including
+# peer-only packages such as react-is that recharts imports directly. `npm install
+# --legacy-peer-deps` skips them and breaks the Vite build.
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
 COPY . .
 
-RUN npm run build-only
+# NODE_ENV=development above exists only so `npm ci` installs devDependencies. `vite build`
+# reads NODE_ENV from the process environment, so leaving it as "development" emitted a
+# development bundle: jsxDEV transform, the React dev runtime, and every
+# `process.env.NODE_ENV === 'development'` check folding to `true` (e.g. the Telegram auth
+# bypass in TelegramAuthGate). The shipped image must be the production app, so override it
+# for the build step only.
+RUN NODE_ENV=production npm run build-only
 
 # -----------------------------------------------------------------------------
 # Stage 2 — runtime (nginx serves prebuilt dist only; no Node in final image)

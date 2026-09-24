@@ -8,10 +8,12 @@ import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery'
 import { useUserStatsQuery } from '@features/profile/hooks/useUserStatsQuery'
 import { useHomeWorkoutTemplatesQuery } from '@features/home/hooks'
+import { HomeHealthSection } from '@features/home/components'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 import { useHideAppShellHeader, useHideAppShellNavigation } from '@app/layouts/AppShellLayoutContext'
 import { cn } from '@shared/lib/cn'
 import { StartWorkoutSheet } from '@features/home/components/StartWorkoutSheet'
+import { EmergencyButton } from '@features/emergency/components'
 import type { HomeWorkoutTemplate } from '@shared/types'
 import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
 
@@ -411,6 +413,8 @@ export function Home() {
                     </div>
                 </section>
 
+                <HomeHealthSection />
+
                 <section className="mt-[12px] rounded-[12px] border border-[#171e28] bg-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]">
                     <div className="flex items-center justify-between">
                         <h2 className="text-[17px] font-bold leading-5 text-white">Прогресс</h2>
@@ -452,6 +456,8 @@ export function Home() {
                         </div>
                     </div>
                 </section>
+                <EmergencyButton className="mt-[12px]" />
+
                 <div className="mt-auto flex justify-center pt-8">
                     <div className="h-[5px] w-[155px] rounded-full bg-white" />
                 </div>

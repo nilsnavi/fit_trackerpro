@@ -37,8 +37,12 @@ test.describe('@mvp-e2e auth (реальный API)', () => {
             })
             await page.getByLabel('Сила').check()
             await page.getByLabel('Начинающий').check()
+            // Согласие на обработку данных о здоровье обязательно (WS1-14):
+            // без него кнопка «Сохранить и продолжить» выключена.
+            await page.getByRole('checkbox', { name: /обработку данных о здоровье/ }).check()
             await page.getByRole('button', { name: 'Сохранить и продолжить' }).click()
-            await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible({ timeout: 30_000 })
+            // Дашборд скрывает shell-навигацию — сигнал завершения онбординга это его контент.
+            await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible({ timeout: 30_000 })
         })
 
         test('второй заход: онбординг пропущен', async ({ page }) => {
@@ -47,7 +51,7 @@ test.describe('@mvp-e2e auth (реальный API)', () => {
             await expect(page.getByRole('heading', { name: 'Добро пожаловать в FitTracker Pro' })).toBeHidden({
                 timeout: 5_000,
             })
-            await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible({ timeout: 30_000 })
+            await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible({ timeout: 30_000 })
         })
     })
 })

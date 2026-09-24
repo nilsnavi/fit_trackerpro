@@ -105,6 +105,7 @@ describe('useActiveWorkoutSync', () => {
                     isActiveDraft: true,
                     activeExercises: workout.exercises,
                     startedAt: null,
+                    draftStorageUserId: 'test-user',
                     queryClient,
                     initializeActiveSession,
                     setActiveExercises,
@@ -170,6 +171,7 @@ describe('useActiveWorkoutSync', () => {
                     isActiveDraft: true,
                     activeExercises: workout.exercises,
                     startedAt: null,
+                    draftStorageUserId: 'test-user',
                     queryClient,
                     initializeActiveSession: jest.fn(),
                     setActiveExercises: jest.fn(),
@@ -235,6 +237,7 @@ describe('useActiveWorkoutSync', () => {
                     isActiveDraft: true,
                     activeExercises: workout.exercises,
                     startedAt: null,
+                    draftStorageUserId: 'test-user',
                     queryClient,
                     initializeActiveSession: jest.fn(),
                     setActiveExercises: jest.fn(),
@@ -292,6 +295,7 @@ describe('useActiveWorkoutSync', () => {
                     isActiveDraft: true,
                     activeExercises: workout.exercises,
                     startedAt: null,
+                    draftStorageUserId: 'test-user',
                     queryClient,
                     initializeActiveSession: jest.fn(),
                     setActiveExercises: jest.fn(),
@@ -362,6 +366,7 @@ describe('useActiveWorkoutSync', () => {
                     isActiveDraft: true,
                     activeExercises: workout.exercises,
                     startedAt: null,
+                    draftStorageUserId: 'test-user',
                     queryClient,
                     initializeActiveSession: jest.fn(),
                     setActiveExercises: jest.fn(),
@@ -392,6 +397,76 @@ describe('useActiveWorkoutSync', () => {
         )
     })
 
+    it('keeps the local session state when the in-flight sync response is older', async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+        })
+        const detailKey = queryKeys.workouts.historyItem(77)
+        const initialWorkout = makeWorkout()
+        queryClient.setQueryData(detailKey, initialWorkout)
+
+        const withWeight = makeWorkout({ comments: 'weight filled' })
+        const withCompletedSet = makeWorkout({
+            comments: 'weight filled',
+            exercises: [makeExercise(true)],
+        })
+
+        const sentOptions: Array<{ onSuccess: (data: WorkoutHistoryItem) => void }> = []
+        const mutate = jest.fn(
+            (_: unknown, options: { onSuccess: (data: WorkoutHistoryItem) => void }) => {
+                sentOptions.push(options)
+            },
+        )
+
+        const { result, rerender } = renderHook(
+            (workout: WorkoutHistoryItem) =>
+                useActiveWorkoutSync({
+                    workoutId: workout.id,
+                    workout,
+                    draftWorkoutId: workout.id,
+                    isActiveDraft: true,
+                    activeExercises: workout.exercises,
+                    startedAt: null,
+                    draftStorageUserId: 'test-user',
+                    queryClient,
+                    initializeActiveSession: jest.fn(),
+                    setActiveExercises: jest.fn(),
+                    setCurrentPosition: jest.fn(),
+                    setActiveElapsedSeconds: jest.fn(),
+                    setActiveSyncState: jest.fn(),
+                    clearWorkoutSessionDraft: jest.fn(),
+                    updateSessionMutation: { mutate },
+                    buildSyncPayload: makePayload,
+                }),
+            { initialProps: initialWorkout },
+        )
+
+        await waitFor(() => {
+            expect(result.current.lastSyncedPayload).toEqual(makePayload(initialWorkout))
+        })
+
+        // Ввод веса уходит PATCH'ем и остаётся в полёте.
+        rerender(withWeight)
+        act(() => {
+            result.current.flushNow()
+        })
+        await waitFor(() => {
+            expect(mutate).toHaveBeenCalledTimes(1)
+        })
+
+        // Пока запрос в полёте, пользователь завершает подход: оптимистичный слой
+        // записывает это в кэш сессии.
+        queryClient.setQueryData(detailKey, withCompletedSet)
+        rerender(withCompletedSet)
+
+        // Приходит ответ на более старый снимок — он не должен откатить завершение подхода.
+        act(() => {
+            sentOptions[0].onSuccess(withWeight)
+        })
+
+        expect(queryClient.getQueryData(detailKey)).toEqual(withCompletedSet)
+    })
+
     it('flushes pending changes on visibilitychange, blur and beforeunload', async () => {
         const queryClient = new QueryClient({
             defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -413,6 +488,7 @@ describe('useActiveWorkoutSync', () => {
                     isActiveDraft: true,
                     activeExercises: workout.exercises,
                     startedAt: null,
+                    draftStorageUserId: 'test-user',
                     queryClient,
                     initializeActiveSession: jest.fn(),
                     setActiveExercises: jest.fn(),

@@ -1,81 +1,47 @@
-import fs from 'node:fs/promises'
-import os from 'node:os'
-import path from 'node:path'
-import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import openapiTS, { astToString } from 'openapi-typescript'
+/** Сверяет закоммиченные артефакты OpenAPI-контракта со схемой backend, снятой пропиновым интерпретатором. */
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import { describeInterpreter, resolvePinnedPython } from './lib/openapiPython.mjs'
+import { buildContract, inspectOpenApiDocument, readTextLf, relativePath } from './lib/openapiTypes.mjs'
 
-const repoRoot = path.resolve(__dirname, '..', '..')
-const generatedDir = path.join(repoRoot, 'frontend', 'src', 'shared', 'api', 'generated')
-const committedTypesPath = path.join(generatedDir, 'openapi.d.ts')
-
-async function exportOpenApi(tmpOpenapiPath) {
-  await fs.mkdir(path.dirname(tmpOpenapiPath), { recursive: true })
-  await new Promise((resolve, reject) => {
-    const child = spawn(
-      'python',
-      ['backend/tools/export_openapi.py', '--out', tmpOpenapiPath],
-      {
-        cwd: repoRoot,
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          ENVIRONMENT: 'test',
-          DEBUG: 'false',
-          DATABASE_URL: 'sqlite+aiosqlite:///:memory:',
-          SECRET_KEY: 'openapi-export-secret-key-32-chars',
-          TELEGRAM_BOT_TOKEN: '0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-          TELEGRAM_WEBAPP_URL: 'https://test.example.com',
-        },
-      },
-    )
-    child.on('error', reject)
-    child.on('exit', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`OpenAPI export failed (exit ${code ?? 'unknown'})`))
-    })
-  })
-}
-
-async function generateTypesFromOpenApi(openapiPath) {
-  const schemaText = await fs.readFile(openapiPath, 'utf-8')
-  const schema = JSON.parse(schemaText)
-  const ast = await openapiTS(schema, {
-    exportType: true,
-    immutableTypes: true,
-  })
-  return astToString(ast).trimEnd() + '\n'
-}
-
-const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fittracker-openapi-'))
-const tmpOpenapiPath = path.join(tmpDir, 'openapi.json')
-
-await exportOpenApi(tmpOpenapiPath)
-const expected = await generateTypesFromOpenApi(tmpOpenapiPath)
-
-let actual = null
 try {
-  actual = await fs.readFile(committedTypesPath, 'utf-8')
-} catch {
-  // no-op
-}
+    const python = await resolvePinnedPython()
+    const artifacts = await buildContract(python)
 
-if (actual !== expected) {
-  console.error(
-    [
-      'API contract drift detected: generated OpenAPI types differ from committed file.',
-      '',
-      `Expected (generated): ${expected.length} chars`,
-      `Actual (committed): ${actual?.length ?? 0} chars`,
-      '',
-      'Fix:',
-      '  cd frontend && npm run api:types:generate',
-    ].join('\n'),
-  )
-  process.exit(1)
-}
+    const problems = []
+    for (const { role, path: artifactPath, text: expected } of artifacts) {
+        const actual = await readTextLf(artifactPath)
 
-console.log('API contract OK (OpenAPI types match).')
+        if (actual !== expected) {
+            const committed = actual === null ? 'missing' : `${actual.length} chars`
+            problems.push(`  - ${relativePath(artifactPath)}: expected ${expected.length} chars, committed ${committed}`)
+        }
+
+        // Закоммиченный документ обязан быть пригодным сам по себе, а не только равным экспорту.
+        if (role === 'document' && actual !== null) {
+            const { problem } = inspectOpenApiDocument(actual)
+            if (problem) problems.push(`  - ${relativePath(artifactPath)} is not a usable OpenAPI document: ${problem}`)
+        }
+    }
+
+    if (problems.length > 0) {
+        console.error(
+            [
+                'API contract drift detected: generated OpenAPI artifacts differ from committed files.',
+                '',
+                ...problems,
+                `Exported with ${describeInterpreter(python)}`,
+                '',
+                'Fix:',
+                '  cd frontend && npm run api:types:generate',
+            ].join('\n'),
+        )
+        process.exit(1)
+    }
+
+    console.log(
+        `API contract OK (${artifacts.length} OpenAPI artifacts match).\nExported with ${describeInterpreter(python)}`,
+    )
+} catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    process.exit(1)
+}
