@@ -11,10 +11,6 @@ jest.mock('@shared/lib/businessMetrics', () => ({
     trackBusinessMetric: jest.fn(),
 }))
 
-jest.mock('@shared/lib/withWorkoutNetworkRetries', () => ({
-    withWorkoutNetworkRetries: <T,>(fn: () => Promise<T>) => fn(),
-}))
-
 jest.mock('@shared/api/domains/workoutsApi', () => {
     return {
         workoutsApi: {
@@ -22,6 +18,13 @@ jest.mock('@shared/api/domains/workoutsApi', () => {
         },
     }
 })
+
+// Детерминированность: реальная обёртка ждёт 1с+2с+4с между ретраями (реальные
+// таймеры), из-за чего waitFor(1s) таймаутится раньше, чем мутация попадёт в
+// offline-очередь. Пробрасываем вызов напрямую — ретраи здесь не тестируются.
+jest.mock('@shared/lib/withWorkoutNetworkRetries', () => ({
+    withWorkoutNetworkRetries: (fn: () => Promise<unknown>) => fn(),
+}))
 
 describe('useCompleteWorkoutMutation (offline / recoverable)', () => {
     it('enqueues offline complete when mutation is queued', async () => {

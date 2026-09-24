@@ -128,6 +128,7 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
     useEffect(() => {
         const tg = webAppRef.current
         if (!tg || !isTelegramMiniAppRuntime(tg)) return
+        if (typeof tg.onEvent !== 'function' || typeof tg.offEvent !== 'function') return
 
         const handleThemeChanged = () => {
             const current = webAppRef.current

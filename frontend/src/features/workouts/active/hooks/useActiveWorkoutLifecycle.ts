@@ -20,8 +20,6 @@ export interface UseActiveWorkoutLifecycleParams {
     buildSyncPayload: (workout: WorkoutHistoryItem) => unknown
 }
 
-export interface UseActiveWorkoutLifecycleResult {}
-
 export function useActiveWorkoutLifecycle({
     workout,
     isActiveDraft,
@@ -35,7 +33,7 @@ export function useActiveWorkoutLifecycle({
     initializeActiveWorkoutDraft,
     clearActiveWorkoutDraft,
     buildSyncPayload,
-}: UseActiveWorkoutLifecycleParams): UseActiveWorkoutLifecycleResult {
+}: UseActiveWorkoutLifecycleParams): void {
     useEffect(() => {
         const { isTelegram, showBackButton, hideBackButton } = tg
         if (isTelegram) {
@@ -106,6 +104,5 @@ export function useActiveWorkoutLifecycle({
         return () => window.clearTimeout(timeoutId)
     }, [currentExerciseIndex, currentSetIndex, isActiveDraft])
 
-    return {}
 }
 

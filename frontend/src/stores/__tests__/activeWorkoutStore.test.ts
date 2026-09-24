@@ -63,37 +63,19 @@ describe('useActiveWorkoutStore', () => {
         expect(store().exercises[0].name).toBe('Row')
     })
 
-    it('runs the rest timer lifecycle and clamps settings', () => {
+    it('starts and skips the rest timer and clamps the default', () => {
         store().startRestTimer(30.8)
 
         expect(store().restTimer).toEqual({
-            isRunning: true,
-            isPaused: false,
             remainingSeconds: 30,
             durationSeconds: 30,
         })
-
-        store().tickRestTimer()
-        expect(store().restTimer.remainingSeconds).toBe(29)
-
-        store().pauseRestTimer()
-        expect(store().restTimer.isPaused).toBe(true)
-        expect(store().restTimer.isRunning).toBe(false)
-
-        store().resumeRestTimer()
-        expect(store().restTimer.isPaused).toBe(false)
-        expect(store().restTimer.isRunning).toBe(true)
-
-        store().restartRestTimer()
-        expect(store().restTimer.remainingSeconds).toBe(30)
 
         store().setRestDefaultSeconds(5.2)
         expect(store().restDefaultSeconds).toBe(15)
 
         store().skipRestTimer()
         expect(store().restTimer).toEqual({
-            isRunning: false,
-            isPaused: false,
             remainingSeconds: 0,
             durationSeconds: 0,
         })

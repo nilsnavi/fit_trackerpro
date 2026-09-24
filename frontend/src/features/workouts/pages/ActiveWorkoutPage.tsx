@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { CheckCircle2, Clock3, Dumbbell } from 'lucide-react'
 
 import { Button } from '@shared/ui/Button'
 import { ActiveWorkoutSessionDetailsCollapsible } from '@features/workouts/active/components/ActiveWorkoutSessionDetailsCollapsible'
@@ -8,7 +9,7 @@ import { cn } from '@shared/lib/cn'
 import { getErrorMessage } from '@shared/errors'
 import { toast } from '@shared/stores/toastStore'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
-import { useSyncQueueWithRetry } from '@shared/hooks/useSyncQueueWithRetry'
+import { useSyncQueue } from '@shared/hooks/useSyncQueue'
 import { useUnsavedChangesGuard } from '@shared/hooks/useUnsavedChangesGuard'
 import { queryKeys } from '@shared/api/queryKeys'
 import { workoutsApi } from '@shared/api/domains/workoutsApi'
@@ -26,11 +27,22 @@ import type { WorkoutHistoryItem, WorkoutSessionUpdateRequest } from '@features/
 
 import { useConflictResolution } from '@features/workouts/components/ConflictResolutionUI'
 import { ActiveWorkoutHeader } from '@features/workouts/active/components/ActiveWorkoutHeader'
+import { ActiveCurrentSetPanel } from '@features/workouts/active/components/ActiveCurrentSetPanel'
+import { ActiveWorkoutScreen } from '@features/workouts/active/components/ActiveWorkoutScreen'
 import { WorkoutSyncQueueStatus } from '@features/workouts/active/components/WorkoutSyncQueueStatus'
 import { useActiveWorkoutSync } from '@features/workouts/active/hooks/useActiveWorkoutSync'
 import { useActiveWorkoutDraftPersist } from '@features/workouts/active/hooks/useActiveWorkoutDraftPersist'
 import { useWorkoutNavigation } from '@features/workouts/active/hooks/useWorkoutNavigation'
 import { useWeightRecommendation } from '@features/workouts/active/hooks/useWeightRecommendation'
+import {
+    useAcceptProgressionRecommendation,
+    useExerciseProgressionRecommendation,
+    useProgressionRecommendation,
+    useRejectProgressionRecommendation,
+} from '@features/workouts/active/hooks/useProgressionRecommendation'
+import { useWakeLock } from '@features/workouts/active/hooks/useWakeLock'
+import { findPreviousResult } from '@features/workouts/active/lib/previousResult'
+import { revertProgressionPrefill } from '@features/workouts/active/lib/progressionPrefill'
 
 import {
     useActiveWorkoutActions,
@@ -53,18 +65,15 @@ import { useActiveWorkoutExerciseActions } from '@features/workouts/active/hooks
 import { useActiveWorkoutRestFlow } from '@features/workouts/active/hooks/useActiveWorkoutRestFlow'
 import { useActiveWorkoutStats } from '@features/workouts/active/hooks/useActiveWorkoutStats'
 import { useActiveWorkoutHistoryInsights } from '@features/workouts/active/hooks/useActiveWorkoutHistoryInsights'
-import { FloatingRestTimer } from '@features/workouts/active/components/FloatingRestTimer'
 import { useActiveWorkoutCatalogSuggestions } from '@features/workouts/active/hooks/useActiveWorkoutCatalogSuggestions'
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useWorkoutSync } from '@/hooks/useWorkoutSync'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
 
-import { WorkoutConfirmModal } from '@features/workouts/components/WorkoutConfirmModal'
 import { ActiveWorkoutSummarySection } from '@features/workouts/active/containers/ActiveWorkoutSummarySection'
 import { ActiveWorkoutExerciseSection } from '@features/workouts/active/containers/ActiveWorkoutExerciseSection'
 import { ActiveWorkoutBottomActions } from '@features/workouts/active/containers/ActiveWorkoutBottomActions'
-import { WorkoutSessionScreenHeader } from '@features/workouts/active/components/WorkoutSessionScreenHeader'
 import { WorkoutExerciseCard } from '@features/workouts/active/components/WorkoutExerciseCard'
 import { ExerciseSessionBottomSheet } from '@features/workouts/active/components/ExerciseSessionBottomSheet'
 import { WorkoutSessionRestOverlay } from '@features/workouts/active/components/WorkoutSessionRestOverlay'
@@ -73,6 +82,7 @@ import { computeWorkoutSessionSummaryMetrics } from '@features/workouts/active/l
 const ActiveWorkoutModals = lazy(() =>
     import('@features/workouts/active/containers/ActiveWorkoutModals').then((m) => ({ default: m.ActiveWorkoutModals })),
 )
+const renderLegacyActiveWorkoutDebug = false
 
 /** Экран активной сессии (макет «WorkoutSessionScreen»). */
 export function ActiveWorkoutPage() {
@@ -82,14 +92,15 @@ export function ActiveWorkoutPage() {
     const tg = useTelegramWebApp()
     const { isOnline } = useNetworkStatus()
     const [reconnectBanner, setReconnectBanner] = useState<'hidden' | 'syncing' | 'saved'>('hidden')
-    const [sessionMenuOpen, setSessionMenuOpen] = useState(false)
-    const [finishSessionConfirmOpen, setFinishSessionConfirmOpen] = useState(false)
+    const [finishWarning, setFinishWarning] = useState<string | null>(null)
+    const [isInlineSetSaving, setIsInlineSetSaving] = useState(false)
     const prevOnlineRef = useRef(isOnline)
 
     const modalExerciseIndex = useWorkoutSessionUiStore((s) => s.modalExerciseIndex)
     const openExerciseModal = useWorkoutSessionUiStore((s) => s.openExerciseModal)
     const closeExerciseModal = useWorkoutSessionUiStore((s) => s.closeExerciseModal)
     const startSessionRestTimer = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
+    const skipSessionRestTimer = useWorkoutSessionUiStore((s) => s.skipSessionRestTimer)
 
     const workoutId: number = Number.parseInt(id ?? '', 10)
     const isValidWorkoutId: boolean = Number.isFinite(workoutId)
@@ -160,7 +171,7 @@ export function ActiveWorkoutPage() {
     const { data: historyData } = useWorkoutHistoryQuery()
     const { data: catalogExercises = [], isLoading: isCatalogLoading } = useExercisesCatalogQuery()
 
-    const { pendingItems: syncPendingItems } = useSyncQueueWithRetry()
+    const { pendingItems: syncPendingItems } = useSyncQueue()
     const { conflict: conflictInfo, isOpen: isConflictOpen, closeConflict } = useConflictResolution()
 
     const restPresetScopeKey = useMemo(() => {
@@ -337,20 +348,120 @@ export function ActiveWorkoutPage() {
      * Проверяем, есть ли предыдущий завершённый подход с RPE для текущего упражнения.
      * Recommendation показывается для текущего подхода, если предыдущий был завершён с RPE.
      */
+    const recommendationExercise = workout?.exercises[currentExerciseIndex] ?? currentExercise
     const hasPreviousSetWithRpe = useMemo(() => {
-        if (!currentExercise || currentSetIndex === 0) return false
-        const previousSet = currentExercise.sets_completed[currentSetIndex - 1]
-        return previousSet?.completed && previousSet?.rpe != null
-    }, [currentExercise, currentSetIndex])
+        if (!recommendationExercise) return false
+        return recommendationExercise.sets_completed.some((set) => set.completed && set.rpe != null)
+    }, [recommendationExercise])
 
     const {
         data: weightRecommendation,
         isLoading: isWeightRecLoading,
         isError: isWeightRecError,
+        refetch: refetchWeightRecommendation,
     } = useWeightRecommendation(
         workoutId,
-        currentExercise?.exercise_id ?? 0,
-        Boolean(isActiveDraft && currentExercise?.exercise_id && hasPreviousSetWithRpe && !currentSet?.completed),
+        recommendationExercise?.exercise_id ?? 0,
+        Boolean(isActiveDraft && recommendationExercise?.exercise_id && hasPreviousSetWithRpe),
+    )
+
+    // SPEC-005 §8: previous completed result for the active exercise.
+    const previousResult = useMemo(
+        () =>
+            recommendationExercise
+                ? findPreviousResult(historyData?.items, workout?.id, recommendationExercise)
+                : null,
+        [historyData?.items, recommendationExercise, workout?.id],
+    )
+
+    // SPEC-006 §41/§45: persisted next target for the active exercise.
+    const {
+        data: storedProgressionRecommendation,
+        isLoading: isStoredProgressionLoading,
+    } = useExerciseProgressionRecommendation({
+        exerciseId: recommendationExercise?.exercise_id ?? 0,
+        templateId: workout?.template_id ?? null,
+        enabled: Boolean(isActiveDraft && recommendationExercise?.exercise_id),
+    })
+
+    // SPEC-005 §37: read-only preview, used when nothing is stored yet.
+    const {
+        data: progressionPreview,
+        isLoading: isPreviewLoading,
+        isError: isPreviewError,
+    } = useProgressionRecommendation({
+        exerciseId: recommendationExercise?.exercise_id ?? 0,
+        policy: 'DOUBLE_PROGRESSION',
+        enabled: Boolean(
+            isActiveDraft &&
+                recommendationExercise?.exercise_id &&
+                !storedProgressionRecommendation,
+        ),
+    })
+
+    const progressionRecommendation = storedProgressionRecommendation ?? progressionPreview
+    const isProgressionLoading = isStoredProgressionLoading || isPreviewLoading
+    const isProgressionError = isPreviewError && !storedProgressionRecommendation
+
+    // SPEC-006 §42–§44: accepting/modifying/rejecting is always explicit.
+    const acceptProgression = useAcceptProgressionRecommendation()
+    const rejectProgression = useRejectProgressionRecommendation()
+    const handleAcceptProgression = useCallback(
+        (recommendation: { id?: number | null; recommended_value?: number | null }, selectedValue?: number) => {
+            if (!recommendation.id) return
+            acceptProgression.mutate(
+                {
+                    recommendationId: recommendation.id,
+                    selectedValue: selectedValue ?? recommendation.recommended_value ?? undefined,
+                },
+                {
+                    onSuccess: (updated) => {
+                        toast.success(
+                            `Следующая цель: ${updated.actual_selected_value ?? updated.recommended_value ?? '—'} кг`,
+                        )
+                    },
+                    onError: () => toast.error('Не удалось сохранить рекомендацию'),
+                },
+            )
+        },
+        [acceptProgression],
+    )
+    const handleRejectProgression = useCallback(
+        (recommendation: { id?: number | null }) => {
+            if (!recommendation.id) return
+            rejectProgression.mutate(
+                { recommendationId: recommendation.id },
+                {
+                    onSuccess: () => toast.info('Рекомендация отклонена'),
+                    onError: () => toast.error('Не удалось отклонить рекомендацию'),
+                },
+            )
+        },
+        [rejectProgression],
+    )
+    // SPEC-006 §46: the "Почему?" sheet explains the recommendation with the
+    // previous session's working sets (warm-ups already excluded upstream).
+    const previousCompletedSets = useMemo(
+        () =>
+            (previousResult?.sets ?? [])
+                .filter((set) => set.completed)
+                .map((set) => ({
+                    set_number: set.set_number,
+                    reps: set.reps ?? null,
+                    weight: set.weight ?? null,
+                    duration: set.duration ?? null,
+                })),
+        [previousResult],
+    )
+    const legacyWeightRecommendation = useMemo(
+        () =>
+            weightRecommendation
+                ? {
+                    suggested_weight: weightRecommendation.suggested_weight ?? undefined,
+                    message: weightRecommendation.message,
+                }
+                : undefined,
+        [weightRecommendation],
     )
 
     useActiveWorkoutLifecycle({
@@ -375,6 +486,56 @@ export function ActiveWorkoutPage() {
             ? getErrorMessage(queryError)
             : null
 
+    // SPEC-005 §49: keep the screen awake during an active session (graceful fallback).
+    useWakeLock(Boolean(isActiveDraft))
+
+    // SPEC-005 §26: skip / un-skip exercise for the current session only.
+    const handleSkipExercise = useCallback(
+        (exerciseIndex: number) => {
+            if (!workout) return
+            tg.hapticFeedback({ type: 'impact', style: 'light' })
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? { ...exercise, status: 'skipped' } : exercise,
+                ),
+            }))
+            toast.info('Упражнение пропущено')
+        },
+        [patchItem, tg, workout],
+    )
+
+    // SPEC-006 §58: undo the accepted target that seeded this exercise's sets.
+    const handleRevertProgressionPrefill = useCallback(
+        (exerciseIndex: number) => {
+            tg.hapticFeedback({ type: 'impact', style: 'light' })
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? revertProgressionPrefill(exercise) : exercise,
+                ),
+            }))
+            toast.success(
+                'Вернули значение из плана — больше не подставляем его автоматически',
+            )
+        },
+        [patchItem, tg],
+    )
+
+    const handleUnskipExercise = useCallback(
+        (exerciseIndex: number) => {
+            if (!workout) return
+            patchItem((prev) => ({
+                ...prev,
+                exercises: prev.exercises.map((exercise, index) =>
+                    index === exerciseIndex ? { ...exercise, status: null } : exercise,
+                ),
+            }))
+            toast.info('Упражнение возвращено в тренировку')
+        },
+        [patchItem, workout],
+    )
+
     const isLoading: boolean = isValidWorkoutId && isFetching
 
     const { exerciseCount, completedSetCount, totalSetCount, completedExercises } = useActiveWorkoutStats({ workout })
@@ -397,6 +558,7 @@ export function ActiveWorkoutPage() {
     }, [workout, currentExerciseIndex, currentSetIndex])
 
     const allExercisesDone = exerciseCount > 0 && exercisesDoneCount >= exerciseCount
+    const activeSessionProgressPercent = totalSetCount > 0 ? Math.round((completedSetCount / totalSetCount) * 100) : 0
 
     const completion = useActiveWorkoutCompletion({
         workoutId,
@@ -505,6 +667,29 @@ export function ActiveWorkoutPage() {
         goToNextSet()
     }
 
+    const handleCompleteCurrentSetQuick = useCallback(() => {
+        if (!currentSet) return
+        handleToggleSetCompletedWithAdvance(currentExerciseIndex, currentSet.set_number, true)
+    }, [currentExerciseIndex, currentSet, handleToggleSetCompletedWithAdvance])
+
+    const handleAddSetWithRest = useCallback(() => {
+        exerciseActions.handleAddSetToCurrentExercise()
+        startRestTimer(restDefaultSeconds)
+        notifySetCompleted()
+    }, [exerciseActions, notifySetCompleted, restDefaultSeconds, startRestTimer])
+
+    const handleInlineSetChanged = useCallback(() => {
+        setFinishWarning(null)
+        setIsInlineSetSaving(true)
+        notifySetCompleted()
+        void queryClient.invalidateQueries({
+            queryKey: ['weight-recommendation', workoutId, recommendationExercise?.exercise_id ?? 0],
+        })
+        window.setTimeout(() => {
+            setIsInlineSetSaving(false)
+        }, 350)
+    }, [notifySetCompleted, queryClient, recommendationExercise?.exercise_id, workoutId])
+
     const handleExerciseCardOpen = useCallback(
         (index: number) => {
             if (!workout) return
@@ -518,25 +703,99 @@ export function ActiveWorkoutPage() {
         [workout, currentExerciseIndex, currentSetIndex, setCurrentPosition, openExerciseModal],
     )
 
-    const handleNavigateToSummaryAfterConfirm = useCallback(() => {
-        if (!workout) return
-        void flushWorkoutSync().then(() => {
-            const metrics = computeWorkoutSessionSummaryMetrics(
-                workout,
-                elapsedSeconds,
-                currentExerciseIndex,
-                currentSetIndex,
-            )
-            navigate(`/workouts/active/${workoutId}/summary`, { state: metrics })
-            setFinishSessionConfirmOpen(false)
-        })
-    }, [workout, flushWorkoutSync, elapsedSeconds, currentExerciseIndex, currentSetIndex, navigate, workoutId])
+    const handleFinishWorkoutDirect = useCallback(async () => {
+        if (!workout || completeMutation.isPending) return
+
+        setFinishWarning(null)
+        await flushWorkoutSync()
+
+        // Единственный владелец сессии — оптимистичный кэш детали: он и только он знает
+        // текущее состояние подходов (устаревший ответ PATCH его больше не откатывает).
+        const session = queryClient.getQueryData<WorkoutHistoryItem>(detailQueryKey) ?? workout
+        if (!session) {
+            setFinishWarning('Нет данных тренировки')
+            return
+        }
+
+        const hasCompletedSet = session.exercises.some((exercise) =>
+            exercise.sets_completed.some((set) => set.completed),
+        )
+
+        if (!hasCompletedSet) {
+            setFinishWarning('Сначала завершите хотя бы один подход')
+            return
+        }
+
+        const metrics = computeWorkoutSessionSummaryMetrics(
+            session,
+            elapsedSeconds,
+            currentExerciseIndex,
+            currentSetIndex,
+        )
+        const durationMinutes = Math.max(1, Math.round(metrics.totalDurationSeconds / 60))
+
+        try {
+            const data = await completeMutation.mutateAsync({
+                workoutId,
+                payload: {
+                    duration: durationMinutes,
+                    exercises: session.exercises,
+                    comments: session.comments,
+                    tags: session.tags ?? [],
+                    glucose_before: session.glucose_before,
+                    glucose_after: session.glucose_after,
+                },
+            })
+
+            clearActiveWorkoutDraft()
+            clearWorkoutSessionDraft()
+            abandonWorkoutSessionDraft()
+            skipRestTimer()
+            skipSessionRestTimer()
+            resetActiveWorkoutState()
+            navigate(`/workouts/active/${data.id}/summary`, {
+                replace: true,
+                state: {
+                    ...metrics,
+                    workoutTitle,
+                    durationMinutes,
+                    finishedAt: data.completed_at,
+                    // SPEC-005 §51: server-computed PRs + next targets.
+                    personalRecords: data.personal_records ?? [],
+                    progressionRecommendations: data.progression_recommendations ?? [],
+                },
+            })
+        } catch (error) {
+            setFinishWarning(`Не удалось завершить тренировку: ${getErrorMessage(error)}`)
+        }
+    }, [
+        abandonWorkoutSessionDraft,
+        clearActiveWorkoutDraft,
+        clearWorkoutSessionDraft,
+        completeMutation,
+        currentExerciseIndex,
+        currentSetIndex,
+        detailQueryKey,
+        elapsedSeconds,
+        flushWorkoutSync,
+        navigate,
+        queryClient,
+        resetActiveWorkoutState,
+        skipRestTimer,
+        skipSessionRestTimer,
+        workout,
+        workoutId,
+        workoutTitle,
+    ])
 
     const handleModalUpdateRpe = useCallback(
         (exerciseIndex: number, setNumber: number, rpe: number) => {
             updateSet(exerciseIndex, setNumber, { rpe })
+            if (exerciseIndex === currentExerciseIndex) {
+                void refetchWeightRecommendation()
+            }
         },
-        [updateSet],
+        [currentExerciseIndex, refetchWeightRecommendation, updateSet],
     )
 
     const modalExercise = useMemo(() => {
@@ -698,7 +957,7 @@ export function ActiveWorkoutPage() {
     // PR UX: `pb-[calc(15rem+safe-area)]` — запас под раскрытый нижний rail, контент не упирается в панель.
     return (
         <div
-            className={`p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
+            className={`min-h-full bg-telegram-bg p-4 space-y-4 ${isActiveDraft ? 'pb-[calc(15rem+env(safe-area-inset-bottom,0px))]' : ''}`}
         >
             {isActiveDraft && !isOnline ? (
                 <OfflineBanner variant="offline" offlineSetCount={offlineSetQueueSize} />
@@ -724,15 +983,6 @@ export function ActiveWorkoutPage() {
                         isFinishPending={completeMutation.isPending}
                         finishErrorMessage={completion.sessionError ?? (completeMutation.isError ? getErrorMessage(completeMutation.error) : null)}
                         syncState={syncState}
-                        isOnline={isOnline}
-                        onRetryFinish={() => {
-                            completeMutation.reset()
-                            completion.handleConfirmFinishFromSheet()
-                        }}
-                        onSaveLocalFinish={() => {
-                            completeMutation.reset()
-                            completion.saveCompleteLocallyAndExit()
-                        }}
                         onCloseFinish={completion.closeFinishSheet}
                         onConfirmFinish={completion.handleConfirmFinishFromSheet}
                         onChangeTagsDraft={completion.setFinishTagsDraft}
@@ -789,72 +1039,7 @@ export function ActiveWorkoutPage() {
                 </Suspense>
             ) : null}
 
-            {isActiveDraft && workout ? (
-                <WorkoutSessionScreenHeader
-                    title={workoutTitle}
-                    onBack={() => guardedAction(() => navigate('/workouts'))}
-                    syncState={syncState}
-                    pendingCount={syncPendingItems.length}
-                    menuOpen={sessionMenuOpen}
-                    onMenuToggle={() => setSessionMenuOpen((v) => !v)}
-                    menuContent={(
-                        <div className="py-1">
-                            {repeatSource ? (
-                                <button
-                                    type="button"
-                                    className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                    onClick={() => {
-                                        exerciseActions.handleRepeatPrevious()
-                                        setSessionMenuOpen(false)
-                                    }}
-                                >
-                                    Повторить прошлую
-                                </button>
-                            ) : null}
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                onClick={() => {
-                                    exerciseActions.resetAddItemForm('exercise')
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Добавить упражнение
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                onClick={() => {
-                                    exerciseActions.resetAddItemForm('timer')
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Добавить таймер
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-telegram-text hover:bg-telegram-secondary-bg"
-                                onClick={() => {
-                                    openRestPresets()
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Пресеты отдыха
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full px-4 py-3 text-left text-sm text-danger hover:bg-danger/10"
-                                onClick={() => {
-                                    completion.openAbandonConfirm()
-                                    setSessionMenuOpen(false)
-                                }}
-                            >
-                                Отменить тренировку
-                            </button>
-                        </div>
-                    )}
-                />
-            ) : (
+            {isActiveDraft && workout ? null : (
                 <ActiveWorkoutHeader
                     onBack={() => guardedAction(() => navigate('/workouts'))}
                     syncState={syncState}
@@ -871,16 +1056,100 @@ export function ActiveWorkoutPage() {
 
             {!isLoading && !errorMessage && workout && isActiveDraft ? (
                 <>
-                    <div className="space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm text-telegram-hint">
-                                {exerciseCount} упражнений · {exercisesDoneCount} выполнено
-                            </p>
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                                {elapsedLabel}
+                    <ActiveWorkoutScreen
+                        workoutId={workoutId}
+                        workout={workout}
+                        workoutTitle={workoutTitle}
+                        elapsedSeconds={elapsedSeconds}
+                        currentExerciseIndex={currentExerciseIndex}
+                        currentSetIndex={currentSetIndex}
+                        previousBestByExercise={previousBestByExercise}
+                        previousResult={previousResult}
+                        progressionRecommendation={progressionRecommendation}
+                        onRevertProgressionPrefill={handleRevertProgressionPrefill}
+                        isProgressionLoading={isProgressionLoading}
+                        isProgressionError={isProgressionError}
+                        onAcceptProgression={handleAcceptProgression}
+                        onRejectProgression={handleRejectProgression}
+                        isProgressionDeciding={
+                            acceptProgression.isPending || rejectProgression.isPending
+                        }
+                        progressionPreviousSets={previousCompletedSets}
+                        weightRecommendation={weightRecommendation}
+                        isWeightRecLoading={isWeightRecLoading}
+                        isWeightRecError={isWeightRecError}
+                        isSavingSet={isInlineSetSaving || updateSessionMutation.isPending || completeMutation.isPending}
+                        finishWarning={finishWarning}
+                        onBack={() => guardedAction(() => navigate(-1))}
+                        onSelectExercise={handleSelectExerciseIndex}
+                        onPatchWorkout={patchItem}
+                        onUpdateSet={updateSet}
+                        onSetCurrentPosition={setCurrentPosition}
+                        onNotifySetCompleted={handleInlineSetChanged}
+                        onSetLastCompletedSet={setLastCompletedSet}
+                        onAddExercise={() => exerciseActions.resetAddItemForm('exercise')}
+                        onFinishWorkout={handleFinishWorkoutDirect}
+                        onSkipExercise={handleSkipExercise}
+                        onUnskipExercise={handleUnskipExercise}
+                    />
+
+                    {renderLegacyActiveWorkoutDebug ? (
+                        <>
+                    <div className="rounded-2xl border border-border bg-telegram-secondary-bg/80 p-3 shadow-sm">
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                <Dumbbell className="h-4 w-4 text-primary" />
+                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exerciseCount}</p>
+                                <p className="text-[11px] leading-tight text-telegram-hint">упражнений</p>
+                            </div>
+                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{exercisesDoneCount}</p>
+                                <p className="text-[11px] leading-tight text-telegram-hint">выполнено</p>
+                            </div>
+                            <div className="rounded-xl bg-telegram-bg/80 p-3">
+                                <Clock3 className="h-4 w-4 text-primary" />
+                                <p className="mt-2 text-lg font-bold tabular-nums text-telegram-text">{elapsedLabel}</p>
+                                <p className="text-[11px] leading-tight text-telegram-hint">время</p>
+                            </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs">
+                            <span className="font-medium text-telegram-hint">Общий прогресс</span>
+                            <span className="font-semibold text-telegram-text">
+                                {completedSetCount}/{totalSetCount} подходов
                             </span>
                         </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-telegram-bg">
+                            <div
+                                className="h-full rounded-full bg-primary transition-[width] duration-300"
+                                style={{ width: `${Math.min(100, Math.max(0, activeSessionProgressPercent))}%` }}
+                            />
+                        </div>
                     </div>
+
+                    <ActiveCurrentSetPanel
+                        exercise={currentExercise}
+                        set={currentSet}
+                        exerciseIndex={currentExerciseIndex}
+                        setIndex={normalizedCurrentSetIndex}
+                        exerciseCount={exerciseCount}
+                        completedSetCount={completedSetCount}
+                        totalSetCount={totalSetCount}
+                        elapsedLabel={elapsedLabel}
+                        restDefaultSeconds={restDefaultSeconds}
+                        hasPrevExercise={hasPrevExercise}
+                        hasNextExercise={hasNextExercise}
+                        weightRecommendation={legacyWeightRecommendation}
+                        isWeightRecLoading={isWeightRecLoading}
+                        isWeightRecError={isWeightRecError}
+                        onUpdateSet={updateSet}
+                        onCompleteSet={handleCompleteCurrentSetQuick}
+                        onSkipSet={handleSkipCurrentSetQuick}
+                        onAddSet={handleAddSetWithRest}
+                        onStartRest={handleStartQuickRest}
+                        onGoToPreviousExercise={goToPreviousExercise}
+                        onGoToNextExercise={goToNextExercise}
+                    />
 
                     <Button
                         type="button"
@@ -890,16 +1159,21 @@ export function ActiveWorkoutPage() {
                             'w-full touch-manipulation border-2',
                             allExercisesDone && 'border-danger/50 text-danger hover:bg-danger/10',
                         )}
-                        onClick={() => setFinishSessionConfirmOpen(true)}
+                        onClick={handleFinishWorkoutDirect}
                         disabled={completeMutation.isPending}
                     >
                         Завершить тренировку
                     </Button>
 
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">Упражнения</p>
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-telegram-hint">План тренировки</p>
+                        <span className="text-xs font-medium text-telegram-hint">
+                            {currentExerciseIndex + 1}/{exerciseCount}
+                        </span>
+                    </div>
 
                     <div className="flex flex-col gap-3">
-                        {workout.exercises.map((exercise, index) => (
+                        {workout!.exercises.map((exercise, index) => (
                             <WorkoutExerciseCard
                                 key={`${exercise.exercise_id}-${index}`}
                                 exercise={exercise}
@@ -911,8 +1185,8 @@ export function ActiveWorkoutPage() {
                         ))}
                     </div>
 
-                    <div className="rounded-xl border border-warning/35 bg-warning/10 p-3 space-y-2">
-                        <p className="text-sm text-telegram-text">
+                    <div className="rounded-2xl border border-warning/35 bg-warning/10 p-3 space-y-2">
+                        <p className="text-sm leading-relaxed text-telegram-text">
                             Черновик сохраняется автоматически до завершения сессии.
                         </p>
                     </div>
@@ -939,7 +1213,7 @@ export function ActiveWorkoutPage() {
                     ) : null}
 
                     <ActiveWorkoutSessionDetailsCollapsible
-                        workout={workout}
+                        workout={workout!}
                         workoutTitle={workoutTitle}
                         elapsedLabel={elapsedLabel}
                         isActiveDraft={isActiveDraft}
@@ -955,8 +1229,8 @@ export function ActiveWorkoutPage() {
                         <ExerciseSessionBottomSheet
                             isOpen
                             onClose={closeExerciseModal}
-                            exercise={modalExercise}
-                            exerciseIndex={modalExerciseIndex}
+                            exercise={modalExercise!}
+                            exerciseIndex={modalExerciseIndex!}
                             readOnly={modalSessionStatus === 'done'}
                             sessionStatus={modalSessionStatus}
                             currentExerciseIndex={currentExerciseIndex}
@@ -969,22 +1243,15 @@ export function ActiveWorkoutPage() {
                             onCompleteSet={handleSheetComplete}
                             onSkipSet={handleSheetSkip}
                             onUpdateSetRpe={handleModalUpdateRpe}
-                            weightRecommendation={modalExerciseIndex === currentExerciseIndex ? weightRecommendation : undefined}
+                            weightRecommendation={modalExerciseIndex === currentExerciseIndex ? legacyWeightRecommendation : undefined}
                             isWeightRecLoading={modalExerciseIndex === currentExerciseIndex ? isWeightRecLoading : false}
                             isWeightRecError={modalExerciseIndex === currentExerciseIndex ? isWeightRecError : false}
                         />
                     ) : null}
 
-                    <WorkoutConfirmModal
-                        isOpen={finishSessionConfirmOpen}
-                        title="Завершить тренировку?"
-                        description={`Выполнено ${exercisesDoneCount} из ${exerciseCount} упражнений`}
-                        confirmLabel="Завершить"
-                        cancelLabel="Продолжить"
-                        confirmVariant="emergency"
-                        onClose={() => setFinishSessionConfirmOpen(false)}
-                        onConfirm={handleNavigateToSummaryAfterConfirm}
-                    />
+                        </>
+                    ) : null}
+
                 </>
             ) : null}
 
@@ -1037,7 +1304,7 @@ export function ActiveWorkoutPage() {
                         onAdjustWeight={exerciseActions.handleAdjustWeight}
                         onUpdateSet={updateSet}
                         onNotesChange={exerciseActions.handleExerciseNotesChange}
-                        weightRecommendation={weightRecommendation}
+                        weightRecommendation={legacyWeightRecommendation}
                         isWeightRecLoading={isWeightRecLoading}
                         isWeightRecError={isWeightRecError}
                         hasNextExercise={hasNextExercise}
@@ -1049,10 +1316,9 @@ export function ActiveWorkoutPage() {
                 </>
             ) : null}
 
-            {isActiveDraft && !isLoading && !errorMessage && workout && (
+            {renderLegacyActiveWorkoutDebug && isActiveDraft && !isLoading && !errorMessage && workout && (
                 <>
                     <WorkoutSessionRestOverlay onTimerEnd={handleRestTimerEnd} />
-                    <FloatingRestTimer workout={workout} onUpdateSet={updateSet} />
                     <ActiveWorkoutBottomActions
                         isActiveDraft={isActiveDraft}
                         restPresets={restPresets}
@@ -1062,7 +1328,7 @@ export function ActiveWorkoutPage() {
                         onSelectRestPreset={handleSelectRestPreset}
                         onAddItem={exerciseActions.resetAddItemForm}
                         onRemoveSet={exerciseActions.handleRemoveLastSetFromCurrentExercise}
-                        onAddSet={exerciseActions.handleAddSetToCurrentExercise}
+                        onAddSet={handleAddSetWithRest}
                         onFinishWorkout={completion.handleOpenFinishSheet}
                         hideFinishButton
                     />

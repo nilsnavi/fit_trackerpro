@@ -41,7 +41,7 @@ export const WorkoutSessionRestOverlay = memo(function WorkoutSessionRestOverlay
             tickSessionRestTimer()
         }, 1000)
         return () => window.clearInterval(id)
-    }, [sessionRestTimer?.forExerciseId, sessionRestTimer?.total, tickSessionRestTimer])
+    }, [sessionRestTimer, tickSessionRestTimer])
 
     useEffect(() => {
         if (!sessionRestTimer) return

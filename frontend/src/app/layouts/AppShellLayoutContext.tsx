@@ -12,6 +12,8 @@ type AppShellLayoutContextValue = {
     setHeaderRight: (node: ReactNode) => void
     hideHeader: boolean
     setHideHeader: (hide: boolean) => void
+    hideNavigation: boolean
+    setHideNavigation: (hide: boolean) => void
 }
 
 const AppShellLayoutContext = createContext<AppShellLayoutContextValue | null>(null)
@@ -19,6 +21,7 @@ const AppShellLayoutContext = createContext<AppShellLayoutContextValue | null>(n
 export function AppShellLayoutProvider({ children }: { children: ReactNode }) {
     const [headerRight, setHeaderRight] = useState<ReactNode>(null)
     const [hideHeader, setHideHeader] = useState(false)
+    const [hideNavigation, setHideNavigation] = useState(false)
 
     const value = useMemo(
         () => ({
@@ -26,8 +29,10 @@ export function AppShellLayoutProvider({ children }: { children: ReactNode }) {
             setHeaderRight,
             hideHeader,
             setHideHeader,
+            hideNavigation,
+            setHideNavigation,
         }),
-        [headerRight, hideHeader],
+        [headerRight, hideHeader, hideNavigation],
     )
 
     return <AppShellLayoutContext.Provider value={value}>{children}</AppShellLayoutContext.Provider>
@@ -66,4 +71,17 @@ export function useHideAppShellHeader() {
         setHideHeader(true)
         return () => setHideHeader(false)
     }, [setHideHeader])
+}
+
+/**
+ * Скрыть глобальную нижнюю навигацию для полноэкранных mobile-first поверхностей.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useHideAppShellNavigation() {
+    const { setHideNavigation } = useAppShellLayoutContext()
+
+    useLayoutEffect(() => {
+        setHideNavigation(true)
+        return () => setHideNavigation(false)
+    }, [setHideNavigation])
 }

@@ -4,8 +4,6 @@
  *
  * ts-jest emits CommonJS here; use synchronous `require` (not `import.meta` / ESM).
  */
-/* eslint-disable @typescript-eslint/no-var-requires -- setupFiles run as CJS before the test graph. */
-
 // Polyfill crypto.randomUUID (not available in jsdom 20).
 // Node.js 18+ has globalThis.crypto with randomUUID; jsdom overrides crypto but drops it.
 // We patch it back from Node's built-in crypto module.
@@ -28,6 +26,30 @@ if (typeof (globalThis as unknown as Record<string, unknown>).crypto === 'undefi
             writable: true,
         })
     }
+}
+
+// Polyfill TextEncoder / TextDecoder.
+// react-router v7 (and its data APIs) touch TextEncoder at module import time;
+// jsdom 20 does not expose either class on the global scope, which breaks every
+// suite that imports react-router-dom. Node's util implementations are spec-compatible.
+try {
+    if (typeof (globalThis as unknown as Record<string, unknown>).TextEncoder === 'undefined') {
+        const nodeUtil = require('util') as typeof import('util')
+        Object.defineProperty(globalThis, 'TextEncoder', {
+            value: nodeUtil.TextEncoder,
+            configurable: true,
+            writable: true,
+            enumerable: true,
+        })
+        Object.defineProperty(globalThis, 'TextDecoder', {
+            value: nodeUtil.TextDecoder,
+            configurable: true,
+            writable: true,
+            enumerable: true,
+        })
+    }
+} catch {
+    // ignore
 }
 
 // Polyfill IndexedDB for jsdom (needed for offline persistence tests).

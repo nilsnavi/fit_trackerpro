@@ -5,7 +5,7 @@ import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 
 const navItems = [
-    { path: '/', icon: Home, label: 'Главная' },
+    { path: '/home', icon: Home, label: 'Главная' },
     { path: '/exercises', icon: LayoutGrid, label: 'Каталог' },
     { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
     { path: '/analytics', icon: BarChart3, label: 'Прогресс' },
@@ -16,7 +16,7 @@ function isNavRouteActive(path: string, pathname: string): boolean {
     if (path === '/analytics') {
         return pathname === '/analytics' || pathname.startsWith('/progress')
     }
-    if (path === '/') return pathname === '/'
+    if (path === '/home') return pathname === '/home'
     return pathname === path || pathname.startsWith(`${path}/`)
 }
 

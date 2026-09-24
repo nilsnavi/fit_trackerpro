@@ -144,7 +144,12 @@ async def test_onboarding_flow(client: AsyncClient, mock_telegram_auth_body: dic
     onboarding = await client.post(
         "/api/v1/users/auth/onboarding",
         headers={"Authorization": f"Bearer {token}"},
-        json={"fitness_goal": "strength", "experience_level": "beginner"},
+        json={
+            "fitness_goal": "strength",
+            "experience_level": "beginner",
+            # Consent to health-data processing is mandatory (WS1-14).
+            "health_data_consent": True,
+        },
     )
     assert onboarding.status_code == 200
     onboarding_data = onboarding.json()

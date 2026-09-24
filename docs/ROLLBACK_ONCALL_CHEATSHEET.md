@@ -64,8 +64,8 @@
 
 Если `PREVIOUS_IMAGE_TAG` пустой:
 1. Авто-rollback в reusable deploy workflow не сработает (ожидаемо).
-2. Запускать `.github/workflows/rollback-production.yml` вручную.
-3. Передавать `rollback_image_tag` явно.
+2. Запускать `.github/workflows/rollback-production.yml` вручную для нужного `environment` (`production` или `staging`).
+3. Передавать `rollback_image_tag` явно и `confirm=ROLLBACK`.
 4. Если рабочего тега нет — rollback образов невозможен, только hotfix/redeploy.
 
 ## 4) Команды (manual SSH fallback)

@@ -3,6 +3,7 @@ import { create } from 'zustand'
 /**
  * Полноэкранный таймер отдыха между подходами (экран сессии).
  * `forExerciseId` — стабильный ключ «упражнение в сессии», см. deriveExerciseSessionState.
+ * SPEC-005 §17: `startedAtMs` allows background-correct countdown (timestamp based).
  */
 export type SessionRestTimerState = {
     active: boolean
@@ -13,6 +14,8 @@ export type SessionRestTimerState = {
     totalSets: number
     remaining: number
     total: number
+    /** Wall-clock ms when the current remaining value was computed. */
+    startedAtMs?: number
 }
 
 /**
@@ -28,6 +31,9 @@ interface WorkoutSessionUiState {
     sessionRestTimer: SessionRestTimerState | null
     startSessionRestTimer: (payload: Omit<SessionRestTimerState, 'active' | 'remaining'>) => void
     tickSessionRestTimer: () => void
+    /** SPEC-005 §17: [-30 сек] / [+30 сек] quick controls. */
+    adjustSessionRestTimer: (deltaSeconds: number) => void
+    restartSessionRestTimer: () => void
     skipSessionRestTimer: () => void
 }
 
@@ -43,18 +49,54 @@ export const useWorkoutSessionUiStore = create<WorkoutSessionUiState>((set) => (
                 ...payload,
                 active: true,
                 remaining: payload.total,
+                startedAtMs: Date.now(),
             },
         }),
     tickSessionRestTimer: () =>
         set((s) => {
             const t = s.sessionRestTimer
             if (!t || t.remaining <= 0) return s
-            const remaining = t.remaining - 1
+            // SPEC-005 §17/AC-005-007: compute remaining from timestamps so the
+            // countdown stays correct after background/interval throttling.
+            const now = Date.now()
+            const anchor = t.startedAtMs ?? now
+            const elapsedSinceAnchor = Math.floor((now - anchor) / 1000)
+            const remaining = Math.max(0, t.remaining - Math.max(1, elapsedSinceAnchor))
             return {
                 sessionRestTimer: {
                     ...t,
                     remaining,
+                    startedAtMs: now,
                     active: remaining > 0,
+                },
+            }
+        }),
+    /** SPEC-005 §17: [-30 сек] quick control. */
+    adjustSessionRestTimer: (deltaSeconds) =>
+        set((s) => {
+            const t = s.sessionRestTimer
+            if (!t) return s
+            const remaining = Math.max(0, t.remaining + deltaSeconds)
+            return {
+                sessionRestTimer: {
+                    ...t,
+                    remaining,
+                    total: Math.max(t.total, remaining),
+                    startedAtMs: Date.now(),
+                    active: remaining > 0,
+                },
+            }
+        }),
+    restartSessionRestTimer: () =>
+        set((s) => {
+            const t = s.sessionRestTimer
+            if (!t) return s
+            return {
+                sessionRestTimer: {
+                    ...t,
+                    active: t.total > 0,
+                    remaining: t.total,
+                    startedAtMs: Date.now(),
                 },
             }
         }),

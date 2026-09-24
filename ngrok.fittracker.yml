@@ -3,3 +3,4 @@ tunnels:
   fittracker-edge:
     proto: http
     addr: edge:80
+    domain: fittrackpro.ru

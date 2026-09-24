@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { MoreVertical } from 'lucide-react'
+import { ArrowLeft, MoreVertical } from 'lucide-react'
 import type { ActiveWorkoutSyncState } from '@/state/local'
 import { WorkoutSyncIndicator } from '@features/workouts/active/components/WorkoutSyncIndicator'
 
@@ -25,13 +25,14 @@ export function WorkoutSessionScreenHeader({
     menuContent,
 }: WorkoutSessionScreenHeaderProps) {
     return (
-        <div className="relative flex items-center justify-between gap-2">
+        <div className="sticky top-0 z-30 -mx-4 -mt-4 flex items-center justify-between gap-2 border-b border-border bg-telegram-bg/90 px-4 py-3 backdrop-blur">
             <button
                 type="button"
                 onClick={onBack}
-                className="shrink-0 text-sm font-semibold text-primary touch-manipulation"
+                className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-telegram-secondary-bg text-primary active:bg-primary/10"
+                aria-label="Назад"
             >
-                ‹ Назад
+                <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1 text-center">
                 <h1 className="truncate text-base font-bold text-telegram-text">{title}</h1>
