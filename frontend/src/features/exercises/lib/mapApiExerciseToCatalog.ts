@@ -26,6 +26,7 @@ const EQUIPMENT_WHITELIST = new Set<EquipmentType>([
     'medicine_ball',
     'foam_roller',
     'yoga_mat',
+    'stability_ball',
 ])
 
 function mapEquipment(raw: string[]): EquipmentType[] {
@@ -99,6 +100,7 @@ export function mapApiExerciseToCatalog(row: ExerciseApiItem): Exercise {
     return {
         id: row.id,
         name: row.name,
+        aliases: row.aliases ?? [],
         category: mapCategory(row),
         equipment: mapEquipment(row.equipment ?? []),
         primaryMuscles: primary,
@@ -109,6 +111,7 @@ export function mapApiExerciseToCatalog(row: ExerciseApiItem): Exercise {
         instructions: instructionsFromDescription(description),
         tips: [],
         ...mediaFields(row.media_url),
+        attribution: row.attribution ?? undefined,
         isCustom: row.author_user_id != null,
         createdBy: row.author_user_id ?? undefined,
     }

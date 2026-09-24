@@ -71,12 +71,15 @@ export type EquipmentType =
     | 'foam_roller'
     | 'yoga_mat'
     | 'machine'
+    | 'stability_ball'
 export type RiskType = 'shoulder' | 'knee' | 'back' | 'wrist' | 'elbow'
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 
 export interface Exercise {
     id: number
     name: string
+    /** Search-only aliases; never rendered as the catalog title. */
+    aliases?: string[]
     category: Exclude<ExerciseCategory, 'all'>
     equipment: EquipmentType[]
     primaryMuscles: string[]
@@ -89,6 +92,8 @@ export interface Exercise {
     videoUrl?: string
     gifUrl?: string
     imageUrl?: string
+    /** Rights notice supplied with optional exercise media. */
+    attribution?: string
     isCustom: boolean
     createdBy?: number
     similarExercises?: number[]

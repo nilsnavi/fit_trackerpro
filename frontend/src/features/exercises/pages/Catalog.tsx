@@ -33,6 +33,7 @@ import {
     CATEGORIES,
     DIFFICULTY_OPTIONS,
     EQUIPMENT_OPTIONS,
+    MUSCLE_LABELS,
     RISK_OPTIONS,
 } from '@features/exercises/constants/catalogReferenceUi';
 import { GoalProgramsSection } from '@features/workouts/components/GoalProgramsSection';
@@ -70,9 +71,13 @@ const highlightText = (text: string, searchTerm: string): React.ReactNode => {
     );
 };
 
-const getCategoryLabel = (category: ExerciseCategory): string => category;
+const getCategoryLabel = (category: ExerciseCategory): string =>
+    CATEGORIES.find((item) => item.id === category)?.label || category;
 
-const getEquipmentLabel = (equipment: EquipmentType): string => equipment;
+const getEquipmentLabel = (equipment: EquipmentType): string =>
+    EQUIPMENT_OPTIONS.find((item) => item.id === equipment)?.label || equipment;
+
+const getMuscleLabel = (muscle: string): string => MUSCLE_LABELS[muscle] || muscle;
 
 const iconToEmoji = (icon: string): string => {
     switch (icon) {
@@ -152,10 +157,11 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, searchTerm, onVie
             <div className="flex items-start gap-3">
                 {/* Image placeholder */}
                 <div className="w-16 h-16 rounded-xl bg-telegram-secondary-bg flex items-center justify-center flex-shrink-0">
-                    {exercise.imageUrl ? (
+                    {exercise.gifUrl || exercise.imageUrl ? (
                         <img
-                            src={exercise.imageUrl}
+                            src={exercise.gifUrl || exercise.imageUrl}
                             alt={exercise.name}
+                            loading="lazy"
                             className="w-full h-full object-cover rounded-xl"
                         />
                     ) : (
@@ -359,6 +365,11 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                         </div>
                     )}
                 </div>
+                {(exercise.gifUrl || exercise.imageUrl || exercise.videoUrl) && (
+                    <p className="text-xs text-telegram-hint">
+                        {exercise.attribution || '© Gym visual — https://gymvisual.com/'}
+                    </p>
+                )}
 
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2">
@@ -457,7 +468,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                                         key={muscle}
                                         className="text-sm px-2 py-0.5 bg-telegram-secondary-bg rounded text-telegram-text"
                                     >
-                                        {muscle}
+                                        {getMuscleLabel(muscle)}
                                     </span>
                                 ))}
                             </div>
@@ -471,7 +482,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                                             key={muscle}
                                             className="text-sm px-2 py-0.5 bg-telegram-secondary-bg rounded text-telegram-hint"
                                         >
-                                            {muscle}
+                                            {getMuscleLabel(muscle)}
                                         </span>
                                     ))}
                                 </div>
@@ -628,7 +639,26 @@ export const Catalog: React.FC = () => {
     const navigate = useNavigate();
     const tg = useTelegramWebApp();
     const { isTelegram, showBackButton, hideBackButton, hapticFeedback, user } = tg;
-    const exercisesQuery = useExercisesCatalogQuery();
+
+    // Keep the large catalog server-backed.  The API can filter one category and
+    // one equipment value per request; multiple selected chips are narrowed
+    // locally after all matching pages are loaded.
+    const [filters, setFilters] = useState<ExerciseFilters>({
+        search: '',
+        categories: ['all'],
+        equipment: [],
+        risks: [],
+        difficulty: [],
+    });
+    const serverCategory = filters.categories.length === 1 && filters.categories[0] !== 'all'
+        ? filters.categories[0]
+        : undefined;
+    const serverEquipment = filters.equipment.length === 1 ? filters.equipment[0] : undefined;
+    const exercisesQuery = useExercisesCatalogQuery({
+        search: filters.search,
+        category: serverCategory,
+        equipment: serverEquipment,
+    });
     const currentUserQuery = useCurrentUserQuery();
     const updateExerciseMutation = useUpdateExerciseMutation();
     const deleteExerciseMutation = useDeleteExerciseMutation();
@@ -671,7 +701,7 @@ export const Catalog: React.FC = () => {
                 { value: 'all', label: 'Все', icon: '🔍' },
                 ...categoriesQuery.data.categories.map((c) => ({
                     value: c.value as ExerciseCategory,
-                    label: c.label,
+                    label: CATEGORIES.find((item) => item.id === c.value)?.label || c.label,
                     icon: iconToEmoji(c.icon),
                 })),
             ]
@@ -682,7 +712,10 @@ export const Catalog: React.FC = () => {
     const equipmentOptions = useMemo(
         () =>
             equipmentQuery.data?.equipment?.length
-                ? equipmentQuery.data.equipment.map((e) => ({ id: e.value as EquipmentType, label: e.label }))
+                ? equipmentQuery.data.equipment.map((e) => ({
+                    id: e.value as EquipmentType,
+                    label: EQUIPMENT_OPTIONS.find((item) => item.id === e.value)?.label || e.label,
+                }))
                 : EQUIPMENT_OPTIONS,
         [equipmentQuery.data],
     )
@@ -697,14 +730,6 @@ export const Catalog: React.FC = () => {
 
     const isLoading = exercisesQuery.isPending;
 
-    // State
-    const [filters, setFilters] = useState<ExerciseFilters>({
-        search: '',
-        categories: ['all'],
-        equipment: [],
-        risks: [],
-        difficulty: [],
-    });
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -729,6 +754,7 @@ export const Catalog: React.FC = () => {
                 const searchLower = filters.search.toLowerCase();
                 const matchesSearch =
                     exercise.name.toLowerCase().includes(searchLower) ||
+                    (exercise.aliases ?? []).some(alias => alias.toLowerCase().includes(searchLower)) ||
                     exercise.description.toLowerCase().includes(searchLower) ||
                     exercise.primaryMuscles.some(m => m.toLowerCase().includes(searchLower)) ||
                     exercise.secondaryMuscles.some(m => m.toLowerCase().includes(searchLower));
