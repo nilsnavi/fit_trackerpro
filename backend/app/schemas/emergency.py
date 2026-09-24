@@ -89,6 +89,40 @@ class EmergencyContactResponse(BaseModel):
     priority: int
     created_at: datetime
     updated_at: datetime
+    is_linked: bool = Field(
+        default=False,
+        description=(
+            "True when the contact linked their Telegram account, i.e. can receive alerts. "
+            "Contacts without a linked account cannot be notified — the API says so instead "
+            "of reporting a fake success."
+        ),
+    )
+    linked_at: Optional[datetime] = Field(
+        default=None,
+        description="When the contact linked their Telegram account.",
+    )
+
+
+class EmergencyContactLinkCodeResponse(BaseModel):
+    """One-time code that binds a contact's Telegram account to this record"""
+
+    contact_id: int
+    contact_name: str
+    code: str = Field(..., min_length=4, max_length=16)
+    command: str = Field(
+        ...,
+        max_length=64,
+        description="Exact message the contact must send to the bot.",
+    )
+    deep_link: Optional[str] = Field(
+        default=None,
+        max_length=512,
+        description="t.me link that prefills the command; None if TELEGRAM_BOT_USERNAME is unset.",
+    )
+    is_linked: bool = Field(
+        default=False,
+        description="True when the contact is already linked (a new code re-links them).",
+    )
 
 
 class EmergencyContactListResponse(BaseModel):
@@ -138,7 +172,12 @@ class NotificationResult(BaseModel):
 
 
 class EmergencyNotifyResponse(BaseModel):
-    """Emergency notification response"""
+    """Emergency notification response
+
+    ``successful_count`` counts messages the Telegram Bot API accepted. It is 0
+    when no contact is linked — the caller must not show "help is on the way"
+    in that case, see ``results`` for per-contact reasons.
+    """
     notified_at: datetime
     severity: str
     message_sent: str = Field(..., max_length=5000)
@@ -173,6 +212,13 @@ class EmergencyWorkoutNotifyResponse(BaseModel):
         None,
         ge=0,
         le=1000,
+        description="Contacts the message was actually delivered to.",
+    )
+    contacts_failed: int = Field(
+        default=0,
+        ge=0,
+        le=1000,
+        description="Selected contacts that could not be reached (not linked or delivery error).",
     )
     preview: Optional[str] = Field(
         None,

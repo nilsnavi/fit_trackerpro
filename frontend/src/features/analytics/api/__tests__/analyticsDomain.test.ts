@@ -351,6 +351,8 @@ describe('analyticsDomain API types contract tests', () => {
     describe('ApiRecoveryStateResponse', () => {
         test('accepts complete recovery state', () => {
             const response: ApiRecoveryStateResponse = {
+                id: 1,
+                userId: 42,
                 fatigueLevel: 30,
                 readinessScore: 75,
             }
@@ -361,6 +363,8 @@ describe('analyticsDomain API types contract tests', () => {
 
         test('accepts zero recovery values', () => {
             const response: ApiRecoveryStateResponse = {
+                id: 1,
+                userId: 42,
                 fatigueLevel: 0,
                 readinessScore: 0,
             }

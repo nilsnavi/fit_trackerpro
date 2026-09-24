@@ -8,6 +8,12 @@ const HealthPage = lazy(() =>
     import('@features/health/pages/HealthPage').then((m) => ({ default: m.HealthPage })),
 )
 const AchievementsPage = lazy(() => import('@features/achievements/pages/AchievementsPage'))
+// SPEC-006 §58: accepted targets whose automatic prefill is switched off.
+const ProgressionTargetsPage = lazy(() =>
+    import('@features/workouts/pages/ProgressionTargetsPage').then((m) => ({
+        default: m.ProgressionTargetsPage,
+    })),
+)
 
 export function profileRoutes() {
     return (
@@ -33,6 +39,14 @@ export function profileRoutes() {
                 element={
                     <RouteGuard screenTitle="Достижения">
                         <AchievementsPage />
+                    </RouteGuard>
+                }
+            />
+            <Route
+                path="/profile/progression-targets"
+                element={
+                    <RouteGuard screenTitle="Цели прогрессии" skeleton={<ProfilePageSkeleton />}>
+                        <ProgressionTargetsPage />
                     </RouteGuard>
                 }
             />

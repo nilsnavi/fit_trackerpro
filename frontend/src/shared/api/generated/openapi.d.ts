@@ -20,23 +20,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/analytics/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Analytics Dashboard */
-        get: operations["get_analytics_dashboard_api_v1_analytics__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/analytics/achievements/": {
         parameters: {
             query?: never;
@@ -649,6 +632,42 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/health-metrics/body-measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Body Measurements */
+        get: operations["get_body_measurements_api_v1_health_metrics_body_measurements_get"];
+        put?: never;
+        /** Create Body Measurement */
+        post: operations["create_body_measurement_api_v1_health_metrics_body_measurements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/body-measurements/{measurement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Body Measurement */
+        delete: operations["delete_body_measurement_api_v1_health_metrics_body_measurements__measurement_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Body Measurement */
+        patch: operations["update_body_measurement_api_v1_health_metrics_body_measurements__measurement_id__patch"];
+        trace?: never;
+    };
     "/api/v1/health-metrics/glucose": {
         parameters: {
             query?: never;
@@ -719,6 +738,112 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/health-metrics/water": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water History */
+        get: operations["get_water_history_api_v1_health_metrics_water_get"];
+        put?: never;
+        /** Create Water Entry */
+        post: operations["create_water_entry_api_v1_health_metrics_water_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/daily/{target_date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Daily Stats */
+        get: operations["get_water_daily_stats_api_v1_health_metrics_water_daily__target_date__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/goal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Goal */
+        get: operations["get_water_goal_api_v1_health_metrics_water_goal_get"];
+        put?: never;
+        /** Set Water Goal */
+        post: operations["set_water_goal_api_v1_health_metrics_water_goal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/reminder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Reminder */
+        get: operations["get_water_reminder_api_v1_health_metrics_water_reminder_get"];
+        put?: never;
+        /** Set Water Reminder */
+        post: operations["set_water_reminder_api_v1_health_metrics_water_reminder_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Weekly Stats */
+        get: operations["get_water_weekly_stats_api_v1_health_metrics_water_weekly_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health-metrics/water/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Entry */
+        get: operations["get_water_entry_api_v1_health_metrics_water__entry_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Water Entry */
+        delete: operations["delete_water_entry_api_v1_health_metrics_water__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health-metrics/wellness": {
         parameters: {
             query?: never;
@@ -771,6 +896,547 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/health/body-measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Body Measurements */
+        get: operations["get_body_measurements_api_v1_health_body_measurements_get"];
+        put?: never;
+        /** Create Body Measurement */
+        post: operations["create_body_measurement_api_v1_health_body_measurements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/body-measurements/{measurement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Body Measurement */
+        delete: operations["delete_body_measurement_api_v1_health_body_measurements__measurement_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Body Measurement */
+        patch: operations["update_body_measurement_api_v1_health_body_measurements__measurement_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/health/glucose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Glucose History */
+        get: operations["get_glucose_history_api_v1_health_glucose_get"];
+        put?: never;
+        /** Create Glucose Log */
+        post: operations["create_glucose_log_api_v1_health_glucose_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/glucose/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Glucose Stats */
+        get: operations["get_glucose_stats_api_v1_health_glucose_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/glucose/{log_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Glucose Log */
+        get: operations["get_glucose_log_api_v1_health_glucose__log_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Glucose Log */
+        delete: operations["delete_glucose_log_api_v1_health_glucose__log_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Health Stats */
+        get: operations["get_health_stats_api_v1_health_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/water": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water History */
+        get: operations["get_water_history_api_v1_health_water_get"];
+        put?: never;
+        /** Create Water Entry */
+        post: operations["create_water_entry_api_v1_health_water_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/water/daily/{target_date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Daily Stats */
+        get: operations["get_water_daily_stats_api_v1_health_water_daily__target_date__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/water/goal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Goal */
+        get: operations["get_water_goal_api_v1_health_water_goal_get"];
+        put?: never;
+        /** Set Water Goal */
+        post: operations["set_water_goal_api_v1_health_water_goal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/water/reminder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Reminder */
+        get: operations["get_water_reminder_api_v1_health_water_reminder_get"];
+        put?: never;
+        /** Set Water Reminder */
+        post: operations["set_water_reminder_api_v1_health_water_reminder_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/water/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Weekly Stats */
+        get: operations["get_water_weekly_stats_api_v1_health_water_weekly_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/water/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Water Entry */
+        get: operations["get_water_entry_api_v1_health_water__entry_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Water Entry */
+        delete: operations["delete_water_entry_api_v1_health_water__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/wellness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Wellness History */
+        get: operations["get_wellness_history_api_v1_health_wellness_get"];
+        put?: never;
+        /** Create Wellness Entry */
+        post: operations["create_wellness_entry_api_v1_health_wellness_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/wellness/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Wellness Stats */
+        get: operations["get_wellness_stats_api_v1_health_wellness_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/wellness/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Wellness Entry */
+        get: operations["get_wellness_entry_api_v1_health_wellness__entry_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/exercises/{exercise_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Effective progression policy for an exercise scope
+         * @description Progression scope is user + program/template + exercise + exercise slot (SPEC §7).
+         */
+        get: operations["get_exercise_progression_api_v1_progression_exercises__exercise_id__get"];
+        /**
+         * Configure progression for an exercise scope
+         * @description Persisting a policy never changes existing recommendations or workout history.
+         */
+        put: operations["update_exercise_progression_api_v1_progression_exercises__exercise_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/exercises/{exercise_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recommendation history for an exercise scope */
+        get: operations["get_exercise_progression_history_api_v1_progression_exercises__exercise_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/exercises/{exercise_id}/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest persisted recommendation (or a read-only preview) */
+        get: operations["get_exercise_recommendation_api_v1_progression_exercises__exercise_id__recommendation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Accepted targets and their automatic-prefill state
+         * @description SPEC §58: the newest accepted target per scope, prefill state included.
+         */
+        get: operations["list_prefill_targets_api_v1_progression_prefill_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/bulk-disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop prefilling many accepted targets automatically
+         * @description SPEC §58: omitting the ids switches off every target the screen lists.
+         *
+         *     One tap after a training cycle instead of walking the list row by row. The
+         *     targets themselves are untouched — only the silent substitution stops. What
+         *     this call switches off becomes one sweep, addressable for its undo through
+         *     ``GET /prefill/last-sweep`` rather than only through this response.
+         */
+        post: operations["bulk_disable_prefill_api_v1_progression_prefill_bulk_disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/bulk-enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch the automatic prefill back on for targets or whole sweeps
+         * @description SPEC §58: undoes a bulk switch-off, addressed by targets or by sweeps.
+         *
+         *     The ids come from that action's ``changed_ids``, so a goal whose prefill was
+         *     switched off earlier stays off — undo restores what this action did, not
+         *     everything that happens to be switched off. Sweep ids address the same thing
+         *     from the other end: the server resolves what each sweep still holds, which is
+         *     what lets the whole undo journal come back in one tap.
+         */
+        post: operations["bulk_enable_prefill_api_v1_progression_prefill_bulk_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/bulk-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply one policy / rep-range edit to many accepted targets
+         * @description SPEC §58: values and prefill switches stay per-target; only the plan moves.
+         */
+        post: operations["bulk_update_prefill_targets_api_v1_progression_prefill_bulk_update_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/sweeps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bulk switch-offs that can still be undone
+         * @description SPEC §58: the undo as the server remembers it, not as one browser does.
+         *
+         *     Every bulk switch-off stamps its targets with one sweep id, so the way back is
+         *     the same on every device and survives a reload. The whole chain is returned,
+         *     newest first, so a run of bulk actions can be put back in any order; targets
+         *     switched on again by hand have left their sweep, and a sweep left with nothing
+         *     is not listed. One whose members were all replaced by newer targets *is* listed
+         *     — ``restorable`` false, replacements named — so the action never vanishes while
+         *     its stamp stays on rows no undo could reach, and acting on it releases them.
+         */
+        get: operations["list_prefill_sweeps_api_v1_progression_prefill_sweeps_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/{recommendation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit an accepted target's value, policy and rep range
+         * @description Only fields the user actually edited are written (SPEC §58).
+         */
+        patch: operations["update_prefill_target_api_v1_progression_prefill__recommendation_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/{recommendation_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop prefilling an accepted target automatically
+         * @description Same as undoing the prefill in a session: the target itself is kept (SPEC §58).
+         */
+        post: operations["disable_prefill_api_v1_progression_prefill__recommendation_id__disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/prefill/{recommendation_id}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn the automatic prefill of an accepted target back on
+         * @description The target itself is unchanged — only the silent substitution returns.
+         */
+        post: operations["enable_prefill_api_v1_progression_prefill__recommendation_id__enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/recommendations/{recommendation_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept (or modify) a recommendation
+         * @description Only an explicit accept may change the program target (SPEC §42/§43).
+         */
+        post: operations["accept_recommendation_api_v1_progression_recommendations__recommendation_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progression/recommendations/{recommendation_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a recommendation
+         * @description Rejection leaves workout history untouched (SPEC §44).
+         */
+        post: operations["reject_recommendation_api_v1_progression_recommendations__recommendation_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/emergency/contact": {
         parameters: {
             query?: never;
@@ -803,6 +1469,49 @@ export type paths = {
         post?: never;
         /** Delete Emergency Contact */
         delete: operations["delete_emergency_contact_api_v1_system_emergency_contact__contact_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/emergency/contact/{contact_id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unlink Emergency Contact
+         * @description Remove the delivery channel of a contact (e.g. they changed accounts).
+         */
+        delete: operations["unlink_emergency_contact_api_v1_system_emergency_contact__contact_id__link_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/emergency/contact/{contact_id}/link-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Emergency Contact Link Code
+         * @description Invite code that binds a contact's Telegram account to this record.
+         *
+         *     Emergency messages can only be delivered to chats that contacted the bot,
+         *     so a contact is reachable after linking (``/link <code>`` or the t.me link).
+         */
+        post: operations["issue_emergency_contact_link_code_api_v1_system_emergency_contact__contact_id__link_code_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -940,11 +1649,15 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * Readiness probe (PostgreSQL, Redis)
+         * Readiness probe (dependencies are healthy)
          * @description Readiness probe for load balancers and orchestrators.
-         *     Проверяет PostgreSQL (``SELECT 1`` через async-сессию) и Redis (``PING`` через общий async-клиент).
+         *     Checks all critical dependencies:
+         *     - Database connectivity
+         *     - Redis availability (if configured)
+         *     - External services (if configured)
          *
-         *     HTTP 200 только при ``status == "ready"``; иначе 503 с ``status == "degraded"`` и телом проверок.
+         *     Returns 200 only if the application is ready to serve traffic.
+         *     Used by load balancers to route traffic only to ready instances.
          */
         get: operations["readiness_probe"];
         put?: never;
@@ -1123,11 +1836,14 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * List Coach Access
-         * @description Coach access sharing is not implemented yet.
-         *     Keep the endpoint to avoid breaking the profile UI.
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
          */
-        get: operations["list_coach_access_api_v1_users_coach_access_get"];
+        get: operations["coach_access_unavailable_api_v1_users_coach_access_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1146,10 +1862,14 @@ export type paths = {
         get?: never;
         put?: never;
         /**
-         * Generate Coach Access
-         * @description Generate a short-lived share code (stub for MVP UI wiring).
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
          */
-        post: operations["generate_coach_access_api_v1_users_coach_access_generate_post"];
+        post: operations["coach_access_unavailable_api_v1_users_coach_access_generate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1166,8 +1886,15 @@ export type paths = {
         get?: never;
         put?: never;
         post?: never;
-        /** Revoke Coach Access */
-        delete: operations["revoke_coach_access_api_v1_users_coach_access__access_id__delete"];
+        /**
+         * Coach Access Unavailable
+         * @description Доступ тренера не реализован (WS2-5).
+         *
+         *     Раньше здесь выдавался код, который ничего не открывал, а UI обещал рабочий
+         *     доступ. Пока нет механизма просмотра данных тренером и аудита доступа
+         *     (WS3-8), эндпоинты честно отвечают 501 вместо выдачи бесполезного кода.
+         */
+        delete: operations["coach_access_unavailable_api_v1_users_coach_access__access_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1230,12 +1957,11 @@ export type paths = {
         };
         /**
          * Get User Stats
-         * @description Lightweight user stats for `ProfilePage`.
+         * @description Lightweight user stats for `ProfilePage` (окно — 30 дней).
          *
-         *     The frontend expects:
-         *       { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-         *
-         *     For MVP we map from analytics summary; calories are not tracked yet.
+         *     Значения считаются по реальной истории: `active_days` — уникальные дни
+         *     с тренировками, остальное — из сводки аналитики. Калории не считаются,
+         *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_me_stats_get"];
         put?: never;
@@ -1255,12 +1981,11 @@ export type paths = {
         };
         /**
          * Get User Stats
-         * @description Lightweight user stats for `ProfilePage`.
+         * @description Lightweight user stats for `ProfilePage` (окно — 30 дней).
          *
-         *     The frontend expects:
-         *       { active_days, total_workouts, current_streak, longest_streak, total_duration, total_calories }
-         *
-         *     For MVP we map from analytics summary; calories are not tracked yet.
+         *     Значения считаются по реальной истории: `active_days` — уникальные дни
+         *     с тренировками, остальное — из сводки аналитики. Калории не считаются,
+         *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_stats_get"];
         put?: never;
@@ -1363,6 +2088,103 @@ export type paths = {
         head?: never;
         /** Update Active Workout */
         patch: operations["update_active_workout_api_v1_workouts_history__workout_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workouts/plate-calculator": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calculate Plates Endpoint
+         * @description Разложить блины на одну сторону штанги (SPEC-005 §42–43).
+         */
+        post: operations["calculate_plates_endpoint_api_v1_workouts_plate_calculator_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progression/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Progression Recommendation
+         * @description Explainable next-target recommendation (SPEC-005 §37–38).
+         */
+        get: operations["get_progression_recommendation_api_v1_workouts_progression_recommendation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Workout Session */
+        post: operations["create_workout_session_api_v1_workouts_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/sessions/incomplete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Incomplete Sessions
+         * @description Незавершённые сессии для восстановления (SPEC-005 §48).
+         */
+        get: operations["list_incomplete_sessions_api_v1_workouts_sessions_incomplete_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/sessions/{session_id}/exercises/{exercise_id}/smart-rest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Smart Rest Recommendation
+         * @description Рекомендация отдыха по типу подхода и интенсивности (SPEC-005 §19).
+         */
+        get: operations["get_smart_rest_recommendation_api_v1_workouts_sessions__session_id__exercises__exercise_id__smart_rest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/workouts/sessions/{session_id}/exercises/{exercise_id}/weight-recommendation": {
@@ -1525,6 +2347,46 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workouts/{workout_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Workout
+         * @description Отменить незавершённую тренировку (SPEC-005 §3/§48).
+         */
+        post: operations["cancel_workout_api_v1_workouts__workout_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workout_id}/exercises/{exercise_row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Session Exercise
+         * @description Пропустить / заменить / переместить / аннотировать упражнение (SPEC-005 §25–28).
+         */
+        patch: operations["patch_session_exercise_api_v1_workouts__workout_id__exercises__exercise_row_id__patch"];
+        trace?: never;
+    };
     "/api/v1/workouts/{workout_id}/sets/{set_id}": {
         parameters: {
             query?: never;
@@ -1600,6 +2462,12 @@ export type paths = {
          *
          *     This endpoint receives updates from Telegram when using webhook mode.
          *     Only used in production environment.
+         *
+         *     When ``TELEGRAM_WEBHOOK_SECRET`` is configured the request must carry the
+         *     matching ``X-Telegram-Bot-Api-Secret-Token`` header (Telegram echoes the value
+         *     passed to ``setWebhook``). The check happens before the body is parsed so
+         *     forged updates never reach the dispatcher. The reverse proxy intentionally
+         *     skips rate limiting for this path, which makes the secret the only gate.
          */
         post: operations["telegram_webhook_telegram_webhook_post"];
         delete?: never;
@@ -1733,24 +2601,15 @@ export type components = {
              * @description Mean workout duration in minutes within the selected period.
              */
             avg_duration: number;
-            /**
-             * Avg Rest Time Seconds
-             * @description Mean actual_rest_seconds across sets where rest was tracked.
-             */
+            /** Avg Rest Time Seconds */
             avg_rest_time_seconds?: number | null;
-            /**
-             * Avg Rpe Per Workout
-             * @description Mean of per-workout average RPE (only sets with RPE logged).
-             */
+            /** Avg Rpe Per Workout */
             avg_rpe_per_workout?: number | null;
-            /**
-             * Avg Rpe Previous Period
-             * @description Same metric for the immediately preceding period of equal length.
-             */
+            /** Avg Rpe Previous Period */
             avg_rpe_previous_period?: number | null;
             /**
              * Avg Rpe Trend
-             * @description up | down | flat when both current and previous period have RPE data.
+             * @description Direction of RPE change vs previous equivalent window: up | down | flat.
              */
             avg_rpe_trend?: string | null;
             /**
@@ -1758,15 +2617,9 @@ export type components = {
              * @description Most frequent exercise name in the selected period.
              */
             favorite_exercise?: string | null;
-            /**
-             * Intensity Score
-             * @description avg_rpe × (sets_count / avg_rest_minutes); None if rest or RPE insufficient.
-             */
+            /** Intensity Score */
             intensity_score?: number | null;
-            /**
-             * Intensity Weekly Chart
-             * @description Intensity score by ISO week (for longer windows).
-             */
+            /** Intensity Weekly Chart */
             intensity_weekly_chart?: components["schemas"]["AnalyticsIntensityWeekPoint"][];
             /**
              * Period
@@ -1780,18 +2633,12 @@ export type components = {
             streak_days: number;
             /** Total Duration Minutes */
             total_duration_minutes: number;
-            /**
-             * Total Time Under Tension Seconds
-             * @description Sum of (completed_at - started_at) in seconds where both timestamps exist.
-             */
+            /** Total Time Under Tension Seconds */
             total_time_under_tension_seconds?: number | null;
             /** Total Workouts */
             total_workouts: number;
-            /**
-             * Weekly Chart
-             * @description Workout counts by day or by ISO week start within the chart window.
-             */
-            weekly_chart?: components["schemas"]["AnalyticsWeeklyChartPoint"][];
+            /** Weekly Chart */
+            weekly_chart: components["schemas"]["AnalyticsWeeklyChartPoint"][];
             /**
              * Workouts This Month
              * @description Workouts logged in the current calendar month.
@@ -1804,7 +2651,6 @@ export type components = {
             workouts_this_week: number;
             /**
              * Workouts With Rpe Count
-             * @description Number of completed workouts in the window that logged at least one RPE value.
              * @default 0
              */
             workouts_with_rpe_count: number;
@@ -1950,16 +2796,102 @@ export type components = {
             /** Success */
             success: boolean;
             /**
-             * Token
-             * @description JWT access token (Mini App / camelCase alias of access_token).
-             */
-            token?: string | null;
-            /**
              * Token Type
              * @default bearer
              */
             token_type: string;
             user?: components["schemas"]["TelegramUserData"] | null;
+        };
+        /**
+         * BodyMeasurementCreate
+         * @description Request model for creating body circumference measurement.
+         */
+        BodyMeasurementCreate: {
+            /**
+             * Measured At
+             * Format: date
+             * @description Measurement date in YYYY-MM-DD format.
+             */
+            measured_at: string;
+            /**
+             * Measurement Type
+             * @description Body measurement type.
+             * @enum {string}
+             */
+            measurement_type: "chest" | "waist" | "hips" | "left_thigh" | "right_thigh" | "left_bicep" | "right_bicep";
+            /**
+             * Value Cm
+             * @description Measurement value in centimeters.
+             */
+            value_cm: number;
+        };
+        /**
+         * BodyMeasurementHistoryResponse
+         * @description Body measurements history response.
+         */
+        BodyMeasurementHistoryResponse: {
+            /** Date From */
+            date_from: string | null;
+            /** Date To */
+            date_to: string | null;
+            /** Items */
+            items: components["schemas"]["BodyMeasurementResponse"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * BodyMeasurementResponse
+         * @description Body measurement response.
+         */
+        BodyMeasurementResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /**
+             * Measured At
+             * Format: date
+             */
+            measured_at: string;
+            /** Measurement Type */
+            measurement_type: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** User Id */
+            user_id: number;
+            /** Value Cm */
+            value_cm: number;
+        };
+        /**
+         * BodyMeasurementUpdate
+         * @description Request model for updating body circumference measurement.
+         */
+        BodyMeasurementUpdate: {
+            /**
+             * Measured At
+             * @description Measurement date in YYYY-MM-DD format.
+             */
+            measured_at?: string | null;
+            /**
+             * Measurement Type
+             * @description Body measurement type.
+             */
+            measurement_type?: ("chest" | "waist" | "hips" | "left_thigh" | "right_thigh" | "left_bicep" | "right_bicep") | null;
+            /**
+             * Value Cm
+             * @description Measurement value in centimeters.
+             */
+            value_cm?: number | null;
         };
         /** Body_create_custom_exercise_multipart_api_v1_exercises_custom_post */
         Body_create_custom_exercise_multipart_api_v1_exercises_custom_post: {
@@ -2373,34 +3305,74 @@ export type components = {
          * @description Completed exercise data
          */
         "CompletedExercise-Input": {
+            /** Block Id */
+            block_id?: number | null;
+            /** Block Order */
+            block_order?: number | null;
+            /** Block Rest Seconds */
+            block_rest_seconds?: number | null;
+            /** Block Rounds */
+            block_rounds?: number | null;
+            block_type?: components["schemas"]["WorkoutBlockType"] | null;
             /** Exercise Id */
             exercise_id: number;
+            /**
+             * Id
+             * @description Database row id of the session exercise, when persisted.
+             */
+            id?: number | null;
             /** Name */
             name: string;
             /** Notes */
             notes?: string | null;
+            progression_target?: components["schemas"]["ProgressionTargetInfo"] | null;
             /**
              * Sets Completed
              * @description Recorded sets (max 100 per exercise).
              */
             sets_completed: components["schemas"]["CompletedSet-Input"][];
+            /**
+             * Status
+             * @description Exercise status inside the session ('skipped' when skipped).
+             */
+            status?: string | null;
         };
         /**
          * CompletedExercise
          * @description Completed exercise data
          */
         "CompletedExercise-Output": {
+            /** Block Id */
+            block_id?: number | null;
+            /** Block Order */
+            block_order?: number | null;
+            /** Block Rest Seconds */
+            block_rest_seconds?: number | null;
+            /** Block Rounds */
+            block_rounds?: number | null;
+            block_type?: components["schemas"]["WorkoutBlockType"] | null;
             /** Exercise Id */
             exercise_id: number;
+            /**
+             * Id
+             * @description Database row id of the session exercise, when persisted.
+             */
+            id?: number | null;
             /** Name */
             name: string;
             /** Notes */
             notes?: string | null;
+            progression_target?: components["schemas"]["ProgressionTargetInfo"] | null;
             /**
              * Sets Completed
              * @description Recorded sets (max 100 per exercise).
              */
             sets_completed: components["schemas"]["CompletedSet-Output"][];
+            /**
+             * Status
+             * @description Exercise status inside the session ('skipped' when skipped).
+             */
+            status?: string | null;
         };
         /**
          * CompletedSet
@@ -2428,10 +3400,35 @@ export type components = {
              */
             duration?: number | null;
             /**
+             * Id
+             * @description Database ID of the workout_set row, if persisted.
+             */
+            id?: number | null;
+            /**
+             * Incline Pct
+             * @description Treadmill incline in percent
+             */
+            incline_pct?: number | null;
+            /**
+             * Notes
+             * @description Set-level notes/comments.
+             */
+            notes?: string | null;
+            /**
+             * Planned Duration
+             * @description Duration planned before the progression target was applied.
+             */
+            planned_duration?: number | null;
+            /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
              */
             planned_rest_seconds?: number | null;
+            /**
+             * Planned Weight
+             * @description Weight planned before the progression target was applied.
+             */
+            planned_weight?: number | null;
             /** Reps */
             reps?: number | null;
             /**
@@ -2448,7 +3445,7 @@ export type components = {
              * Rpe
              * @description Rate of Perceived Exertion (1-10).
              */
-            rpe?: number | null;
+            rpe?: number | string | null;
             /**
              * Set Number
              * @description 1-based set index within the exercise.
@@ -2459,6 +3456,11 @@ export type components = {
              * @default working
              */
             set_type: components["schemas"]["WorkoutSetType"];
+            /**
+             * Speed Kmh
+             * @description Treadmill speed in km/h
+             */
+            speed_kmh?: number | null;
             /**
              * Started At
              * @description Set start timestamp (client, for time-under-tension).
@@ -2493,10 +3495,35 @@ export type components = {
              */
             duration?: number | null;
             /**
+             * Id
+             * @description Database ID of the workout_set row, if persisted.
+             */
+            id?: number | null;
+            /**
+             * Incline Pct
+             * @description Treadmill incline in percent
+             */
+            incline_pct?: number | null;
+            /**
+             * Notes
+             * @description Set-level notes/comments.
+             */
+            notes?: string | null;
+            /**
+             * Planned Duration
+             * @description Duration planned before the progression target was applied.
+             */
+            planned_duration?: number | null;
+            /**
              * Planned Rest Seconds
              * @description Planned rest for the set, in seconds.
              */
             planned_rest_seconds?: number | null;
+            /**
+             * Planned Weight
+             * @description Weight planned before the progression target was applied.
+             */
+            planned_weight?: number | null;
             /** Reps */
             reps?: number | null;
             /**
@@ -2513,7 +3540,7 @@ export type components = {
              * Rpe
              * @description Rate of Perceived Exertion (1-10).
              */
-            rpe?: number | null;
+            rpe?: string | null;
             /**
              * Set Number
              * @description 1-based set index within the exercise.
@@ -2525,6 +3552,11 @@ export type components = {
              */
             set_type: components["schemas"]["WorkoutSetType"];
             /**
+             * Speed Kmh
+             * @description Treadmill speed in km/h
+             */
+            speed_kmh?: number | null;
+            /**
              * Started At
              * @description Set start timestamp (client, for time-under-tension).
              */
@@ -2532,6 +3564,12 @@ export type components = {
             /** Weight */
             weight?: number | null;
         };
+        /**
+         * Confidence
+         * @description SPEC-006 §29 — quality of the underlying data, not an AI probability.
+         * @enum {string}
+         */
+        Confidence: "high" | "medium" | "low";
         /**
          * DailyWellnessCreate
          * @description Request model for creating daily wellness entry
@@ -2730,6 +3768,34 @@ export type components = {
             relationship_type?: components["schemas"]["EmergencyRelationship"] | null;
         };
         /**
+         * EmergencyContactLinkCodeResponse
+         * @description One-time code that binds a contact's Telegram account to this record
+         */
+        EmergencyContactLinkCodeResponse: {
+            /** Code */
+            code: string;
+            /**
+             * Command
+             * @description Exact message the contact must send to the bot.
+             */
+            command: string;
+            /** Contact Id */
+            contact_id: number;
+            /** Contact Name */
+            contact_name: string;
+            /**
+             * Deep Link
+             * @description t.me link that prefills the command; None if TELEGRAM_BOT_USERNAME is unset.
+             */
+            deep_link?: string | null;
+            /**
+             * Is Linked
+             * @description True when the contact is already linked (a new code re-links them).
+             * @default false
+             */
+            is_linked: boolean;
+        };
+        /**
          * EmergencyContactListResponse
          * @description List of emergency contacts response
          */
@@ -2759,6 +3825,17 @@ export type components = {
             id: number;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Is Linked
+             * @description True when the contact linked their Telegram account, i.e. can receive alerts. Contacts without a linked account cannot be notified — the API says so instead of reporting a fake success.
+             * @default false
+             */
+            is_linked: boolean;
+            /**
+             * Linked At
+             * @description When the contact linked their Telegram account.
+             */
+            linked_at?: string | null;
             /** Notify On Emergency */
             notify_on_emergency: boolean;
             /** Notify On Workout End */
@@ -2853,6 +3930,10 @@ export type components = {
         /**
          * EmergencyNotifyResponse
          * @description Emergency notification response
+         *
+         *     ``successful_count`` counts messages the Telegram Bot API accepted. It is 0
+         *     when no contact is linked — the caller must not show "help is on the way"
+         *     in that case, see ``results`` for per-contact reasons.
          */
         EmergencyNotifyResponse: {
             /** Failed Count */
@@ -2902,7 +3983,16 @@ export type components = {
          * @description Result of workout start/end notify-to-contacts action
          */
         EmergencyWorkoutNotifyResponse: {
-            /** Contacts Notified */
+            /**
+             * Contacts Failed
+             * @description Selected contacts that could not be reached (not linked or delivery error).
+             * @default 0
+             */
+            contacts_failed: number;
+            /**
+             * Contacts Notified
+             * @description Contacts the message was actually delivered to.
+             */
             contacts_notified?: number | null;
             /** Message */
             message: string;
@@ -2933,7 +4023,7 @@ export type components = {
          * ExerciseCategory
          * @enum {string}
          */
-        ExerciseCategory: "strength" | "cardio" | "flexibility" | "balance" | "sport";
+        ExerciseCategory: "strength" | "cardio" | "flexibility" | "balance" | "sport" | "rehab";
         /** ExerciseCategoryItem */
         ExerciseCategoryItem: {
             /** Icon */
@@ -3368,6 +4458,29 @@ export type components = {
          */
         HealthDashboardPeriod: "7d" | "30d" | "90d" | "1y";
         /**
+         * HealthDataConsent
+         * @description Proof that the user accepted a specific version of the legal texts.
+         */
+        HealthDataConsent: {
+            /**
+             * Accepted At
+             * Format: date-time
+             * @description When the consent was recorded (UTC).
+             */
+            accepted_at: string;
+            /**
+             * Source
+             * @description Where the consent was collected.
+             * @default onboarding
+             */
+            source: string;
+            /**
+             * Version
+             * @description Version of the consent text the user accepted.
+             */
+            version: string;
+        };
+        /**
          * HealthStatsResponse
          * @description Health statistics response
          */
@@ -3557,10 +4670,21 @@ export type components = {
          * @description Request model for first-login onboarding.
          */
         OnboardingRequest: {
+            /**
+             * Consent Version
+             * @description Version of the consent text the user saw; defaults to the current one.
+             */
+            consent_version?: string | null;
             /** @description Current training level. */
             experience_level: components["schemas"]["ExperienceLevel"];
             /** @description Primary fitness objective. */
             fitness_goal: components["schemas"]["FitnessGoal"];
+            /**
+             * Health Data Consent
+             * @description True when the user ticked the consent box for processing health data (pulse, glucose, weight, sleep, wellbeing). Without it onboarding is rejected.
+             * @default false
+             */
+            health_data_consent: boolean;
         };
         /**
          * OnboardingResponse
@@ -3659,6 +4783,78 @@ export type components = {
             unit: string;
             /** Value */
             value: number;
+        };
+        /**
+         * PersonalRecordEntry
+         * @description Personal record achieved or matched (SPEC-005 §40).
+         */
+        PersonalRecordEntry: {
+            /** Achieved At */
+            achieved_at?: string | null;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Name */
+            exercise_name: string;
+            /**
+             * Is New Record
+             * @default true
+             */
+            is_new_record: boolean;
+            /** Previous Value */
+            previous_value?: number | null;
+            record_type: components["schemas"]["PersonalRecordType"];
+            /** Set Number */
+            set_number?: number | null;
+            /**
+             * Unit
+             * @default kg
+             */
+            unit: string;
+            /** Value */
+            value: number;
+        };
+        /**
+         * PersonalRecordType
+         * @description Personal record types tracked per exercise (SPEC-005 §40).
+         * @enum {string}
+         */
+        PersonalRecordType: "MAX_WEIGHT" | "MAX_REPS_AT_WEIGHT" | "ESTIMATED_1RM" | "MAX_VOLUME" | "MAX_DURATION";
+        /**
+         * PlateCalculationRequest
+         * @description Plate calculator request (SPEC-005 §42–43).
+         */
+        PlateCalculationRequest: {
+            /**
+             * Available Plates
+             * @description Available plate weights in kg.
+             */
+            available_plates?: number[];
+            /**
+             * Bar Weight
+             * @default 20
+             */
+            bar_weight: number;
+            /** Target Weight */
+            target_weight: number;
+        };
+        /**
+         * PlateCalculationResponse
+         * @description Plate calculator result per side (SPEC-005 §42–43).
+         */
+        PlateCalculationResponse: {
+            /** Achievable */
+            achievable: boolean;
+            /** Exact Weight */
+            exact_weight?: number | null;
+            /** Nearest Weight */
+            nearest_weight?: number | null;
+            /** Plates Per Side */
+            plates_per_side?: number[];
+            /**
+             * Remainder
+             * @default 0
+             */
+            remainder: number;
         };
         /**
          * ProgressInsightsBestSetItem
@@ -3798,6 +4994,587 @@ export type components = {
             workout_count: number;
         };
         /**
+         * ProgressionBulkResult
+         * @description Outcome of a bulk change across accepted targets (SPEC §58).
+         */
+        ProgressionBulkResult: {
+            /**
+             * Applied To All
+             * @description True when the request addressed every current target of the user.
+             * @default false
+             */
+            applied_to_all: boolean;
+            /**
+             * Changed Ids
+             * @description Exactly the targets the change applied to — not the ids that were requested. A caller can hand them straight back to undo the action without re-deriving what changed from the response.
+             */
+            changed_ids?: number[];
+            /**
+             * Released Ids
+             * @description Sweep members an undo released: targets a newer one replaced, which no undo can switch back on. Their prefill stays off and only the sweep stamp is cleared, so the entry stops holding a goal nobody can restore. Empty for every other bulk action.
+             */
+            released_ids?: number[];
+            /**
+             * Skipped
+             * @description Targets the change did not apply to, each with the reason: unknown, someone else's, no longer an accepted target, or — for switching the prefill off — already switched off.
+             */
+            skipped?: components["schemas"]["ProgressionBulkSkipped"][];
+            /**
+             * Updated
+             * @description Targets the change actually applied to.
+             * @default 0
+             */
+            updated: number;
+        };
+        /**
+         * ProgressionBulkSkipReason
+         * @description Why a bulk action left one selected target alone (SPEC-006 §58).
+         * @enum {string}
+         */
+        ProgressionBulkSkipReason: "not_found" | "already_disabled" | "already_enabled" | "superseded";
+        /**
+         * ProgressionBulkSkipped
+         * @description One selected target a bulk action did not change, explained (SPEC §58).
+         *
+         *     Reporting the id alone leaves the user guessing which goal was left behind;
+         *     the name, the value it still carries and the scope come along so the screen
+         *     can name the row exactly like the list does. A target that is not a current
+         *     accepted target can only be identified by its id — and a record that a newer
+         *     target replaced says which id to address instead, so the caller never has to
+         *     guess which row the slot belongs to now.
+         */
+        ProgressionBulkSkipped: {
+            /** Exercise Id */
+            exercise_id?: number | null;
+            /**
+             * Exercise Name
+             * @description Catalog name; null when the target no longer exists.
+             */
+            exercise_name?: string | null;
+            reason: components["schemas"]["ProgressionBulkSkipReason"];
+            /** Recommendation Id */
+            recommendation_id: number;
+            /**
+             * Scope Key
+             * @description Progression scope the skipped target belongs to.
+             */
+            scope_key?: string | null;
+            /**
+             * Superseded By
+             * @description The target that owns this scope now, when the skipped record was replaced by a newer one (`superseded`); null for every other reason.
+             */
+            superseded_by?: number | null;
+            /**
+             * Unit
+             * @description 'kg' or 'seconds'.
+             */
+            unit?: string | null;
+            /**
+             * Value
+             * @description The target's current value (kg, or seconds when timed).
+             */
+            value?: number | null;
+        };
+        /**
+         * ProgressionPolicy
+         * @description Supported progression policies (SPEC-005 §29).
+         * @enum {string}
+         */
+        ProgressionPolicy: "MANUAL" | "LINEAR" | "DOUBLE_PROGRESSION" | "RPE_BASED" | "RIR_BASED" | "PERCENT_1RM" | "TIME_PROGRESSION";
+        /**
+         * ProgressionPolicyResponse
+         * @description Effective policy for one progression scope (SPEC §6/§7).
+         */
+        ProgressionPolicyResponse: {
+            /** Deload Percent */
+            deload_percent?: number | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Equipment Increment */
+            equipment_increment?: number | null;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Failure Threshold */
+            failure_threshold?: number | null;
+            /**
+             * Id
+             * @description Null when the scope still uses defaults.
+             */
+            id?: number | null;
+            /** Increment */
+            increment?: number | null;
+            /** Max Value */
+            max_value?: number | null;
+            /** Min Value */
+            min_value?: number | null;
+            /** Percent 1Rm */
+            percent_1rm?: number | null;
+            /**
+             * Policy Scope Key
+             * @description Scope the stored policy row actually lives in; differs from scope_key when a template-level or user-level policy is inherited. Null for defaults.
+             */
+            policy_scope_key?: string | null;
+            /**
+             * Policy Version
+             * @default MANUAL_V1
+             */
+            policy_version: string;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /**
+             * Scope Key
+             * @description Progression scope: user + template + exercise + program slot.
+             */
+            scope_key: string;
+            /** Sets Target */
+            sets_target?: number | null;
+            /** Target Rir */
+            target_rir?: number | null;
+            /** Target Rpe */
+            target_rpe?: number | null;
+            /** Template Exercise Id */
+            template_exercise_id?: number | null;
+            /** Template Id */
+            template_id?: number | null;
+            /** Time Increment Seconds */
+            time_increment_seconds?: number | null;
+            time_priority?: components["schemas"]["TimePriority"] | null;
+            /** Time Target Seconds */
+            time_target_seconds?: number | null;
+            /** @default MANUAL */
+            type: components["schemas"]["ProgressionPolicy"];
+            /** User Id */
+            user_id: number;
+        };
+        /**
+         * ProgressionPolicyUpdate
+         * @description PUT body: configure progression for one exercise scope.
+         */
+        ProgressionPolicyUpdate: {
+            /** Deload Percent */
+            deload_percent?: number | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Equipment Increment */
+            equipment_increment?: number | null;
+            /** Failure Threshold */
+            failure_threshold?: number | null;
+            /** Increment */
+            increment?: number | null;
+            /** Max Value */
+            max_value?: number | null;
+            /** Min Value */
+            min_value?: number | null;
+            /** Percent 1Rm */
+            percent_1rm?: number | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Sets Target */
+            sets_target?: number | null;
+            /** Target Rir */
+            target_rir?: number | null;
+            /** Target Rpe */
+            target_rpe?: number | null;
+            /** Time Increment Seconds */
+            time_increment_seconds?: number | null;
+            /** @description Weight+time exercises: TIME_FIRST or WEIGHT_FIRST (SPEC §24). */
+            time_priority?: components["schemas"]["TimePriority"] | null;
+            /** Time Target Seconds */
+            time_target_seconds?: number | null;
+            /**
+             * @description MANUAL never computes a target; the engine only proposes for other types.
+             * @default MANUAL
+             */
+            type: components["schemas"]["ProgressionPolicy"];
+        };
+        /**
+         * ProgressionPrefillBulkDisable
+         * @description POST body: switch the automatic prefill off for many targets at once.
+         */
+        ProgressionPrefillBulkDisable: {
+            /**
+             * Recommendation Ids
+             * @description Targets to switch off. Omit (or send null) to switch off every accepted target the settings screen lists.
+             */
+            recommendation_ids?: number[] | null;
+        };
+        /**
+         * ProgressionPrefillBulkEnable
+         * @description POST body: switch the automatic prefill back on — the undo of a sweep.
+         *
+         *     Two addresses, never both: the exact targets an action reported as changed,
+         *     or whole sweeps. A sweep id is the honest way to undo one link of the chain
+         *     (and to undo several at once): the caller does not have to re-state a set of
+         *     ids it merely read, and a chain longer than the id cap is still one call.
+         */
+        ProgressionPrefillBulkEnable: {
+            /**
+             * Recommendation Ids
+             * @description The targets to switch back on (the changed set of one action).
+             */
+            recommendation_ids?: number[] | null;
+            /**
+             * Sweep Ids
+             * @description Sweeps whose still-switched-off targets come back, resolved server-side. This is what «вернуть всё» in the undo journal sends.
+             */
+            sweep_ids?: string[] | null;
+        };
+        /**
+         * ProgressionPrefillListResponse
+         * @description SPEC §58: accepted targets and whether they prefill new sessions.
+         */
+        ProgressionPrefillListResponse: {
+            /** Items */
+            items?: components["schemas"]["ProgressionRecommendationResponse"][];
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
+         * ProgressionPrefillSweep
+         * @description One bulk switch-off the server still holds (SPEC §58).
+         *
+         *     Read-only view of a sweep that has targets switched off: the ids to hand to
+         *     ``POST /prefill/bulk-enable``, plus when it happened so a chain of sweeps can
+         *     be told apart. It carries no report — how many targets a sweep skipped and
+         *     why is not reconstructed after the fact — so an undo promises the targets and
+         *     nothing else. A sweep left with no targets at all (undone in full, or its last
+         *     one switched back on by hand) is not listed. A sweep whose members were all
+         *     replaced by newer targets is listed with ``restorable`` false and them named in
+         *     ``superseded``: the action stays visible and says there is nothing to switch
+         *     back on, instead of disappearing and leaving its stamp unreachable.
+         */
+        ProgressionPrefillSweep: {
+            /**
+             * Changed Ids
+             * @description Exactly the set its undo brings back.
+             */
+            changed_ids?: number[];
+            /**
+             * Declined At
+             * @description When that action switched its last target off.
+             */
+            declined_at?: string | null;
+            /**
+             * Restorable
+             * @description False when every member it still holds was replaced by a newer target, so its undo has nothing to switch back on.
+             * @default true
+             */
+            restorable: boolean;
+            /**
+             * Superseded
+             * @description Members it still holds that a newer target replaced; nothing can be switched back on through them.
+             */
+            superseded?: components["schemas"]["ProgressionPrefillSweepSuperseded"][];
+            /**
+             * Sweep Id
+             * @description Identifier shared by the targets one bulk action switched off.
+             */
+            sweep_id: string;
+            /**
+             * Updated
+             * @description Members it switched off that are still switched off *and* still the target of their scope — what its undo really brings back.
+             * @default 0
+             */
+            updated: number;
+        };
+        /**
+         * ProgressionPrefillSweepListResponse
+         * @description SPEC §58: the chain of bulk switch-offs that can still be undone.
+         */
+        ProgressionPrefillSweepListResponse: {
+            /**
+             * Sweeps
+             * @description Newest sweep first.
+             */
+            sweeps?: components["schemas"]["ProgressionPrefillSweep"][];
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
+         * ProgressionPrefillSweepSuperseded
+         * @description A sweep member a newer target replaced, so no undo can bring it back (§58).
+         */
+        ProgressionPrefillSweepSuperseded: {
+            /** Recommendation Id */
+            recommendation_id: number;
+            /**
+             * Superseded By
+             * @description The target that owns the scope now, when it is still known.
+             */
+            superseded_by?: number | null;
+        };
+        /**
+         * ProgressionRecommendation
+         * @description Explainable progression recommendation (SPEC-005 §37–38, SPEC-006 §8).
+         *
+         *     SPEC-006 fields are additive: existing consumers keep reading the original
+         *     keys, while the card can now show status, lifecycle and the persisted id.
+         */
+        ProgressionRecommendation: {
+            /** Actual Selected Value */
+            actual_selected_value?: number | null;
+            /**
+             * Confidence
+             * @default low
+             */
+            confidence: string;
+            /** Difference */
+            difference?: number | null;
+            /** Exercise Id */
+            exercise_id?: number | null;
+            /**
+             * Failure Streak
+             * @default 0
+             */
+            failure_streak: number;
+            /** Id */
+            id?: number | null;
+            /** Lifecycle Status */
+            lifecycle_status?: string | null;
+            /** @default MANUAL */
+            policy: components["schemas"]["ProgressionPolicy"];
+            /** Policy Version */
+            policy_version?: string | null;
+            /** Previous Duration */
+            previous_duration?: number | null;
+            /** Previous Reps */
+            previous_reps?: number | null;
+            /** Previous Value */
+            previous_value?: number | null;
+            /**
+             * Reason Code
+             * @default NO_DATA
+             */
+            reason_code: string;
+            /**
+             * Reason Text
+             * @default
+             */
+            reason_text: string;
+            /** Recommended Duration */
+            recommended_duration?: number | null;
+            /** Recommended Reps */
+            recommended_reps?: number | null;
+            /** Recommended Value */
+            recommended_value?: number | null;
+            /** Recovery Warning */
+            recovery_warning?: string | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Scope Key */
+            scope_key?: string | null;
+            /** Source Session Id */
+            source_session_id?: number | null;
+            /** Status */
+            status?: string | null;
+            /** Template Exercise Id */
+            template_exercise_id?: number | null;
+            /** Template Id */
+            template_id?: number | null;
+        };
+        /**
+         * ProgressionRecommendationDecision
+         * @description POST body for accept/reject (SPEC §42–§44).
+         */
+        ProgressionRecommendationDecision: {
+            /**
+             * Selected Value
+             * @description Omit to accept the recommended value; send a different own value to record the recommendation as ``modified``.
+             */
+            selected_value?: number | null;
+        };
+        /**
+         * ProgressionRecommendationResponse
+         * @description Explainable recommendation (SPEC §8/§27/§28/§29/§46).
+         */
+        ProgressionRecommendationResponse: {
+            /** Actual Selected Value */
+            actual_selected_value?: number | null;
+            /** @default low */
+            confidence: components["schemas"]["Confidence"];
+            /** Created At */
+            created_at?: string | null;
+            /** Difference */
+            difference?: number | null;
+            /**
+             * Effective Increment
+             * @description Step the scope progresses by now (equipment-aware).
+             */
+            effective_increment?: number | null;
+            /** @description Policy that governs the scope right now. Differs from ``policy`` (the policy this target was produced by) once the target's policy is edited on the settings screen (SPEC §58). */
+            effective_policy?: components["schemas"]["ProgressionPolicy"] | null;
+            /**
+             * Effective Time Increment Seconds
+             * @description Time step in seconds for time-based policies (SPEC §24).
+             */
+            effective_time_increment_seconds?: number | null;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Name */
+            exercise_name?: string | null;
+            /**
+             * Failure Streak
+             * @default 0
+             */
+            failure_streak: number;
+            /**
+             * Id
+             * @description Null for a non-persisted preview.
+             */
+            id?: number | null;
+            /**
+             * Idempotent Replay
+             * @default false
+             */
+            idempotent_replay: boolean;
+            /** @default generated */
+            lifecycle_status: components["schemas"]["RecommendationLifecycle"];
+            /**
+             * Persisted
+             * @default false
+             */
+            persisted: boolean;
+            /** @default MANUAL */
+            policy: components["schemas"]["ProgressionPolicy"];
+            /**
+             * Policy Version
+             * @default MANUAL_V1
+             */
+            policy_version: string;
+            /**
+             * Prefill Declined
+             * @description True when the user undid this target's automatic prefill: it stays accepted, but a new session no longer starts on it (SPEC §58).
+             * @default false
+             */
+            prefill_declined: boolean;
+            /** Previous Duration */
+            previous_duration?: number | null;
+            /** Previous Reps */
+            previous_reps?: number | null;
+            /** Previous Value */
+            previous_value?: number | null;
+            /**
+             * Reason Code
+             * @default
+             */
+            reason_code: string;
+            /**
+             * Reason Text
+             * @default
+             */
+            reason_text: string;
+            /** Recommended Duration */
+            recommended_duration?: number | null;
+            /** Recommended Reps */
+            recommended_reps?: number | null;
+            /** Recommended Value */
+            recommended_value?: number | null;
+            /**
+             * Recovery Warning
+             * @description Advisory only — recovery never changes the recommendation (SPEC §34).
+             */
+            recovery_warning?: string | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Scope Key */
+            scope_key: string;
+            /** Source Session Id */
+            source_session_id?: number | null;
+            /** @default INSUFFICIENT_DATA */
+            status: components["schemas"]["RecommendationStatus"];
+            /** Template Exercise Id */
+            template_exercise_id?: number | null;
+            /** Template Id */
+            template_id?: number | null;
+        };
+        /**
+         * ProgressionTargetBulkUpdate
+         * @description POST body: apply one policy / rep-range edit to several targets (§58).
+         *
+         *     ``value`` is deliberately absent: a bulk action configures how the scopes
+         *     progress, while the next number stays a per-target decision.
+         */
+        ProgressionTargetBulkUpdate: {
+            /** Recommendation Ids */
+            recommendation_ids: number[];
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** @description Policy type applied to each selected target's own scope. */
+            type?: components["schemas"]["ProgressionPolicy"] | null;
+        };
+        /**
+         * ProgressionTargetInfo
+         * @description SPEC-006 §42/§58: accepted target a session's numbers were seeded from.
+         *
+         *     Present on an exercise only while the seeded value is still in place; the UI
+         *     labels the number and offers a revert to the planned one.
+         */
+        ProgressionTargetInfo: {
+            /** Lifecycle Status */
+            lifecycle_status?: string | null;
+            /** Policy */
+            policy?: string | null;
+            /** Recommendation Id */
+            recommendation_id: number;
+            /** Scope Key */
+            scope_key: string;
+            /**
+             * Unit
+             * @description What ``value`` measures.
+             * @default kg
+             */
+            unit: string;
+            /**
+             * Value
+             * @description Accepted target: kg or seconds.
+             */
+            value: number;
+        };
+        /**
+         * ProgressionTargetUpdate
+         * @description PATCH body: edit an accepted target in place (SPEC §58).
+         *
+         *     Omitted fields keep their current value — the endpoint never resets a policy
+         *     parameter the user did not touch. The remaining policy parameters (step,
+         *     RPE target, sets, percent of 1RM…) belong to the per-exercise policy screen
+         *     (``PUT /progression/exercises/{id}``), so they are deliberately not here.
+         */
+        ProgressionTargetUpdate: {
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** @description Policy type for the target's own progression scope. */
+            type?: components["schemas"]["ProgressionPolicy"] | null;
+            /**
+             * Value
+             * @description New target value: kilograms, or seconds when the policy is TIME_PROGRESSION. New sessions start on it.
+             */
+            value?: number | null;
+        };
+        /**
          * ReadinessChecks
          * @description Per-dependency result: ``"ok"`` or ``"error: …"`` (human-readable failure).
          */
@@ -3826,6 +5603,18 @@ export type components = {
              */
             status: "ready" | "degraded";
         };
+        /**
+         * RecommendationLifecycle
+         * @description SPEC-006 §10 — a recommendation never mutates the program by itself.
+         * @enum {string}
+         */
+        RecommendationLifecycle: "generated" | "accepted" | "modified" | "rejected" | "expired";
+        /**
+         * RecommendationStatus
+         * @description SPEC-006 §9.
+         * @enum {string}
+         */
+        RecommendationStatus: "INCREASE" | "KEEP" | "DECREASE" | "DELOAD" | "MANUAL" | "INSUFFICIENT_DATA";
         /**
          * RecoveryStateRecalculateResponse
          * @description Recovery state after manual recalculation
@@ -3975,6 +5764,18 @@ export type components = {
             opening_avg_rpe: number;
         };
         /**
+         * SmartRestRecommendation
+         * @description Smart rest recommendation (SPEC-005 §19).
+         */
+        SmartRestRecommendation: {
+            /** Reason Code */
+            reason_code: string;
+            /** Reason Text */
+            reason_text: string;
+            /** Recommended Rest Seconds */
+            recommended_rest_seconds: number;
+        };
+        /**
          * StartWorkoutTemplateOverrides
          * @description Optional template overrides for start workflow without mutating source template.
          */
@@ -4058,6 +5859,12 @@ export type components = {
              */
             username?: string | null;
         };
+        /**
+         * TimePriority
+         * @description SPEC-006 §24 — weight+time exercises: which lever moves first.
+         * @enum {string}
+         */
+        TimePriority: "TIME_FIRST" | "WEIGHT_FIRST";
         /**
          * TrainingLoadDailyEntry
          * @description Daily training load aggregate entry
@@ -4181,6 +5988,8 @@ export type components = {
              * @description Date of birth (string; format depends on client).
              */
             birth_date?: string | null;
+            /** @description Recorded health-data consent (version + timestamp) for audit. */
+            consent?: components["schemas"]["HealthDataConsent"] | null;
             /**
              * Current Weight
              * @description Current body weight in kilograms.
@@ -4412,6 +6221,228 @@ export type components = {
             type: string;
         };
         /**
+         * WaterDailyStats
+         * @description Water daily statistics
+         */
+        WaterDailyStats: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Entry Count */
+            entry_count: number;
+            /** Goal */
+            goal: number;
+            /** Is Goal Reached */
+            is_goal_reached: boolean;
+            /** Percentage */
+            percentage: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * WaterEntryCreate
+         * @description Request model for creating water entry
+         */
+        WaterEntryCreate: {
+            /**
+             * Amount
+             * @description Water amount in milliliters.
+             */
+            amount: number;
+            /**
+             * Recorded At
+             * @description When water was consumed (default: now)
+             */
+            recorded_at?: string | null;
+        };
+        /**
+         * WaterEntryResponse
+         * @description Water entry response
+         */
+        WaterEntryResponse: {
+            /** Amount */
+            amount: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** User Id */
+            user_id: number;
+        };
+        /**
+         * WaterGoalCreate
+         * @description Request model for creating/updating water goal
+         */
+        WaterGoalCreate: {
+            /**
+             * Daily Goal
+             * @description Daily water goal in milliliters.
+             * @default 2000
+             */
+            daily_goal: number;
+            /**
+             * Is Workout Day
+             * @description Whether today is a workout day
+             * @default false
+             */
+            is_workout_day: boolean;
+            /**
+             * Workout Increase
+             * @description Extra water on workout days.
+             * @default 500
+             */
+            workout_increase: number;
+        };
+        /**
+         * WaterGoalResponse
+         * @description Water goal response
+         */
+        WaterGoalResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Daily Goal */
+            daily_goal: number;
+            /** Id */
+            id: number;
+            /** Is Workout Day */
+            is_workout_day: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** User Id */
+            user_id: number;
+            /** Workout Increase */
+            workout_increase: number;
+        };
+        /**
+         * WaterHistoryResponse
+         * @description Water history response
+         */
+        WaterHistoryResponse: {
+            /** Date From */
+            date_from: string | null;
+            /** Date To */
+            date_to: string | null;
+            /** Items */
+            items: components["schemas"]["WaterEntryResponse"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Total Amount */
+            total_amount: number;
+        };
+        /**
+         * WaterReminderCreate
+         * @description Request model for creating/updating water reminder
+         */
+        WaterReminderCreate: {
+            /**
+             * Enabled
+             * @description Whether reminders are enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * End Time
+             * @description Reminder end time (HH:MM)
+             * @default 22:00
+             */
+            end_time: string;
+            /**
+             * Interval Hours
+             * @description Hours between reminders
+             * @default 2
+             */
+            interval_hours: number;
+            /**
+             * Quiet Hours End
+             * @description Quiet hours end time (HH:MM)
+             */
+            quiet_hours_end?: string | null;
+            /**
+             * Quiet Hours Start
+             * @description Quiet hours start time (HH:MM)
+             */
+            quiet_hours_start?: string | null;
+            /**
+             * Start Time
+             * @description Reminder start time (HH:MM)
+             * @default 08:00
+             */
+            start_time: string;
+            /**
+             * Telegram Notifications
+             * @description Send reminders via Telegram
+             * @default true
+             */
+            telegram_notifications: boolean;
+        };
+        /**
+         * WaterReminderResponse
+         * @description Water reminder response
+         */
+        WaterReminderResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Enabled */
+            enabled: boolean;
+            /** End Time */
+            end_time: string;
+            /** Id */
+            id: number;
+            /** Interval Hours */
+            interval_hours: number;
+            /** Quiet Hours End */
+            quiet_hours_end: string | null;
+            /** Quiet Hours Start */
+            quiet_hours_start: string | null;
+            /** Start Time */
+            start_time: string;
+            /** Telegram Notifications */
+            telegram_notifications: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** User Id */
+            user_id: number;
+        };
+        /**
+         * WaterWeeklyStats
+         * @description Water weekly statistics
+         */
+        WaterWeeklyStats: {
+            /** Average */
+            average: number;
+            best_day: components["schemas"]["WaterDailyStats"] | null;
+            /** Days */
+            days: components["schemas"]["WaterDailyStats"][];
+            /** Total Entries */
+            total_entries: number;
+        };
+        /**
          * WellnessStats
          * @description Wellness statistics
          */
@@ -4429,6 +6460,59 @@ export type components = {
             /** Avg Sleep Score 7D */
             avg_sleep_score_7d: number | null;
         };
+        /**
+         * WorkoutBlockPayload
+         * @description Block definition attached to a session create/update (SPEC-005 §24).
+         */
+        WorkoutBlockPayload: {
+            /**
+             * Client Id
+             * @description Client-side identifier to correlate exercises with the block.
+             */
+            client_id?: string | null;
+            /**
+             * Order
+             * @default 0
+             */
+            order: number;
+            /** Rest Seconds */
+            rest_seconds?: number | null;
+            /**
+             * Rounds
+             * @default 1
+             */
+            rounds: number;
+            /** @default NORMAL */
+            type: components["schemas"]["WorkoutBlockType"];
+        };
+        /**
+         * WorkoutBlockResponse
+         * @description Persisted session block (SPEC-005 §24).
+         */
+        WorkoutBlockResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Order
+             * @default 0
+             */
+            order: number;
+            /** Rest Seconds */
+            rest_seconds?: number | null;
+            /**
+             * Rounds
+             * @default 1
+             */
+            rounds: number;
+            /** @default NORMAL */
+            type: components["schemas"]["WorkoutBlockType"];
+        };
+        /**
+         * WorkoutBlockType
+         * @description Training block grouping exercises within a session (SPEC-005 §24).
+         * @enum {string}
+         */
+        WorkoutBlockType: "NORMAL" | "SUPERSET" | "TRISET" | "CIRCUIT";
         /**
          * WorkoutCalendarResponse
          * @description Workout calendar response
@@ -4455,6 +6539,34 @@ export type components = {
             total_duration: number;
             /** Total Workouts */
             total_workouts: number;
+        };
+        /**
+         * WorkoutCancelRequest
+         * @description Request model for cancelling an in-progress session (SPEC-005 §3).
+         */
+        WorkoutCancelRequest: {
+            /** Comments */
+            comments?: string | null;
+            /**
+             * Idempotency Key
+             * @description Optional idempotency key for replay-safe cancellation.
+             */
+            idempotency_key?: string | null;
+        };
+        /**
+         * WorkoutCancelResponse
+         * @description Response after cancelling a session.
+         */
+        WorkoutCancelResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Message
+             * @default Workout cancelled. This session is excluded from analytics.
+             */
+            message: string;
+            /** @default cancelled */
+            status: components["schemas"]["WorkoutStatus"];
         };
         /**
          * WorkoutCompleteRequest
@@ -4531,7 +6643,15 @@ export type components = {
              * @default Workout completed successfully
              */
             message: string;
+            /** Personal Records */
+            personal_records?: components["schemas"]["PersonalRecordEntry"][];
+            /** Progression Recommendations */
+            progression_recommendations?: components["schemas"]["ProgressionRecommendation"][];
             session_metrics?: components["schemas"]["WorkoutSessionMetrics"] | null;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /** Tags */
             tags: string[];
             /** Template Id */
@@ -4542,10 +6662,37 @@ export type components = {
             version: number;
         };
         /**
+         * WorkoutExercisePatchRequest
+         * @description PATCH payload for a session exercise row (SPEC-005 §6/§25-28).
+         */
+        WorkoutExercisePatchRequest: {
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Replacement Exercise Id
+             * @description Replace the exercise (session-only) with this exercise.
+             */
+            replacement_exercise_id?: number | null;
+            /** Replacement Name */
+            replacement_name?: string | null;
+            /**
+             * Status
+             * @description Set to 'skipped' to skip the exercise for this session only.
+             */
+            status?: string | null;
+            /**
+             * Target Order Index
+             * @description Reposition the exercise within the session.
+             */
+            target_order_index?: number | null;
+        };
+        /**
          * WorkoutHistoryItem
          * @description Single workout history entry
          */
         WorkoutHistoryItem: {
+            /** Blocks */
+            blocks?: components["schemas"]["WorkoutBlockResponse"][];
             /** Comments */
             comments: string | null;
             /**
@@ -4569,8 +6716,18 @@ export type components = {
             /** Id */
             id: number;
             session_metrics?: components["schemas"]["WorkoutSessionMetrics"] | null;
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
+            /** Started At */
+            started_at?: string | null;
+            /** @default active */
+            status: components["schemas"]["WorkoutStatus"];
             /** Tags */
             tags: string[];
+            /** Template Id */
+            template_id?: number | null;
             /** Version */
             version: number;
         };
@@ -4623,6 +6780,27 @@ export type components = {
             /** Workout Id */
             workout_id: number;
         };
+        /**
+         * WorkoutSessionCreateRequest
+         * @description Canonical request for creating a WorkoutSession from any start source.
+         */
+        WorkoutSessionCreateRequest: {
+            /** Name */
+            name?: string | null;
+            overrides?: components["schemas"]["StartWorkoutTemplateOverrides"] | null;
+            /**
+             * Source Id
+             * @description Source entity ID. Required for all sources except quick_start.
+             */
+            source_id?: number | null;
+            /**
+             * @description Canonical start source for the workout session.
+             * @default quick_start
+             */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
+            /** @default custom */
+            type: components["schemas"]["WorkoutSessionType"];
+        };
         /** WorkoutSessionInsightItem */
         WorkoutSessionInsightItem: {
             /** Code */
@@ -4633,6 +6811,42 @@ export type components = {
             message: string;
             /** Title */
             title: string;
+        };
+        /**
+         * WorkoutSessionListResponse
+         * @description Lightweight response for incomplete session restore (SPEC-005 §48).
+         */
+        WorkoutSessionListResponse: {
+            /**
+             * Completed Exercise Count
+             * @default 0
+             */
+            completed_exercise_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Elapsed Seconds
+             * @description Elapsed time derived from started_at.
+             */
+            elapsed_seconds?: number | null;
+            /**
+             * Exercise Count
+             * @default 0
+             */
+            exercise_count: number;
+            /** Id */
+            id: number;
+            /** Name */
+            name?: string | null;
+            status: components["schemas"]["WorkoutStatus"];
         };
         /** WorkoutSessionMetrics */
         WorkoutSessionMetrics: {
@@ -4648,7 +6862,14 @@ export type components = {
              */
             completed_sets: number;
             effort_distribution?: components["schemas"]["SessionEffortDistribution"];
+            /**
+             * Exercise Count
+             * @default 0
+             */
+            exercise_count: number;
             fatigue_trend?: components["schemas"]["SessionFatigueTrend"] | null;
+            /** Max Weight */
+            max_weight?: number | null;
             /** Rest Consistency Score */
             rest_consistency_score?: number | null;
             /**
@@ -4662,13 +6883,35 @@ export type components = {
              */
             rest_tracking_ratio: number;
             /**
+             * Total Reps
+             * @default 0
+             */
+            total_reps: number;
+            /**
              * Total Rest Seconds
              * @default 0
              */
             total_rest_seconds: number;
+            /** Total Volume */
+            total_volume?: number | null;
             /** Volume Per Minute */
             volume_per_minute?: number | null;
+            /**
+             * Warmup Sets
+             * @default 0
+             */
+            warmup_sets: number;
+            /**
+             * Working Sets
+             * @default 0
+             */
+            working_sets: number;
         };
+        /**
+         * WorkoutSessionSourceType
+         * @enum {string}
+         */
+        WorkoutSessionSourceType: "quick_start" | "personal_template" | "system_template" | "community_template" | "program_day" | "previous_session";
         /**
          * WorkoutSessionType
          * @enum {string}
@@ -4679,6 +6922,11 @@ export type components = {
          * @description Request model for updating an in-progress workout session.
          */
         WorkoutSessionUpdateRequest: {
+            /**
+             * Blocks
+             * @description Full replacement list of session blocks (when provided).
+             */
+            blocks?: components["schemas"]["WorkoutBlockPayload"][] | null;
             /** Comments */
             comments?: string | null;
             /**
@@ -4700,31 +6948,64 @@ export type components = {
              * @description Optional idempotency key for replay-safe updates.
              */
             idempotency_key?: string | null;
+            /** @description Lifecycle transition target: 'active' (resume) or 'paused'. */
+            status?: components["schemas"]["WorkoutStatus"] | null;
             /**
              * Tags
              * @description Session tags kept while workout is in progress.
              */
             tags?: string[];
         };
-        /** WorkoutSetPatchRequest */
+        /**
+         * WorkoutSetPatchRequest
+         * @description Editable fields for a completed set from workout history.
+         */
         WorkoutSetPatchRequest: {
+            /** Completed */
+            completed?: boolean | null;
+            /** Duration */
+            duration?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Reps */
+            reps?: number | null;
             /** Rest Seconds */
             rest_seconds?: number | null;
             /** Rpe */
-            rpe?: number | null;
+            rpe?: number | string | null;
+            /** Weight */
+            weight?: number | string | null;
         };
-        /** WorkoutSetResponse */
+        /**
+         * WorkoutSetResponse
+         * @description Response after patching a workout set.
+         */
         WorkoutSetResponse: {
+            /**
+             * Completed
+             * @default true
+             */
+            completed: boolean;
+            /** Duration */
+            duration?: number | null;
             /** Exercise Id */
             exercise_id: number;
             /** Id */
             id: number;
+            /** Notes */
+            notes?: string | null;
+            /** Personal Records */
+            personal_records?: components["schemas"]["PersonalRecordEntry"][] | null;
+            /** Reps */
+            reps?: number | null;
             /** Rest Seconds */
             rest_seconds?: number | null;
             /** Rpe */
-            rpe?: number | null;
+            rpe?: string | null;
             /** Set Number */
             set_number: number;
+            /** Weight */
+            weight?: string | null;
             /** Workout Id */
             workout_id: number;
         };
@@ -4782,6 +7063,12 @@ export type components = {
              * @default Workout started successfully
              */
             message: string;
+            /** @default active */
+            session_status: components["schemas"]["WorkoutStatus"];
+            /** Source Id */
+            source_id?: number | null;
+            /** @default quick_start */
+            source_type: components["schemas"]["WorkoutSessionSourceType"];
             /**
              * Start Time
              * Format: date-time
@@ -4815,6 +7102,12 @@ export type components = {
             /** Total Workouts 7D */
             total_workouts_7d: number;
         };
+        /**
+         * WorkoutStatus
+         * @description Lifecycle status of a WorkoutSession (SPEC-005 §3).
+         * @enum {string}
+         */
+        WorkoutStatus: "draft" | "active" | "paused" | "completed" | "cancelled";
         /**
          * WorkoutTemplateCloneRequest
          * @description Clone existing template.
@@ -4956,37 +7249,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_analytics_dashboard_api_v1_analytics__get: {
-        parameters: {
-            query?: {
-                period?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnalyticsDashboardResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6182,6 +8444,139 @@ export interface operations {
             };
         };
     };
+    get_body_measurements_api_v1_health_metrics_body_measurements_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                date_from?: string | null;
+                date_to?: string | null;
+                measurement_type?: ("chest" | "waist" | "hips" | "left_thigh" | "right_thigh" | "left_bicep" | "right_bicep") | null;
+                latest?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BodyMeasurementHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_body_measurement_api_v1_health_metrics_body_measurements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BodyMeasurementCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BodyMeasurementResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_body_measurement_api_v1_health_metrics_body_measurements__measurement_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_body_measurement_api_v1_health_metrics_body_measurements__measurement_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BodyMeasurementUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BodyMeasurementResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_glucose_history_api_v1_health_metrics_glucose_get: {
         parameters: {
             query?: {
@@ -6372,6 +8767,290 @@ export interface operations {
             };
         };
     };
+    get_water_history_api_v1_health_metrics_water_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_water_entry_api_v1_health_metrics_water_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_daily_stats_api_v1_health_metrics_water_daily__target_date__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target_date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterDailyStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_goal_api_v1_health_metrics_water_goal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterGoalResponse"];
+                };
+            };
+        };
+    };
+    set_water_goal_api_v1_health_metrics_water_goal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterGoalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterGoalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_reminder_api_v1_health_metrics_water_reminder_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterReminderResponse"];
+                };
+            };
+        };
+    };
+    set_water_reminder_api_v1_health_metrics_water_reminder_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterReminderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterReminderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_weekly_stats_api_v1_health_metrics_water_weekly_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterWeeklyStats"];
+                };
+            };
+        };
+    };
+    get_water_entry_api_v1_health_metrics_water__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_water_entry_api_v1_health_metrics_water__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_wellness_history_api_v1_health_metrics_wellness_get: {
         parameters: {
             query?: {
@@ -6487,6 +9166,1208 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DailyWellnessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_body_measurements_api_v1_health_body_measurements_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                date_from?: string | null;
+                date_to?: string | null;
+                measurement_type?: ("chest" | "waist" | "hips" | "left_thigh" | "right_thigh" | "left_bicep" | "right_bicep") | null;
+                latest?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BodyMeasurementHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_body_measurement_api_v1_health_body_measurements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BodyMeasurementCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BodyMeasurementResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_body_measurement_api_v1_health_body_measurements__measurement_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_body_measurement_api_v1_health_body_measurements__measurement_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BodyMeasurementUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BodyMeasurementResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_glucose_history_api_v1_health_glucose_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                date_from?: string | null;
+                date_to?: string | null;
+                measurement_type?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlucoseHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_glucose_log_api_v1_health_glucose_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlucoseLogCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlucoseLogResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_glucose_stats_api_v1_health_glucose_stats_get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthStatsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_glucose_log_api_v1_health_glucose__log_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlucoseLogResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_glucose_log_api_v1_health_glucose__log_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_health_stats_api_v1_health_stats_get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthStatsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_history_api_v1_health_water_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_water_entry_api_v1_health_water_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_daily_stats_api_v1_health_water_daily__target_date__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target_date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterDailyStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_goal_api_v1_health_water_goal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterGoalResponse"];
+                };
+            };
+        };
+    };
+    set_water_goal_api_v1_health_water_goal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterGoalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterGoalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_reminder_api_v1_health_water_reminder_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterReminderResponse"];
+                };
+            };
+        };
+    };
+    set_water_reminder_api_v1_health_water_reminder_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaterReminderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterReminderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_water_weekly_stats_api_v1_health_water_weekly_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterWeeklyStats"];
+                };
+            };
+        };
+    };
+    get_water_entry_api_v1_health_water__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaterEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_water_entry_api_v1_health_water__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_wellness_history_api_v1_health_wellness_get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyWellnessResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_wellness_entry_api_v1_health_wellness_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyWellnessCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyWellnessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_wellness_stats_api_v1_health_wellness_stats_get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthStatsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_wellness_entry_api_v1_health_wellness__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyWellnessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise_progression_api_v1_progression_exercises__exercise_id__get: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionPolicyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_exercise_progression_api_v1_progression_exercises__exercise_id__put: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressionPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionPolicyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise_progression_history_api_v1_progression_exercises__exercise_id__history_get: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise_recommendation_api_v1_progression_exercises__exercise_id__recommendation_get: {
+        parameters: {
+            query?: {
+                template_id?: number | null;
+                template_exercise_id?: number | null;
+            };
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prefill_targets_api_v1_progression_prefill_get: {
+        parameters: {
+            query?: {
+                /** @description Only targets whose automatic prefill the user switched off. */
+                declined_only?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionPrefillListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_disable_prefill_api_v1_progression_prefill_bulk_disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProgressionPrefillBulkDisable"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_enable_prefill_api_v1_progression_prefill_bulk_enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressionPrefillBulkEnable"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_update_prefill_targets_api_v1_progression_prefill_bulk_update_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressionTargetBulkUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prefill_sweeps_api_v1_progression_prefill_sweeps_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionPrefillSweepListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_prefill_target_api_v1_progression_prefill__recommendation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressionTargetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_prefill_api_v1_progression_prefill__recommendation_id__disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_prefill_api_v1_progression_prefill__recommendation_id__enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_recommendation_api_v1_progression_recommendations__recommendation_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProgressionRecommendationDecision"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_recommendation_api_v1_progression_recommendations__recommendation_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendationResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6636,6 +10517,68 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_emergency_contact_api_v1_system_emergency_contact__contact_id__link_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmergencyContactResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_emergency_contact_link_code_api_v1_system_emergency_contact__contact_id__link_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmergencyContactLinkCodeResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -7159,7 +11102,7 @@ export interface operations {
             };
         };
     };
-    list_coach_access_api_v1_users_coach_access_get: {
+    coach_access_unavailable_api_v1_users_coach_access_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -7179,7 +11122,7 @@ export interface operations {
             };
         };
     };
-    generate_coach_access_api_v1_users_coach_access_generate_post: {
+    coach_access_unavailable_api_v1_users_coach_access_generate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -7199,13 +11142,11 @@ export interface operations {
             };
         };
     };
-    revoke_coach_access_api_v1_users_coach_access__access_id__delete: {
+    coach_access_unavailable_api_v1_users_coach_access__access_id__delete: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                access_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -7216,15 +11157,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };
@@ -7550,6 +11482,167 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutHistoryItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calculate_plates_endpoint_api_v1_workouts_plate_calculator_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlateCalculationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlateCalculationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_progression_recommendation_api_v1_workouts_progression_recommendation_get: {
+        parameters: {
+            query: {
+                exercise_id: number;
+                policy?: components["schemas"]["ProgressionPolicy"];
+                increment?: number | null;
+                rep_range_min?: number | null;
+                rep_range_max?: number | null;
+                target_rpe?: number | null;
+                target_rir?: number | null;
+                percent_1rm?: number | null;
+                time_increment_seconds?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionRecommendation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_workout_session_api_v1_workouts_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutSessionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_incomplete_sessions_api_v1_workouts_sessions_incomplete_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutSessionListResponse"][];
+                };
+            };
+        };
+    };
+    get_smart_rest_recommendation_api_v1_workouts_sessions__session_id__exercises__exercise_id__smart_rest_get: {
+        parameters: {
+            query?: {
+                set_type?: string;
+                rpe?: number | null;
+                rir?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: number;
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmartRestRecommendation"];
                 };
             };
             /** @description Validation Error */
@@ -7977,6 +12070,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutTemplateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_workout_api_v1_workouts__workout_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutCancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutCancelResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_session_exercise_api_v1_workouts__workout_id__exercises__exercise_row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+                exercise_row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutExercisePatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutHistoryItem"];
                 };
             };
             /** @description Validation Error */

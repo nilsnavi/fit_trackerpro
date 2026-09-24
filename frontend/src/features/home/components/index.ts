@@ -1,5 +1,6 @@
+export { HomeHealthSection } from './HomeHealthSection'
 export { GlucoseWidget } from './GlucoseWidget'
 export { WellnessWidget } from './WellnessWidget'
 export { WaterWidget } from './WaterWidget'
 export { WorkoutCard } from './WorkoutCard'
-export { EmergencyButton } from './EmergencyButton'
+export { TemplateCard } from './TemplateCard'

@@ -12,7 +12,7 @@ import type { TelegramMiniAppUser } from './testUser'
 const TELEGRAM_SCRIPT = 'https://telegram.org/js/telegram-web-app.js'
 
 export function getE2eTelegramBotToken(): string {
-    return process.env.E2E_TELEGRAM_BOT_TOKEN?.trim() || 'test_token_for_e2e'
+    return process.env.E2E_TELEGRAM_BOT_TOKEN?.trim() || '0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 }
 
 /**

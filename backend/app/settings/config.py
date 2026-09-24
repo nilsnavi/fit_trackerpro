@@ -16,6 +16,7 @@ below exist only for local development and automated tests — they are rejected
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated, Final, List, Self
 
@@ -35,6 +36,12 @@ _DEV_TELEGRAM_BOT_TOKEN: Final[str] = (
     "000000000:AAHdev_local_only_replace_for_production_bot_token"
 )
 _DEV_TELEGRAM_WEBAPP_URL: Final[str] = "http://localhost:5173"
+_TELEGRAM_BOT_TOKEN_RE: Final[re.Pattern[str]] = re.compile(r"^\d+:[A-Za-z0-9_-]{20,}$")
+# Telegram Bot API: secret_token must be 1-256 chars of A-Z, a-z, 0-9, "_" and "-".
+_TELEGRAM_WEBHOOK_SECRET_RE: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9_-]{1,256}$")
+_TELEGRAM_WEBHOOK_SECRET_MIN_LENGTH: Final[int] = 16
+# Telegram bot usernames: 5-32 chars, letters, digits and underscores, must end with "bot".
+_TELEGRAM_BOT_USERNAME_RE: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z][A-Za-z0-9_]{3,30}[Bb][Oo][Tt]$")
 
 
 class Settings(BaseSettings):
@@ -155,6 +162,29 @@ class Settings(BaseSettings):
             )
         ),
     ] = False
+
+    TELEGRAM_WEBHOOK_SECRET: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Secret token for the Telegram webhook (Telegram sends it back in the "
+                "X-Telegram-Bot-Api-Secret-Token header). Required in production when "
+                "TELEGRAM_BOT_ENABLED=true: without it anyone knowing the URL can post "
+                "fake updates. Allowed characters: A-Z, a-z, 0-9, '_' and '-'."
+            )
+        ),
+    ] = None
+
+    TELEGRAM_BOT_USERNAME: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Bot username without '@'. Used to build t.me deep links, e.g. the "
+                "emergency-contact invite link t.me/<username>?start=link_<code>. "
+                "Optional: without it the app shows the plain '/link <code>' command."
+            )
+        ),
+    ] = None
 
     SECRET_KEY: Annotated[
         str,
@@ -306,6 +336,18 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "text"
 
+    @property
+    def telegram_bot_configured(self) -> bool:
+        """True only when a real Bot API token is configured.
+
+        The dev default is a syntactically valid placeholder, so checking the
+        token for emptiness is not enough: sending anything with it would fail
+        with a confusing Telegram error. Callers use this flag to report an
+        honest "bot is not configured" state instead of attempting delivery.
+        """
+        token = (self.TELEGRAM_BOT_TOKEN or "").strip()
+        return bool(token) and token != _DEV_TELEGRAM_BOT_TOKEN
+
     @field_validator(
         "DATABASE_URL",
         "TELEGRAM_BOT_TOKEN",
@@ -327,6 +369,11 @@ class Settings(BaseSettings):
         normalized = value.strip()
         if normalized.lower() in {"your_telegram_bot_token_here", "changeme", "your_token_here"}:
             raise ValueError("TELEGRAM_BOT_TOKEN contains a placeholder value")
+        if not _TELEGRAM_BOT_TOKEN_RE.fullmatch(normalized):
+            raise ValueError(
+                "TELEGRAM_BOT_TOKEN must match Telegram Bot API format "
+                "'<bot_id>:<secret>'; check for extra '=' in .env"
+            )
         return normalized
 
     @field_validator("TELEGRAM_WEBAPP_URL")
@@ -420,6 +467,36 @@ class Settings(BaseSettings):
                 )
         return value
 
+    @field_validator("TELEGRAM_WEBHOOK_SECRET")
+    @classmethod
+    def validate_telegram_webhook_secret(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if not _TELEGRAM_WEBHOOK_SECRET_RE.fullmatch(normalized):
+            raise ValueError(
+                "TELEGRAM_WEBHOOK_SECRET may only contain A-Z, a-z, 0-9, '_' and '-' "
+                "(Telegram Bot API requirement)"
+            )
+        return normalized
+
+    @field_validator("TELEGRAM_BOT_USERNAME", mode="before")
+    @classmethod
+    def validate_telegram_bot_username(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip().lstrip("@")
+        if not normalized:
+            return None
+        if not _TELEGRAM_BOT_USERNAME_RE.fullmatch(normalized):
+            raise ValueError(
+                "TELEGRAM_BOT_USERNAME must be a Telegram bot username "
+                "(5-32 characters: letters, digits, underscores), without '@'"
+            )
+        return normalized
+
     @field_validator("DEBUG")
     @classmethod
     def validate_debug_in_production(cls, value: bool, info: ValidationInfo) -> bool:
@@ -451,6 +528,19 @@ class Settings(BaseSettings):
 
         if self.TELEGRAM_WEBAPP_URL.strip() == _DEV_TELEGRAM_WEBAPP_URL:
             errors.append("TELEGRAM_WEBAPP_URL must be set to your public Mini App URL in production")
+
+        if self.TELEGRAM_BOT_ENABLED:
+            secret = (self.TELEGRAM_WEBHOOK_SECRET or "").strip()
+            if not secret:
+                errors.append(
+                    "TELEGRAM_WEBHOOK_SECRET is required in production when TELEGRAM_BOT_ENABLED=true "
+                    "(otherwise /telegram/webhook accepts forged updates)"
+                )
+            elif len(secret) < _TELEGRAM_WEBHOOK_SECRET_MIN_LENGTH:
+                errors.append(
+                    f"TELEGRAM_WEBHOOK_SECRET must be at least {_TELEGRAM_WEBHOOK_SECRET_MIN_LENGTH} "
+                    "characters in production"
+                )
 
         if self.AUTO_CREATE_DB_SCHEMA:
             errors.append(

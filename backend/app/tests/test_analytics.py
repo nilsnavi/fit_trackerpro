@@ -36,6 +36,14 @@ class TestAnalyticsAuthBoundary:
         r = await client.get("/api/v1/analytics/workouts")
         assert r.status_code == 401
 
+    async def test_recovery_state_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/analytics/recovery-state")
+        assert r.status_code == 401
+
+    async def test_recovery_state_recalculate_requires_auth(self, client: AsyncClient):
+        r = await client.post("/api/v1/analytics/recovery-state/recalculate")
+        assert r.status_code == 401
+
 
 @pytest.mark.integration
 class TestAnalyticsEmptyStateContracts:
@@ -96,11 +104,40 @@ class TestAnalyticsEmptyStateContracts:
         assert r.status_code in (200, 404), r.text
         if r.status_code == 200:
             data = r.json()
+            assert "id" in data
+            assert "userId" in data
             assert "fatigueLevel" in data
             assert "readinessScore" in data
         else:
             data = r.json()
-            assert (data.get("error") or {}).get("code") == "analytics_not_found"
+            assert (data.get("error") or {}).get(
+                "code") == "analytics_not_found"
+
+    async def test_recovery_state_recalculate_contract(self, authenticated_client: AsyncClient):
+        r = await authenticated_client.post("/api/v1/analytics/recovery-state/recalculate")
+        # On a fresh DB with no workouts, recalc may return 404 or 200 with defaults.
+        assert r.status_code in (200, 404), r.text
+        if r.status_code == 200:
+            data = r.json()
+            # Verify response contract matches RecoveryStateRecalculateResponse schema
+            assert "id" in data
+            assert "userId" in data
+            assert "fatigueLevel" in data
+            assert "readinessScore" in data
+            assert "recalculatedForDate" in data
+            assert "dateFrom" in data
+            assert "dateTo" in data
+        else:
+            data = r.json()
+            assert (data.get("error") or {}).get(
+                "code") == "analytics_not_found"
+
+    async def test_recovery_state_recalculate_with_date_params(self, authenticated_client: AsyncClient):
+        r = await authenticated_client.post(
+            "/api/v1/analytics/recovery-state/recalculate?date_from=2026-01-01&date_to=2026-01-31"
+        )
+        # Should accept query parameters without error
+        assert r.status_code in (200, 404), r.text
 
     async def test_muscle_signals_envelope_contract(self, authenticated_client: AsyncClient):
         r = await authenticated_client.get("/api/v1/analytics/muscle-signals")
@@ -111,11 +148,13 @@ class TestAnalyticsEmptyStateContracts:
             assert "available" in data
             assert "signals" in data
         else:
-            assert (data.get("error") or {}).get("code") == "analytics_not_found"
+            assert (data.get("error") or {}).get(
+                "code") == "analytics_not_found"
 
     async def test_progress_insights_contract(self, authenticated_client: AsyncClient):
         if str(settings.DATABASE_URL).startswith("sqlite"):
-            pytest.skip("Progress insights relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
+            pytest.skip(
+                "Progress insights relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
         r = await authenticated_client.get("/api/v1/analytics/progress-insights?period=30d")
         assert r.status_code == 200, r.text
         data = r.json()
@@ -130,7 +169,8 @@ class TestAnalyticsEmptyStateContracts:
 
     async def test_performance_overview_contract(self, authenticated_client: AsyncClient):
         if str(settings.DATABASE_URL).startswith("sqlite"):
-            pytest.skip("Performance overview relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
+            pytest.skip(
+                "Performance overview relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
         r = await authenticated_client.get("/api/v1/analytics/performance-overview?period=30d")
         assert r.status_code == 200, r.text
         data = r.json()
@@ -149,7 +189,8 @@ class TestAnalyticsEmptyStateContracts:
 
     async def test_workout_summary_not_found_contract(self, authenticated_client: AsyncClient):
         if str(settings.DATABASE_URL).startswith("sqlite"):
-            pytest.skip("Workout summary relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
+            pytest.skip(
+                "Workout summary relies on PostgreSQL JSON/CTE features; skipped on SQLite.")
         r = await authenticated_client.get("/api/v1/analytics/workout-summary?workout_id=999999")
         assert r.status_code == 404, r.text
         data = r.json()
@@ -158,7 +199,8 @@ class TestAnalyticsEmptyStateContracts:
     async def test_calendar_contract(self, authenticated_client: AsyncClient):
         # Calendar query uses PostgreSQL aggregates (e.g., bool_or) and isn't portable to SQLite.
         if str(settings.DATABASE_URL).startswith("sqlite"):
-            pytest.skip("Calendar analytics relies on PostgreSQL-only functions; skipped on SQLite.")
+            pytest.skip(
+                "Calendar analytics relies on PostgreSQL-only functions; skipped on SQLite.")
         now = datetime.now()
         r = await authenticated_client.get(f"/api/v1/analytics/calendar?year={now.year}&month={now.month}")
         assert r.status_code == 200, r.text
@@ -205,4 +247,5 @@ class TestAnalyticsExportFlow:
             assert "status" in status_json
         else:
             status_json = status.json()
-            assert (status_json.get("error") or {}).get("code") == "analytics_not_found"
+            assert (status_json.get("error") or {}).get(
+                "code") == "analytics_not_found"

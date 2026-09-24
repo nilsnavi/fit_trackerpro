@@ -11,6 +11,7 @@ from sqlalchemy.sql import func
 from app.domain.base import Base
 
 if TYPE_CHECKING:
+    from .body_measurement import BodyMeasurement
     from .challenge import Challenge
     from .daily_wellness import DailyWellness
     from .emergency_contact import EmergencyContact
@@ -21,6 +22,10 @@ if TYPE_CHECKING:
     from .template_exercise import TemplateExercise
     from .training_load_daily import TrainingLoadDaily
     from .user_achievement import UserAchievement
+    from .water_entry import WaterEntry
+    from .water_goal import WaterGoal
+    from .water_reminder import WaterReminder
+    from .workout_block import WorkoutBlock
     from .workout_log import WorkoutLog
     from .workout_session_exercise import WorkoutSessionExercise
     from .workout_set import WorkoutSet
@@ -116,10 +121,21 @@ class User(Base):
         cascade="all, delete-orphan",
         overlaps="workout_session",
     )
+    workout_blocks: Mapped[list["WorkoutBlock"]] = relationship(
+        "WorkoutBlock",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        overlaps="workout_session,workout_blocks",
+    )
     glucose_logs: Mapped[list["GlucoseLog"]] = relationship(
         "GlucoseLog",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    body_measurements: Mapped[list["BodyMeasurement"]] = relationship(
+        "BodyMeasurement",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
     daily_wellness_entries: Mapped[list["DailyWellness"]] = relationship(
         "DailyWellness",
@@ -161,6 +177,23 @@ class User(Base):
         "Exercise",
         back_populates="author",
         cascade="all, delete-orphan"
+    )
+    water_entries: Mapped[list["WaterEntry"]] = relationship(
+        "WaterEntry",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    water_goal: Mapped[Optional["WaterGoal"]] = relationship(
+        "WaterGoal",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    water_reminder: Mapped[Optional["WaterReminder"]] = relationship(
+        "WaterReminder",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
     __table_args__ = (

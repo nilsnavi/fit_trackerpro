@@ -5,7 +5,7 @@ import type {
     WorkoutSessionUpdateRequest,
 } from '@features/workouts/types/workouts'
 
-export type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility'
+export type ExerciseCatalogFilter = 'all' | 'strength' | 'cardio' | 'flexibility' | 'custom'
 
 export type AddItemKind = 'exercise' | 'timer'
 
@@ -51,10 +51,50 @@ export function buildSyncPayload(workout: WorkoutHistoryItem): WorkoutSessionUpd
         tags: workout.tags ?? [],
         glucose_before: workout.glucose_before,
         glucose_after: workout.glucose_after,
+        // SPEC-005 §21/§24: superset/triset/circuit blocks of the session. Sent as
+        // a full replacement list, matching the update request contract.
+        blocks: workout.blocks ?? [],
     }
 }
 
 export function nextExerciseId(exercises: CompletedExercise[]): number {
     return exercises.reduce((maxId, exercise) => Math.max(maxId, exercise.exercise_id), 1000) + 1
+}
+
+/**
+ * SPEC-005 §20: a set measured by time instead of reps. Completion stores `0`
+ * reps for timed sets, so a falsy reps value (undefined or 0) means «timed».
+ */
+export function isTimedSet(set: CompletedSet): boolean {
+    return typeof set.duration === 'number' && set.duration > 0 && !set.reps
+}
+
+/** SPEC-005 §20: default duration applied when a set is switched to time. */
+export const DEFAULT_TIMED_SET_SECONDS = 60
+
+/**
+ * SPEC-005 §11: append a set that copies the previous working set's weight, reps
+ * target and (for timed work) duration, so the user never retypes the same values.
+ */
+export function appendPrefilledSet(exercise: CompletedExercise): CompletedExercise {
+    const previous =
+        [...exercise.sets_completed].reverse().find((set) => set.set_type !== 'warmup') ??
+        exercise.sets_completed[exercise.sets_completed.length - 1]
+
+    const next: CompletedSet = {
+        set_number: exercise.sets_completed.length + 1,
+        set_type: previous?.set_type && previous.set_type !== 'warmup' ? previous.set_type : 'working',
+        completed: false,
+    }
+
+    if (previous) {
+        if (previous.weight != null) next.weight = previous.weight
+        if (isTimedSet(previous)) next.duration = previous.duration
+        else next.reps = previous.reps ?? 10
+    } else {
+        next.reps = 10
+    }
+
+    return { ...exercise, sets_completed: [...exercise.sets_completed, next] }
 }
 

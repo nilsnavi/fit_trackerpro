@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { HeartPulse, Moon, ShieldCheck, Zap } from 'lucide-react'
+import { BarChart2, HeartPulse, Loader2, Moon, RefreshCw, ShieldCheck, Table2, Zap } from 'lucide-react'
 import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
 import { SectionHeader } from '@shared/ui/SectionHeader'
@@ -16,7 +16,11 @@ import {
     type ApiRecoveryStateResponse,
     type ApiTrainingLoadDailyEntry,
 } from '@features/analytics/api/analyticsDomain'
+import { useRecalculateRecoveryMutation } from '@features/analytics/hooks/useRecoveryMutations'
+import { useToastStore } from '@shared/stores/toastStore'
 import { ProgressTrendBars } from '@features/analytics/components/ProgressTrendBars'
+import { TrainingLoadTable } from '@features/analytics/components/TrainingLoadTable'
+import { MuscleLoadTable } from '@features/analytics/components/MuscleLoadTable'
 import {
     getAnalyticsDateRange,
     PROGRESS_PERIODS_SHORT,
@@ -51,15 +55,37 @@ function topMuscles(rows: ApiMuscleLoadEntry[]) {
 
 export default function RecoveryPage() {
     const [period, setPeriod] = useState<ProgressPeriod>('30d')
+    const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart')
+    const [muscleLoadViewMode, setMuscleLoadViewMode] = useState<'chart' | 'table'>('chart')
     const range = useMemo(() => getAnalyticsDateRange(period), [period])
     const dateFrom = range.date_from ?? null
     const dateTo = range.date_to ?? null
+    const pushToast = useToastStore((s) => s.push)
 
     const recoveryQuery = useQuery<ApiRecoveryStateResponse>({
         queryKey: queryKeys.analytics.recoveryState,
         queryFn: () => getAnalyticsRecoveryState(),
         staleTime: 30_000,
     })
+
+    const recalculateMutation = useRecalculateRecoveryMutation()
+
+    const handleRecalculate = () => {
+        recalculateMutation.mutate(
+            {
+                date_from: dateFrom ?? undefined,
+                date_to: dateTo ?? undefined,
+            },
+            {
+                onSuccess: () => {
+                    pushToast({ kind: 'success', message: 'Состояние восстановления пересчитано' })
+                },
+                onError: (err) => {
+                    pushToast({ kind: 'error', message: `Ошибка пересчёта: ${getErrorMessage(err)}` })
+                },
+            }
+        )
+    }
 
     const dailyLoadQuery = useQuery<ApiTrainingLoadDailyEntry[]>({
         queryKey: queryKeys.analytics.trainingLoadDaily(dateFrom, dateTo),
@@ -126,6 +152,22 @@ export default function RecoveryPage() {
 
             {!isLoading && !noData ? (
                 <>
+                    <section className="flex items-center justify-end">
+                        <button
+                            type="button"
+                            onClick={handleRecalculate}
+                            disabled={recalculateMutation.isPending || recoveryQuery.isFetching}
+                            className="flex items-center gap-1.5 rounded-lg bg-telegram-secondary-bg px-3 py-1.5 text-sm font-medium text-telegram-text transition-colors hover:bg-telegram-secondary-bg/80 disabled:opacity-50"
+                        >
+                            {recalculateMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-4 w-4" />
+                            )}
+                            <span>{recalculateMutation.isPending ? 'Пересчёт...' : 'Обновить'}</span>
+                        </button>
+                    </section>
+
                     <section className="grid grid-cols-2 gap-2">
                         <article className="rounded-2xl bg-telegram-secondary-bg p-3">
                             <div className="flex items-center justify-between">
@@ -148,51 +190,125 @@ export default function RecoveryPage() {
 
                     <section className="space-y-3">
                         <div className="rounded-2xl bg-telegram-secondary-bg p-4">
-                            <div className="mb-3 flex items-center gap-2">
-                                <Zap className="h-4 w-4 text-primary" />
-                                <h2 className="text-sm font-semibold text-telegram-text">Динамика нагрузки</h2>
+                            <div className="mb-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Zap className="h-4 w-4 text-primary" />
+                                    <h2 className="text-sm font-semibold text-telegram-text">Динамика нагрузки</h2>
+                                </div>
+                                {/* View Mode Toggle */}
+                                <div className="flex rounded-lg bg-telegram-bg p-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewMode('chart')}
+                                        className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === 'chart'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'text-telegram-hint hover:text-telegram-text'
+                                            }`}
+                                    >
+                                        <BarChart2 className="h-3.5 w-3.5" />
+                                        <span>График</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewMode('table')}
+                                        className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === 'table'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'text-telegram-hint hover:text-telegram-text'
+                                            }`}
+                                    >
+                                        <Table2 className="h-3.5 w-3.5" />
+                                        <span>Таблица</span>
+                                    </button>
+                                </div>
                             </div>
-                            <ProgressTrendBars
-                                title="Утомление за последние сессии"
-                                subtitle="Оценка нагрузки по дням"
-                                items={fatigueItems}
-                                emptyMessage="Нет данных для тренда утомления."
-                            />
 
-                            <div className="mt-3 grid grid-cols-3 gap-2">
-                                <article className="rounded-xl bg-telegram-bg p-3">
-                                    <p className="text-xs text-telegram-hint">Ср. объём</p>
-                                    <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgVolume}</p>
-                                </article>
-                                <article className="rounded-xl bg-telegram-bg p-3">
-                                    <p className="text-xs text-telegram-hint">Ср. утомл.</p>
-                                    <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgFatigue}</p>
-                                </article>
-                                <article className="rounded-xl bg-telegram-bg p-3">
-                                    <p className="text-xs text-telegram-hint">Ср. RPE</p>
-                                    <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgRpe}</p>
-                                </article>
-                            </div>
+                            {viewMode === 'chart' ? (
+                                <>
+                                    <ProgressTrendBars
+                                        title="Утомление за последние сессии"
+                                        subtitle="Оценка нагрузки по дням"
+                                        items={fatigueItems}
+                                        emptyMessage="Нет данных для тренда утомления."
+                                    />
+
+                                    <div className="mt-3 grid grid-cols-3 gap-2">
+                                        <article className="rounded-xl bg-telegram-bg p-3">
+                                            <p className="text-xs text-telegram-hint">Ср. объём</p>
+                                            <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgVolume}</p>
+                                        </article>
+                                        <article className="rounded-xl bg-telegram-bg p-3">
+                                            <p className="text-xs text-telegram-hint">Ср. утомл.</p>
+                                            <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgFatigue}</p>
+                                        </article>
+                                        <article className="rounded-xl bg-telegram-bg p-3">
+                                            <p className="text-xs text-telegram-hint">Ср. RPE</p>
+                                            <p className="mt-1 text-base font-semibold text-telegram-text">{summary.avgRpe}</p>
+                                        </article>
+                                    </div>
+                                </>
+                            ) : (
+                                <TrainingLoadTable
+                                    dateFrom={dateFrom}
+                                    dateTo={dateTo}
+                                    pageSize={10}
+                                />
+                            )}
                         </div>
                     </section>
 
                     <section className="rounded-2xl bg-telegram-secondary-bg p-4">
-                        <h2 className="text-sm font-semibold text-telegram-text">Мышечные зоны под нагрузкой</h2>
-                        {topLoadedMuscles.length === 0 ? (
-                            <p className="mt-3 rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
-                                Нагрузки по мышечным группам пока не зафиксированы.
-                            </p>
-                        ) : (
-                            <div className="mt-3 space-y-2">
-                                {topLoadedMuscles.map((item) => (
-                                    <article key={item.muscle} className="rounded-xl bg-telegram-bg p-3">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <p className="text-sm font-medium text-telegram-text">{item.muscle}</p>
-                                            <p className="text-sm font-semibold text-telegram-text">{item.total}</p>
-                                        </div>
-                                    </article>
-                                ))}
+                        <div className="mb-3 flex items-center justify-between">
+                            <h2 className="text-sm font-semibold text-telegram-text">Мышечные зоны под нагрузкой</h2>
+                            {/* View Mode Toggle */}
+                            <div className="flex rounded-lg bg-telegram-bg p-0.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setMuscleLoadViewMode('chart')}
+                                    className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${muscleLoadViewMode === 'chart'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'text-telegram-hint hover:text-telegram-text'
+                                        }`}
+                                >
+                                    <BarChart2 className="h-3.5 w-3.5" />
+                                    <span>График</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMuscleLoadViewMode('table')}
+                                    className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${muscleLoadViewMode === 'table'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'text-telegram-hint hover:text-telegram-text'
+                                        }`}
+                                >
+                                    <Table2 className="h-3.5 w-3.5" />
+                                    <span>Таблица</span>
+                                </button>
                             </div>
+                        </div>
+
+                        {muscleLoadViewMode === 'chart' ? (
+                            topLoadedMuscles.length === 0 ? (
+                                <p className="rounded-xl bg-telegram-bg px-3 py-2 text-xs text-telegram-hint">
+                                    Нагрузки по мышечным группам пока не зафиксированы.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {topLoadedMuscles.map((item) => (
+                                        <article key={item.muscle} className="rounded-xl bg-telegram-bg p-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="text-sm font-medium text-telegram-text">{item.muscle}</p>
+                                                <p className="text-sm font-semibold text-telegram-text">{item.total}</p>
+                                            </div>
+                                        </article>
+                                    ))}
+                                </div>
+                            )
+                        ) : (
+                            <MuscleLoadTable
+                                dateFrom={dateFrom}
+                                dateTo={dateTo}
+                                pageSize={10}
+                            />
                         )}
                     </section>
                 </>

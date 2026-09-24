@@ -11,7 +11,6 @@ export const queryKeys = {
     profile: {
         me: ['profile', 'me'] as const,
         stats: ['profile', 'stats'] as const,
-        coachAccess: ['profile', 'coachAccess'] as const,
     },
     achievements: {
         list: (category: AchievementListFilter) => ['achievements', 'list', category] as const,
@@ -27,6 +26,8 @@ export const queryKeys = {
         templatesDetail: (templateId: number) => ['workouts', 'templates', 'detail', templateId] as const,
     },
     health: {
+        bodyMeasurements: (params?: Record<string, unknown>) =>
+            ['health', 'bodyMeasurements', params ?? {}] as const,
         waterGoal: ['health', 'water', 'goal'] as const,
         waterReminder: ['health', 'water', 'reminder'] as const,
         waterToday: ['health', 'water', 'today'] as const,
@@ -64,12 +65,22 @@ export const queryKeys = {
         ) => ['analytics', 'progress', period, maxExercises, maxDataPoints, dateFrom, dateTo] as const,
         trainingLoadDaily: (dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'trainingLoadDaily', dateFrom, dateTo] as const,
+        trainingLoadDailyTable: (page: number, pageSize: number, dateFrom: string | null, dateTo: string | null) =>
+            ['analytics', 'trainingLoadDailyTable', page, pageSize, dateFrom, dateTo] as const,
         muscleLoad: (dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'muscleLoad', dateFrom, dateTo] as const,
+        muscleLoadTable: (
+            page: number,
+            pageSize: number,
+            dateFrom: string | null,
+            dateTo: string | null,
+            muscleGroup: string | null
+        ) => ['analytics', 'muscleLoadTable', page, pageSize, dateFrom, dateTo, muscleGroup] as const,
         recoveryState: ['analytics', 'recoveryState'] as const,
         progressInsights: (period: string, dateFrom: string | null, dateTo: string | null) =>
             ['analytics', 'progressInsights', period, dateFrom, dateTo] as const,
         workoutSummary: (workoutId: number) => ['analytics', 'workoutSummary', workoutId] as const,
+        muscleSignals: ['analytics', 'muscleSignals'] as const,
     },
     challenges: {
         dashboard: ['challenges', 'dashboard'] as const,
