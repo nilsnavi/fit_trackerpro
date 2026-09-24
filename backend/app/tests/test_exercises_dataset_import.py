@@ -1,6 +1,7 @@
 import re
+import sys
 
-from app.cli.seed_reference_data import _normalize_exercise_row
+from app.cli.seed_reference_data import _normalize_exercise_row, _parse_args
 from scripts.import_exercises_dataset import (
     generate_catalog,
     map_category,
@@ -119,3 +120,16 @@ def test_seed_normalization_persists_aliases_and_primary_muscle():
 
     assert normalized["muscle_group"] == "abs"
     assert normalized["aliases"] == '["example exercise"]'
+
+
+def test_seed_cli_accepts_data_dir_after_apply(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["seed_reference_data", "apply", "--data-dir", "reference_data"],
+    )
+
+    args = _parse_args()
+
+    assert args.command == "apply"
+    assert args.data_dir == "reference_data"

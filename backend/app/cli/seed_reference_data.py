@@ -266,9 +266,19 @@ def _parse_args() -> argparse.Namespace:
     sub = p.add_subparsers(dest="command", required=True)
 
     apply_p = sub.add_parser("apply", help="Apply reference data (idempotent upsert)")
+    apply_p.add_argument(
+        "--data-dir",
+        default=argparse.SUPPRESS,
+        help="Directory containing manifest.json and datasets (may be placed before or after the command)",
+    )
     apply_p.add_argument("--dry-run", action="store_true", help="Validate inputs but do not write to DB")
 
     check_p = sub.add_parser("check", help="Fail if DB state doesn't match current dataset checksum")
+    check_p.add_argument(
+        "--data-dir",
+        default=argparse.SUPPRESS,
+        help="Directory containing manifest.json and datasets (may be placed before or after the command)",
+    )
     check_p.add_argument("--strict", action="store_true", help="Reserved for future use")
 
     return p.parse_args()
