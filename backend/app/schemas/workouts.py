@@ -183,6 +183,40 @@ class CompletedSet(BaseModel):
         max_length=1000,
         description="Set-level notes/comments.",
     )
+    # SPEC-006 §42/§58: the value the plan had before an accepted progression
+    # target replaced it (None means the set was empty). Recorded once, so the
+    # UI can offer a one-tap revert to the planned number.
+    planned_weight: Optional[float] = Field(
+        None,
+        ge=0,
+        le=2000,
+        description="Weight planned before the progression target was applied.",
+    )
+    planned_duration: Optional[int] = Field(
+        None,
+        ge=0,
+        le=86400,
+        description="Duration planned before the progression target was applied.",
+    )
+
+
+class ProgressionTargetInfo(BaseModel):
+    """SPEC-006 §42/§58: accepted target a session's numbers were seeded from.
+
+    Present on an exercise only while the seeded value is still in place; the UI
+    labels the number and offers a revert to the planned one.
+    """
+
+    recommendation_id: int = Field(..., ge=1)
+    scope_key: str = Field(..., max_length=128)
+    value: float = Field(..., description="Accepted target: kg or seconds.")
+    unit: str = Field(
+        default="kg",
+        pattern="^(kg|seconds)$",
+        description="What ``value`` measures.",
+    )
+    policy: Optional[str] = Field(None, max_length=64)
+    lifecycle_status: Optional[str] = Field(None, max_length=32)
 
 
 class CompletedExercise(BaseModel):
@@ -220,6 +254,8 @@ class CompletedExercise(BaseModel):
     block_order: Optional[int] = Field(None, ge=0)
     block_rounds: Optional[int] = Field(None, ge=1)
     block_rest_seconds: Optional[int] = Field(None, ge=0)
+    # SPEC-006 §58: set when the accepted target seeded this exercise's sets.
+    progression_target: Optional[ProgressionTargetInfo] = None
 
 
 class SessionFatigueTrend(BaseModel):
@@ -717,7 +753,30 @@ class SmartRestRecommendation(BaseModel):
 
 
 class ProgressionRecommendation(BaseModel):
-    """Explainable progression recommendation (SPEC-005 §37–38)."""
+    """Explainable progression recommendation (SPEC-005 §37–38, SPEC-006 §8).
+
+    SPEC-006 fields are additive: existing consumers keep reading the original
+    keys, while the card can now show status, lifecycle and the persisted id.
+    """
+
+    # SPEC-006 §8/§9/§10 — persisted recommendation identity + lifecycle.
+    id: Optional[int] = None
+    exercise_id: Optional[int] = None
+    scope_key: Optional[str] = None
+    template_id: Optional[int] = None
+    template_exercise_id: Optional[int] = None
+    status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    policy_version: Optional[str] = None
+    actual_selected_value: Optional[float] = None
+    previous_reps: Optional[int] = None
+    recommended_reps: Optional[int] = None
+    reps_min: Optional[int] = None
+    reps_max: Optional[int] = None
+    previous_duration: Optional[int] = None
+    recommended_duration: Optional[int] = None
+    failure_streak: int = 0
+    recovery_warning: Optional[str] = None
 
     recommended_value: Optional[float] = None
     previous_value: Optional[float] = None

@@ -101,7 +101,7 @@ test.describe('MVP Regression: Golden Path @regression @golden-path @mvp', () =>
         // Verify the dashboard rendered (auth success indicator). The dashboard hides
         // the shell navigation, so its own content is the signal; the nav locator below
         // is used on the section routes later in this flow.
-        await expect(page.getByRole('heading', { name: 'Мои шаблоны' })).toBeVisible({ timeout: 15_000 })
+        await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible({ timeout: 15_000 })
         const nav = page.getByRole('navigation', { name: 'Основная навигация' })
 
         // ═══════════════════════════════════════════════════════════════════════

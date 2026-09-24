@@ -91,6 +91,23 @@ class ProgressionPolicy(StrEnum):
     TIME_PROGRESSION = "TIME_PROGRESSION"
 
 
+class ProgressionBulkSkipReason(StrEnum):
+    """Why a bulk action left one selected target alone (SPEC-006 §58)."""
+
+    # Unknown id, someone else's record, or one that is no longer an accepted
+    # target (rejected or superseded by a newer recommendation).
+    NOT_FOUND = "not_found"
+    # The target is accepted and fine — its automatic prefill is just already off.
+    ALREADY_DISABLED = "already_disabled"
+    # The mirror case when the prefill is switched back on: this target never
+    # had it off (SPEC §58 — undoing a bulk switch-off).
+    ALREADY_ENABLED = "already_enabled"
+    # Another selected target of the same scope is newer, and the edit reached
+    # that scope already: a policy belongs to the scope, not to a record, so the
+    # overlap is not edited (or named) a second time.
+    SUPERSEDED = "superseded"
+
+
 class PersonalRecordType(StrEnum):
     """Personal record types tracked per exercise (SPEC-005 §40)."""
 

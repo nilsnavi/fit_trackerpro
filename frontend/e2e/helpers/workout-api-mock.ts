@@ -239,53 +239,43 @@ export async function fillActiveSetInputs(page: Page, values: { weight?: number;
     }
 }
 
-/** Set once per page load so only the first dismissal waits for a sheet. */
-const DISMISS_ONCE_FLAG = '__e2eDismissBlockingDone'
-
 /**
  * Nothing on the screen is clickable while a sheet is open. The §48 restore prompt is the
  * one that greets the app when an unfinished session exists; close it the way a user would.
  *
  * The gate that renders the prompt is loaded lazily, so it can land well after the screen has
- * painted. On the first call of each page load (a reload starts a new page load) an in-progress
- * session is given a moment to raise its sheet, instead of racing it with a 2s poll window.
+ * painted — and it can land again after a dismissal. With an in-progress session on disk the
+ * prompt is expected, so its arrival is awaited for a bounded window instead of racing it;
+ * without one the call stays a single cheap check.
  */
 export async function dismissBlockingDialog(page: Page) {
-    const firstCallInPage = await page
-        .evaluate((flag) => {
-            const owner = window as unknown as Record<string, unknown>
-            if (owner[flag] === true) return false
-            owner[flag] = true
-            return true
-        }, DISMISS_ONCE_FLAG)
+    const sessionInProgress = await page
+        .evaluate(() => localStorage.getItem('workout-session-draft') !== null)
         .catch(() => false)
+    const deadline = Date.now() + (sessionInProgress ? 8_000 : 0)
 
-    if (firstCallInPage) {
-        const sessionInProgress = await page
-            .evaluate(() => localStorage.getItem('workout-session-draft') !== null)
-            .catch(() => false)
-        if (sessionInProgress) {
-            await page
-                .locator('[role="dialog"]')
-                .first()
-                .waitFor({ state: 'visible', timeout: 5_000 })
-                .catch(() => undefined)
+    for (;;) {
+        const restorePrompt = page.getByTestId('session-restore-dialog')
+        if (await restorePrompt.isVisible().catch(() => false)) {
+            await page.getByTestId('restore-continue-btn').click()
+            await expect(restorePrompt).toBeHidden({ timeout: 10_000 })
+            return
         }
-    }
 
-    const restorePrompt = page.getByTestId('session-restore-dialog')
-    if (await restorePrompt.isVisible().catch(() => false)) {
-        await page.getByTestId('restore-continue-btn').click()
-        await expect(restorePrompt).toBeHidden({ timeout: 10_000 })
-        return
-    }
+        const dialog = page.locator('[role="dialog"]').last()
+        if (await dialog.isVisible().catch(() => false)) {
+            // A sheet that is already animating out is still "visible" here, and an unbounded
+            // click on it would retry until the test times out: the close is bounded and the
+            // sheet is allowed to hide itself.
+            const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
+            if ((await closeButton.count()) > 0) await closeButton.first().click({ timeout: 3_000 }).catch(() => undefined)
+            else await page.keyboard.press('Escape').catch(() => undefined)
+            await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
+            return
+        }
 
-    const dialog = page.locator('[role="dialog"]').last()
-    if (await dialog.isVisible().catch(() => false)) {
-        const closeButton = dialog.getByRole('button', { name: 'Закрыть' })
-        if ((await closeButton.count()) > 0) await closeButton.first().click().catch(() => undefined)
-        else await page.keyboard.press('Escape').catch(() => undefined)
-        await expect(dialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined)
+        if (Date.now() >= deadline) return
+        await page.waitForTimeout(250)
     }
 }
 
@@ -417,6 +407,12 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             return respond(200, buildUserProfile())
         }
 
+        // Экстренные контакты: главная спрашивает список при загрузке (WS1-13).
+        // Явный ответ, чтобы сценарии не зависели от «пустого» фоллбэка ниже.
+        if (method === 'GET' && normalizedPath.endsWith('/system/emergency/contact')) {
+            return respond(200, { items: [], total: 0, active_count: 0 })
+        }
+
         // TelegramAuthGate exchanges the injected initData for a token; without this
         // handler the catch-all answer has no access_token and the app lands on its
         // "Ошибка авторизации" screen instead of the shell.
@@ -443,6 +439,20 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
         }
 
         if (method === 'GET' && /coach-access$/.test(normalizedPath)) {
+            return respond(200, [])
+        }
+
+        // Health metrics for home dashboard widgets (WS2-2)
+        if (method === 'GET' && (normalizedPath.includes('/health-metrics/water/goal') || normalizedPath.includes('/health-metrics/water/reminder'))) {
+            return respond(200, { daily_goal: 2000, enabled: false })
+        }
+        if (method === 'GET' && normalizedPath.includes('/health-metrics/water/daily')) {
+            return respond(200, { total: 0, goal: 2000, entries: [] })
+        }
+        if (method === 'GET' && normalizedPath.includes('/health-metrics/water')) {
+            return respond(200, { items: [], total: 0, page: 1, page_size: 50, total_amount: 0 })
+        }
+        if (method === 'GET' && (normalizedPath.includes('/health-metrics/glucose') || normalizedPath.includes('/health-metrics/wellness'))) {
             return respond(200, [])
         }
 
@@ -789,6 +799,38 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
                 })),
                 message: 'completed',
             })
+        }
+
+        // WS2-2 «Здоровье сегодня»: главная запрашивает health-metrics при загрузке.
+        // Пустые, но корректные по форме ответы: catch-all ниже отдаёт `{}` для
+        // массивов (glucose/wellness), и `entries.find` падает в HomeHealthSection,
+        // что рушит весь Home через ErrorBoundary до рендера «Мои шаблоны».
+        if (method === 'GET' && normalizedPath.endsWith('/health-metrics/water/goal')) {
+            return respond(200, {
+                id: 1,
+                user_id: 1,
+                daily_goal: 2000,
+                workout_increase: 500,
+                is_workout_day: false,
+                created_at: isoNow(),
+                updated_at: isoNow(),
+            })
+        }
+        if (method === 'GET' && /\/health-metrics\/water\/daily\/\d{4}-\d{2}-\d{2}$/.test(normalizedPath)) {
+            return respond(200, {
+                date: new Date().toISOString().slice(0, 10),
+                total: 0,
+                goal: 2000,
+                percentage: 0,
+                is_goal_reached: false,
+                entry_count: 0,
+            })
+        }
+        if (method === 'GET' && normalizedPath.endsWith('/health-metrics/glucose')) {
+            return respond(200, [])
+        }
+        if (method === 'GET' && normalizedPath.endsWith('/health-metrics/wellness')) {
+            return respond(200, [])
         }
 
         // Never hit external API in tests: unknown endpoints return empty success payload.

@@ -391,7 +391,16 @@ class WorkoutsRepository(SQLAlchemyRepository):
         user_id: int,
         workout_session_id: int,
         session_exercises: list[WorkoutSessionExercise],
-    ) -> None:
+    ) -> list[WorkoutSessionExercise]:
+        """Rebuild the snapshot rows, re-using the ids the rows already carry (SPEC §58).
+
+        The rows are deleted and re-created on every rebuild. A rebuilt row whose
+        ``id`` is already set is inserted **with that id** (explicit primary key),
+        so a row keeps its identity across rebuilds; rows without an id get fresh
+        ones from the sequence. The service stamps the ids into the session's own
+        JSON right after, which is what lets the session recognize its entries
+        without relying on the client echoing them.
+        """
         await self.db.execute(
             delete(WorkoutSet).where(
                 and_(
@@ -408,9 +417,20 @@ class WorkoutsRepository(SQLAlchemyRepository):
                 )
             )
         )
+        # Core DELETE bypasses the ORM: drop whatever the identity map still
+        # holds for these rows, so re-created rows re-using a carried id are not
+        # shadowed by a stale object with the previous payload's columns.
+        # Only the snapshot rows expire — a blanket ``expire_all()`` would also
+        # expire the session's own ``WorkoutLog``, whose next attribute read
+        # (``workout.exercises``) then tries a synchronous lazy refresh and
+        # dies with ``MissingGreenlet`` in async context.
+        for workout_set in list(self.db.identity_map.values()):
+            if isinstance(workout_set, (WorkoutSet, WorkoutSessionExercise)):
+                self.db.expunge(workout_set)
         for row in session_exercises:
             self.add(row)
         await self.commit()
+        return session_exercises
 
     def add_training_load_daily(self, row: TrainingLoadDaily) -> None:
         self.add(row)

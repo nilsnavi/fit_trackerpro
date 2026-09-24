@@ -27,6 +27,8 @@ venv/
 ENV/
 env/
 .venv
+# Пропиновое окружение для экспорта OpenAPI (frontend/scripts/lib/openapiPython.mjs)
+.venv-openapi/
 
 # Environment files
 .env

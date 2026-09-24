@@ -20,6 +20,9 @@ test.describe('@mvp-e2e offline sync (реальный API)', () => {
         if (await onboardingTitle.isVisible().catch(() => false)) {
             await page.getByLabel('Сила').check()
             await page.getByLabel('Начинающий').check()
+            // Согласие на обработку данных о здоровье обязательно (WS1-14):
+            // без него кнопка «Сохранить и продолжить» выключена.
+            await page.getByRole('checkbox', { name: /обработку данных о здоровье/ }).check()
             await page.getByRole('button', { name: 'Сохранить и продолжить' }).click()
             await expect(onboardingTitle).toBeHidden({ timeout: 30_000 })
         }
