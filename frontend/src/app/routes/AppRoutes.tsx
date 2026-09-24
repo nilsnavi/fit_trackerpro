@@ -6,6 +6,7 @@ import { RouteFallbackSpinner } from '@shared/ui/page-skeletons'
 import { workoutRoutes } from '@features/workouts/routes'
 import { analyticsRoutes } from '@features/analytics/routes'
 import { profileRoutes } from '@features/profile/routes'
+import { legalRoutes } from '@features/legal/routes'
 
 const Home = lazy(() =>
     import('@features/home/pages/Home').then((m) => ({ default: m.Home })),
@@ -19,8 +20,9 @@ export function AppRoutes() {
         <Suspense fallback={<RouteFallbackSpinner />}>
             <Routes>
                 <Route element={<AppShell />}>
+                    <Route path="/" element={<Navigate to="/home" replace />} />
                     <Route
-                        path="/"
+                        path="/home"
                         element={
                             <RouteGuard screenTitle="Главная" isPublic>
                                 <Home />
@@ -38,7 +40,8 @@ export function AppRoutes() {
                     {workoutRoutes()}
                     {analyticsRoutes()}
                     {profileRoutes()}
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    {legalRoutes()}
+                    <Route path="*" element={<Navigate to="/home" replace />} />
                 </Route>
             </Routes>
         </Suspense>

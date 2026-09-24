@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, Dumbbell, User, Library, BarChart3 } from 'lucide-react'
+import { Home, User, LayoutGrid, Dumbbell, BarChart3 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useWorkoutSessionDraftStore } from '@/state/local'
 
 const navItems = [
-    { path: '/', icon: Home, label: 'Главная' },
-    { path: '/exercises', icon: Library, label: 'Каталог' },
+    { path: '/home', icon: Home, label: 'Главная' },
+    { path: '/exercises', icon: LayoutGrid, label: 'Каталог' },
     { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
     { path: '/analytics', icon: BarChart3, label: 'Прогресс' },
     { path: '/profile', icon: User, label: 'Профиль' },
@@ -16,7 +16,7 @@ function isNavRouteActive(path: string, pathname: string): boolean {
     if (path === '/analytics') {
         return pathname === '/analytics' || pathname.startsWith('/progress')
     }
-    if (path === '/') return pathname === '/'
+    if (path === '/home') return pathname === '/home'
     return pathname === path || pathname.startsWith(`${path}/`)
 }
 

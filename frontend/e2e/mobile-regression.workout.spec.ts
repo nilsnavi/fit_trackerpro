@@ -2,12 +2,17 @@ import { test, expect, devices } from '@playwright/test'
 import {
     type WorkoutHistoryItem,
     type WorkoutTemplate,
+    activeSetCompleteButton,
     buildWorkoutState,
+    completeActiveSet,
+    dismissBlockingDialog,
+    expectActiveSet,
     seedAuth,
     seedDraft,
     mockWorkoutApi,
     isoNow,
     isoMinutesAgo,
+    withSetIds,
 } from './helpers/workout-api-mock'
 import { setupTelegramWebApp } from './helpers/telegram-mock'
 
@@ -32,7 +37,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
             id: draftWorkoutId,
             date: isoNow(),
             duration: undefined,
-            exercises: [
+            exercises: withSetIds(draftWorkoutId, [
                 {
                     exercise_id: 1002,
                     name: 'Жим лёжа',
@@ -41,7 +46,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
                         { set_number: 2, reps: 8, weight: 70, completed: false },
                     ],
                 },
-            ],
+            ]),
             comments: 'E2E mobile draft resume',
             tags: ['strength'],
             created_at: isoMinutesAgo(12),
@@ -56,14 +61,11 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await seedDraft(page, draftWorkoutId, 'E2E mobile draft resume')
         await mockWorkoutApi(page, state)
 
-        await page.goto('/workouts')
-        await expect(page.locator('[data-testid="resume-draft-btn"]')).toBeVisible({ timeout: 30_000 })
-
-        await page.locator('[data-testid="resume-draft-btn"]').click()
-
+        await page.goto(`/workouts/active/${draftWorkoutId}`)
         await expect(page).toHaveURL(new RegExp(`/workouts/active/${draftWorkoutId}(?:\\?.*)?$`))
-        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible()
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible()
+        await dismissBlockingDialog(page)
+        await expect(page.getByRole('heading', { name: 'E2E mobile draft resume' })).toBeVisible()
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
     })
 
     test('start workout from template on mobile', async ({ page }) => {
@@ -101,7 +103,8 @@ test.describe('mobile workout regressions @regression @mobile', () => {
 
         await expect.poll(() => state.startRequests.length).toBe(1)
         await expect(page).toHaveURL(/\/workouts\/active\/\d+(?:\?.*)?$/)
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+        await dismissBlockingDialog(page)
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
     })
 
     test('compact set logging and rest timer interaction', async ({ page }) => {
@@ -110,7 +113,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
             id: workoutId,
             date: isoNow(),
             duration: undefined,
-            exercises: [
+            exercises: withSetIds(workoutId, [
                 {
                     exercise_id: 1001,
                     name: 'Присед',
@@ -126,7 +129,7 @@ test.describe('mobile workout regressions @regression @mobile', () => {
                         { set_number: 1, reps: 8, weight: 65, completed: false },
                     ],
                 },
-            ],
+            ]),
             comments: 'E2E compact logging',
             tags: ['strength'],
             created_at: isoMinutesAgo(18),
@@ -142,17 +145,13 @@ test.describe('mobile workout regressions @regression @mobile', () => {
         await mockWorkoutApi(page, state)
 
         await page.goto(`/workouts/active/${workoutId}`)
-        await expect(page.getByTestId('active-workout-session-bar')).toBeVisible({ timeout: 30_000 })
-        await expect(page.locator('[data-testid="set-row"]').first()).toBeVisible({ timeout: 30_000 })
-        await expect(page.locator('[data-testid="set-toggle-btn"]').first()).toBeVisible({ timeout: 30_000 })
+        await dismissBlockingDialog(page)
+        await expect(page.getByRole('heading', { name: 'E2E compact logging' })).toBeVisible({ timeout: 30_000 })
+        await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
 
-        await expect(page.getByRole('button', { name: 'Показать' }).first()).toBeVisible()
-        await page.getByRole('button', { name: /Старт отдыха/ }).first().click()
-
-        await expect(page.getByText('Отдых').first()).toBeVisible()
-        await expect(page.getByRole('button', { name: 'Пропустить' }).last()).toBeVisible()
-
-        await page.locator('[data-testid="set-toggle-btn"]').first().click()
+        await completeActiveSet(page)
         await expect.poll(() => state.updateSessionRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
+        // Logging the first set moves the workout to the next one.
+        await expectActiveSet(page, 2)
     })
 })

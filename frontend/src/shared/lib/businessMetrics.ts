@@ -9,6 +9,7 @@ export type BusinessMetricEvent =
     | 'abandoned_workout'
     | 'created_template'
     | 'viewed_analytics'
+    | 'edited_workout_set'
 
 export type BusinessMetricProperties = Record<
     string,

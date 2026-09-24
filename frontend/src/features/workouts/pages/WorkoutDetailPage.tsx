@@ -7,6 +7,7 @@ import {
     CalendarDays,
     Clock3,
     MessageSquare,
+    Pencil,
     RotateCcw,
     Tags,
     LayoutTemplate,
@@ -30,7 +31,8 @@ import {
     formatSetValue,
 } from '@features/workouts/lib/workoutDetailFormatters'
 import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHelpers'
-import type { WorkoutHistoryItem, WorkoutSessionMetrics } from '@features/workouts/types/workouts'
+import { EditSetSheet } from '@features/workouts/components/EditSetSheet'
+import type { CompletedSet, WorkoutHistoryItem, WorkoutSessionMetrics } from '@features/workouts/types/workouts'
 
 const buildTemplateName = (workout: WorkoutHistoryItem): string => {
     const base = workout.comments?.trim()
@@ -84,6 +86,14 @@ export function WorkoutDetailPage() {
     const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false)
     const [templateNameDraft, setTemplateNameDraft] = useState('')
     const [templateNameError, setTemplateNameError] = useState<string | null>(null)
+    const [editingSet, setEditingSet] = useState<{
+        exerciseIndex: number
+        exerciseId: number
+        exerciseName: string
+        setIndex: number
+        setNumber: number
+        set: CompletedSet
+    } | null>(null)
 
     const isCompletedWorkout = typeof workout?.duration === 'number' && workout.duration > 0
 
@@ -197,7 +207,7 @@ export function WorkoutDetailPage() {
             {!isFetching && !errorMessage && workout && !isCompletedWorkout && (
                 <div className="space-y-3 rounded-xl border border-border bg-telegram-secondary-bg p-4">
                     <p className="text-sm text-telegram-hint">
-                            Эта сессия еще не завершена. Для изменения подходов и выполнения откройте страницу активной тренировки.
+                        Эта сессия еще не завершена. Для изменения подходов и выполнения откройте страницу активной тренировки.
                     </p>
                     <Button type="button" onClick={() => navigate(`/workouts/active/${workout.id}`)}>
                         Открыть активную тренировку
@@ -208,7 +218,7 @@ export function WorkoutDetailPage() {
             {!isFetching && !errorMessage && workout && isCompletedWorkout && (
                 <>
                     <section className="space-y-3 rounded-xl bg-telegram-secondary-bg p-4">
-                            <h2 className="text-base font-semibold text-telegram-text">Итоги</h2>
+                        <h2 className="text-base font-semibold text-telegram-text">Итоги</h2>
                         <div className="flex items-center gap-2 text-sm text-telegram-hint">
                             <CalendarDays className="h-4 w-4" />
                             <span>{formatDate(workout.date)}</span>
@@ -263,7 +273,7 @@ export function WorkoutDetailPage() {
                             <div className="flex items-start gap-2 rounded-lg bg-telegram-bg/50 p-3 text-sm text-telegram-text">
                                 <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-telegram-hint" />
                                 <div>
-                                     <div className="text-xs uppercase tracking-wide text-telegram-hint">Заметки</div>
+                                    <div className="text-xs uppercase tracking-wide text-telegram-hint">Заметки</div>
                                     <div className="mt-1">{workout.comments}</div>
                                 </div>
                             </div>
@@ -273,7 +283,7 @@ export function WorkoutDetailPage() {
                             <div className="flex items-start gap-2 rounded-lg bg-telegram-bg/50 p-3 text-sm text-telegram-text">
                                 <Tags className="mt-0.5 h-4 w-4 shrink-0 text-telegram-hint" />
                                 <div>
-                                     <div className="text-xs uppercase tracking-wide text-telegram-hint">Теги</div>
+                                    <div className="text-xs uppercase tracking-wide text-telegram-hint">Теги</div>
                                     <div className="mt-1">{workout.tags.join(', ')}</div>
                                 </div>
                             </div>
@@ -282,7 +292,7 @@ export function WorkoutDetailPage() {
 
                     <section className="space-y-3 rounded-xl bg-telegram-secondary-bg p-4">
                         <div className="flex items-center justify-between">
-                               <h2 className="text-base font-semibold text-telegram-text">Аналитика тренировки</h2>
+                            <h2 className="text-base font-semibold text-telegram-text">Аналитика тренировки</h2>
                             <Trophy className="h-4 w-4 text-amber-500" />
                         </div>
 
@@ -413,27 +423,27 @@ export function WorkoutDetailPage() {
                     </section>
 
                     <section className="space-y-2">
-                            <h2 className="text-base font-semibold text-telegram-text">Действия</h2>
+                        <h2 className="text-base font-semibold text-telegram-text">Действия</h2>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <Button
                                 type="button"
                                 leftIcon={<RotateCcw className="h-4 w-4" />}
                                 onClick={() => void handleRepeatWorkout()}
-                                    isLoading={isStartingSession}
-                                    disabled={isStartingSession}
+                                isLoading={isStartingSession}
+                                disabled={isStartingSession}
                             >
-                                        Повторить
+                                Повторить
                             </Button>
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    leftIcon={<LayoutTemplate className="h-4 w-4" />}
-                                    onClick={handleOpenSaveAsTemplate}
-                                    isLoading={createTemplateFromWorkoutMutation.isPending}
-                                    disabled={createTemplateFromWorkoutMutation.isPending}
-                                >
-                                        Сохранить как шаблон
-                                </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                leftIcon={<LayoutTemplate className="h-4 w-4" />}
+                                onClick={handleOpenSaveAsTemplate}
+                                isLoading={createTemplateFromWorkoutMutation.isPending}
+                                disabled={createTemplateFromWorkoutMutation.isPending}
+                            >
+                                Сохранить как шаблон
+                            </Button>
                         </div>
                         {templateSavedName && (
                             <p className="text-sm text-primary">Шаблон сохранен: {templateSavedName}</p>
@@ -442,7 +452,7 @@ export function WorkoutDetailPage() {
                     </section>
 
                     <section className="space-y-3">
-                            <h2 className="text-base font-semibold text-telegram-text">Упражнения</h2>
+                        <h2 className="text-base font-semibold text-telegram-text">Упражнения</h2>
                         {workout.exercises.map((exercise, exerciseIndex) => (
                             <article
                                 key={`${exercise.exercise_id}-${exerciseIndex}`}
@@ -456,23 +466,36 @@ export function WorkoutDetailPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                     <div className="text-xs uppercase tracking-wide text-telegram-hint">Подходы</div>
-                                    {exercise.sets_completed.map((set) => (
-                                        <div
+                                    <div className="text-xs uppercase tracking-wide text-telegram-hint">Подходы</div>
+                                    {exercise.sets_completed.map((set, setIndex) => (
+                                        <button
                                             key={set.set_number}
-                                            className="space-y-2 rounded-lg bg-telegram-bg/60 p-3 text-sm text-telegram-text"
+                                            type="button"
+                                            onClick={() => {
+                                                setEditingSet({
+                                                    exerciseIndex,
+                                                    exerciseId: exercise.exercise_id,
+                                                    exerciseName: exercise.name,
+                                                    setIndex,
+                                                    setNumber: set.set_number,
+                                                    set,
+                                                })
+                                            }}
+                                            className="w-full space-y-2 rounded-lg bg-telegram-bg/60 p-3 text-sm text-telegram-text text-left active:scale-[0.99] transition-transform relative group"
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="font-medium">Подход {set.set_number}</span>
-                                                <span
-                                                    className={`rounded-full px-2 py-0.5 text-xs ${
-                                                        set.completed
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className={`rounded-full px-2 py-0.5 text-xs ${set.completed
                                                             ? 'bg-success/15 text-success'
                                                             : 'bg-telegram-secondary-bg text-telegram-hint'
-                                                    }`}
-                                                >
-                                                    {set.completed ? 'Выполнен' : 'Не выполнен'}
-                                                </span>
+                                                            }`}
+                                                    >
+                                                        {set.completed ? 'Выполнен' : 'Не выполнен'}
+                                                    </span>
+                                                    <Pencil className="w-4 h-4 text-telegram-hint opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </div>
                                             </div>
                                             <div className="flex flex-wrap gap-2 text-xs">
                                                 <span className="rounded-md bg-telegram-bg/60 px-2 py-1">
@@ -494,7 +517,7 @@ export function WorkoutDetailPage() {
                                                     Дистанция: {formatSetValue(set.distance, 'км')}
                                                 </span>
                                             </div>
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
 
@@ -554,6 +577,20 @@ export function WorkoutDetailPage() {
                             </div>
                         </div>
                     </Modal>
+
+                    {/* Edit Set Sheet */}
+                    {editingSet && workout && (
+                        <EditSetSheet
+                            isOpen
+                            onClose={() => setEditingSet(null)}
+                            workoutId={workout.id}
+                            exerciseId={editingSet.exerciseId}
+                            exerciseName={editingSet.exerciseName}
+                            setNumber={editingSet.setNumber}
+                            setId={editingSet.set.id ?? editingSet.setNumber}
+                            initialData={editingSet.set}
+                        />
+                    )}
                 </>
             )}
         </div>

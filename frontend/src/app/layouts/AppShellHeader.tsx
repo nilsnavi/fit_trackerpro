@@ -8,8 +8,10 @@ import { ActiveWorkoutHeaderPill } from '@app/components/ActiveWorkoutHeaderPill
 export function AppShellHeader() {
     const { pathname } = useLocation()
     const { isTelegram } = useTelegramContext()
-    const { headerRight } = useAppShellLayoutContext()
+    const { headerRight, hideHeader } = useAppShellLayoutContext()
     const title = getAppShellTitle(pathname)
+
+    if (hideHeader) return null
 
     return (
         <header

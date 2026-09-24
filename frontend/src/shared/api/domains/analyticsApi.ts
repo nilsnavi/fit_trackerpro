@@ -2,7 +2,7 @@ import { api } from '@shared/api/client'
 
 export const analyticsApi = {
     getDashboard(params?: { period?: string }) {
-        return api.get('/analytics/', params)
+        return api.get('/analytics', params)
     },
     /** GET /api/v1/analytics/workouts — сводка тренировок по периоду (см. AnalyticsDashboardResponse). */
     getWorkoutStats(params?: { period?: string }) {
@@ -20,11 +20,17 @@ export const analyticsApi = {
     getTrainingLoadDaily(params?: Record<string, unknown>) {
         return api.get('/analytics/training-load/daily', params)
     },
+    getTrainingLoadDailyTable(params?: Record<string, unknown>) {
+        return api.get('/analytics/training-load/daily/table', params)
+    },
     getCalendar(params?: Record<string, unknown>) {
         return api.get('/analytics/calendar', params)
     },
     getMuscleLoad(params?: Record<string, unknown>) {
         return api.get('/analytics/muscle-load', params)
+    },
+    getMuscleLoadTable(params?: Record<string, unknown>) {
+        return api.get('/analytics/muscle-load/table', params)
     },
     getRecoveryState() {
         return api.get('/analytics/recovery-state')
@@ -34,5 +40,17 @@ export const analyticsApi = {
     },
     getWorkoutSummary(params?: Record<string, unknown>) {
         return api.get('/analytics/workout-summary', params)
+    },
+    getMuscleSignals() {
+        return api.get('/analytics/muscle-signals')
+    },
+    recalculateRecoveryState(params?: { target_date?: string; date_from?: string; date_to?: string }) {
+        // Backend expects query params, not body (FastAPI Query parameters)
+        const query = new URLSearchParams()
+        if (params?.target_date) query.set('target_date', params.target_date)
+        if (params?.date_from) query.set('date_from', params.date_from)
+        if (params?.date_to) query.set('date_to', params.date_to)
+        const queryString = query.toString()
+        return api.post(`/analytics/recovery-state/recalculate${queryString ? `?${queryString}` : ''}`)
     },
 }

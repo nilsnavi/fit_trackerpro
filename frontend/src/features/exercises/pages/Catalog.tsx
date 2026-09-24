@@ -35,6 +35,7 @@ import {
     EQUIPMENT_OPTIONS,
     RISK_OPTIONS,
 } from '@features/exercises/constants/catalogReferenceUi';
+import { GoalProgramsSection } from '@features/workouts/components/GoalProgramsSection';
 
 export type {
     Exercise,
@@ -85,6 +86,8 @@ const iconToEmoji = (icon: string): string => {
             return '⚖️';
         case 'basketball':
             return '🏀';
+        case 'accessibility':
+            return '🩺';
         default:
             return '🏷️';
     }
@@ -1048,6 +1051,9 @@ export const Catalog: React.FC = () => {
 
             {/* Exercise List */}
             <div className="px-4 py-4">
+                <div className="mb-5">
+                    <GoalProgramsSection />
+                </div>
                 {exercisesQuery.isError && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 text-center">
                         {exercisesQuery.data
