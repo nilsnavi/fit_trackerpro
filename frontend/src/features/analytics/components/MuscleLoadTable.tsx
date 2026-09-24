@@ -1,16 +1,12 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Loader2, Table2 } from 'lucide-react'
-import { queryKeys } from '@shared/api/queryKeys'
 import { getErrorMessage } from '@shared/errors'
-import {
-    getAnalyticsMuscleLoadTable,
-    type ApiMuscleLoadTableEntry,
-} from '@features/analytics/api/analyticsDomain'
+import type { ApiMuscleLoadTableEntry } from '@features/analytics/api/analyticsDomain'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { cn } from '@shared/lib/cn'
+import { useMuscleLoadTable } from '../hooks/useLoadTables'
 
 interface MuscleLoadTableProps {
     dateFrom: string | null
@@ -26,43 +22,17 @@ export function MuscleLoadTable({
     muscleGroup,
 }: MuscleLoadTableProps) {
     const tg = useTelegramWebApp()
-    const [page, setPage] = useState(1)
-
-    const {
-        data,
-        isLoading,
-        isError,
-        error,
-        isFetching,
-    } = useQuery({
-        queryKey: queryKeys.analytics.muscleLoadTable(page, pageSize, dateFrom, dateTo, muscleGroup ?? null),
-        queryFn: () =>
-            getAnalyticsMuscleLoadTable({
-                page,
-                page_size: pageSize,
-                date_from: dateFrom ?? undefined,
-                date_to: dateTo ?? undefined,
-                muscle_group: muscleGroup ?? undefined,
-            }),
-        staleTime: 60_000,
-    })
-
-    const items = data?.items ?? []
-    const total = data?.total ?? 0
-    const totalPages = Math.ceil(total / pageSize)
+    const { items, total, totalPages, page, isLoading, isError, error, isFetching, goPrev, goNext } =
+        useMuscleLoadTable({ dateFrom, dateTo, pageSize, muscleGroup })
 
     const handlePrevPage = () => {
-        if (page > 1) {
-            setPage(page - 1)
-            tg.hapticFeedback({ type: 'selection' })
-        }
+        goPrev()
+        tg.hapticFeedback({ type: 'selection' })
     }
 
     const handleNextPage = () => {
-        if (page < totalPages) {
-            setPage(page + 1)
-            tg.hapticFeedback({ type: 'selection' })
-        }
+        goNext()
+        tg.hapticFeedback({ type: 'selection' })
     }
 
     if (isLoading) {

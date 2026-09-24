@@ -20,7 +20,9 @@ from telegram.ext import (
 )
 
 from app.application.analytics_service import AnalyticsService
+from app.application.emergency_service import EmergencyService
 from app.application.users_service import UsersService
+from app.domain.exceptions import EmergencyValidationError
 from app.infrastructure.database import AsyncSessionLocal
 from app.settings import settings
 
@@ -105,6 +107,7 @@ async def set_bot_commands(bot: Application) -> None:
         BotCommand("help", "❓ Помощь и инструкции"),
         BotCommand("stats", "📊 Моя статистика"),
         BotCommand("settings", "⚙️ Настройки"),
+        BotCommand("link", "🔗 Подключиться как экстренный контакт"),
     ]
 
     try:
@@ -114,6 +117,50 @@ async def set_bot_commands(bot: Application) -> None:
         logger.error(f"Failed to set bot commands: {e}")
 
 
+async def link_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /link <code> and /start link_<code>
+
+    Binds this Telegram chat to an emergency contact record so that alerts can
+    actually be delivered (bots can only message users who contacted them).
+    """
+    args = list(context.args or [])
+    raw_code = args[0] if args else ""
+    code = raw_code.removeprefix("link_").strip()
+
+    chat_id = getattr(update.effective_chat, "id", None)
+    if not isinstance(chat_id, int):
+        return
+
+    async with AsyncSessionLocal() as db:
+        service = EmergencyService(db)
+        try:
+            result = await service.link_contact_by_code(code, chat_id)
+        except EmergencyValidationError as exc:
+            await update.message.reply_text(f"⚠️ {exc}")
+            return
+        except Exception:
+            logger.exception("Failed to link emergency contact for chat_id=%s", chat_id)
+            await update.message.reply_text(
+                "⚠️ Не удалось подключиться. Попробуйте позже или попросите новый код."
+            )
+            return
+
+    if result.already_linked:
+        text = (
+            "✅ Вы уже подключены как экстренный контакт "
+            f"({result.contact_name}) пользователя {result.owner_name}."
+        )
+    else:
+        text = (
+            "✅ Готово! Вы подключены как экстренный контакт "
+            f"({result.contact_name}) пользователя {result.owner_name}.\n\n"
+            "Если ему/ей станет плохо и он(а) нажмёт «Мне плохо» в приложении, "
+            "вы получите здесь сообщение с просьбой связаться."
+        )
+    await update.message.reply_text(text)
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /start command
@@ -121,6 +168,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     Sends a welcome message with a button to open the WebApp
     """
     user = update.effective_user
+
+    # Deep link t.me/<bot>?start=link_<code> arrives as /start link_<code>.
+    if context.args and str(context.args[0]).startswith("link_"):
+        await link_command(update, context)
+        return
 
     # Create keyboard with WebApp button
     keyboard = [
@@ -285,6 +337,7 @@ def setup_bot() -> Application:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("stats", stats_command))
     application.add_handler(CommandHandler("settings", settings_command))
+    application.add_handler(CommandHandler("link", link_command))
 
     _bot_application = application
     logger.info("Bot application configured")
@@ -382,9 +435,20 @@ async def start_bot_webhook(
         await set_webapp_menu_button(app)
         await set_bot_commands(app)
 
-        # Set webhook
-        await app.bot.set_webhook(url=webhook_url)
-        logger.info(f"Webhook set to: {webhook_url}")
+        # Set webhook. When a secret is configured Telegram echoes it back in the
+        # X-Telegram-Bot-Api-Secret-Token header, which /telegram/webhook verifies
+        # before parsing anything. Never log the secret itself.
+        webhook_secret = (settings.TELEGRAM_WEBHOOK_SECRET or "").strip() or None
+        await app.bot.set_webhook(url=webhook_url, secret_token=webhook_secret)
+        logger.info(
+            "Webhook set to: %s (secret_token: %s)",
+            webhook_url,
+            "enabled" if webhook_secret else "disabled",
+        )
+        if not webhook_secret:
+            logger.warning(
+                "TELEGRAM_WEBHOOK_SECRET is not set: /telegram/webhook accepts unsigned updates"
+            )
 
         # Start application (without updater for webhook mode)
         await app.start()

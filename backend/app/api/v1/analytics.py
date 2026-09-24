@@ -36,16 +36,6 @@ from app.settings import settings
 router = APIRouter()
 
 
-@router.get("/", response_model=AnalyticsDashboardResponse)
-async def get_analytics_dashboard(
-    period: str = Query("week", pattern="^(week|month|all)$"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db),
-):
-    service = AnalyticsService(db)
-    return await service.get_analytics_dashboard(user_id=current_user.id, period=period)
-
-
 @router.get("/workouts", response_model=AnalyticsDashboardResponse)
 async def get_analytics_workouts(
     period: str = Query("week", pattern="^(week|month|all)$"),

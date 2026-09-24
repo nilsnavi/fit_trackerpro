@@ -20,8 +20,8 @@ import {
 // Aggressive debounce causes redundant requests; use a wider window instead.
 const DEBOUNCE_MS = 2000
 /** Паузы между повторами: 1 с, 2 с, 4 с. */
-const RETRY_BASE_DELAY_MS = 1000
-const RETRY_MAX_DELAY_MS = 4000
+const RETRY_BASE_DELAY_MS = 3000
+const RETRY_MAX_DELAY_MS = 15000
 const MAX_RETRY_ATTEMPTS = 3
 
 type UpdateSessionMutation = {
@@ -249,7 +249,16 @@ export function useActiveWorkoutSync({
                     retryAttemptRef.current = 0
                     setLastSyncedPayload(payload)
                     clearWorkoutDraftFromLocalStorage(draftStorageUserIdRef.current, workoutIdRef.current)
-                    queryClientRef.current.setQueryData(detailQueryKeyRef.current, data)
+                    // Ответ — эхо отправленного снимка. Если пока запрос был в полёте сессия
+                    // изменилась, локальное состояние новее: отставшее эхо не должно откатывать
+                    // его в кэше (иначе завершённый подход исчезает и «Завершить» отказывает).
+                    const latestPayload = isActiveDraftRef.current && workoutRef.current
+                        ? buildSyncPayloadRef.current(workoutRef.current)
+                        : null
+                    const latestSnapshot = latestPayload ? JSON.stringify(latestPayload) : null
+                    if (latestSnapshot === snapshot) {
+                        queryClientRef.current.setQueryData(detailQueryKeyRef.current, data)
+                    }
                     updateSyncStateRef.current('synced')
                     emitWorkoutSyncTelemetry('sync_succeeded', {
                         channel: 'active_session',
@@ -268,18 +277,15 @@ export function useActiveWorkoutSync({
                     hasShownOfflineToastRef.current = false
 
                     // New changes arrived while the request was in flight → flush them.
-                    const latestWorkout = workoutRef.current
-                    if (latestWorkout && isActiveDraftRef.current) {
-                        const latestPayload = buildSyncPayloadRef.current(latestWorkout)
-                        const latestSnapshot = JSON.stringify(latestPayload)
-                        if (latestSnapshot !== lastPersistedSnapshotRef.current) {
-                            setPendingPayload(latestPayload)
-                            scheduleDebouncedRef.current()
-                            return
-                        }
+                    if (latestPayload && latestSnapshot !== lastPersistedSnapshotRef.current) {
+                        setPendingPayload(latestPayload)
+                        scheduleDebouncedRef.current()
+                    } else {
+                        setPendingPayload(null)
                     }
 
-                    setPendingPayload(null)
+                    // Ожидающие flush продолжают работу в любом случае: иначе завершение
+                    // тренировки зависает до следующего цикла синхронизации.
                     resolveFlushWaiters()
                 },
                 onError: (error: unknown) => {

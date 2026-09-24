@@ -8,7 +8,7 @@ def _valid_settings_payload() -> dict:
     return {
         "DATABASE_URL": "sqlite+aiosqlite:///:memory:",
         "SECRET_KEY": "test-secret-key-1234567890",
-        "TELEGRAM_BOT_TOKEN": "123456:ABCDEF_test_token",
+        "TELEGRAM_BOT_TOKEN": "123456:ABCDEF_test_token_value_long_enough",
         "TELEGRAM_WEBAPP_URL": "https://localhost:3000",
     }
 
@@ -128,6 +128,9 @@ def test_telegram_bot_token_valid_formats_accepted(token: str):
         "",              # empty
         "   ",           # whitespace only
         "your_telegram_bot_token_here",  # placeholder
+        "=123456789:AAHproduction_token_not_equal_to_dev_default",
+        "123456789",
+        "not-a-token",
     ],
 )
 def test_telegram_bot_token_invalid_values_rejected(token: str):
@@ -153,3 +156,80 @@ def test_telegram_webapp_url_valid_values_accepted(url: str):
     payload["TELEGRAM_WEBAPP_URL"] = url
     s = Settings(**payload)
     assert s.TELEGRAM_WEBAPP_URL == url
+
+
+def _production_payload(**overrides) -> dict:
+    payload = {
+        "ENVIRONMENT": "production",
+        "DATABASE_URL": "postgresql+asyncpg://user:pass@db.example.com:5432/app",
+        "SECRET_KEY": "x" * 32,
+        "TELEGRAM_BOT_TOKEN": "123456789:AAHproduction_token_not_equal_to_dev_default",
+        "TELEGRAM_WEBAPP_URL": "https://fittrackpro.ru",
+        "ALLOWED_ORIGINS": "https://fittrackpro.ru",
+        "DEBUG": False,
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.mark.unit
+def test_production_requires_webhook_secret_when_bot_enabled():
+    """Without a secret the webhook would accept forged updates — refuse to start."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(**_production_payload(TELEGRAM_BOT_ENABLED=True))
+
+    assert "TELEGRAM_WEBHOOK_SECRET" in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_production_rejects_short_webhook_secret():
+    with pytest.raises(ValidationError):
+        Settings(
+            **_production_payload(
+                TELEGRAM_BOT_ENABLED=True,
+                TELEGRAM_WEBHOOK_SECRET="short",
+            )
+        )
+
+
+@pytest.mark.unit
+def test_production_accepts_webhook_secret_with_bot_enabled():
+    secret = "a" * 32
+    s = Settings(
+        **_production_payload(
+            TELEGRAM_BOT_ENABLED=True,
+            TELEGRAM_WEBHOOK_SECRET=secret,
+        )
+    )
+
+    assert s.TELEGRAM_WEBHOOK_SECRET == secret
+
+
+@pytest.mark.unit
+def test_production_does_not_require_webhook_secret_when_bot_disabled():
+    """Bot runtime disabled => no webhook traffic => the secret is optional."""
+    s = Settings(**_production_payload(TELEGRAM_BOT_ENABLED=False))
+
+    assert s.TELEGRAM_WEBHOOK_SECRET is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "secret",
+    [
+        "invalid secret with spaces",
+        "has!punctuation",
+        "semi;colon",
+    ],
+)
+def test_webhook_secret_rejects_disallowed_characters(secret: str):
+    """Telegram only allows A-Z, a-z, 0-9, '_' and '-' in secret_token."""
+    with pytest.raises(ValidationError):
+        Settings(**_production_payload(TELEGRAM_WEBHOOK_SECRET=secret))
+
+
+@pytest.mark.unit
+def test_webhook_secret_is_trimmed():
+    s = Settings(**_production_payload(TELEGRAM_WEBHOOK_SECRET="  " + "b" * 32 + "  "))
+
+    assert s.TELEGRAM_WEBHOOK_SECRET == "b" * 32
