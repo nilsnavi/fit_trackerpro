@@ -81,7 +81,9 @@ export function useWorkoutSync({
             }
             return
         }
-        void flushWorkoutSync()
+        window.setTimeout(() => {
+            void flushWorkoutSync()
+        }, 0)
     }, [enabled, flushWorkoutSync, getSessionPayload, isOnline, refreshOfflineSetQueueSize, workoutId])
 
     useEffect(() => {

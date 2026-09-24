@@ -1,205 +1,79 @@
-import { test, expect } from '@playwright/test'
-import { ensureLoggedIn, ensureLoggedInOptionsFromEnv } from './utils/auth'
-import type { WorkoutHistoryItem } from '@features/workouts/types/workouts'
+/**
+ * Critical path: sign in, resume the unfinished session the app offers on start, log a set,
+ * finish the workout and find it completed in the workouts hub.
+ *
+ * SPEC-005 moved the active session to its own screen (rows with a "Завершить подход" control)
+ * and made §48 the resume entry point, so this spec drives those instead of the removed
+ * "Детали тренировки" / "Отметить" / finish-workout-btn flow.
+ *
+ * The API is mocked through the shared harness (helpers/workout-api-mock).
+ */
 
-type Json = Record<string, unknown>
-type WorkoutCompletePayload = Pick<WorkoutHistoryItem, 'duration' | 'exercises' | 'comments' | 'tags'>
+import { expect, test } from '@playwright/test'
+import {
+    type WorkoutHistoryItem,
+    activeSetCompleteButton,
+    buildWorkoutState,
+    completeActiveSet,
+    dismissBlockingDialog,
+    expectSetCompleted,
+    finishActiveWorkout,
+    isoMinutesAgo,
+    isoNow,
+    mockWorkoutApi,
+    seedAuth,
+    seedDraft,
+    withSetIds,
+} from './helpers/workout-api-mock'
 
-function isoNow() {
-    return new Date().toISOString()
-}
+const WORKOUT_TITLE = 'E2E критический путь'
 
 test('critical path: login → open workout → complete → see in history', async ({ page }) => {
-    await ensureLoggedIn(page, ensureLoggedInOptionsFromEnv())
+    test.setTimeout(90_000)
 
-    // In-memory mocked backend state.
-    const templateId = 10
-    const workoutId = 101
-    const userId = 1
-
-    // Mark workoutId as an active draft (WorkoutsPage template start currently doesn't set this store).
-    await page.addInitScript((draft) => {
-        localStorage.setItem('workout-session-draft', JSON.stringify({
-            state: {
-                workoutId: draft.workoutId,
-                title: draft.title,
-                updatedAt: Date.now(),
-            },
-            version: 0,
-        }))
-    }, { workoutId, title: 'E2E сессия' })
-
-    const template = {
-        id: templateId,
-        user_id: userId,
-        name: 'E2E шаблон (силовая)',
-        type: 'strength',
-        exercises: [
-            {
-                exercise_id: 1001,
-                name: 'Присед',
-                sets: 1,
-                reps: 5,
-                rest_seconds: 90,
-                weight: 60,
-            },
-        ],
-        is_public: false,
-        created_at: isoNow(),
-        updated_at: isoNow(),
-    }
-
-    const startedAt = isoNow()
-    const workoutDate = new Date().toISOString()
-    const historyItemDraft = {
+    const workoutId = 8101
+    const session: WorkoutHistoryItem = {
         id: workoutId,
-        date: workoutDate,
+        date: isoNow(),
         duration: undefined,
-        exercises: [
+        exercises: withSetIds(workoutId, [
             {
                 exercise_id: 1001,
                 name: 'Присед',
-                sets_completed: [
-                    {
-                        set_number: 1,
-                        reps: 5,
-                        weight: 60,
-                        completed: false,
-                    },
-                ],
+                sets_completed: [{ set_number: 1, reps: 5, weight: 60, completed: false }],
             },
-        ],
-        comments: undefined,
+        ]),
+        comments: WORKOUT_TITLE,
         tags: ['strength'],
-        created_at: startedAt,
+        created_at: isoMinutesAgo(20),
     }
-
-    let historyItems: WorkoutHistoryItem[] = []
-    let detail: WorkoutHistoryItem = historyItemDraft
-
-    await page.route('**/api/v1/**', async (route) => {
-        const req = route.request()
-        const url = new URL(req.url())
-        const path = url.pathname
-        const method = req.method()
-
-        const corsHeaders = {
-            'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'GET,POST,PUT,DELETE,OPTIONS',
-            'access-control-allow-headers': 'authorization,content-type',
-        }
-
-        const respond = (status: number, body: Json) =>
-            route.fulfill({
-                status,
-                contentType: 'application/json; charset=utf-8',
-                headers: corsHeaders,
-                body: JSON.stringify(body),
-            })
-
-        // CORS preflight for cross-origin API_URL in dev.
-        if (method === 'OPTIONS') {
-            return route.fulfill({ status: 204, headers: corsHeaders, body: '' })
-        }
-
-        // Templates
-        if (method === 'GET' && path.endsWith('/workouts/templates')) {
-            return respond(200, { items: [template], total: 1, page: 1, page_size: 50 })
-        }
-
-        // History list
-        if (method === 'GET' && path.endsWith('/workouts/history')) {
-            return respond(200, {
-                items: historyItems,
-                total: historyItems.length,
-                page: 1,
-                page_size: 50,
-            })
-        }
-
-        // Start workout
-        if (method === 'POST' && path.endsWith('/workouts/start')) {
-            const startResponse = {
-                id: workoutId,
-                user_id: userId,
-                template_id: templateId,
-                date: workoutDate,
-                start_time: startedAt,
-                status: 'ok',
-                message: 'started',
-            }
-            // React Query optimistic updater will also set caches; this keeps server view consistent.
-            historyItems = [detail, ...historyItems]
-            return respond(200, startResponse)
-        }
-
-        // Workout detail
-        if (method === 'GET' && /\/workouts\/history\/\d+$/.test(path)) {
-            return respond(200, detail)
-        }
-
-        // Complete workout
-        if (method === 'POST' && path.endsWith('/workouts/complete')) {
-            const payload = (req.postDataJSON?.() ?? {}) as Partial<WorkoutCompletePayload>
-            const completedAt = isoNow()
-
-            detail = {
-                ...detail,
-                duration: payload.duration,
-                exercises: payload.exercises,
-                comments: payload.comments,
-                tags: payload.tags ?? detail.tags,
-            }
-
-            const completeResponse = {
-                id: workoutId,
-                user_id: userId,
-                template_id: templateId,
-                date: workoutDate,
-                duration: payload.duration,
-                exercises: payload.exercises,
-                comments: payload.comments,
-                tags: payload.tags ?? [],
-                glucose_before: payload.glucose_before,
-                glucose_after: payload.glucose_after,
-                completed_at: completedAt,
-                message: 'completed',
-            }
-
-            // Replace (or insert) in list.
-            historyItems = [detail, ...historyItems.filter((w) => w.id !== workoutId)]
-
-            return respond(200, completeResponse)
-        }
-
-        // Default: allow non-API requests.
-        return route.fallback()
+    const state = buildWorkoutState({
+        historyItems: [session],
+        details: new Map([[workoutId, session]]),
     })
 
-    // Ensure app is reachable post-auth.
-    await page.goto('/')
-    await expect(page).toHaveURL(/\/$/)
+    await seedAuth(page)
+    await seedDraft(page, workoutId, WORKOUT_TITLE)
+    await mockWorkoutApi(page, state)
 
-    // Open workouts.
-    const nav = page.getByRole('navigation', { name: 'Основная навигация' })
-    await nav.getByRole('link', { name: 'Тренировки' }).click()
-    await expect(page).toHaveURL(/\/workouts(?:\?.*)?$/)
-
-    // Open the active workout ("resume draft").
-    await page.getByRole('button', { name: /Незавершённая тренировка/i }).click()
-    await expect(page).toHaveURL(/\/workouts\/\d+(?:\?.*)?$/)
-    await expect(page.getByRole('heading', { name: 'Детали тренировки' })).toBeVisible()
-
-    // Mark at least one set as completed (required for completion).
-    await page.getByRole('button', { name: 'Отметить' }).first().click()
-
-    // Complete workout (save).
-    await page.getByTestId('finish-workout-btn').click()
-    await expect(page.getByTestId('finish-workout-btn')).toBeHidden()
-
-    // Verify it appears in history.
+    // The app offers the unfinished session on start (SPEC-005 §48); "Продолжить" opens it.
     await page.goto('/workouts')
-    await expect(page.getByRole('main').getByRole('heading', { name: 'История' })).toBeVisible()
-    await expect(page.getByText('Присед')).toBeVisible()
-})
+    const restorePrompt = page.getByTestId('session-restore-dialog')
+    await expect(restorePrompt).toBeVisible({ timeout: 30_000 })
+    await page.getByTestId('restore-continue-btn').click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/active/${workoutId}(?:\\?.*)?$`), { timeout: 30_000 })
+    await dismissBlockingDialog(page)
 
+    // Log the planned set and finish the workout.
+    await expect(activeSetCompleteButton(page)).toBeVisible({ timeout: 30_000 })
+    await completeActiveSet(page)
+    await expectSetCompleted(page, 1)
+    await finishActiveWorkout(page)
+    await expect.poll(() => state.completeRequests.length, { timeout: 20_000 }).toBe(1)
+
+    // Back in the hub the session is completed rather than still in progress.
+    await page.goto('/workouts')
+    const sessionRow = page.getByRole('button').filter({ hasText: WORKOUT_TITLE })
+    await expect(sessionRow.first()).toBeVisible({ timeout: 30_000 })
+    await expect(sessionRow.first().getByText('В процессе')).toHaveCount(0)
+})

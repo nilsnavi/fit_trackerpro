@@ -3,7 +3,6 @@
  */
 export { RestTimer } from './RestTimer'
 export type { RestTimerProps } from './RestTimer'
-export { CurrentExerciseCard } from './CurrentExerciseCard'
 export { FinishWorkoutSheet } from './FinishWorkoutSheet'
 export { WorkoutModal } from './WorkoutModal'
 export { WorkoutConfirmModal } from './WorkoutConfirmModal'

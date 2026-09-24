@@ -21,5 +21,8 @@ export function useHomeWaterQuery() {
         data,
         isPending: goalQ.isPending || todayQ.isPending,
         isError: goalQ.isError || todayQ.isError,
+        refetch: async () => {
+            await Promise.all([goalQ.refetch(), todayQ.refetch()])
+        },
     }
 }

@@ -1,4 +1,3 @@
-import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -74,8 +73,8 @@ function renderWithProviders(ui: React.ReactElement) {
 
 describe('WorkoutHistoryCard', () => {
     it('renders workout information correctly', () => {
-        const onNavigate = vi.fn()
-        const onRepeat = vi.fn()
+        const onNavigate = jest.fn()
+        const onRepeat = jest.fn()
 
         renderWithProviders(
             <WorkoutHistoryCard
@@ -92,8 +91,8 @@ describe('WorkoutHistoryCard', () => {
     })
 
     it('calls onNavigate when card is clicked', () => {
-        const onNavigate = vi.fn()
-        const onRepeat = vi.fn()
+        const onNavigate = jest.fn()
+        const onRepeat = jest.fn()
 
         renderWithProviders(
             <WorkoutHistoryCard
@@ -103,13 +102,14 @@ describe('WorkoutHistoryCard', () => {
             />
         )
 
-        fireEvent.click(screen.getByRole('button'))
+        // Первая кнопка в DOM — обёртка карточки с навигацией, вторая — «Повторить тренировку».
+        fireEvent.click(screen.getAllByRole('button')[0])
         expect(onNavigate).toHaveBeenCalledWith(1)
     })
 
     it('calls onRepeat when repeat button is clicked', () => {
-        const onNavigate = vi.fn()
-        const onRepeat = vi.fn()
+        const onNavigate = jest.fn()
+        const onRepeat = jest.fn()
 
         renderWithProviders(
             <WorkoutHistoryCard
@@ -130,8 +130,8 @@ describe('WorkoutHistoryCard', () => {
             duration: 0,
         }
 
-        const onNavigate = vi.fn()
-        const onRepeat = vi.fn()
+        const onNavigate = jest.fn()
+        const onRepeat = jest.fn()
 
         renderWithProviders(
             <WorkoutHistoryCard
@@ -150,8 +150,8 @@ describe('WorkoutHistoryCard', () => {
             duration: 0,
         }
 
-        const onNavigate = vi.fn()
-        const onRepeat = vi.fn()
+        const onNavigate = jest.fn()
+        const onRepeat = jest.fn()
 
         renderWithProviders(
             <WorkoutHistoryCard

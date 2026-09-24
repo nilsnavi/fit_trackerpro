@@ -1,5 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import {
     ArrowLeft,
     Check,
@@ -15,23 +14,59 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@shared/ui/Button'
-import { workoutsApi } from '@shared/api/domains/workoutsApi'
 import { cn } from '@shared/lib/cn'
-import { getErrorMessage } from '@shared/errors'
 import { toast } from '@shared/stores/toastStore'
 import { formatElapsedDuration } from '@features/workouts/active/lib/activeWorkoutUtils'
 import { useRestTimer } from '@features/workouts/active/hooks/useRestTimer'
-import { weightRecommendationQueryKey } from '@features/workouts/active/hooks/useWeightRecommendation'
+import { useWorkoutSetWrites } from '@features/workouts/active/hooks/useWorkoutSetWrites'
 import type {
     CompletedExercise,
     CompletedSet,
     WeightRecommendationResponse,
     WorkoutHistoryItem,
 } from '@features/workouts/types/workouts'
-import { useWorkoutSessionUiStore } from '@/state/local'
+import { PreviousResultCard } from './PreviousResultCard'
+import { PlateCalculatorModal } from './PlateCalculatorModal'
+import type { ProgressionRecommendation as Recommendation } from '../hooks/useProgressionRecommendation'
+import { ProgressionPrefillNotice } from './ProgressionPrefillNotice'
+import type { PreviousExerciseResult } from '../lib/previousResult'
 
-const DEFAULT_REST_SECONDS = 90
-const RPE_OPTIONS = [6, 7, 8, 9, 10] as const
+// Loaded on demand so the active-workout route chunk stays inside its budget.
+const ProgressionRecommendationCard = lazy(() =>
+    import('./ProgressionRecommendationCard').then((module) => ({
+        default: module.ProgressionRecommendationCard,
+    })),
+)
+
+type ProgressionExplanationSet = {
+    set_number?: number
+    reps?: number | null
+    weight?: number | null
+    duration?: number | null
+}
+import {
+    groupExerciseWithNext,
+    supersetSlots,
+    ungroupExercise,
+    type SupersetSlot,
+} from '../lib/supersetGrouping'
+import {
+    appendPrefilledSet,
+    DEFAULT_TIMED_SET_SECONDS,
+    isTimedSet,
+} from '../lib/activeWorkoutUtils'
+
+// SPEC-005 §14: RPE 1–10 with 0.5 step.
+const RPE_OPTIONS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const
+// SPEC-005 §10: allowed set types.
+const SET_TYPE_OPTIONS: Array<{ value: CompletedSet['set_type']; label: string }> = [
+    { value: 'warmup', label: 'W' },
+    { value: 'working', label: 'W+' },
+    { value: 'dropset', label: 'D' },
+    { value: 'failure', label: 'F' },
+]
+// SPEC-005 §12: quick weight deltas.
+const WEIGHT_DELTAS = [-5, -2.5, 2.5, 5] as const
 
 type PatchItemFn = (recipe: (prev: WorkoutHistoryItem) => WorkoutHistoryItem) => void
 type UpdateSetFn = (exerciseIndex: number, setNumber: number, patch: Partial<CompletedSet>) => void
@@ -61,6 +96,20 @@ export interface ActiveWorkoutScreenProps {
     currentExerciseIndex: number
     currentSetIndex: number
     previousBestByExercise: Map<string, CompletedSet>
+    /** SPEC-005 §8: previous completed result for the active exercise. */
+    previousResult?: PreviousExerciseResult | null
+    /** SPEC-005 §37: explainable progression recommendation. */
+    progressionRecommendation?: Recommendation | null
+    isProgressionLoading?: boolean
+    isProgressionError?: boolean
+    /** SPEC-006 §42–§44: explicit accept/modify/reject for a stored recommendation. */
+    onAcceptProgression?: (recommendation: Recommendation, selectedValue?: number) => void
+    onRejectProgression?: (recommendation: Recommendation) => void
+    isProgressionDeciding?: boolean
+    /** SPEC-006 §46: previous sets shown in the "Почему?" sheet. */
+    progressionPreviousSets?: ProgressionExplanationSet[]
+    /** SPEC-006 §58: undo the accepted target that seeded the active exercise. */
+    onRevertProgressionPrefill?: (exerciseIndex: number) => void
     weightRecommendation?: WeightRecommendationResponse
     isWeightRecLoading: boolean
     isWeightRecError: boolean
@@ -75,17 +124,15 @@ export interface ActiveWorkoutScreenProps {
     onSetLastCompletedSet: (payload: { exerciseIndex: number; setNumber: number } | null) => void
     onAddExercise: () => void
     onFinishWorkout: () => void
+    /** SPEC-005 §26: skip exercise (session-only). */
+    onSkipExercise?: (exerciseIndex: number) => void
+    /** SPEC-005 §26: un-skip a skipped exercise. */
+    onUnskipExercise?: (exerciseIndex: number) => void
 }
 
 function formatKg(value: number | undefined): string {
     if (value == null || !Number.isFinite(value)) return '0'
     return Number.isInteger(value) ? String(value) : value.toFixed(1)
-}
-
-function getRestSeconds(exercise: CompletedExercise): number {
-    const planned = exercise.sets_completed.find((set) => typeof set.planned_rest_seconds === 'number')?.planned_rest_seconds
-    const tracked = exercise.sets_completed.find((set) => typeof set.rest_seconds === 'number')?.rest_seconds
-    return planned ?? tracked ?? DEFAULT_REST_SECONDS
 }
 
 function getActiveSetIndex(exercise: CompletedExercise, currentSetIndex: number): number {
@@ -197,7 +244,7 @@ const WorkoutProgress = memo(function WorkoutProgress({
 })
 
 function InlineRestTimer() {
-    const { isVisible, remainingLabel, progressPercent, skip, reset } = useRestTimer()
+    const { isVisible, remainingLabel, progressPercent, skip, reset, adjust } = useRestTimer()
 
     if (!isVisible) return null
 
@@ -213,12 +260,31 @@ function InlineRestTimer() {
                         />
                     </div>
                 </div>
+                {/* SPEC-005 §17: -30 / +30 quick adjustments beside skip. */}
+                <button
+                    type="button"
+                    onClick={() => adjust(-30)}
+                    data-testid="rest-minus-30"
+                    aria-label="Минус 30 секунд"
+                    className="flex h-11 min-w-11 items-center justify-center rounded-2xl bg-white/[0.06] px-2 text-xs font-black tabular-nums text-[#F8FAFC] active:bg-white/10"
+                >
+                    −30
+                </button>
                 <button
                     type="button"
                     onClick={skip}
                     className="min-h-11 rounded-2xl bg-white/[0.06] px-3 text-sm font-bold text-[#F8FAFC] active:bg-white/10"
                 >
                     Пропустить
+                </button>
+                <button
+                    type="button"
+                    onClick={() => adjust(30)}
+                    data-testid="rest-plus-30"
+                    aria-label="Плюс 30 секунд"
+                    className="flex h-11 min-w-11 items-center justify-center rounded-2xl bg-white/[0.06] px-2 text-xs font-black tabular-nums text-[#F8FAFC] active:bg-white/10"
+                >
+                    +30
                 </button>
                 <button
                     type="button"
@@ -280,6 +346,8 @@ function SetsTable({
     onUpdateSet,
     onUpdateSetRpe,
     onCompleteActiveSet,
+    onOpenPlateCalculator,
+    onAddSet,
 }: {
     exercise: CompletedExercise
     exerciseIndex: number
@@ -289,6 +357,9 @@ function SetsTable({
     onUpdateSet: UpdateSetFn
     onUpdateSetRpe: (set: CompletedSet, rpe: number) => void
     onCompleteActiveSet: (set: CompletedSet) => void
+    onOpenPlateCalculator?: (targetWeight: number) => void
+    /** SPEC-005 §11: append a set prefilled from the previous working set. */
+    onAddSet?: () => void
 }) {
     const activeSetIndex = getActiveSetIndex(exercise, currentSetIndex)
     const activeSet = exercise.sets_completed[activeSetIndex] ?? null
@@ -321,6 +392,9 @@ function SetsTable({
                         const isActive = state === 'active'
                         const isEditing = isActive && editingSetNumber === set.set_number
                         const canComplete = isActive && !isSaving
+                        // SPEC-005 §20: timed sets show duration instead of reps.
+                        const isTimed = isTimedSet(set)
+                        const isWarmup = set.set_type === 'warmup'
 
                         return (
                             <div
@@ -329,9 +403,13 @@ function SetsTable({
                                     'grid min-h-[64px] grid-cols-[0.7fr_1fr_1fr_3.25rem] items-center gap-2 px-3 py-2',
                                     isActive && 'bg-[#162033]',
                                     state === 'locked' && 'opacity-60',
+                                    isWarmup && 'bg-[#FACC15]/[0.04]',
                                 )}
+                                data-testid={`set-row-${set.set_number}`}
                             >
-                                <span className="text-sm font-black tabular-nums text-[#F8FAFC]">#{set.set_number}</span>
+                                <span className="text-sm font-black tabular-nums text-[#F8FAFC]">
+                                    {set.set_type === 'warmup' ? 'W' : '#'}{isWarmup ? set.set_number : set.set_number}
+                                </span>
 
                                 {isEditing ? (
                                     <>
@@ -345,20 +423,42 @@ function SetsTable({
                                             className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-[#0B1118] px-3 text-base font-black tabular-nums text-[#F8FAFC] outline-none focus:border-[#4ADE80]"
                                             aria-label="Вес"
                                         />
-                                        <input
-                                            type="number"
-                                            inputMode="numeric"
-                                            min={1}
-                                            value={set.reps ?? ''}
-                                            onChange={(event) => onUpdateSet(exerciseIndex, set.set_number, { reps: event.target.value === '' ? undefined : Number.parseInt(event.target.value, 10) })}
-                                            className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-[#0B1118] px-3 text-base font-black tabular-nums text-[#F8FAFC] outline-none focus:border-[#4ADE80]"
-                                            aria-label="Повторы"
-                                        />
+                                        {isTimed ? (
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                min={0}
+                                                value={set.duration ?? ''}
+                                                onChange={(event) => onUpdateSet(exerciseIndex, set.set_number, { duration: event.target.value === '' ? undefined : Number.parseInt(event.target.value, 10) })}
+                                                className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-[#0B1118] px-3 text-base font-black tabular-nums text-[#F8FAFC] outline-none focus:border-[#4ADE80]"
+                                                aria-label="Длительность, сек"
+                                            />
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                min={0}
+                                                max={999}
+                                                value={set.reps ?? ''}
+                                                onChange={(event) => onUpdateSet(exerciseIndex, set.set_number, { reps: event.target.value === '' ? undefined : Number.parseInt(event.target.value, 10) })}
+                                                className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-[#0B1118] px-3 text-base font-black tabular-nums text-[#F8FAFC] outline-none focus:border-[#4ADE80]"
+                                                aria-label="Повторы"
+                                            />
+                                        )}
                                     </>
                                 ) : (
                                     <>
-                                        <span className="text-base font-black tabular-nums text-[#F8FAFC]">{formatKg(set.weight)} кг</span>
-                                        <span className="text-base font-black tabular-nums text-[#F8FAFC]">{set.reps ?? 0}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => onOpenPlateCalculator?.(set.weight ?? 0)}
+                                            className="truncate text-left text-base font-black tabular-nums text-[#F8FAFC]"
+                                            title="Рассчитать блины"
+                                        >
+                                            {formatKg(set.weight)} кг
+                                        </button>
+                                        <span className="text-base font-black tabular-nums text-[#F8FAFC]">
+                                            {isTimed ? `${set.duration} сек` : set.reps ?? 0}
+                                        </span>
                                     </>
                                 )}
 
@@ -366,10 +466,110 @@ function SetsTable({
 
                                 {isActive ? (
                                     <div className="col-span-4 space-y-2 pt-1">
+                                        {/* SPEC-005 §10: set type quick switch. */}
+                                        <div className="flex items-center gap-2" data-testid="set-type-switch">
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">Тип</span>
+                                            <div className="grid flex-1 grid-cols-4 gap-1.5">
+                                                {SET_TYPE_OPTIONS.map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        type="button"
+                                                        onClick={() => onUpdateSet(exerciseIndex, set.set_number, { set_type: option.value })}
+                                                        className={cn(
+                                                            'min-h-9 rounded-xl border text-xs font-black',
+                                                            (set.set_type ?? 'working') === option.value
+                                                                ? 'border-[#60A5FA]/60 bg-[#60A5FA]/20 text-[#DBEAFE]'
+                                                                : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                        )}
+                                                        aria-label={`Тип подхода: ${option.value}`}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {/* SPEC-005 §20: measurement toggle — reps or time. */}
+                                        <div className="flex items-center gap-2" data-testid="set-measure-switch">
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">Измерение</span>
+                                            <div className="grid flex-1 grid-cols-2 gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    data-testid="set-measure-reps"
+                                                    onClick={() => onUpdateSet(exerciseIndex, set.set_number, {
+                                                        reps: set.reps ?? 10,
+                                                        duration: undefined,
+                                                    })}
+                                                    className={cn(
+                                                        'min-h-9 rounded-xl border text-xs font-black',
+                                                        !isTimed
+                                                            ? 'border-[#4ADE80]/60 bg-[#4ADE80]/20 text-[#DCFCE7]'
+                                                            : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                    )}
+                                                >
+                                                    Повторы
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    data-testid="set-measure-time"
+                                                    onClick={() => onUpdateSet(exerciseIndex, set.set_number, {
+                                                        duration: set.duration ?? DEFAULT_TIMED_SET_SECONDS,
+                                                        reps: undefined,
+                                                    })}
+                                                    className={cn(
+                                                        'min-h-9 rounded-xl border text-xs font-black',
+                                                        isTimed
+                                                            ? 'border-[#4ADE80]/60 bg-[#4ADE80]/20 text-[#DCFCE7]'
+                                                            : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                    )}
+                                                >
+                                                    Время
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {/* SPEC-005 §12: quick weight controls. */}
+                                        <div className="flex items-center gap-1.5" data-testid="weight-quick-controls">
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">Вес</span>
+                                            <div className="grid flex-1 grid-cols-4 gap-1.5">
+                                                {WEIGHT_DELTAS.map((delta) => (
+                                                    <button
+                                                        key={delta}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const current = typeof set.weight === 'number' ? set.weight : 0
+                                                            const next = Math.max(0, Number((current + delta).toFixed(2)))
+                                                            onUpdateSet(exerciseIndex, set.set_number, { weight: next })
+                                                        }}
+                                                        className="min-h-9 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-black tabular-nums text-[#F8FAFC] active:bg-white/[0.08]"
+                                                    >
+                                                        {delta > 0 ? `+${delta}` : delta}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">RPE</span>
                                             <div className="grid flex-1 grid-cols-5 gap-1.5">
-                                                {RPE_OPTIONS.map((value) => (
+                                                {RPE_OPTIONS.slice(0, 5).map((value) => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() => onUpdateSetRpe(set, value)}
+                                                        className={cn(
+                                                            'min-h-9 rounded-xl border text-sm font-black tabular-nums',
+                                                            set.rpe === value
+                                                                ? 'border-[#FACC15]/60 bg-[#FACC15]/20 text-[#FEF3C7]'
+                                                                : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                        )}
+                                                    >
+                                                        {value}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-transparent">RPE</span>
+                                            <div className="grid flex-1 grid-cols-5 gap-1.5">
+                                                {RPE_OPTIONS.slice(5).map((value) => (
                                                     <button
                                                         key={value}
                                                         type="button"
@@ -412,6 +612,18 @@ function SetsTable({
                     })}
                 </div>
             </div>
+            {/* SPEC-005 §11: add set, prefilled from the previous working set. */}
+            {onAddSet ? (
+                <button
+                    type="button"
+                    data-testid="add-set-btn"
+                    onClick={onAddSet}
+                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-dashed border-white/[0.14] bg-white/[0.02] text-sm font-black text-[#8A94A6] active:bg-white/[0.06]"
+                >
+                    <Plus className="h-4 w-4" />
+                    Добавить подход
+                </button>
+            ) : null}
             {errorMessage ? (
                 <p className="rounded-2xl border border-[#EF4444]/30 bg-[#EF4444]/10 px-3 py-2 text-sm font-semibold text-[#FCA5A5]">
                     {errorMessage}
@@ -424,9 +636,23 @@ function SetsTable({
 function ExerciseMenu({
     onReplace,
     onDelete,
+    onSkip,
+    onUnskip,
+    isSkipped,
+    onGroupWithNext,
+    onUngroup,
+    isInBlock,
 }: {
     onReplace: () => void
     onDelete: () => void
+    onSkip?: () => void
+    onUnskip?: () => void
+    isSkipped?: boolean
+    /** SPEC-005 §21: group this exercise with the next one into a superset block. */
+    onGroupWithNext?: () => void
+    /** SPEC-005 §21: remove this exercise from its block. */
+    onUngroup?: () => void
+    isInBlock?: boolean
 }) {
     const [open, setOpen] = useState(false)
 
@@ -456,6 +682,62 @@ function ExerciseMenu({
                     >
                         Заменить
                     </button>
+                    {onSkip && !isSkipped ? (
+                        <button
+                            type="button"
+                            data-testid="exercise-skip-btn"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#FACC15]"
+                            onClick={(event) => {
+                                event.stopPropagation()
+                                setOpen(false)
+                                onSkip()
+                            }}
+                        >
+                            Пропустить
+                        </button>
+                    ) : null}
+                    {onUnskip && isSkipped ? (
+                        <button
+                            type="button"
+                            data-testid="exercise-unskip-btn"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#4ADE80]"
+                            onClick={(event) => {
+                                event.stopPropagation()
+                                setOpen(false)
+                                onUnskip()
+                            }}
+                        >
+                            Вернуть в тренировку
+                        </button>
+                    ) : null}
+                    {onGroupWithNext ? (
+                        <button
+                            type="button"
+                            data-testid="exercise-superset-btn"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#60A5FA]"
+                            onClick={(event) => {
+                                event.stopPropagation()
+                                setOpen(false)
+                                onGroupWithNext()
+                            }}
+                        >
+                            В суперсет с следующим
+                        </button>
+                    ) : null}
+                    {onUngroup && isInBlock ? (
+                        <button
+                            type="button"
+                            data-testid="exercise-unsuperset-btn"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#93C5FD]"
+                            onClick={(event) => {
+                                event.stopPropagation()
+                                setOpen(false)
+                                onUngroup()
+                            }}
+                        >
+                            Убрать из суперсета
+                        </button>
+                    ) : null}
                     <button
                         type="button"
                         className="flex min-h-12 w-full items-center gap-2 px-4 text-left text-sm font-bold text-[#EF4444]"
@@ -477,21 +759,47 @@ function ExerciseMenu({
 function CollapsedExerciseCard({
     exercise,
     exerciseIndex,
+    slot,
     onSelect,
     onReplace,
     onDelete,
+    onSkip,
+    onUnskip,
+    onGroupWithNext,
+    onUngroup,
 }: {
     exercise: CompletedExercise
     exerciseIndex: number
+    /** SPEC-005 §21: superset block presentation for this exercise. */
+    slot?: SupersetSlot
     onSelect: (index: number) => void
     onReplace: () => void
     onDelete: () => void
+    onSkip?: () => void
+    onUnskip?: () => void
+    onGroupWithNext?: () => void
+    onUngroup?: () => void
 }) {
+    const isSkipped = exercise.status === 'skipped'
     const completed = exercise.sets_completed.filter((set) => set.completed).length
     const total = exercise.sets_completed.length
 
     return (
-        <div className="rounded-[20px] border border-white/[0.08] bg-[#101720] p-4 shadow-[0_12px_32px_rgba(0,0,0,0.22)]">
+        <div
+            className={cn(
+                'rounded-[20px] border bg-[#101720] p-4 shadow-[0_12px_32px_rgba(0,0,0,0.22)]',
+                isSkipped ? 'border-white/[0.05] opacity-70' : 'border-white/[0.08]',
+            )}
+            data-testid={isSkipped ? 'exercise-card-skipped' : 'exercise-card'}
+        >
+            {slot?.header ? (
+                <p
+                    data-testid="superset-block-header"
+                    className="mb-2 text-[11px] font-black uppercase tracking-wide text-[#60A5FA]"
+                >
+                    {slot.header}
+                </p>
+            ) : null}
             <div className="flex items-center gap-3">
                 <button
                     type="button"
@@ -499,16 +807,35 @@ function CollapsedExerciseCard({
                     className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left active:opacity-80"
                 >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-[#8A94A6]">
-                        <Dumbbell className="h-5 w-5" />
+                        <Dumbbell className={cn('h-5 w-5', isSkipped && 'line-through')} />
                     </span>
                     <span className="min-w-0 flex-1">
-                        <span className="block truncate text-base font-black text-[#F8FAFC]">{exercise.name}</span>
-                        <span className="mt-1 block text-xs font-semibold text-[#8A94A6]">
-                            {completed}/{total} подходов
+                        <span className={cn('block truncate text-base font-black text-[#F8FAFC]', isSkipped && 'line-through')}>
+                            {exercise.name}
+                        </span>
+                        <span className="mt-1 flex items-center gap-2 text-xs font-semibold text-[#8A94A6]">
+                            {isSkipped ? 'Пропущено' : `${completed}/${total} подходов`}
+                            {slot?.label ? (
+                                <span
+                                    data-testid="exercise-block-label"
+                                    className="rounded-md bg-[#60A5FA]/15 px-1.5 py-0.5 font-black text-[#93C5FD]"
+                                >
+                                    {slot.label}
+                                </span>
+                            ) : null}
                         </span>
                     </span>
                 </button>
-                <ExerciseMenu onReplace={onReplace} onDelete={onDelete} />
+                <ExerciseMenu
+                    onReplace={onReplace}
+                    onDelete={onDelete}
+                    onSkip={onSkip}
+                    onUnskip={onUnskip}
+                    isSkipped={isSkipped}
+                    onGroupWithNext={onGroupWithNext}
+                    onUngroup={onUngroup}
+                    isInBlock={Boolean(slot?.label)}
+                />
             </div>
         </div>
     )
@@ -565,6 +892,15 @@ function ActiveExerciseCard({
     recommendation,
     isWeightRecLoading,
     isWeightRecError,
+    previousResult,
+    progressionRecommendation,
+    isProgressionLoading,
+    isProgressionError,
+    onAcceptProgression,
+    onRejectProgression,
+    isProgressionDeciding,
+    progressionPreviousSets,
+    onRevertProgressionPrefill,
     onUpdateSet,
     onPatchWorkout,
     onNotifySetCompleted,
@@ -573,6 +909,9 @@ function ActiveExerciseCard({
     onAddExercise,
     onSelectExercise,
     exercises,
+    slot,
+    onGroupWithNext,
+    onUngroup,
 }: {
     workoutId: number
     exercise: CompletedExercise
@@ -582,6 +921,16 @@ function ActiveExerciseCard({
     recommendation?: WeightRecommendationResponse
     isWeightRecLoading: boolean
     isWeightRecError: boolean
+    previousResult?: PreviousExerciseResult | null
+    progressionRecommendation?: Recommendation | null
+    isProgressionLoading?: boolean
+    isProgressionError?: boolean
+    onAcceptProgression?: (recommendation: Recommendation, selectedValue?: number) => void
+    onRejectProgression?: (recommendation: Recommendation) => void
+    isProgressionDeciding?: boolean
+    progressionPreviousSets?: ProgressionExplanationSet[]
+    /** SPEC-006 §58: undo the accepted target that seeded this exercise. */
+    onRevertProgressionPrefill?: () => void
     onUpdateSet: UpdateSetFn
     onPatchWorkout: PatchItemFn
     onNotifySetCompleted: () => void
@@ -590,45 +939,17 @@ function ActiveExerciseCard({
     onAddExercise: () => void
     onSelectExercise: (exerciseIndex: number) => void
     exercises: CompletedExercise[]
+    /** SPEC-005 §21: superset block presentation for the active exercise. */
+    slot?: SupersetSlot
+    onGroupWithNext?: () => void
+    onUngroup?: () => void
 }) {
-    const queryClient = useQueryClient()
-    const startRest = useWorkoutSessionUiStore((s) => s.startSessionRestTimer)
     const completed = exercise.sets_completed.filter((set) => set.completed).length
     const total = exercise.sets_completed.length
     const [completionError, setCompletionError] = useState<string | null>(null)
-
-    const completeSetMutation = useMutation({
-        mutationFn: async ({ setId, weight, reps, rpe }: { setId: number; weight: number; reps: number; rpe?: number }) =>
-            workoutsApi.patchWorkoutSet(workoutId, setId, {
-                weight,
-                reps,
-                ...(typeof rpe === 'number' ? { rpe } : {}),
-                completed: true,
-            }),
-    })
-
-    const patchSetRpeMutation = useMutation({
-        mutationFn: async ({ setId, rpe }: { setId: number; rpe: number }) =>
-            workoutsApi.patchWorkoutSet(workoutId, setId, { rpe }),
-    })
-
-    const refreshWeightRecommendation = useCallback(
-        (nextSet?: CompletedSet) => {
-            void queryClient.fetchQuery({
-                queryKey: weightRecommendationQueryKey(workoutId, exercise.exercise_id),
-                queryFn: () => workoutsApi.getWeightRecommendation(workoutId, exercise.exercise_id),
-                staleTime: 0,
-            }).then((nextRecommendation) => {
-                if (!nextSet || typeof nextRecommendation.suggested_weight !== 'number') return
-                onUpdateSet(exerciseIndex, nextSet.set_number, {
-                    weight: nextRecommendation.suggested_weight,
-                })
-            }).catch(() => {
-                // Recommendation is optional and must not block workout editing.
-            })
-        },
-        [exercise.exercise_id, exerciseIndex, onUpdateSet, queryClient, workoutId],
-    )
+    // SPEC-005 §42: plate calculator state.
+    const [isPlateCalculatorOpen, setIsPlateCalculatorOpen] = useState(false)
+    const [plateTargetWeight, setPlateTarget] = useState(0)
 
     const deleteExercise = useCallback(() => {
         const shouldDelete = window.confirm('Удалить упражнение из тренировки?')
@@ -638,130 +959,94 @@ function ActiveExerciseCard({
         toast.info('Упражнение удалено')
     }, [exerciseIndex, onNotifySetCompleted, onPatchWorkout])
 
-    const completeSet = useCallback(
-        async (set: CompletedSet) => {
-            if (set.completed) return
-            setCompletionError(null)
+    // SPEC-005 §11: new set inherits the previous working set's values.
+    const addSet = useCallback(() => {
+        onPatchWorkout((prev) => ({
+            ...prev,
+            exercises: prev.exercises.map((item, index) =>
+                index === exerciseIndex ? appendPrefilledSet(item) : item,
+            ),
+        }))
+        onNotifySetCompleted()
+    }, [exerciseIndex, onNotifySetCompleted, onPatchWorkout])
 
-            const weight = typeof set.weight === 'number' ? set.weight : Number.NaN
-            const reps = typeof set.reps === 'number' ? set.reps : Number.NaN
-            if (!Number.isFinite(weight) || weight <= 0) {
-                setCompletionError('Заполните вес больше 0')
-                return
-            }
-            if (!Number.isFinite(reps) || reps <= 0) {
-                setCompletionError('Заполните повторы больше 0')
-                return
-            }
-            if (typeof set.id !== 'number' || set.id <= 0) {
-                setCompletionError('Не удалось сохранить подход: отсутствует id set')
-                return
-            }
-
-            try {
-                const saved = await completeSetMutation.mutateAsync({
-                    setId: set.id,
-                    weight,
-                    reps,
-                    rpe: typeof set.rpe === 'number' ? set.rpe : undefined,
-                })
-
-                onUpdateSet(exerciseIndex, saved.set_number, {
-                    id: saved.id,
-                    weight: saved.weight ?? weight,
-                    reps: saved.reps ?? reps,
-                    rpe: saved.rpe == null ? undefined : Number(saved.rpe),
-                    rest_seconds: saved.rest_seconds ?? undefined,
-                    completed: saved.completed,
-                    completed_at: new Date().toISOString(),
-                    notes: saved.notes ?? undefined,
-                })
-                onSetLastCompletedSet({ exerciseIndex, setNumber: saved.set_number })
-
-                const nextSetIndex = saved.set_number
-                const nextSet = exercise.sets_completed[nextSetIndex]
-                if (nextSet) {
-                    onUpdateSet(exerciseIndex, nextSet.set_number, {
-                        weight: saved.weight ?? weight,
-                        reps: saved.reps ?? reps,
-                    })
-                    onSetCurrentPosition(exerciseIndex, nextSetIndex)
-                    refreshWeightRecommendation(nextSet)
-                    startRest({
-                        forExerciseId: `${exercise.exercise_id}-${exerciseIndex}`,
-                        exerciseIndex,
-                        exerciseName: exercise.name,
-                        nextSetOrdinal: nextSet.set_number,
-                        totalSets: exercise.sets_completed.length,
-                        total: getRestSeconds(exercise),
-                    })
-                } else {
-                    const nextExerciseIndex = exercises.findIndex((_, index) => index > exerciseIndex)
-                    if (nextExerciseIndex >= 0) {
-                        onSetCurrentPosition(nextExerciseIndex, 0)
-                        onSelectExercise(nextExerciseIndex)
-                    } else {
-                        toast.success('Все упражнения выполнены')
-                    }
-                }
-
-                onNotifySetCompleted()
-            } catch (error) {
-                setCompletionError(`Не удалось сохранить подход: ${getErrorMessage(error)}`)
-            }
-        },
-        [
-            completeSetMutation,
-            exercise,
-            exerciseIndex,
-            exercises,
-            onNotifySetCompleted,
-            onSelectExercise,
-            onSetCurrentPosition,
-            onSetLastCompletedSet,
-            onUpdateSet,
-            refreshWeightRecommendation,
-            startRest,
-        ],
-    )
-
-    const updateSetRpe = useCallback(
-        (set: CompletedSet, rpe: number) => {
-            onUpdateSet(exerciseIndex, set.set_number, { rpe })
-
-            if (set.completed && typeof set.id === 'number' && set.id > 0) {
-                void patchSetRpeMutation.mutateAsync({ setId: set.id, rpe })
-                    .then(() => refreshWeightRecommendation(exercise.sets_completed[set.set_number]))
-                    .catch(() => {
-                        // Keep the UI non-blocking; the next sync/edit can retry this field.
-                    })
-                return
-            }
-
-            if (!set.completed) {
-                void queryClient.invalidateQueries({
-                    queryKey: weightRecommendationQueryKey(workoutId, exercise.exercise_id),
-                })
-            }
-        },
-        [exercise.exercise_id, exercise.sets_completed, exerciseIndex, onUpdateSet, patchSetRpeMutation, queryClient, refreshWeightRecommendation, workoutId],
-    )
+    // SPEC-005 §11/§17/§47: завершение подхода, его RPE и рекомендация по весу — во владельце записи.
+    const { completeSet, updateSetRpe } = useWorkoutSetWrites({
+        workoutId,
+        exercise,
+        exerciseIndex,
+        exercises,
+        onUpdateSet,
+        onSetLastCompletedSet,
+        onSetCurrentPosition,
+        onSelectExercise,
+        onNotifySetCompleted,
+        onCompletionError: setCompletionError,
+    })
 
     return (
         <section className="rounded-[24px] border border-[#4ADE80]/25 bg-[#111821] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.35)]">
             <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black uppercase tracking-wide text-[#4ADE80]">Активное</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-black uppercase tracking-wide text-[#4ADE80]">Активное</p>
+                        {slot?.label ? (
+                            <span
+                                data-testid="active-superset-badge"
+                                className="rounded-md bg-[#60A5FA]/15 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#93C5FD]"
+                            >
+                                {slot.header ? `${slot.header} · ` : 'SUPERSET · '}
+                                {slot.label}
+                            </span>
+                        ) : null}
+                    </div>
                     <h2 className="mt-1 text-xl font-black leading-tight text-[#F8FAFC]">{exercise.name}</h2>
                     <p className="mt-2 text-sm font-semibold text-[#8A94A6]">
                         {completed}/{total} подходов
                     </p>
                 </div>
-                <ExerciseMenu onReplace={onAddExercise} onDelete={deleteExercise} />
+                <ExerciseMenu
+                    onReplace={onAddExercise}
+                    onDelete={deleteExercise}
+                    onGroupWithNext={onGroupWithNext}
+                    onUngroup={onUngroup}
+                    isInBlock={Boolean(slot?.label)}
+                />
             </div>
 
             <div className="mt-4 space-y-3">
                 <InlineRestTimer />
+                {/* SPEC-005 §8: previous completed result. */}
+                <PreviousResultCard previous={previousResult} />
+                {/* SPEC-005 §37 / SPEC-006 §45: explainable progression recommendation. */}
+                <Suspense
+                    fallback={
+                        <div className="rounded-[16px] border border-white/[0.08] bg-black/20 px-3 py-2 text-sm font-bold text-telegram-hint">
+                            Расчёт рекомендации...
+                        </div>
+                    }
+                >
+                    <ProgressionRecommendationCard
+                        recommendation={progressionRecommendation}
+                        isLoading={isProgressionLoading}
+                        isError={isProgressionError}
+                        onAccept={onAcceptProgression}
+                        onReject={onRejectProgression}
+                        isDeciding={isProgressionDeciding}
+                        previousSets={progressionPreviousSets}
+                        onApply={(value) => {
+                            const nextIncomplete = exercise.sets_completed.find((set) => !set.completed)
+                            if (nextIncomplete) {
+                                onUpdateSet(exerciseIndex, nextIncomplete.set_number, { weight: value })
+                            }
+                        }}
+                    />
+                </Suspense>
+                <ProgressionPrefillNotice
+                    exercise={exercise}
+                    onRevert={onRevertProgressionPrefill}
+                    className="mt-3"
+                />
                 <WeightRecommendationInline
                     recommendation={recommendation}
                     isLoading={isWeightRecLoading}
@@ -771,13 +1056,26 @@ function ActiveExerciseCard({
                     exercise={exercise}
                     exerciseIndex={exerciseIndex}
                     currentSetIndex={currentSetIndex}
-                    isSaving={isSaving || completeSetMutation.isPending}
+                    isSaving={isSaving}
                     errorMessage={completionError}
                     onUpdateSet={onUpdateSet}
                     onUpdateSetRpe={updateSetRpe}
                     onCompleteActiveSet={completeSet}
+                    onOpenPlateCalculator={(weight) => {
+                        // SPEC-005 §42: the weight cell opens the plate calculator.
+                        setPlateTarget(weight)
+                        setIsPlateCalculatorOpen(true)
+                    }}
+                    onAddSet={addSet}
                 />
             </div>
+
+            <PlateCalculatorModal
+                isOpen={isPlateCalculatorOpen}
+                onClose={() => setIsPlateCalculatorOpen(false)}
+                targetWeight={plateTargetWeight}
+                exerciseName={exercise.name}
+            />
         </section>
     )
 }
@@ -814,6 +1112,15 @@ export function ActiveWorkoutScreen({
     elapsedSeconds,
     currentExerciseIndex,
     currentSetIndex,
+    previousResult,
+    progressionRecommendation,
+    isProgressionLoading,
+    isProgressionError,
+    onAcceptProgression,
+    onRejectProgression,
+    isProgressionDeciding,
+    progressionPreviousSets,
+    onRevertProgressionPrefill,
     weightRecommendation,
     isWeightRecLoading,
     isWeightRecError,
@@ -828,6 +1135,8 @@ export function ActiveWorkoutScreen({
     onSetLastCompletedSet,
     onAddExercise,
     onFinishWorkout,
+    onSkipExercise,
+    onUnskipExercise,
 }: ActiveWorkoutScreenProps) {
     const elapsedLabel = formatElapsedDuration(elapsedSeconds)
     const completedSets = useMemo(() => countCompletedSets(workout), [workout])
@@ -842,6 +1151,27 @@ export function ActiveWorkoutScreen({
             onPatchWorkout((prev) => ({ ...prev, exercises: prev.exercises.filter((_, index) => index !== exerciseIndex) }))
             onNotifySetCompleted()
             toast.info('Упражнение удалено')
+        },
+        [onNotifySetCompleted, onPatchWorkout],
+    )
+
+    // SPEC-005 §21: superset/triset/circuit blocks are session-only.
+    const blockSlots = useMemo(() => supersetSlots(workout), [workout])
+
+    const groupWithNext = useCallback(
+        (exerciseIndex: number) => {
+            onPatchWorkout((prev) => groupExerciseWithNext(prev, exerciseIndex))
+            onNotifySetCompleted()
+            toast.info('Упражнения объединены в суперсет')
+        },
+        [onNotifySetCompleted, onPatchWorkout],
+    )
+
+    const ungroup = useCallback(
+        (exerciseIndex: number) => {
+            onPatchWorkout((prev) => ungroupExercise(prev, exerciseIndex))
+            onNotifySetCompleted()
+            toast.info('Упражнение убрано из суперсета')
         },
         [onNotifySetCompleted, onPatchWorkout],
     )
@@ -887,6 +1217,15 @@ export function ActiveWorkoutScreen({
                                     recommendation={weightRecommendation}
                                     isWeightRecLoading={isWeightRecLoading}
                                     isWeightRecError={isWeightRecError}
+                                    previousResult={previousResult}
+                                    progressionRecommendation={progressionRecommendation}
+                                    isProgressionLoading={isProgressionLoading}
+                                    isProgressionError={isProgressionError}
+                                    onAcceptProgression={onAcceptProgression}
+                                    onRejectProgression={onRejectProgression}
+                                    isProgressionDeciding={isProgressionDeciding}
+                                    progressionPreviousSets={progressionPreviousSets}
+                                    onRevertProgressionPrefill={() => onRevertProgressionPrefill?.(index)}
                                     onUpdateSet={onUpdateSet}
                                     onPatchWorkout={onPatchWorkout}
                                     onNotifySetCompleted={onNotifySetCompleted}
@@ -895,6 +1234,9 @@ export function ActiveWorkoutScreen({
                                     onAddExercise={onAddExercise}
                                     onSelectExercise={onSelectExercise}
                                     exercises={workout.exercises}
+                                    slot={blockSlots[index]}
+                                    onGroupWithNext={() => groupWithNext(index)}
+                                    onUngroup={() => ungroup(index)}
                                 />
                             )
                         }
@@ -907,6 +1249,11 @@ export function ActiveWorkoutScreen({
                                 onSelect={onSelectExercise}
                                 onReplace={onAddExercise}
                                 onDelete={() => deleteExercise(index)}
+                                onSkip={onSkipExercise ? () => onSkipExercise(index) : undefined}
+                                onUnskip={onUnskipExercise ? () => onUnskipExercise(index) : undefined}
+                                slot={blockSlots[index]}
+                                onGroupWithNext={index < workout.exercises.length - 1 ? () => groupWithNext(index) : undefined}
+                                onUngroup={() => ungroup(index)}
                             />
                         )
                     })}

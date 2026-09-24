@@ -1,24 +1,52 @@
 import { expect, test } from '@playwright/test'
+import { setupTelegramWebApp } from './helpers/telegram-mock'
 
 test.describe('telegram auth bootstrap and onboarding @regression', () => {
     test('shows fallback screen when Telegram context is missing', async ({ page }) => {
+        // index.html loads telegram-web-app.js from telegram.org; serve it empty so the
+        // missing-context state is the same in every target instead of depending on
+        // whether that host is reachable.
+        await page.route('**/telegram-web-app.js', (route) =>
+            route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }),
+        )
         await page.goto('/')
 
-        await expect(page.getByRole('heading', { name: 'Откройте приложение в Telegram' })).toBeVisible()
-        await expect(page.getByRole('button', { name: 'Проверить снова' })).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'Открой в Telegram' })).toBeVisible()
+        await expect(
+            page.getByText(/Мини-приложение доступно через бота|Запустите мини-приложение из Telegram/),
+        ).toBeVisible()
     })
 
     test('completes onboarding for authenticated first login', async ({ page }) => {
+        await setupTelegramWebApp(page)
         await page.addInitScript(() => {
             localStorage.setItem('auth_token', 'bootstrap-auth-token')
         })
 
         let profileCalls = 0
         let onboardingBody: Record<string, unknown> | null = null
+        // The app re-reads the profile after saving and keeps the onboarding screen up
+        // until the server reports the flag as done.
+        let onboardingCompleted = false
 
         await page.route('**/*', async (route) => {
             const request = route.request()
             const requestUrl = request.url()
+
+            // HealthCheckGate unmounts the app behind a maintenance screen without this.
+            if (requestUrl.includes('/health/ready')) {
+                return route.fulfill({
+                    status: 200,
+                    contentType: 'application/json; charset=utf-8',
+                    headers: { 'access-control-allow-origin': '*' },
+                    body: JSON.stringify({
+                        status: 'ready',
+                        timestamp: new Date().toISOString(),
+                        dependencies: { database: { name: 'database', healthy: true } },
+                    }),
+                })
+            }
+
             if (!requestUrl.includes('/api/v1/')) {
                 return route.fallback()
             }
@@ -45,28 +73,48 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
                 return route.fulfill({ status: 204, headers: corsHeaders, body: '' })
             }
 
-            if (method === 'GET' && path.includes('/users/auth/me')) {
-                profileCalls += 1
+            // TelegramAuthGate exchanges the injected initData before the app renders.
+            if (method === 'POST' && path.includes('/users/auth/telegram')) {
                 return json(200, {
-                    id: 1,
-                    telegram_id: 777,
-                    username: 'e2e_user',
-                    first_name: 'E2E',
-                    profile: {
-                        onboarding_completed: false,
-                    },
-                    settings: {
-                        theme: 'telegram',
-                        notifications: true,
-                        units: 'metric',
-                    },
-                    created_at: '2026-01-01T00:00:00Z',
-                    updated_at: '2026-01-01T00:00:00Z',
+                    success: true,
+                    message: 'ok',
+                    access_token: 'bootstrap-auth-token',
+                    refresh_token: null,
+                    is_new_user: false,
+                    onboarding_required: true,
                 })
             }
 
-            if (method === 'POST' && path.includes('/users/auth/onboarding')) {
+            const profile = () => ({
+                id: 1,
+                telegram_id: 777,
+                username: 'e2e_user',
+                first_name: 'E2E',
+                profile: {
+                    onboarding_completed: onboardingCompleted,
+                },
+                settings: {
+                    theme: 'telegram',
+                    notifications: true,
+                    units: 'metric',
+                },
+                created_at: '2026-01-01T00:00:00Z',
+                updated_at: '2026-01-01T00:00:00Z',
+            })
+
+            if (method === 'GET' && path.includes('/auth/me')) {
+                profileCalls += 1
+                return json(200, profile())
+            }
+
+            // The onboarding screen renames the user before saving the goals.
+            if (method === 'PUT' && path.includes('/auth/me')) {
+                return json(200, profile())
+            }
+
+            if (method === 'POST' && path.includes('/auth/onboarding')) {
                 onboardingBody = request.postDataJSON() as Record<string, unknown>
+                onboardingCompleted = true
                 return json(200, {
                     success: true,
                     message: 'Onboarding saved',
@@ -89,7 +137,12 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
 
         await page.getByLabel('Выносливость').check()
         await page.getByLabel('Продвинутый').check()
-        await page.getByRole('button', { name: 'Сохранить и продолжить' }).click()
+        // Без согласия на обработку данных о здоровье онбординг не сохраняется (WS1-14).
+        const submit = page.getByRole('button', { name: 'Сохранить и продолжить' })
+        await expect(submit).toBeDisabled()
+        await page.getByRole('checkbox', { name: /обработку данных о здоровье/ }).check()
+        await expect(submit).toBeEnabled()
+        await submit.click()
 
         await expect(
             page.getByRole('heading', { name: 'Добро пожаловать в FitTracker Pro' }),
@@ -97,9 +150,11 @@ test.describe('telegram auth bootstrap and onboarding @regression', () => {
         await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
 
         expect(profileCalls).toBeGreaterThanOrEqual(1)
-        expect(onboardingBody).toEqual({
+        expect(onboardingBody).toMatchObject({
             fitness_goal: 'endurance',
             experience_level: 'advanced',
+            health_data_consent: true,
         })
+        expect(typeof onboardingBody?.consent_version).toBe('string')
     })
 })

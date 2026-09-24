@@ -11,7 +11,6 @@ export const queryKeys = {
     profile: {
         me: ['profile', 'me'] as const,
         stats: ['profile', 'stats'] as const,
-        coachAccess: ['profile', 'coachAccess'] as const,
     },
     achievements: {
         list: (category: AchievementListFilter) => ['achievements', 'list', category] as const,
