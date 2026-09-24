@@ -6129,6 +6129,22 @@
             "title": "Applied To All",
             "type": "boolean"
           },
+          "changed_ids": {
+            "description": "Exactly the targets the change applied to — not the ids that were requested. A caller can hand them straight back to undo the action without re-deriving what changed from the response.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Changed Ids",
+            "type": "array"
+          },
+          "released_ids": {
+            "description": "Sweep members an undo released: targets a newer one replaced, which no undo can switch back on. Their prefill stays off and only the sweep stamp is cleared, so the entry stops holding a goal nobody can restore. Empty for every other bulk action.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Released Ids",
+            "type": "array"
+          },
           "skipped": {
             "description": "Targets the change did not apply to, each with the reason: unknown, someone else's, no longer an accepted target, or — for switching the prefill off — already switched off.",
             "items": {
@@ -6151,13 +6167,15 @@
         "description": "Why a bulk action left one selected target alone (SPEC-006 §58).",
         "enum": [
           "not_found",
-          "already_disabled"
+          "already_disabled",
+          "already_enabled",
+          "superseded"
         ],
         "title": "ProgressionBulkSkipReason",
         "type": "string"
       },
       "ProgressionBulkSkipped": {
-        "description": "One selected target a bulk action did not change, explained (SPEC §58).\n\nReporting the id alone leaves the user guessing which goal was left behind;\nthe name, the value it still carries and the scope come along so the screen\ncan name the row exactly like the list does. A target that is not a current\naccepted target can only be identified by its id.",
+        "description": "One selected target a bulk action did not change, explained (SPEC §58).\n\nReporting the id alone leaves the user guessing which goal was left behind;\nthe name, the value it still carries and the scope come along so the screen\ncan name the row exactly like the list does. A target that is not a current\naccepted target can only be identified by its id — and a record that a newer\ntarget replaced says which id to address instead, so the caller never has to\nguess which row the slot belongs to now.",
         "properties": {
           "exercise_id": {
             "anyOf": [
@@ -6200,6 +6218,18 @@
             ],
             "description": "Progression scope the skipped target belongs to.",
             "title": "Scope Key"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The target that owns this scope now, when the skipped record was replaced by a newer one (`superseded`); null for every other reason.",
+            "title": "Superseded By"
           },
           "unit": {
             "anyOf": [
@@ -6729,6 +6759,47 @@
         "title": "ProgressionPrefillBulkDisable",
         "type": "object"
       },
+      "ProgressionPrefillBulkEnable": {
+        "description": "POST body: switch the automatic prefill back on — the undo of a sweep.\n\nTwo addresses, never both: the exact targets an action reported as changed,\nor whole sweeps. A sweep id is the honest way to undo one link of the chain\n(and to undo several at once): the caller does not have to re-state a set of\nids it merely read, and a chain longer than the id cap is still one call.",
+        "properties": {
+          "recommendation_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 200,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The targets to switch back on (the changed set of one action).",
+            "title": "Recommendation Ids"
+          },
+          "sweep_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sweeps whose still-switched-off targets come back, resolved server-side. This is what «вернуть всё» in the undo journal sends.",
+            "title": "Sweep Ids"
+          }
+        },
+        "title": "ProgressionPrefillBulkEnable",
+        "type": "object"
+      },
       "ProgressionPrefillListResponse": {
         "description": "SPEC §58: accepted targets and whether they prefill new sessions.",
         "properties": {
@@ -6746,6 +6817,108 @@
           }
         },
         "title": "ProgressionPrefillListResponse",
+        "type": "object"
+      },
+      "ProgressionPrefillSweep": {
+        "description": "One bulk switch-off the server still holds (SPEC §58).\n\nRead-only view of a sweep that has targets switched off: the ids to hand to\n``POST /prefill/bulk-enable``, plus when it happened so a chain of sweeps can\nbe told apart. It carries no report — how many targets a sweep skipped and\nwhy is not reconstructed after the fact — so an undo promises the targets and\nnothing else. A sweep left with no targets at all (undone in full, or its last\none switched back on by hand) is not listed. A sweep whose members were all\nreplaced by newer targets is listed with ``restorable`` false and them named in\n``superseded``: the action stays visible and says there is nothing to switch\nback on, instead of disappearing and leaving its stamp unreachable.",
+        "properties": {
+          "changed_ids": {
+            "description": "Exactly the set its undo brings back.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Changed Ids",
+            "type": "array"
+          },
+          "declined_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When that action switched its last target off.",
+            "title": "Declined At"
+          },
+          "restorable": {
+            "default": true,
+            "description": "False when every member it still holds was replaced by a newer target, so its undo has nothing to switch back on.",
+            "title": "Restorable",
+            "type": "boolean"
+          },
+          "superseded": {
+            "description": "Members it still holds that a newer target replaced; nothing can be switched back on through them.",
+            "items": {
+              "$ref": "#/components/schemas/ProgressionPrefillSweepSuperseded"
+            },
+            "title": "Superseded",
+            "type": "array"
+          },
+          "sweep_id": {
+            "description": "Identifier shared by the targets one bulk action switched off.",
+            "title": "Sweep Id",
+            "type": "string"
+          },
+          "updated": {
+            "default": 0,
+            "description": "Members it switched off that are still switched off *and* still the target of their scope — what its undo really brings back.",
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sweep_id"
+        ],
+        "title": "ProgressionPrefillSweep",
+        "type": "object"
+      },
+      "ProgressionPrefillSweepListResponse": {
+        "description": "SPEC §58: the chain of bulk switch-offs that can still be undone.",
+        "properties": {
+          "sweeps": {
+            "description": "Newest sweep first.",
+            "items": {
+              "$ref": "#/components/schemas/ProgressionPrefillSweep"
+            },
+            "title": "Sweeps",
+            "type": "array"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "ProgressionPrefillSweepListResponse",
+        "type": "object"
+      },
+      "ProgressionPrefillSweepSuperseded": {
+        "description": "A sweep member a newer target replaced, so no undo can bring it back (§58).",
+        "properties": {
+          "recommendation_id": {
+            "title": "Recommendation Id",
+            "type": "integer"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The target that owns the scope now, when it is still known.",
+            "title": "Superseded By"
+          }
+        },
+        "required": [
+          "recommendation_id"
+        ],
+        "title": "ProgressionPrefillSweepSuperseded",
         "type": "object"
       },
       "ProgressionRecommendation": {
@@ -16738,7 +16911,7 @@
     },
     "/api/v1/progression/prefill/bulk-disable": {
       "post": {
-        "description": "SPEC §58: omitting the ids switches off every target the screen lists.\n\nOne tap after a training cycle instead of walking the list row by row. The\ntargets themselves are untouched — only the silent substitution stops.",
+        "description": "SPEC §58: omitting the ids switches off every target the screen lists.\n\nOne tap after a training cycle instead of walking the list row by row. The\ntargets themselves are untouched — only the silent substitution stops. What\nthis call switches off becomes one sweep, addressable for its undo through\n``GET /prefill/last-sweep`` rather than only through this response.",
         "operationId": "bulk_disable_prefill_api_v1_progression_prefill_bulk_disable_post",
         "requestBody": {
           "content": {
@@ -16790,6 +16963,53 @@
         ]
       }
     },
+    "/api/v1/progression/prefill/bulk-enable": {
+      "post": {
+        "description": "SPEC §58: undoes a bulk switch-off, addressed by targets or by sweeps.\n\nThe ids come from that action's ``changed_ids``, so a goal whose prefill was\nswitched off earlier stays off — undo restores what this action did, not\neverything that happens to be switched off. Sweep ids address the same thing\nfrom the other end: the server resolves what each sweep still holds, which is\nwhat lets the whole undo journal come back in one tap.",
+        "operationId": "bulk_enable_prefill_api_v1_progression_prefill_bulk_enable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressionPrefillBulkEnable"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Switch the automatic prefill back on for targets or whole sweeps",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
     "/api/v1/progression/prefill/bulk-update": {
       "post": {
         "description": "SPEC §58: values and prefill switches stay per-target; only the plan moves.",
@@ -16832,6 +17052,57 @@
           }
         ],
         "summary": "Apply one policy / rep-range edit to many accepted targets",
+        "tags": [
+          "Progression"
+        ]
+      }
+    },
+    "/api/v1/progression/prefill/sweeps": {
+      "get": {
+        "description": "SPEC §58: the undo as the server remembers it, not as one browser does.\n\nEvery bulk switch-off stamps its targets with one sweep id, so the way back is\nthe same on every device and survives a reload. The whole chain is returned,\nnewest first, so a run of bulk actions can be put back in any order; targets\nswitched on again by hand have left their sweep, and a sweep left with nothing\nis not listed. One whose members were all replaced by newer targets *is* listed\n— ``restorable`` false, replacements named — so the action never vanishes while\nits stamp stays on rows no undo could reach, and acting on it releases them.",
+        "operationId": "list_prefill_sweeps_api_v1_progression_prefill_sweeps_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionPrefillSweepListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bulk switch-offs that can still be undone",
         "tags": [
           "Progression"
         ]

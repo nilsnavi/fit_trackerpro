@@ -801,6 +801,38 @@ export async function mockWorkoutApi(page: Page, state: MockWorkoutApiState) {
             })
         }
 
+        // WS2-2 «Здоровье сегодня»: главная запрашивает health-metrics при загрузке.
+        // Пустые, но корректные по форме ответы: catch-all ниже отдаёт `{}` для
+        // массивов (glucose/wellness), и `entries.find` падает в HomeHealthSection,
+        // что рушит весь Home через ErrorBoundary до рендера «Мои шаблоны».
+        if (method === 'GET' && normalizedPath.endsWith('/health-metrics/water/goal')) {
+            return respond(200, {
+                id: 1,
+                user_id: 1,
+                daily_goal: 2000,
+                workout_increase: 500,
+                is_workout_day: false,
+                created_at: isoNow(),
+                updated_at: isoNow(),
+            })
+        }
+        if (method === 'GET' && /\/health-metrics\/water\/daily\/\d{4}-\d{2}-\d{2}$/.test(normalizedPath)) {
+            return respond(200, {
+                date: new Date().toISOString().slice(0, 10),
+                total: 0,
+                goal: 2000,
+                percentage: 0,
+                is_goal_reached: false,
+                entry_count: 0,
+            })
+        }
+        if (method === 'GET' && normalizedPath.endsWith('/health-metrics/glucose')) {
+            return respond(200, [])
+        }
+        if (method === 'GET' && normalizedPath.endsWith('/health-metrics/wellness')) {
+            return respond(200, [])
+        }
+
         // Never hit external API in tests: unknown endpoints return empty success payload.
         if (method === 'GET') {
             return respond(200, {})

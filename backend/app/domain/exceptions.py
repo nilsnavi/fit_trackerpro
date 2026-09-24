@@ -147,6 +147,20 @@ class ProgressionRecommendationNotFoundError(DomainError):
     default_message = "Progression recommendation not found"
 
 
+class ProgressionTargetSupersededError(DomainError):
+    """The addressed record was replaced by a newer target of its own slot (§58).
+
+    A policy belongs to the scope, so editing a superseded record would reach the
+    same slot through a row the settings screen does not even show. The error
+    carries the id of the target that owns the slot now, instead of editing it
+    silently.
+    """
+
+    code = "progression_target_superseded"
+    http_status = 409
+    default_message = "Progression target was superseded by a newer one"
+
+
 class ProgressionValidationError(DomainError):
     """Inconsistent progression scope or policy payload (SPEC-006 §7)."""
 

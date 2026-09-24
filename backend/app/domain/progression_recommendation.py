@@ -87,6 +87,11 @@ class ProgressionRecommendationRecord(Base):
     prefill_declined_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # SPEC-006 §58: the bulk switch-off this target was declined by, shared by
+    # every target that one action changed. The undo is resolved from it
+    # server-side (newest sweep still switched off), so it does not depend on the
+    # device that ran the sweep. A manual per-target flip leaves it NULL.
+    prefill_sweep_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )

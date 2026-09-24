@@ -115,8 +115,15 @@ class ProgressionRepository(SQLAlchemyRepository):
         user_id: int,
         scope: ProgressionScope,
         values: dict,
+        commit: bool = True,
     ) -> ProgressionPolicyRecord:
-        """Create or replace the single policy row for one progression scope."""
+        """Create or replace the single policy row for one progression scope.
+
+        ``commit=False`` leaves the write pending in the caller's transaction so a
+        batch of scope edits is committed as one unit — see
+        :meth:`ProgressionEngineService.update_targets_bulk`, which writes every
+        selected scope this way and rolls the whole batch back on any failure.
+        """
         record = await self.get_policy(user_id=user_id, scope_key=scope.key)
         if record is None:
             record = ProgressionPolicyRecord(
@@ -129,6 +136,11 @@ class ProgressionRepository(SQLAlchemyRepository):
             self.add(record)
         for field, value in values.items():
             setattr(record, field, value)
+        if not commit:
+            # Surface an insert conflict here, but leave the COMMIT to the batch
+            # that owns the transaction.
+            await self.db.flush()
+            return record
         try:
             await self.commit()
         except IntegrityError:
@@ -191,8 +203,10 @@ class ProgressionRepository(SQLAlchemyRepository):
 
         ``generated`` recommendations are deliberately excluded: a proposal may
         prefill a session only after the user accepted (or modified) it. So are
-        declined ones — undoing a prefill switches it off until a newer target is
-        accepted (SPEC §58). One query with a window function keeps this bounded
+        declined ones — and a newer accepted target inherits that refusal instead
+        of ending it (see :meth:`carry_prefill_consent`), so switching the
+        substitution off lasts until the user turns it back on (SPEC §58). One
+        query with a window function keeps this bounded
         by the requested scopes instead of scanning the user's whole
         recommendation history.
         """
@@ -294,6 +308,45 @@ class ProgressionRepository(SQLAlchemyRepository):
         )
         return list(result.scalars().all())
 
+    async def carry_prefill_consent(
+        self, *, user_id: int, source_id: int, target_id: int, commit: bool = False
+    ) -> bool:
+        """Hand a switched-off prefill to the target that replaces this one (§58).
+
+        The refusal belongs to the *slot*, not to one row: a user who stopped the
+        silent substitution meant it until they said otherwise, and a training
+        cycle should not quietly overrule that. So when a newer target is accepted
+        for a scope whose previous target was switched off, the new one starts
+        switched off too — with the original moment kept, so the journal still says
+        when the decision was made — and the sweep stamp travels with it, which is
+        what keeps the bulk action addressable through the goal that owns the slot
+        now.
+
+        The replaced row keeps its own ``prefill_declined_at`` and loses only the
+        stamp: it is the historical record of that decision, but it can never be
+        switched back on through a sweep again (see
+        :meth:`release_prefill_sweeps`). Returns ``False`` — and writes nothing —
+        when there is nothing to carry, which is the common case.
+        """
+        if int(source_id) == int(target_id):
+            return False
+        source = await self.get_recommendation(
+            user_id=user_id, recommendation_id=int(source_id)
+        )
+        target = await self.get_recommendation(
+            user_id=user_id, recommendation_id=int(target_id)
+        )
+        if source is None or target is None or source.prefill_declined_at is None:
+            return False
+        target.prefill_declined_at = source.prefill_declined_at
+        target.prefill_sweep_id = source.prefill_sweep_id
+        source.prefill_sweep_id = None
+        if not commit:
+            await self.db.flush()
+            return True
+        await self.commit()
+        return True
+
     async def create_recommendation(
         self, payload: dict
     ) -> tuple[ProgressionRecommendationRecord, bool]:
@@ -332,8 +385,14 @@ class ProgressionRepository(SQLAlchemyRepository):
         lifecycle_status: str,
         actual_selected_value: Optional[float],
         difference: Optional[float] = None,
+        commit: bool = True,
     ) -> ProgressionRecommendationRecord:
-        """Lifecycle transitions never touch workout history (SPEC §42–§44)."""
+        """Lifecycle transitions never touch workout history (SPEC §42–§44).
+
+        ``commit=False`` leaves the write pending in the caller's transaction so a
+        combined edit (value + policy) is committed as one unit — see
+        :meth:`ProgressionEngineService.update_target`.
+        """
         record.lifecycle_status = lifecycle_status
         if actual_selected_value is not None:
             record.actual_selected_value = actual_selected_value
@@ -342,22 +401,36 @@ class ProgressionRepository(SQLAlchemyRepository):
         if difference is not None:
             record.difference = difference
         record.decided_at = datetime.now(timezone.utc)
+        if not commit:
+            await self.db.flush()
+            return record
         await self.commit()
         await self.refresh(record)
         return record
 
     async def decline_prefill(
-        self, *, user_id: int, recommendation_ids: Sequence[int]
-    ) -> int:
+        self,
+        *,
+        user_id: int,
+        recommendation_ids: Sequence[int],
+        sweep_id: Optional[str] = None,
+        commit: bool = True,
+    ) -> list[int]:
         """Switch off the automatic prefill of these accepted targets (SPEC §58).
 
         The lifecycle is left untouched — the target is still the agreed next
         number, it is only no longer substituted silently. Idempotent: already
-        declined records are counted but not rewritten.
+        declined records are left alone, and the return value names exactly the
+        rows this call changed (``RETURNING``), not the set it was asked for —
+        under a concurrent write the two can differ.
+
+        ``sweep_id`` stamps one bulk action on every target it changed, which is
+        what lets the undo be resolved later (and on another device) instead of
+        being handed around by the caller.
         """
         ids = [int(value) for value in dict.fromkeys(recommendation_ids) if value]
         if not ids:
-            return 0
+            return []
         result = await self.db.execute(
             update(ProgressionRecommendationRecord)
             .where(
@@ -367,62 +440,64 @@ class ProgressionRepository(SQLAlchemyRepository):
                     ProgressionRecommendationRecord.prefill_declined_at.is_(None),
                 )
             )
-            .values(prefill_declined_at=datetime.now(timezone.utc))
+            .values(
+                prefill_declined_at=datetime.now(timezone.utc),
+                prefill_sweep_id=sweep_id,
+            )
+            # Only the rows this statement really switched off, so a target that
+            # lost a race with a concurrent write is not promised as changed.
+            .returning(ProgressionRecommendationRecord.id)
         )
-        await self.commit()
-        return int(result.rowcount or 0)
-
-    async def enable_prefill(
-        self, *, user_id: int, recommendation_id: int
-    ) -> Optional[ProgressionRecommendationRecord]:
-        """Turn an accepted target's automatic prefill back on (SPEC §58)."""
-        record = await self.get_recommendation(
-            user_id=user_id, recommendation_id=recommendation_id
-        )
-        if record is None:
-            return None
-        if record.prefill_declined_at is not None:
-            record.prefill_declined_at = None
+        changed = [int(value) for value in result.scalars().all()]
+        if commit:
             await self.commit()
-            await self.refresh(record)
-        return record
+        return changed
 
-    async def disable_prefill(
-        self, *, user_id: int, recommendation_id: int
-    ) -> Optional[ProgressionRecommendationRecord]:
-        """Switch one accepted target's automatic prefill off (SPEC §58).
-
-        The lifecycle is left untouched — this is a display/substitution choice,
-        not a rejection: the target keeps being the agreed next number and stays
-        visible in the UI. Idempotent, so a repeated toggle does not rewrite the
-        timestamp and muddies "when was this switched off".
-        """
-        record = await self.get_recommendation(
-            user_id=user_id, recommendation_id=recommendation_id
-        )
-        if record is None:
-            return None
-        if record.prefill_declined_at is None:
-            record.prefill_declined_at = datetime.now(timezone.utc)
-            await self.commit()
-            await self.refresh(record)
-        return record
-
-    async def latest_targets(
+    async def enable_prefill_bulk(
         self,
         *,
         user_id: int,
-        declined_only: bool = False,
-        limit: int = 50,
-    ) -> list[ProgressionRecommendationRecord]:
-        """Newest accepted/modified target per scope, newest scopes first.
+        recommendation_ids: Sequence[int],
+        commit: bool = True,
+    ) -> list[int]:
+        """Switch the automatic prefill of these accepted targets back on (§58).
 
-        Ranking happens inside each scope *before* any prefill filter, so a scope
-        whose newest target was declined is reported as declined instead of
-        resurfacing an older, still-prefilling record (SPEC §58). Bounded by
-        ``limit`` — one row per scope, never the whole recommendation history.
+        The mirror of :meth:`decline_prefill`, and the undo of a bulk switch-off:
+        only records that are currently switched off are rewritten, so undoing an
+        action that was already undone is a no-op instead of a second write. The
+        sweep stamp is cleared with the switch, which is what shrinks a sweep to
+        the targets it still holds. The lifecycle, the value and the policy are
+        never touched. The return value names exactly the rows this call changed
+        (``RETURNING``).
         """
-        ranked = (
+        ids = [int(value) for value in dict.fromkeys(recommendation_ids) if value]
+        if not ids:
+            return []
+        result = await self.db.execute(
+            update(ProgressionRecommendationRecord)
+            .where(
+                and_(
+                    ProgressionRecommendationRecord.user_id == user_id,
+                    ProgressionRecommendationRecord.id.in_(ids),
+                    ProgressionRecommendationRecord.prefill_declined_at.is_not(None),
+                )
+            )
+            .values(prefill_declined_at=None, prefill_sweep_id=None)
+            .returning(ProgressionRecommendationRecord.id)
+        )
+        changed = [int(value) for value in result.scalars().all()]
+        if commit:
+            await self.commit()
+        return changed
+
+    def _current_target_ids(self, user_id: int):
+        """Newest accepted/modified target per scope, as a subquery.
+
+        The ranking the settings screen is built on (SPEC §58): a scope is
+        represented by its newest target only, so a superseded record can never
+        resurface — neither in the list nor in what a bulk sweep still owes.
+        """
+        return (
             select(
                 ProgressionRecommendationRecord.id.label("recommendation_id"),
                 func.row_number()
@@ -444,6 +519,187 @@ class ProgressionRepository(SQLAlchemyRepository):
             )
             .subquery()
         )
+
+    async def prefill_sweeps(
+        self, *, user_id: int, limit: int = 5
+    ) -> list[tuple[str, Optional[datetime], list[ProgressionRecommendationRecord]]]:
+        """The bulk switch-offs that still have targets switched off (SPEC §58).
+
+        One entry per sweep — ``(sweep_id, declined_at, targets)``, newest first
+        — so the whole chain is addressable instead of only its last link. Every
+        target one bulk action changed shares a ``prefill_sweep_id``, which makes
+        the sweep a fact in the data rather than something the caller has to
+        remember; a target switched back on by hand (or undone) drops its stamp
+        and leaves the sweep, and a sweep with nothing left is not listed at all.
+
+        A member a newer target replaced is *kept* in the entry: dropping it would
+        hide the action while its stamp stayed on a row nobody can act on, so the
+        caller is handed both the members it can still switch back on and the ones
+        a newer target took over (:meth:`ProgressionEngineService` names which is
+        which). Two queries for the whole chain, user-scoped, no N+1.
+        """
+        stamped = and_(
+            ProgressionRecommendationRecord.user_id == user_id,
+            ProgressionRecommendationRecord.prefill_sweep_id.is_not(None),
+            ProgressionRecommendationRecord.prefill_declined_at.is_not(None),
+            # Still a decided target, so a record that was rejected (and whose
+            # stamp is therefore meaningless) never shows up here.
+            ProgressionRecommendationRecord.lifecycle_status.in_(ACCEPTED_LIFECYCLES),
+            ProgressionRecommendationRecord.actual_selected_value.is_not(None),
+        )
+        declined_at = func.max(ProgressionRecommendationRecord.prefill_declined_at)
+        grouped = await self.db.execute(
+            select(ProgressionRecommendationRecord.prefill_sweep_id, declined_at)
+            .where(stamped)
+            .group_by(ProgressionRecommendationRecord.prefill_sweep_id)
+            # Ids break ties so the chain has one stable order even if two sweeps
+            # were stamped within the same instant.
+            .order_by(
+                declined_at.desc(),
+                ProgressionRecommendationRecord.prefill_sweep_id.desc(),
+            )
+            .limit(int(limit))
+        )
+        ordered = [(str(row[0]), row[1]) for row in grouped.all()]
+        if not ordered:
+            return []
+        result = await self.db.execute(
+            select(ProgressionRecommendationRecord)
+            .where(
+                and_(
+                    stamped,
+                    ProgressionRecommendationRecord.prefill_sweep_id.in_(
+                        [sweep_id for sweep_id, _ in ordered]
+                    ),
+                )
+            )
+            .order_by(ProgressionRecommendationRecord.id.asc())
+        )
+        by_sweep: dict[str, list[ProgressionRecommendationRecord]] = {
+            sweep_id: [] for sweep_id, _ in ordered
+        }
+        for record in result.scalars().all():
+            by_sweep.setdefault(str(record.prefill_sweep_id), []).append(record)
+        return [(sweep_id, when, by_sweep[sweep_id]) for sweep_id, when in ordered]
+
+    async def release_prefill_sweeps(
+        self,
+        *,
+        user_id: int,
+        recommendation_ids: Sequence[int],
+        commit: bool = False,
+    ) -> list[int]:
+        """Drop these targets from their sweep, leaving them switched off (§58).
+
+        A record a newer target replaced can never be switched back on through the
+        sweep it is part of, so holding it would keep the journal offering an undo
+        that promises nothing and outlive every action able to clear it. Releasing
+        it ends that: only ``prefill_sweep_id`` is cleared, while
+        ``prefill_declined_at`` stays, because the decision belongs to that target
+        and switching it off is not being undone here. ``RETURNING`` names exactly
+        the rows this call released.
+        """
+        ids = [int(value) for value in dict.fromkeys(recommendation_ids) if value]
+        if not ids:
+            return []
+        result = await self.db.execute(
+            update(ProgressionRecommendationRecord)
+            .where(
+                and_(
+                    ProgressionRecommendationRecord.user_id == user_id,
+                    ProgressionRecommendationRecord.id.in_(ids),
+                    ProgressionRecommendationRecord.prefill_sweep_id.is_not(None),
+                )
+            )
+            .values(prefill_sweep_id=None)
+            .returning(ProgressionRecommendationRecord.id)
+        )
+        released = [int(value) for value in result.scalars().all()]
+        if commit:
+            await self.commit()
+        return released
+
+    async def targets_by_prefill_sweeps(
+        self, *, user_id: int, sweep_ids: Sequence[str]
+    ) -> list[ProgressionRecommendationRecord]:
+        """The targets these sweeps still have switched off (one query, scoped).
+
+        Addressing an undo by sweep rather than by an enumerated set of ids keeps
+        the two ends of the action in one place: the caller asks for what it was
+        shown, and the server resolves the targets that are still switched off —
+        including a chain longer than any list of ids could carry. Unknown or
+        foreign sweep ids simply resolve to nothing.
+        """
+        ids = [str(value) for value in dict.fromkeys(sweep_ids) if value]
+        if not ids:
+            return []
+        result = await self.db.execute(
+            select(ProgressionRecommendationRecord).where(
+                and_(
+                    ProgressionRecommendationRecord.user_id == user_id,
+                    ProgressionRecommendationRecord.prefill_sweep_id.in_(ids),
+                    ProgressionRecommendationRecord.prefill_declined_at.is_not(None),
+                )
+            )
+        )
+        return list(result.scalars().all())
+
+    async def enable_prefill(
+        self, *, user_id: int, recommendation_id: int
+    ) -> Optional[ProgressionRecommendationRecord]:
+        """Turn an accepted target's automatic prefill back on (SPEC §58)."""
+        record = await self.get_recommendation(
+            user_id=user_id, recommendation_id=recommendation_id
+        )
+        if record is None:
+            return None
+        if record.prefill_declined_at is not None:
+            record.prefill_declined_at = None
+            # A single flip is nobody's sweep, so it stops being part of one.
+            record.prefill_sweep_id = None
+            await self.commit()
+            await self.refresh(record)
+        return record
+
+    async def disable_prefill(
+        self, *, user_id: int, recommendation_id: int
+    ) -> Optional[ProgressionRecommendationRecord]:
+        """Switch one accepted target's automatic prefill off (SPEC §58).
+
+        The lifecycle is left untouched — this is a display/substitution choice,
+        not a rejection: the target keeps being the agreed next number and stays
+        visible in the UI. Idempotent, so a repeated toggle does not rewrite the
+        timestamp and muddies "when was this switched off".
+        """
+        record = await self.get_recommendation(
+            user_id=user_id, recommendation_id=recommendation_id
+        )
+        if record is None:
+            return None
+        if record.prefill_declined_at is None:
+            record.prefill_declined_at = datetime.now(timezone.utc)
+            # Switching one target off by hand is not a sweep: nothing about it
+            # is offered for a bulk undo later.
+            record.prefill_sweep_id = None
+            await self.commit()
+            await self.refresh(record)
+        return record
+
+    async def latest_targets(
+        self,
+        *,
+        user_id: int,
+        declined_only: bool = False,
+        limit: int = 50,
+    ) -> list[ProgressionRecommendationRecord]:
+        """Newest accepted/modified target per scope, newest scopes first.
+
+        Ranking happens inside each scope *before* any prefill filter, so a scope
+        whose newest target was declined is reported as declined instead of
+        resurfacing an older, still-prefilling record (SPEC §58). Bounded by
+        ``limit`` — one row per scope, never the whole recommendation history.
+        """
+        ranked = self._current_target_ids(user_id)
         query = (
             select(ProgressionRecommendationRecord)
             .join(
@@ -461,6 +717,37 @@ class ProgressionRepository(SQLAlchemyRepository):
             ).limit(int(limit))
         )
         return list(result.scalars().all())
+
+    async def current_target_ids(
+        self, *, user_id: int, scope_keys: Sequence[str]
+    ) -> dict[str, int]:
+        """Id of the target that represents each of these scopes *now* (SPEC §58).
+
+        The very ranking the settings screen is built on (newest accepted/modified
+        record per scope), resolved for an explicit set of scopes in one query, so
+        a caller can tell a current target from one a newer record replaced — and
+        name the newer one — without reading the whole list. A scope with no
+        current target at all is simply absent.
+        """
+        keys = [key for key in dict.fromkeys(scope_keys) if key]
+        if not keys:
+            return {}
+        ranked = self._current_target_ids(user_id)
+        result = await self.db.execute(
+            select(
+                ProgressionRecommendationRecord.scope_key,
+                ranked.c.recommendation_id,
+            )
+            .join(
+                ranked,
+                ProgressionRecommendationRecord.id == ranked.c.recommendation_id,
+            )
+            .where(
+                ranked.c.scope_rank == 1,
+                ProgressionRecommendationRecord.scope_key.in_(keys),
+            )
+        )
+        return {str(row[0]): int(row[1]) for row in result.all()}
 
     async def targets_by_ids(
         self, *, user_id: int, recommendation_ids: Sequence[int]

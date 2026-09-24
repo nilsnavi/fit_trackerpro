@@ -14,17 +14,28 @@
  * apply one policy / rep range to the whole selection. Bulk never moves a value
  * or a switch — it re-plans the scopes, one target at a time underneath — and
  * every target it left alone is reported with its own name and reason.
+ *
+ * A sweep is undone on the action's own changed set: the goals it switched off
+ * (and only those — a switch the user flipped earlier stays flipped) come back
+ * with one tap, so trying a bulk action never costs a walk through the list to
+ * repair it. The wrong decision is usually noticed after the fact, so that offer
+ * is not this screen's private state: the server remembers every sweep that still
+ * has goals switched off, and the journal above the list offers the whole chain —
+ * after a reload, or from another device, and in any order, one link at a time or
+ * all of them at once.
  */
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Check, Loader2, Target, TrendingDown, TrendingUp, Minus, HelpCircle, Pencil } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Target, TrendingDown, TrendingUp, Minus, HelpCircle, Pencil, Undo2, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Chip } from '@shared/ui/Chip'
 import {
     useBulkDisableProgressionPrefill,
+    useBulkEnableProgressionPrefill,
     useBulkUpdateProgressionTargets,
     useDisableProgressionPrefill,
     useEnableProgressionPrefill,
+    useProgressionPrefillSweeps,
     useProgressionPrefillTargets,
     useUpdateProgressionTarget,
 } from '@features/workouts/hooks/useProgressionPrefillTargets'
@@ -35,8 +46,13 @@ import {
     selectableIds,
     toggleSelection,
     type BulkDraft,
-    type BulkSkipView,
 } from '@features/workouts/lib/progressionBulkDraft'
+import {
+    describeUndoSweeps,
+    describeUnrestoredTargets,
+    type BulkOutcome,
+    type UndoSweepRow,
+} from '@features/workouts/lib/progressionBulkOutcome'
 import {
     PROGRESSION_POLICY_LABELS,
     draftFor,
@@ -59,14 +75,8 @@ const POLICY_OPTIONS = Object.keys(POLICY_LABELS) as ProgressionPolicy[]
 
 type Filter = 'all' | 'off'
 
-/** What the last bulk action did: what it changed and what it left alone. */
-interface BulkOutcome {
-    kind: 'disable' | 'apply'
-    updated: number
-    /** How many targets the action addressed (null for «всем»). */
-    total: number | null
-    skips: BulkSkipView[]
-}
+/** Which undo is running, so the journal can show it on the right control. */
+type UndoInFlight = { kind: 'sweep'; sweepId: string } | { kind: 'chain' } | null
 
 /** The step the scope progresses by now — the policy edit's visible consequence. */
 function stepFor(recommendation: ProgressionRecommendation): number | null {
@@ -514,13 +524,133 @@ function BulkToolbar({
     )
 }
 
+/** One line for what the last bulk action did. */
+function outcomeTitle(outcome: BulkOutcome): string {
+    if (outcome.updated === 0) return 'Ничего не изменилось'
+    const addressed = outcome.total == null ? '' : ` из ${outcome.total}`
+    switch (outcome.kind) {
+        case 'disable':
+            return outcome.total == null
+                ? `Выключили автоподстановку у всех целей: ${outcome.updated}`
+                : `Выключили подстановку у выбранных: ${outcome.updated}${addressed}`
+        case 'enable':
+            return `Вернули автоподстановку: ${outcome.updated}${addressed}`
+        default:
+            return `Применили к выбранным: ${outcome.updated}${addressed}`
+    }
+}
+
+/**
+ * SPEC-006 §58: the bulk switch-offs that can still be undone — the journal.
+ *
+ * The undo is a state, not an event. A sweep is often the wrong decision, and the
+ * moment the user notices is after the fact — after leaving the screen, after a
+ * reload, or on another device — so the server keeps every sweep it still holds
+ * and this lists the chain, newest first. Each link names the goals it would bring
+ * back and is undone on its own, which is what makes a run of bulk actions
+ * recoverable in any order instead of only the last one. With more than one link
+ * there is also a single button for the whole chain, for the case where the cycle
+ * itself was the mistake rather than one sweep in it.
+ *
+ * A sweep whose goals a newer target took over is listed as spent rather than
+ * dropped: it says there is nothing to switch back on, and the one action left is
+ * to release it. That is the honest end of the chain — the stamp cannot quietly
+ * outlive the entry that promised it.
+ */
+function UndoSweepsPanel({
+    rows,
+    undoing,
+    isPending,
+    onUndo,
+    onUndoAll,
+}: {
+    rows: UndoSweepRow[]
+    /** What is being put back right now, so exactly that control shows a spinner. */
+    undoing: UndoInFlight
+    isPending: boolean
+    onUndo: (row: UndoSweepRow) => void
+    onUndoAll: () => void
+}) {
+    if (rows.length === 0) return null
+    return (
+        <div
+            data-testid="progression-undo-sweeps"
+            className="mb-3 rounded-[16px] border border-white/[0.08] bg-telegram-secondary-bg p-3"
+        >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-telegram-hint">
+                    Отмена пачечных выключений
+                </p>
+                {rows.length > 1 ? (
+                    <button
+                        type="button"
+                        data-testid="progression-undo-sweeps-restore-all"
+                        disabled={isPending}
+                        onClick={onUndoAll}
+                        className="flex items-center gap-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                    >
+                        {undoing?.kind === 'chain' ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                            <Undo2 className="h-3.5 w-3.5" />
+                        )}
+                        Вернуть всё
+                    </button>
+                ) : null}
+            </div>
+            <ul className="mt-2 space-y-2">
+                {rows.map((row) => (
+                    <li
+                        key={row.sweepId}
+                        data-testid="progression-undo-sweep"
+                        className="flex items-start justify-between gap-3"
+                    >
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-telegram-text">{row.title}</p>
+                            <p
+                                data-testid="progression-undo-sweep-targets"
+                                className="mt-0.5 text-[11px] font-semibold text-telegram-hint"
+                            >
+                                {row.names}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            data-testid="progression-undo-sweep-restore"
+                            aria-label={
+                                row.restorable
+                                    ? `Вернуть автоподстановку: ${row.names}`
+                                    : 'Убрать запись из журнала: отменять нечего'
+                            }
+                            disabled={isPending}
+                            onClick={() => onUndo(row)}
+                            className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-white/[0.08] px-2.5 py-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                        >
+                            {undoing?.kind === 'sweep' && undoing.sweepId === row.sweepId ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : row.restorable ? (
+                                <Undo2 className="h-3.5 w-3.5" />
+                            ) : (
+                                <X className="h-3.5 w-3.5" />
+                            )}
+                            {row.restorable ? 'Вернуть' : 'Убрать'}
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    )
+}
+
 /**
  * SPEC-006 §58: what the last bulk action did, target by target.
  *
  * A bare count leaves the user wondering which goals were left behind — after a
  * sweep over a whole list that is the only part worth knowing, and the toast is
  * gone before the list has even been re-read. The notice stays until the next
- * bulk action or an explicit dismiss.
+ * bulk action or an explicit dismiss, and it reports only — what can be *undone*
+ * is a state of the user's targets, so it lives in the journal below, which
+ * outlives this screen instead of living in this block.
  */
 function BulkOutcomeNotice({
     outcome,
@@ -529,15 +659,7 @@ function BulkOutcomeNotice({
     outcome: BulkOutcome
     onDismiss: () => void
 }) {
-    const addressed = outcome.total == null ? '' : ` из ${outcome.total}`
-    const title =
-        outcome.updated === 0
-            ? 'Ничего не изменилось'
-            : outcome.kind === 'disable'
-              ? outcome.total == null
-                  ? `Выключили автоподстановку у всех целей: ${outcome.updated}`
-                  : `Выключили подстановку у выбранных: ${outcome.updated}${addressed}`
-              : `Применили к выбранным: ${outcome.updated}${addressed}`
+    const title = outcomeTitle(outcome)
 
     return (
         <div
@@ -592,18 +714,38 @@ function BulkOutcomeNotice({
 
 export function ProgressionTargetsPage() {
     const { data, isLoading, isError } = useProgressionPrefillTargets({ declinedOnly: false })
+    const prefillSweeps = useProgressionPrefillSweeps()
     const enablePrefill = useEnableProgressionPrefill()
     const disablePrefill = useDisableProgressionPrefill()
     const updateTarget = useUpdateProgressionTarget()
     const bulkDisable = useBulkDisableProgressionPrefill()
     const bulkUpdate = useBulkUpdateProgressionTargets()
+    const bulkEnable = useBulkEnableProgressionPrefill()
     const [filter, setFilter] = useState<Filter>('all')
     const [editingId, setEditingId] = useState<number | null>(null)
     const [selected, setSelected] = useState<number[]>([])
     const [bulkDraft, setBulkDraft] = useState<BulkDraft>(EMPTY_BULK_DRAFT)
     const [bulkError, setBulkError] = useState<string | null>(null)
     const [bulkOutcome, setBulkOutcome] = useState<BulkOutcome | null>(null)
+    const [undoing, setUndoing] = useState<UndoInFlight>(null)
     const items = useMemo(() => data?.items ?? [], [data])
+
+    /**
+     * The undo journal: every sweep the server can still put back.
+     *
+     * Built only once the list is in hand, because the rows are what name the
+     * goals a sweep would bring back. Nothing is pruned here — the server already
+     * narrowed each sweep to the targets that are still switched off — and the
+     * journal is refreshed after every action, so the sweep just made joins the
+     * chain instead of replacing it.
+     */
+    const undoSweeps = useMemo(
+        () =>
+            data == null
+                ? []
+                : describeUndoSweeps(prefillSweeps.data?.sweeps ?? [], items),
+        [data, prefillSweeps.data, items],
+    )
 
     const declinedItems = useMemo(
         () => items.filter((item) => item.prefill_declined),
@@ -619,7 +761,7 @@ export function ProgressionTargetsPage() {
         [selected, selectable],
     )
     const allSelected = selectable.length > 0 && selectedIds.length === selectable.length
-    const bulkPending = bulkDisable.isPending || bulkUpdate.isPending
+    const bulkPending = bulkDisable.isPending || bulkUpdate.isPending || bulkEnable.isPending
     const canDisableAny = items.some((item) => !item.prefill_declined)
 
     const pendingId = enablePrefill.isPending
@@ -723,6 +865,48 @@ export function ProgressionTargetsPage() {
         )
     }
 
+    /**
+     * Put back one link of the chain, or the whole chain, in one address.
+     *
+     * The request names the sweeps, so the server resolves what each still holds;
+     * the report then says how much of what the journal promised actually came
+     * back — including the goals that left their sweep since it was listed, which
+     * the server no longer knows about but the rows in front of the user still do.
+     */
+    const handleUndoSweeps = (rows: UndoSweepRow[]) => {
+        if (rows.length === 0) return
+        // Everything the sweeps still hold, not only what can come back: a goal a
+        // newer target replaced is addressed too, so the report accounts for it
+        // instead of leaving it out of the count.
+        const addressed = [...new Set(rows.flatMap((row) => row.addressedIds))]
+        setUndoing(
+            rows.length > 1 ? { kind: 'chain' } : { kind: 'sweep', sweepId: rows[0].sweepId },
+        )
+        bulkEnable.mutate(
+            rows.map((row) => row.sweepId),
+            {
+                // The report becomes the undo's own outcome: it has no undo of its
+                // own, and keeping the old one would offer an action already taken.
+                // The journal refreshes itself, so the sweeps it just put back leave
+                // it while the other links stay offered.
+                onSuccess: (result) => {
+                    setUndoing(null)
+                    setBulkOutcome({
+                        kind: 'enable',
+                        updated: result.updated,
+                        total: addressed.length,
+                        skips: [
+                            ...describeBulkSkips(result.skipped, items),
+                            ...describeUnrestoredTargets(addressed, result, items),
+                        ],
+                    })
+                },
+                // A failed undo keeps the chain in the journal: a retry is one tap.
+                onError: () => setUndoing(null),
+            },
+        )
+    }
+
     return (
         <div className="min-h-screen bg-telegram-bg p-4 pb-24 animate-fade-in">
             <div className="mb-4 flex items-center gap-3">
@@ -818,6 +1002,14 @@ export function ProgressionTargetsPage() {
                 />
             ) : null}
 
+            <UndoSweepsPanel
+                rows={undoSweeps}
+                undoing={undoing}
+                isPending={bulkEnable.isPending}
+                onUndo={(row) => handleUndoSweeps([row])}
+                onUndoAll={() => handleUndoSweeps(undoSweeps)}
+            />
+
             <div className="space-y-3">
                 {visible.map((item) => (
                     <TargetRow
@@ -843,7 +1035,15 @@ export function ProgressionTargetsPage() {
                     принятой, новая сессия начнётся с этого числа. Выключенная автоподстановка сама
                     не включается — переключатель, как и раньше, ваш. Выделив несколько целей, можно
                     применить к ним одну политику или диапазон повторов и выключить подстановку
-                    сразу всем — значения при этом не меняются.
+                    сразу всем — значения при этом не меняются, а вернуть подстановку можно в блоке
+                    «Отмена пачечных выключений»: там перечислены последние пачечные выключения с
+                    целями, которым вернётся подстановка, и каждое отменяется отдельно — в любом
+                    порядке, а не только последнее, — а кнопка «Вернуть всё» отменяет сразу всю
+                    цепочку и говорит, сколько целей вернулось. Если все цели пачки успела перекрыть
+                    более новая цель, строка честно говорит, что отменять нечего, и называет, какие
+                    цели заняли слоты, — такая запись не исчезает незаметно, а убирается одним тапом.
+                    Список читается с сервера, поэтому не теряется при уходе с экрана или
+                    перезагрузке и одинаков на всех устройствах.
                 </p>
             ) : null}
         </div>

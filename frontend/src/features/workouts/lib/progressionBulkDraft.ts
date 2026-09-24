@@ -98,7 +98,33 @@ export function toggleSelection(selected: number[], id: number): number[] {
 /** Russian wording for the reasons a bulk action reports for a skipped target. */
 export const BULK_SKIP_REASON_LABELS: Record<ProgressionBulkSkipReason, string> = {
     already_disabled: 'Автоподстановка уже была выключена',
+    already_enabled: 'Автоподстановка уже была включена',
     not_found: 'Цель не найдена: удалена, чужая или уже не актуальна',
+    superseded: 'Слот уже обновлён через более новую цель',
+}
+
+/**
+ * Who an undo brings back, named the way the list names them.
+ *
+ * Undo addresses the action's own changed ids, so saying *which* goals come
+ * back is the whole promise of the button — a bare count would leave the user
+ * checking the switches afterwards. Long sweeps are summarised instead of
+ * printing two hundred names.
+ */
+export function describeUndoTargets(
+    changedIds: number[],
+    items: ProgressionRecommendation[],
+    max = 3,
+): string {
+    if (changedIds.length === 0) return ''
+    const byId = new Map<number, string>()
+    for (const item of items) {
+        if (item.id != null) byId.set(item.id, targetLabel(item))
+    }
+    const names = changedIds.map((id) => byId.get(id) ?? `Цель #${id}`)
+    const shown = names.slice(0, max)
+    const rest = names.length - shown.length
+    return rest > 0 ? `${shown.join(', ')} и ещё ${rest}` : shown.join(', ')
 }
 
 /** One skipped target as the screen shows it: what it is and why it stayed. */
@@ -130,8 +156,38 @@ export function describeBulkSkips(
             skippedTitle(entry) ??
             chosen.get(entry.recommendation_id) ??
             `Цель #${entry.recommendation_id}`,
-        reason: BULK_SKIP_REASON_LABELS[entry.reason] ?? entry.reason,
+        reason: skipReason(entry, chosen),
     }))
+}
+
+/**
+ * Why one target stayed behind, naming the goal that took the edit when we can.
+ *
+ * A superseded record is not a mistake the user can fix in place: the slot already
+ * carries the edit, and the target that owns it now is right there in the list, so
+ * the report names it instead of pointing at an id the screen does not show.
+ */
+function skipReason(
+    entry: ProgressionBulkSkipped,
+    chosen: Map<number, string>,
+): string {
+    if (entry.reason === 'superseded') {
+        const owner = entry.superseded_by == null ? null : chosen.get(entry.superseded_by)
+        if (owner) return `Слот уже обновлён через «${owner}»`
+        return entry.superseded_by == null
+            ? BULK_SKIP_REASON_LABELS.superseded
+            : `Слот уже обновлён через цель #${entry.superseded_by}`
+    }
+    return BULK_SKIP_REASON_LABELS[entry.reason] ?? entry.reason
+}
+
+/**
+ * True when a bulk edit changed nothing because every target it addressed belongs
+ * to a slot that a newer goal already owns — the one case worth explaining
+ * differently from «цели не найдены».
+ */
+export function allTargetsSuperseded(skipped: ProgressionBulkSkipped[]): boolean {
+    return skipped.length > 0 && skipped.every((entry) => entry.reason === 'superseded')
 }
 
 /** Name and value of a target the backend still knows about, or nothing. */

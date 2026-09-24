@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.domain.progression.types import (
     Confidence,
@@ -144,11 +144,20 @@ class ProgressionBulkSkipped(BaseModel):
     Reporting the id alone leaves the user guessing which goal was left behind;
     the name, the value it still carries and the scope come along so the screen
     can name the row exactly like the list does. A target that is not a current
-    accepted target can only be identified by its id.
+    accepted target can only be identified by its id — and a record that a newer
+    target replaced says which id to address instead, so the caller never has to
+    guess which row the slot belongs to now.
     """
 
     recommendation_id: int
     reason: ProgressionBulkSkipReason
+    superseded_by: Optional[int] = Field(
+        None,
+        description=(
+            "The target that owns this scope now, when the skipped record was "
+            "replaced by a newer one (`superseded`); null for every other reason."
+        ),
+    )
     exercise_id: Optional[int] = None
     exercise_name: Optional[str] = Field(
         None, description="Catalog name; null when the target no longer exists."
@@ -166,12 +175,29 @@ class ProgressionBulkResult(BaseModel):
     """Outcome of a bulk change across accepted targets (SPEC §58)."""
 
     updated: int = Field(0, description="Targets the change actually applied to.")
+    changed_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Exactly the targets the change applied to — not the ids that were "
+            "requested. A caller can hand them straight back to undo the action "
+            "without re-deriving what changed from the response."
+        ),
+    )
     skipped: list[ProgressionBulkSkipped] = Field(
         default_factory=list,
         description=(
             "Targets the change did not apply to, each with the reason: unknown, "
             "someone else's, no longer an accepted target, or — for switching the "
             "prefill off — already switched off."
+        ),
+    )
+    released_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Sweep members an undo released: targets a newer one replaced, which "
+            "no undo can switch back on. Their prefill stays off and only the "
+            "sweep stamp is cleared, so the entry stops holding a goal nobody can "
+            "restore. Empty for every other bulk action."
         ),
     )
     applied_to_all: bool = Field(
@@ -191,6 +217,104 @@ class ProgressionPrefillBulkDisable(BaseModel):
             "accepted target the settings screen lists."
         ),
     )
+
+
+class ProgressionPrefillBulkEnable(BaseModel):
+    """POST body: switch the automatic prefill back on — the undo of a sweep.
+
+    Two addresses, never both: the exact targets an action reported as changed,
+    or whole sweeps. A sweep id is the honest way to undo one link of the chain
+    (and to undo several at once): the caller does not have to re-state a set of
+    ids it merely read, and a chain longer than the id cap is still one call.
+    """
+
+    recommendation_ids: Optional[list[int]] = Field(
+        None,
+        min_length=1,
+        max_length=200,
+        description="The targets to switch back on (the changed set of one action).",
+    )
+    sweep_ids: Optional[list[str]] = Field(
+        None,
+        min_length=1,
+        max_length=20,
+        description=(
+            "Sweeps whose still-switched-off targets come back, resolved "
+            "server-side. This is what «вернуть всё» in the undo journal sends."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _exactly_one_address(self) -> "ProgressionPrefillBulkEnable":
+        if (self.recommendation_ids is None) == (self.sweep_ids is None):
+            raise ValueError("Give either recommendation_ids or sweep_ids, not both")
+        return self
+
+
+class ProgressionPrefillSweepSuperseded(BaseModel):
+    """A sweep member a newer target replaced, so no undo can bring it back (§58)."""
+
+    recommendation_id: int
+    superseded_by: Optional[int] = Field(
+        None,
+        description="The target that owns the scope now, when it is still known.",
+    )
+
+
+class ProgressionPrefillSweep(BaseModel):
+    """One bulk switch-off the server still holds (SPEC §58).
+
+    Read-only view of a sweep that has targets switched off: the ids to hand to
+    ``POST /prefill/bulk-enable``, plus when it happened so a chain of sweeps can
+    be told apart. It carries no report — how many targets a sweep skipped and
+    why is not reconstructed after the fact — so an undo promises the targets and
+    nothing else. A sweep left with no targets at all (undone in full, or its last
+    one switched back on by hand) is not listed. A sweep whose members were all
+    replaced by newer targets is listed with ``restorable`` false and them named in
+    ``superseded``: the action stays visible and says there is nothing to switch
+    back on, instead of disappearing and leaving its stamp unreachable.
+    """
+
+    sweep_id: str = Field(
+        description="Identifier shared by the targets one bulk action switched off."
+    )
+    declined_at: Optional[datetime] = Field(
+        None, description="When that action switched its last target off."
+    )
+    restorable: bool = Field(
+        True,
+        description=(
+            "False when every member it still holds was replaced by a newer "
+            "target, so its undo has nothing to switch back on."
+        ),
+    )
+    updated: int = Field(
+        0,
+        description=(
+            "Members it switched off that are still switched off *and* still the "
+            "target of their scope — what its undo really brings back."
+        ),
+    )
+    changed_ids: list[int] = Field(
+        default_factory=list,
+        description="Exactly the set its undo brings back.",
+    )
+    superseded: list[ProgressionPrefillSweepSuperseded] = Field(
+        default_factory=list,
+        description=(
+            "Members it still holds that a newer target replaced; nothing can be "
+            "switched back on through them."
+        ),
+    )
+
+
+class ProgressionPrefillSweepListResponse(BaseModel):
+    """SPEC §58: the chain of bulk switch-offs that can still be undone."""
+
+    sweeps: list[ProgressionPrefillSweep] = Field(
+        default_factory=list, description="Newest sweep first."
+    )
+    total: int = 0
 
 
 class ProgressionTargetBulkUpdate(BaseModel):

@@ -41,6 +41,8 @@ export const progressionQueryKeys = {
     /** SPEC-006 §58: accepted targets whose automatic prefill was switched off. */
     prefillList: (declinedOnly: boolean) =>
         [...progressionQueryKeys.all, 'prefill', declinedOnly] as const,
+    /** SPEC-006 §58: the bulk switch-offs the server can still undo. */
+    sweeps: () => [...progressionQueryKeys.all, 'prefill', 'sweeps'] as const,
 }
 
 /**
