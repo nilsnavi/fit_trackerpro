@@ -6,13 +6,14 @@ import calendar
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.api.deps.idempotency import optional_idempotency_key
 from app.application.strength_math import calculate_plates
+from app.application.workout_contact_notifier import WorkoutContactNotifier
 from app.application.workouts_service import WorkoutsService
 from app.core.audit import get_client_ip
 from app.domain.user import User
@@ -49,6 +50,14 @@ from app.schemas.workouts import (
 )
 
 router = APIRouter()
+
+
+def _lifecycle_service(db: AsyncSession, background_tasks: BackgroundTasks) -> WorkoutsService:
+    """Service for start/complete/cancel: also messages emergency contacts after the response."""
+    return WorkoutsService(
+        db,
+        contact_notifier=WorkoutContactNotifier(db, schedule=background_tasks.add_task),
+    )
 
 
 VALID_WORKOUT_TYPES = {"cardio", "strength", "flexibility", "mixed"}
@@ -260,10 +269,11 @@ async def get_workout_history(
 async def start_workout(
     start_data: WorkoutStartRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
-    service = WorkoutsService(db)
+    service = _lifecycle_service(db, background_tasks)
     return await service.start_workout(
         user_id=current_user.id,
         data=start_data,
@@ -275,10 +285,11 @@ async def start_workout(
 async def create_workout_session(
     session_data: WorkoutSessionCreateRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
-    service = WorkoutsService(db)
+    service = _lifecycle_service(db, background_tasks)
     return await service.create_workout_session(
         user_id=current_user.id,
         data=session_data,
@@ -291,10 +302,11 @@ async def start_workout_from_template_with_overrides(
     template_id: int,
     start_data: WorkoutStartFromTemplateRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
-    service = WorkoutsService(db)
+    service = _lifecycle_service(db, background_tasks)
     return await service.start_workout_from_template_with_overrides(
         user_id=current_user.id,
         template_id=template_id,
@@ -308,11 +320,12 @@ async def complete_workout(
     workout_id: int,
     complete_data: WorkoutCompleteRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
     idempotency_key: str | None = Depends(optional_idempotency_key),
 ):
-    service = WorkoutsService(db)
+    service = _lifecycle_service(db, background_tasks)
     return await service.complete_workout(
         user_id=current_user.id,
         workout_id=workout_id,
@@ -449,11 +462,12 @@ async def cancel_workout(
     workout_id: int,
     payload: WorkoutCancelRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
     """Отменить незавершённую тренировку (SPEC-005 §3/§48)."""
-    service = WorkoutsService(db)
+    service = _lifecycle_service(db, background_tasks)
     return await service.cancel_workout(
         user_id=current_user.id,
         workout_id=workout_id,

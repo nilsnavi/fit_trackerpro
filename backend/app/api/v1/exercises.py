@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user, require_admin
 from app.application.exercises_service import ExercisesService
+from app.core.permissions import is_admin_user
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.exercises import (
@@ -22,7 +23,6 @@ from app.schemas.exercises import (
     ExerciseUpdate,
     RiskFlags,
 )
-from app.settings import settings
 
 router = APIRouter()
 
@@ -48,6 +48,8 @@ async def get_exercises(
         status=status,
         page=page,
         page_size=page_size,
+        # Everyone else's submissions are the admins' business only.
+        pending_author_id=None if is_admin_user(current_user) else current_user.id,
     )
 
 
@@ -79,7 +81,7 @@ async def create_exercise(
     db: AsyncSession = Depends(get_async_db),
 ):
     service = ExercisesService(db)
-    is_admin = current_user.telegram_id in settings.ADMIN_USER_IDS
+    is_admin = is_admin_user(current_user)
     return await service.create_exercise(user_id=current_user.id, data=exercise_data, is_admin=is_admin)
 
 
@@ -128,7 +130,7 @@ async def create_custom_exercise_multipart(
     _ = (difficulty, media)
 
     service = ExercisesService(db)
-    is_admin = current_user.telegram_id in settings.ADMIN_USER_IDS
+    is_admin = is_admin_user(current_user)
     return await service.create_exercise(
         user_id=current_user.id,
         data=ExerciseCreate(

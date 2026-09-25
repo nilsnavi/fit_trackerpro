@@ -22,3 +22,11 @@ export function enqueueSyncMutation(input: EnqueueSyncMutationInput): EnqueueRes
 export function requestSyncFlush(): void {
     void getSyncQueueEngine().flush()
 }
+
+/**
+ * Удалить всю очередь — и в памяти, и в хранилище (удаление аккаунта): неотправленные
+ * операции принадлежат удалённому пользователю и не должны уйти на сервер позже.
+ */
+export function clearSyncQueue(): void {
+    getSyncQueueEngine().clearAll()
+}

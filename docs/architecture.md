@@ -44,7 +44,7 @@
 
 Платформа:
 
-- `GET /api/v1/system/health` (а также алиас `GET /health` с тем же JSON)
+- `GET /api/v1/system/health` (алиас `GET /health` с тем же JSON есть только на самом бэкенде `:8000`; через прокси `/health` — SPA-маршрут «Здоровье»)
 - `GET /api/v1/system/version`
 
 Доменные маршруты:

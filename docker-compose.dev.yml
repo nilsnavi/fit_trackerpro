@@ -22,6 +22,9 @@ services:
       dockerfile: Dockerfile
       target: builder
     working_dir: /app
+    environment:
+      # vite.config.ts proxies /api and /health/ready here (same-origin API in dev).
+      - VITE_DEV_BACKEND_URL=http://backend:8000
     command:
       [
         "sh",

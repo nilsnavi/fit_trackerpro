@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from sqlalchemy import and_, desc, select
+from sqlalchemy.exc import IntegrityError
 
 from app.domain.emergency_contact import EmergencyContact
+from app.domain.exceptions import EmergencyContactConflictError
 from app.domain.user import User
 from app.infrastructure.repositories.base import SQLAlchemyRepository
 
@@ -78,14 +80,22 @@ class EmergencyRepository(SQLAlchemyRepository):
 
     async def create_contact(self, contact: EmergencyContact) -> EmergencyContact:
         self.add(contact)
-        await self.commit()
+        await self._commit_unique()
         await self.refresh(contact)
         return contact
 
     async def update_contact(self, contact: EmergencyContact) -> EmergencyContact:
-        await self.commit()
+        await self._commit_unique()
         await self.refresh(contact)
         return contact
+
+    async def _commit_unique(self) -> None:
+        """Commit; a duplicate username/phone for the same user is a 409, not a 500."""
+        try:
+            await self.commit()
+        except IntegrityError as exc:
+            await self.rollback()
+            raise EmergencyContactConflictError() from exc
 
     async def delete_contact(self, contact: EmergencyContact) -> None:
         await self.delete(contact)

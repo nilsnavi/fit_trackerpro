@@ -136,7 +136,7 @@ jobs:
               sleep 5
             done
             docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
-            curl -fk https://localhost/health > /dev/null
+            curl -fk https://localhost/api/v1/system/health > /dev/null
             curl -fk https://localhost/healthz > /dev/null
             curl -fk https://localhost/ > /dev/null
             echo "Manual rollback completed and health checks passed."

@@ -5,7 +5,7 @@
     Ngrok-Skip-Browser-Warning "FitTracker Pro"
   }
 
-  @api path /api/* /docs* /redoc* /openapi.json /metrics /health
+  @api path /api/* /docs* /redoc* /openapi.json /metrics /health/ready /health/live
   handle @api {
     reverse_proxy backend:8000
   }

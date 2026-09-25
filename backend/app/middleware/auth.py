@@ -11,11 +11,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.permissions import is_admin_user
 from app.core.security import security, verify_token
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.infrastructure.repositories.auth_repository import AuthRepository
-from app.settings import settings
 
 
 async def get_current_user_id(
@@ -122,11 +122,7 @@ async def require_admin(
     Raises:
         HTTPException: If user is not admin
     """
-    # Check if user has admin role in settings
-    # For now, check if telegram_id is in a list of admin IDs
-    admin_ids = getattr(settings, 'ADMIN_USER_IDS', [])
-
-    if current_user.telegram_id not in admin_ids:
+    if not is_admin_user(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin privileges required"

@@ -15,7 +15,7 @@ interface MaintenanceScreenProps {
 }
 
 export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
-  message = 'Service Maintenance',
+  message = 'Техническое обслуживание',
   showDetails = true,
 }) => {
   return (
@@ -47,20 +47,20 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
 
         {/* Subtitle */}
         <p className="text-lg text-slate-300 mb-2">
-          We're performing system maintenance
+          Сервер временно недоступен
         </p>
 
         {/* Details */}
         {showDetails && (
           <p className="text-sm text-slate-400 mb-8 leading-relaxed">
-            Our service is temporarily unavailable. This usually takes a few minutes.
-            Please check back shortly.
+            Обычно это занимает несколько минут. Приложение откроется
+            автоматически, как только сервер снова станет доступен.
           </p>
         )}
 
         {/* Status indicator animation */}
         <div className="flex justify-center items-center gap-2 mb-8">
-          <span className="text-sm text-slate-400">Checking status</span>
+          <span className="text-sm text-slate-400">Проверяем состояние</span>
           <div className="flex gap-1">
             <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
             <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
@@ -70,6 +70,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
 
         {/* Action button */}
         <button
+          type="button"
           onClick={() => window.location.reload()}
           className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
         >
@@ -86,12 +87,12 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Refresh Page
+          Обновить страницу
         </button>
 
         {/* Footer note */}
         <p className="text-xs text-slate-500 mt-8">
-          If the problem persists, please contact support.
+          Если проблема не исчезает, напишите в поддержку.
         </p>
       </div>
     </div>

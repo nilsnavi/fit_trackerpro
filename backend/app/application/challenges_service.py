@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import secrets
-from datetime import date, datetime
+from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import CHALLENGE_CREATE, CHALLENGE_JOIN, CHALLENGE_LEAVE, audit_log
+from app.core.audit import CHALLENGE_CREATE, audit_log
 from app.domain.challenge import Challenge
 from app.domain.exceptions import (
-    ChallengeForbiddenError,
     ChallengeNotFoundError,
     ChallengeValidationError,
+    NotImplementedFeatureError,
 )
 from app.infrastructure.repositories.challenges_repository import ChallengesRepository
 from app.schemas.challenges import (
@@ -23,6 +23,10 @@ from app.schemas.challenges import (
     ChallengeListResponse,
     ChallengeMyActiveResponse,
     ChallengeResponse,
+)
+
+CHALLENGE_PARTICIPATION_NOT_IMPLEMENTED = (
+    "Challenge participation (join, leave, leaderboard) is not implemented yet"
 )
 
 
@@ -185,6 +189,12 @@ class ChallengesService:
             updated_at=challenge.updated_at,
         )
 
+    # ------------------------------------------------------------------
+    # Participation is not implemented: there is no participants table and no
+    # progress tracking. The endpoints used to answer "joined!" with a made-up
+    # participant count, empty leaderboards and nothing persisted. Until the
+    # feature is built they honestly answer 501 (same approach as coach access).
+    # ------------------------------------------------------------------
     async def join_challenge(
         self,
         user_id: int,
@@ -192,33 +202,8 @@ class ChallengesService:
         join_code: str | None,
         client_ip: str | None = None,
     ) -> ChallengeJoinResponse:
-        _ = user_id
-        challenge = await self.repository.get_challenge(challenge_id)
-        if not challenge:
-            raise ChallengeNotFoundError("Challenge not found")
-        if challenge.status == "completed":
-            raise ChallengeValidationError("Challenge has already ended")
-        if challenge.status == "cancelled":
-            raise ChallengeValidationError("Challenge has been cancelled")
-        if not challenge.is_public and (not join_code or join_code.upper() != challenge.join_code):
-            raise ChallengeForbiddenError("Invalid join code")
-
-        audit_log(
-            action=CHALLENGE_JOIN,
-            user_db_id=user_id,
-            resource_type="challenge",
-            resource_id=challenge_id,
-            client_ip=client_ip,
-            meta={"private": not challenge.is_public},
-        )
-
-        return ChallengeJoinResponse(
-            success=True,
-            challenge_id=challenge_id,
-            joined_at=datetime.utcnow(),
-            message="Successfully joined the challenge!",
-            participant_count=46,
-        )
+        _ = (user_id, challenge_id, join_code, client_ip)
+        raise NotImplementedFeatureError(CHALLENGE_PARTICIPATION_NOT_IMPLEMENTED)
 
     async def leave_challenge(
         self,
@@ -226,33 +211,13 @@ class ChallengesService:
         challenge_id: int,
         client_ip: str | None = None,
     ) -> ChallengeLeaveResponse:
-        challenge = await self.repository.get_challenge(challenge_id)
-        if not challenge:
-            raise ChallengeNotFoundError("Challenge not found")
-        audit_log(
-            action=CHALLENGE_LEAVE,
-            user_db_id=user_id,
-            resource_type="challenge",
-            resource_id=challenge_id,
-            client_ip=client_ip,
-        )
-        return ChallengeLeaveResponse(
-            success=True,
-            challenge_id=challenge_id,
-            message="Successfully left the challenge",
-        )
+        _ = (user_id, challenge_id, client_ip)
+        raise NotImplementedFeatureError(CHALLENGE_PARTICIPATION_NOT_IMPLEMENTED)
 
     async def get_challenge_leaderboard(self, challenge_id: int) -> ChallengeLeaderboardResponse:
-        challenge = await self.repository.get_challenge(challenge_id)
-        if not challenge:
-            raise ChallengeNotFoundError("Challenge not found")
-        return ChallengeLeaderboardResponse(
-            challenge_id=challenge_id,
-            entries=[],
-            user_rank=None,
-            total_participants=0,
-        )
+        _ = challenge_id
+        raise NotImplementedFeatureError(CHALLENGE_PARTICIPATION_NOT_IMPLEMENTED)
 
     async def get_my_active_challenges(self, user_id: int) -> ChallengeMyActiveResponse:
         _ = user_id
-        return ChallengeMyActiveResponse(items=[], total=0)
+        raise NotImplementedFeatureError(CHALLENGE_PARTICIPATION_NOT_IMPLEMENTED)

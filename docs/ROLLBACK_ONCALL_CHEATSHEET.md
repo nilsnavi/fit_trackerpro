@@ -102,7 +102,7 @@ docker exec -i fittracker-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < 
 
 - `GET /api/v1/system/health` = 200, `status=healthy`
 - `GET /api/v1/system/version` = 200, версия читается
-- `GET /health` = 200
+- `GET /health` = 200 и отдаёт SPA (`index.html`), а не JSON
 - Ключевые пользовательские сценарии проходят
 - В incident note зафиксированы: причина, выбранный сценарий, ревизии/теги, риск по данным
 

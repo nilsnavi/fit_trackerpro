@@ -476,7 +476,7 @@ describe('ActiveWorkoutPage offline sync', () => {
 - **Всегда** пишет последние ~200 событий в `window.__WORKOUT_SYNC_TELEMETRY_BUFFER__` (копия для поддержки; те же данные через `window.__FITTRACKER_SYNC_DEBUG__?.getTelemetryBuffer()` в DEV).
 - **Опционально** (через Vite env):
   - `VITE_WORKOUT_SYNC_TELEMETRY_URL` — абсолютный URL; тело `POST` / `sendBeacon`: `{ event, payload }` (без заголовка `Authorization`; только уже обезличенные поля).
-  - `VITE_WORKOUT_SYNC_TELEMETRY_API=1` — дублирование в `POST {API_URL}/client/workout-sync-events` через общий `api` (нужен реализованный бэкенд и сессия).
+  - ~~`VITE_WORKOUT_SYNC_TELEMETRY_API=1`~~ — удалено (2026-09): эндпоинта `POST /client/workout-sync-events` на бэкенде нет. Для серверного ingest используйте `VITE_WORKOUT_SYNC_TELEMETRY_URL`.
 
 Переопределить поведение целиком можно так:
 

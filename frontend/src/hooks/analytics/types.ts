@@ -11,12 +11,3 @@ export function toApiWorkoutPeriod(period: AnalyticsPagePeriod): AnalyticsApiPer
 }
 
 export type AnalyticsWorkoutStatsResponse = components['schemas']['AnalyticsDashboardResponse']
-
-type ChallengeListResponse = components['schemas']['ChallengeListResponse']
-
-export interface AnalyticsChallengesMine {
-    active: components['schemas']['ChallengeResponse'][]
-    completed: components['schemas']['ChallengeResponse'][]
-}
-
-export type { ChallengeListResponse }

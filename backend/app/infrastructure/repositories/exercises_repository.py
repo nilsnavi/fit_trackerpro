@@ -15,12 +15,18 @@ class ExercisesRepository(SQLAlchemyRepository):
         equipment: str | None,
         search: str | None,
         status: str,
+        pending_author_id: int | None = None,
     ):
+        """``pending_author_id``: non-admin viewer — pending rows are limited to their own."""
         query = select(Exercise)
         if category:
             query = query.where(Exercise.category == category)
         if status != "all":
             query = query.where(Exercise.status == status)
+        if pending_author_id is not None:
+            query = query.where(
+                or_(Exercise.status != "pending", Exercise.author_user_id == pending_author_id)
+            )
         if muscle_group:
             query = query.where(
                 or_(
@@ -48,8 +54,11 @@ class ExercisesRepository(SQLAlchemyRepository):
         equipment: str | None,
         search: str | None,
         status: str,
+        pending_author_id: int | None = None,
     ) -> int:
-        query = self._base_filtered_query(category, muscle_group, equipment, search, status)
+        query = self._base_filtered_query(
+            category, muscle_group, equipment, search, status, pending_author_id
+        )
         count_query = select(func.count()).select_from(query.subquery())
         result = await self.db.execute(count_query)
         return int(result.scalar() or 0)
@@ -63,8 +72,11 @@ class ExercisesRepository(SQLAlchemyRepository):
         status: str,
         page: int,
         page_size: int,
+        pending_author_id: int | None = None,
     ):
-        query = self._base_filtered_query(category, muscle_group, equipment, search, status)
+        query = self._base_filtered_query(
+            category, muscle_group, equipment, search, status, pending_author_id
+        )
         query = query.order_by(Exercise.name).offset((page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
         return result.scalars().all()

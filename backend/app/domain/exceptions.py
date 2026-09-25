@@ -79,6 +79,12 @@ class EmergencyValidationError(DomainError):
     default_message = "Invalid emergency request"
 
 
+class EmergencyContactConflictError(DomainError):
+    code = "emergency_contact_conflict"
+    http_status = 409
+    default_message = "Контакт с таким Telegram username или телефоном уже есть"
+
+
 class AchievementNotFoundError(DomainError):
     code = "achievement_not_found"
     http_status = 404

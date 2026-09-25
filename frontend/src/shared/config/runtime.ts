@@ -6,8 +6,6 @@
 export interface AppRuntimeConfig {
     /** Base URL for REST API, e.g. https://example.com/api/v1 */
     API_URL: string
-    /** Comma-separated Telegram IDs that are allowed to use admin UI actions */
-    ADMIN_USER_IDS: string
     /** Bot username without @ */
     TELEGRAM_BOT_USERNAME: string
     /** Public Mini App URL (share / deep links) */
@@ -28,7 +26,12 @@ declare global {
     }
 }
 
-const DEFAULT_API_URL = 'http://localhost:8000/api/v1'
+/**
+ * Same-origin by default: nginx (prod), Caddy and the Vite dev server (`server.proxy`)
+ * forward `/api/*` to the backend. An absolute `localhost` default would point a
+ * Telegram WebView / phone / tunnel preview at the user's own device.
+ */
+const DEFAULT_API_URL = '/api/v1'
 
 function trim(s: string | undefined): string | undefined {
     const t = s?.trim()
@@ -50,8 +53,6 @@ export function getRuntimeConfig(): AppRuntimeConfig {
     return {
         API_URL:
             firstNonEmpty(w?.API_URL, import.meta.env.VITE_API_URL) ?? DEFAULT_API_URL,
-        ADMIN_USER_IDS:
-            firstNonEmpty(w?.ADMIN_USER_IDS, import.meta.env.VITE_ADMIN_USER_IDS) ?? '',
         TELEGRAM_BOT_USERNAME:
             firstNonEmpty(w?.TELEGRAM_BOT_USERNAME, import.meta.env.VITE_TELEGRAM_BOT_USERNAME) ??
             '',
@@ -77,8 +78,4 @@ export function getTelegramBotUsername(): string {
 
 export function getTelegramWebAppUrl(): string {
     return getRuntimeConfig().TELEGRAM_WEBAPP_URL
-}
-
-export function getAdminUserIdsRaw(): string {
-    return getRuntimeConfig().ADMIN_USER_IDS
 }

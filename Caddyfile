@@ -5,7 +5,8 @@ http://:80 {
     Ngrok-Skip-Browser-Warning "FitTracker Pro"
   }
 
-  @api path /api/* /docs* /redoc* /openapi.json /metrics /health
+  # /health is an SPA route («Здоровье»); monitors use /api/v1/system/health.
+  @api path /api/* /docs* /redoc* /openapi.json /metrics
   handle @api {
     reverse_proxy fittracker-backend:8000
   }

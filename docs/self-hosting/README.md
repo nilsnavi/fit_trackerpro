@@ -159,8 +159,7 @@ nano /etc/fittracker/app.env
 | `TELEGRAM_WEBAPP_URL` | `https://fitness.example.com` |
 | `ALLOWED_ORIGINS` | `https://fitness.example.com`, без `/api/v1`, без `*` |
 | `API_URL`, `VITE_API_URL` | `https://fitness.example.com/api/v1` |
-| `ADMIN_USER_IDS` | JSON-массив Telegram ID, например `[123456789]`, либо `[]` |
-| `FRONTEND_ADMIN_USER_IDS` | Те же ID через запятую, либо пусто; это только UI, права проверяет backend |
+| `ADMIN_USER_IDS` | JSON-массив Telegram ID, например `[123456789]`, либо `[]`. Единственный источник прав админа: фронтенд получает флаг `is_admin` из `/users/auth/me` |
 | `SENTRY_DSN` | Необязательный DSN; пусто отключает интеграцию |
 
 Два разных секрета сгенерируйте локально на сервере: дважды `openssl rand -hex 32`, затем вставьте их в файл. Не отправляйте значения в чат. Hex выбран, чтобы избежать экранирования `$`, `@`, `%` и других символов в Compose и URL базы.

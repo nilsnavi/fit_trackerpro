@@ -4,11 +4,20 @@ import { isSentryEnabled } from '@app/sentry'
 import { getPublicApiBaseUrl } from '@shared/config/runtime'
 import { AppHttpError, normalizeError } from '@shared/errors'
 import { getAuthTokens, useAuthStore } from '@/stores/authStore'
+import { isAppTerminated } from '@/stores/appTerminationStore'
 
 // NOTE: Backend deprecated aliases are scheduled for removal in v1.2.0 (2026-06-30).
 // Keep frontend calls on the canonical routes documented in the repo README (API v1 section).
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+
+/** Per-request overrides for {@link ApiService.get}. */
+export interface ApiGetOptions {
+    /** `'blob'` for file downloads — otherwise axios parses a JSON file into an object. */
+    responseType?: 'json' | 'blob'
+    /** Override the default 10 s timeout (large exports). */
+    timeout?: number
+}
 
 function isPublicAuthRequest(config: RetryableRequestConfig | undefined): boolean {
     const requestUrl = config?.url ?? ''
@@ -86,12 +95,23 @@ class ApiService {
                     ? (error.config as RetryableRequestConfig | undefined)
                     : undefined
 
+                // Account deleted: a request that was still in flight must neither refresh
+                // the session nor redirect/re-login (that would recreate the account).
+                if (isAppTerminated()) {
+                    return Promise.reject(new AppHttpError(clientError))
+                }
+
                 // Deduplicated refresh strategy: on 401, share a single refresh
                 // call across all concurrent requests that failed at the same time.
+
+                // Never refresh on a 401 from the auth endpoints themselves: a rejected
+                // POST /users/auth/refresh would otherwise await its own refreshPromise and
+                // hang every pending request forever.
                 if (
                     clientError.status === 401 &&
                     originalConfig &&
-                    !originalConfig._retry
+                    !originalConfig._retry &&
+                    !isPublicAuthRequest(originalConfig)
                 ) {
                     const { refreshToken } = getAuthTokens()
                     if (refreshToken) {
@@ -169,8 +189,8 @@ class ApiService {
         )
     }
 
-    async get<T>(url: string, params?: Record<string, unknown>) {
-        const response = await this.client.get<T>(url, { params })
+    async get<T>(url: string, params?: Record<string, unknown>, options?: ApiGetOptions) {
+        const response = await this.client.get<T>(url, { params, ...options })
         return response.data
     }
 

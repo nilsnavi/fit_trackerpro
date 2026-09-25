@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useAppShellHeaderRight } from '@app/layouts/AppShellLayoutContext';
-import { getAdminUserIdsRaw } from '@shared/config/runtime';
 import { Input } from '@shared/ui/Input';
 import { Button } from '@shared/ui/Button';
 import { Chip } from '@shared/ui/Chip';
@@ -36,6 +35,7 @@ import {
     RISK_OPTIONS,
 } from '@features/exercises/constants/catalogReferenceUi';
 import { GoalProgramsSection } from '@features/workouts/components/GoalProgramsSection';
+import { ExerciseModerationSection } from '@features/exercises/components/ExerciseModerationSection';
 
 export type {
     Exercise,
@@ -627,7 +627,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 export const Catalog: React.FC = () => {
     const navigate = useNavigate();
     const tg = useTelegramWebApp();
-    const { isTelegram, showBackButton, hideBackButton, hapticFeedback, user } = tg;
+    const { isTelegram, showBackButton, hideBackButton, hapticFeedback } = tg;
     const exercisesQuery = useExercisesCatalogQuery();
     const currentUserQuery = useCurrentUserQuery();
     const updateExerciseMutation = useUpdateExerciseMutation();
@@ -635,35 +635,10 @@ export const Catalog: React.FC = () => {
     const categoriesQuery = useExerciseCategoriesQuery();
     const equipmentQuery = useExerciseEquipmentQuery();
 
-    const parseAdminIds = useCallback((raw: string | null | undefined): number[] => {
-        if (!raw) return [];
-        return raw
-            .replace(/\[/g, '')
-            .replace(/\]/g, '')
-            .split(',')
-            .map((value: string) => Number.parseInt(value.trim(), 10))
-            .filter((value: number) => Number.isFinite(value) && value > 0);
-    }, []);
-
-    const adminTelegramIds = useMemo(() => {
-        const runtimeIdsRaw = getAdminUserIdsRaw();
-        const localOverrideRaw =
-            typeof window !== 'undefined'
-                ? window.localStorage.getItem('fittracker_admin_user_ids')
-                : null;
-
-        return new Set<number>([
-            ...parseAdminIds(import.meta.env.VITE_ADMIN_USER_IDS),
-            ...parseAdminIds(runtimeIdsRaw),
-            ...parseAdminIds(localOverrideRaw),
-        ]);
-    }, [parseAdminIds]);
-
-    const currentTelegramId = currentUserQuery.data?.telegram_id ?? user?.id ?? null;
-    const canManageExercises = useMemo(
-        () => currentTelegramId != null && adminTelegramIds.has(currentTelegramId),
-        [adminTelegramIds, currentTelegramId],
-    );
+    // Флаг приходит с сервера (`ADMIN_USER_IDS` в backend) — раньше список админов
+    // дублировался во фронтовом env/localStorage, и его можно было подменить руками.
+    // Кнопки — лишь отображение: сервер перепроверяет права на каждом запросе.
+    const canManageExercises = currentUserQuery.data?.is_admin === true;
 
     const categories = useMemo((): { value: ExerciseCategory; label: string; icon: string }[] => {
         if (categoriesQuery.data?.categories?.length) {
@@ -1054,6 +1029,7 @@ export const Catalog: React.FC = () => {
                 <div className="mb-5">
                     <GoalProgramsSection />
                 </div>
+                <ExerciseModerationSection isAdmin={canManageExercises} />
                 {exercisesQuery.isError && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 text-center">
                         {exercisesQuery.data

@@ -6085,6 +6085,12 @@ export type components = {
             first_name: string | null;
             /** Id */
             id: number;
+            /**
+             * Is Admin
+             * @description Server-side admin flag (ADMIN_USER_IDS). The UI uses it only to show moderation controls; every admin endpoint checks it again.
+             * @default false
+             */
+            is_admin: boolean;
             profile?: components["schemas"]["UserProfileData"];
             settings?: components["schemas"]["UserSettingsData"];
             /** Telegram Id */
@@ -7509,6 +7515,13 @@ export interface operations {
                     "application/json": components["schemas"]["ChallengeMyActiveResponse"];
                 };
             };
+            /** @description Challenge participation is not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     get_challenge_api_v1_analytics_challenges__challenge_id__get: {
@@ -7573,6 +7586,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Challenge participation is not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     get_challenge_leaderboard_api_v1_analytics_challenges__challenge_id__leaderboard_get: {
@@ -7606,6 +7626,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Challenge participation is not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     leave_challenge_api_v1_analytics_challenges__challenge_id__leave_post: {
@@ -7636,6 +7663,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Challenge participation is not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
