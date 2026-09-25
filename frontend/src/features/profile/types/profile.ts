@@ -24,6 +24,11 @@ export interface UserProfile {
         units?: 'metric' | 'imperial'
         language?: string
     }
+    /**
+     * Server-side admin flag (`ADMIN_USER_IDS` on the backend). Only decides whether
+     * moderation controls are shown — every admin endpoint re-checks it.
+     */
+    is_admin?: boolean
     created_at: string
     updated_at: string
 }

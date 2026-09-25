@@ -9,6 +9,7 @@ from typing import Annotated, List, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
+from app.core.permissions import is_admin_user
 from app.schemas.enums import ExperienceLevel, FitnessGoal, TokenKind, UserTheme, UserUnits
 
 # --- Response / stored profile (permissive; must accept legacy DB JSON) ---
@@ -343,6 +344,13 @@ class UserProfileResponse(BaseModel):
     first_name: Optional[str]
     profile: UserProfileData = Field(default_factory=UserProfileData)
     settings: UserSettingsData = Field(default_factory=UserSettingsData)
+    is_admin: bool = Field(
+        default=False,
+        description=(
+            "Server-side admin flag (ADMIN_USER_IDS). The UI uses it only to show "
+            "moderation controls; every admin endpoint checks it again."
+        ),
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -356,6 +364,7 @@ def user_profile_from_db(user) -> UserProfileResponse:
         first_name=user.first_name,
         profile=UserProfileData.model_validate(user.profile or {}),
         settings=UserSettingsData.model_validate(user.settings or {}),
+        is_admin=is_admin_user(user),
         created_at=user.created_at,
         updated_at=user.updated_at,
     )

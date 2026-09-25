@@ -5,7 +5,6 @@
 // In Docker, startup.sh regenerates this file from config.template.js.
 window.__APP_CONFIG__ = {
   API_URL: '',
-  ADMIN_USER_IDS: '',
   TELEGRAM_BOT_USERNAME: '',
   TELEGRAM_WEBAPP_URL: '',
   SENTRY_DSN: '',

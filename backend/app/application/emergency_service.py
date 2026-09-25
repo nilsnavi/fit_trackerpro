@@ -7,6 +7,10 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.workout_contact_notifier import (
+    workout_finished_message,
+    workout_started_message,
+)
 from app.domain.emergency_contact import EmergencyContact
 from app.domain.exceptions import EmergencyNotFoundError, EmergencyValidationError
 from app.domain.user import User
@@ -372,11 +376,7 @@ class EmergencyService:
         user_id = user.id
         user_name = _display_name(user)
         contacts = await self.repository.list_contacts_for_workout_start(user_id=user_id)
-        duration_str = f" (примерно {estimated_duration} мин)" if estimated_duration else ""
-        message = (
-            f"🏃 {user_name} начал(а) тренировку{duration_str}. "
-            "Сообщим, когда она закончится."
-        )
+        message = workout_started_message(user_name, estimated_duration=estimated_duration)
         return await self._notify_contacts(
             list(contacts),
             message,
@@ -416,8 +416,9 @@ class EmergencyService:
         user_id = user.id
         user_name = _display_name(user)
         contacts = await self.repository.list_contacts_for_workout_end(user_id=user_id)
-        status = "завершил(а)" if completed_successfully else "закончил(а)"
-        message = f"✅ {user_name} {status} тренировку ({duration} мин). Всё в порядке."
+        message = workout_finished_message(
+            user_name, duration=duration, completed_successfully=completed_successfully
+        )
         return await self._notify_contacts(
             list(contacts),
             message,
@@ -452,7 +453,12 @@ class EmergencyService:
     async def get_settings(self, user_id: int) -> EmergencySettingsResponse:
         contacts = await self.repository.list_contacts(user_id=user_id)
         return EmergencySettingsResponse(
-            auto_notify_on_workout=False,
+            # The server messages contacts on workout start/end by itself (see
+            # WorkoutContactNotifier) — true when any active contact opted in.
+            auto_notify_on_workout=any(
+                c.is_active and (c.notify_on_workout_start or c.notify_on_workout_end)
+                for c in contacts
+            ),
             emergency_timeout_minutes=60,
             # The app never transmits location on its own: it is only included in
             # an alert when the user explicitly passes it.

@@ -4,7 +4,6 @@ import type { AppRuntimeConfig } from '../shared/config/runtime'
 export function getRuntimeConfig(): AppRuntimeConfig {
     return {
         API_URL: 'http://localhost:8000/api/v1',
-        ADMIN_USER_IDS: '',
         TELEGRAM_BOT_USERNAME: 'test_bot',
         TELEGRAM_WEBAPP_URL: 'https://test.example.com',
         SENTRY_DSN: '',
@@ -24,8 +23,4 @@ export function getTelegramBotUsername(): string {
 
 export function getTelegramWebAppUrl(): string {
     return getRuntimeConfig().TELEGRAM_WEBAPP_URL
-}
-
-export function getAdminUserIdsRaw(): string {
-    return ''
 }
