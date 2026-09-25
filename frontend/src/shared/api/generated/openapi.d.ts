@@ -20,6 +20,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Analytics Dashboard */
+        get: operations["get_analytics_dashboard_api_v1_analytics__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analytics/achievements/": {
         parameters: {
             query?: never;
@@ -1685,26 +1702,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create User
-         * @description Create or update user from Telegram data
-         */
-        post: operations["create_user_api_v1_users__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/users/auth/logout": {
         parameters: {
             query?: never;
@@ -1988,26 +1985,6 @@ export type paths = {
          *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_stats_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get User
-         * @description Get user by ID
-         */
-        get: operations["get_user_api_v1_users__user_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2601,15 +2578,24 @@ export type components = {
              * @description Mean workout duration in minutes within the selected period.
              */
             avg_duration: number;
-            /** Avg Rest Time Seconds */
+            /**
+             * Avg Rest Time Seconds
+             * @description Mean actual_rest_seconds across sets where rest was tracked.
+             */
             avg_rest_time_seconds?: number | null;
-            /** Avg Rpe Per Workout */
+            /**
+             * Avg Rpe Per Workout
+             * @description Mean of per-workout average RPE (only sets with RPE logged).
+             */
             avg_rpe_per_workout?: number | null;
-            /** Avg Rpe Previous Period */
+            /**
+             * Avg Rpe Previous Period
+             * @description Same metric for the immediately preceding period of equal length.
+             */
             avg_rpe_previous_period?: number | null;
             /**
              * Avg Rpe Trend
-             * @description Direction of RPE change vs previous equivalent window: up | down | flat.
+             * @description up | down | flat when both current and previous period have RPE data.
              */
             avg_rpe_trend?: string | null;
             /**
@@ -2617,9 +2603,15 @@ export type components = {
              * @description Most frequent exercise name in the selected period.
              */
             favorite_exercise?: string | null;
-            /** Intensity Score */
+            /**
+             * Intensity Score
+             * @description avg_rpe × (sets_count / avg_rest_minutes); None if rest or RPE insufficient.
+             */
             intensity_score?: number | null;
-            /** Intensity Weekly Chart */
+            /**
+             * Intensity Weekly Chart
+             * @description Intensity score by ISO week (for longer windows).
+             */
             intensity_weekly_chart?: components["schemas"]["AnalyticsIntensityWeekPoint"][];
             /**
              * Period
@@ -2633,12 +2625,18 @@ export type components = {
             streak_days: number;
             /** Total Duration Minutes */
             total_duration_minutes: number;
-            /** Total Time Under Tension Seconds */
+            /**
+             * Total Time Under Tension Seconds
+             * @description Sum of (completed_at - started_at) in seconds where both timestamps exist.
+             */
             total_time_under_tension_seconds?: number | null;
             /** Total Workouts */
             total_workouts: number;
-            /** Weekly Chart */
-            weekly_chart: components["schemas"]["AnalyticsWeeklyChartPoint"][];
+            /**
+             * Weekly Chart
+             * @description Workout counts by day or by ISO week start within the chart window.
+             */
+            weekly_chart?: components["schemas"]["AnalyticsWeeklyChartPoint"][];
             /**
              * Workouts This Month
              * @description Workouts logged in the current calendar month.
@@ -2651,6 +2649,7 @@ export type components = {
             workouts_this_week: number;
             /**
              * Workouts With Rpe Count
+             * @description Number of completed workouts in the window that logged at least one RPE value.
              * @default 0
              */
             workouts_with_rpe_count: number;
@@ -2795,6 +2794,11 @@ export type components = {
             refresh_token?: string | null;
             /** Success */
             success: boolean;
+            /**
+             * Token
+             * @description JWT access token (Mini App / camelCase alias of access_token).
+             */
+            token?: string | null;
             /**
              * Token Type
              * @default bearer
@@ -5955,29 +5959,6 @@ export type components = {
             /** User Id */
             user_id: number;
         };
-        /** UserCreate */
-        UserCreate: {
-            /**
-             * First Name
-             * @description Given name.
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Family name.
-             */
-            last_name?: string | null;
-            /**
-             * Telegram Id
-             * @description Telegram user ID (positive integer).
-             */
-            telegram_id: number;
-            /**
-             * Username
-             * @description Telegram @username without the leading @.
-             */
-            username?: string | null;
-        };
         /**
          * UserProfileData
          * @description User profile JSON (equipment, limitations, goals).
@@ -6135,29 +6116,6 @@ export type components = {
             profile?: components["schemas"]["UserProfilePatch"] | null;
             /** @description User settings: theme, notifications, units */
             settings?: components["schemas"]["UserSettingsPatch"] | null;
-        };
-        /** UserResponse */
-        UserResponse: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** First Name */
-            first_name: string | null;
-            /** Id */
-            id: number;
-            /** Last Name */
-            last_name: string | null;
-            /** Telegram Id */
-            telegram_id: number;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /** Username */
-            username: string | null;
         };
         /**
          * UserSettingsData
@@ -7249,6 +7207,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_analytics_dashboard_api_v1_analytics__get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsDashboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -10831,39 +10820,6 @@ export interface operations {
             };
         };
     };
-    create_user_api_v1_users__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     logout_api_v1_users_auth_logout_post: {
         parameters: {
             query?: never;
@@ -11287,37 +11243,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_user_api_v1_users__user_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

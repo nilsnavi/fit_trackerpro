@@ -1,7 +1,8 @@
 """
 Telegram WebApp authentication: public login/refresh vs JWT-protected session routes.
 
-Public: ``POST /telegram``, ``POST /refresh`` (no Bearer required).
+Public: ``POST /telegram``, ``POST /register`` (same handler as telegram), ``POST /lookup``
+(initData validation + existence check), ``POST /refresh`` (no Bearer required).
 Protected: profile under ``/me``, ``POST /logout`` (Bearer access token).
 """
 from fastapi import APIRouter, Depends, Request
