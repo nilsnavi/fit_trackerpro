@@ -2578,15 +2578,24 @@ export type components = {
              * @description Mean workout duration in minutes within the selected period.
              */
             avg_duration: number;
-            /** Avg Rest Time Seconds */
+            /**
+             * Avg Rest Time Seconds
+             * @description Mean actual_rest_seconds across sets where rest was tracked.
+             */
             avg_rest_time_seconds?: number | null;
-            /** Avg Rpe Per Workout */
+            /**
+             * Avg Rpe Per Workout
+             * @description Mean of per-workout average RPE (only sets with RPE logged).
+             */
             avg_rpe_per_workout?: number | null;
-            /** Avg Rpe Previous Period */
+            /**
+             * Avg Rpe Previous Period
+             * @description Same metric for the immediately preceding period of equal length.
+             */
             avg_rpe_previous_period?: number | null;
             /**
              * Avg Rpe Trend
-             * @description Direction of RPE change vs previous equivalent window: up | down | flat.
+             * @description up | down | flat when both current and previous period have RPE data.
              */
             avg_rpe_trend?: string | null;
             /**
@@ -2594,9 +2603,15 @@ export type components = {
              * @description Most frequent exercise name in the selected period.
              */
             favorite_exercise?: string | null;
-            /** Intensity Score */
+            /**
+             * Intensity Score
+             * @description avg_rpe × (sets_count / avg_rest_minutes); None if rest or RPE insufficient.
+             */
             intensity_score?: number | null;
-            /** Intensity Weekly Chart */
+            /**
+             * Intensity Weekly Chart
+             * @description Intensity score by ISO week (for longer windows).
+             */
             intensity_weekly_chart?: components["schemas"]["AnalyticsIntensityWeekPoint"][];
             /**
              * Period
@@ -2610,12 +2625,18 @@ export type components = {
             streak_days: number;
             /** Total Duration Minutes */
             total_duration_minutes: number;
-            /** Total Time Under Tension Seconds */
+            /**
+             * Total Time Under Tension Seconds
+             * @description Sum of (completed_at - started_at) in seconds where both timestamps exist.
+             */
             total_time_under_tension_seconds?: number | null;
             /** Total Workouts */
             total_workouts: number;
-            /** Weekly Chart */
-            weekly_chart: components["schemas"]["AnalyticsWeeklyChartPoint"][];
+            /**
+             * Weekly Chart
+             * @description Workout counts by day or by ISO week start within the chart window.
+             */
+            weekly_chart?: components["schemas"]["AnalyticsWeeklyChartPoint"][];
             /**
              * Workouts This Month
              * @description Workouts logged in the current calendar month.
@@ -2628,6 +2649,7 @@ export type components = {
             workouts_this_week: number;
             /**
              * Workouts With Rpe Count
+             * @description Number of completed workouts in the window that logged at least one RPE value.
              * @default 0
              */
             workouts_with_rpe_count: number;
