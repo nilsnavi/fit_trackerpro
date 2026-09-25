@@ -8782,6 +8782,12 @@
             "title": "Id",
             "type": "integer"
           },
+          "is_admin": {
+            "default": false,
+            "description": "Server-side admin flag (ADMIN_USER_IDS). The UI uses it only to show moderation controls; every admin endpoint checks it again.",
+            "title": "Is Admin",
+            "type": "boolean"
+          },
           "profile": {
             "$ref": "#/components/schemas/UserProfileData"
           },
@@ -12068,6 +12074,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
           }
         },
         "security": [
@@ -12178,6 +12187,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
           }
         },
         "security": [
@@ -12237,6 +12249,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
           }
         },
         "security": [
@@ -12284,6 +12299,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
           }
         },
         "security": [

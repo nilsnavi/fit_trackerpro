@@ -15,6 +15,7 @@ jest.mock('@features/emergency/hooks/useEmergencyQueries', () => ({
     useDeleteEmergencyContactMutation: jest.fn(),
     useIssueEmergencyLinkCodeMutation: jest.fn(),
     useUnlinkEmergencyContactMutation: jest.fn(),
+    useUpdateEmergencyContactMutation: jest.fn(),
 }))
 
 const mockContactsQuery = emergencyHooks.useEmergencyContactsQuery as jest.Mock
@@ -22,6 +23,7 @@ const mockCreate = emergencyHooks.useCreateEmergencyContactMutation as jest.Mock
 const mockDelete = emergencyHooks.useDeleteEmergencyContactMutation as jest.Mock
 const mockLinkCode = emergencyHooks.useIssueEmergencyLinkCodeMutation as jest.Mock
 const mockUnlink = emergencyHooks.useUnlinkEmergencyContactMutation as jest.Mock
+const mockUpdate = emergencyHooks.useUpdateEmergencyContactMutation as jest.Mock
 
 function contact(overrides: Record<string, unknown> = {}) {
     return {
@@ -76,6 +78,7 @@ describe('EmergencyContactsSection', () => {
         mockDelete.mockReturnValue(idleMutation())
         mockLinkCode.mockReturnValue(idleMutation())
         mockUnlink.mockReturnValue(idleMutation())
+        mockUpdate.mockReturnValue(idleMutation())
     })
 
     it('shows the real linking status of each contact', () => {
@@ -144,6 +147,100 @@ describe('EmergencyContactsSection', () => {
                 contact_username: 'papa',
                 phone: undefined,
                 notify_on_emergency: true,
+                notify_on_workout_start: false,
+                notify_on_workout_end: false,
+            })
+        })
+    })
+
+    it('lets the user opt a new contact into workout start/end messages', async () => {
+        const mutateAsync = jest.fn().mockResolvedValue(undefined)
+        mockCreate.mockReturnValue(idleMutation({ mutateAsync }))
+
+        renderSection()
+        fireEvent.click(screen.getByRole('button', { name: 'Добавить' }))
+        fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Папа' } })
+        fireEvent.change(screen.getByLabelText('Телефон'), { target: { value: '+79990001122' } })
+        fireEvent.click(screen.getByLabelText(/Начало тренировки/))
+        fireEvent.click(screen.getByLabelText(/Окончание тренировки/))
+        fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+        await waitFor(() => {
+            expect(mutateAsync).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    phone: '+79990001122',
+                    notify_on_workout_start: true,
+                    notify_on_workout_end: true,
+                }),
+            )
+        })
+    })
+
+    it('keeps the form and shows the server message on a duplicate (409)', async () => {
+        const conflict = Object.assign(new Error('conflict'), {
+            isAxiosError: true,
+            response: {
+                status: 409,
+                data: {
+                    error: {
+                        code: 'emergency_contact_conflict',
+                        message: 'Контакт с таким Telegram username или телефоном уже есть',
+                    },
+                },
+            },
+        })
+        mockCreate.mockReturnValue(idleMutation({ mutateAsync: jest.fn().mockRejectedValue(conflict) }))
+
+        renderSection()
+        fireEvent.click(screen.getByRole('button', { name: 'Добавить' }))
+        fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Мама 2' } })
+        fireEvent.change(screen.getByLabelText('Telegram username'), { target: { value: 'mama' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('уже есть')
+        // Введённые данные не потерялись — можно исправить и отправить снова.
+        expect(screen.getByLabelText('Telegram username')).toHaveValue('mama')
+    })
+
+    it('shows what each contact is subscribed to', () => {
+        mockContactsQuery.mockReturnValue({
+            data: {
+                items: [
+                    contact({ id: 1, notify_on_workout_start: true, notify_on_workout_end: true }),
+                    contact({ id: 2, contact_username: 'brat', is_active: false }),
+                ],
+                total: 2,
+                active_count: 1,
+            },
+            isLoading: false,
+            isSuccess: true,
+            isError: false,
+            error: null,
+        })
+
+        renderSection()
+
+        expect(screen.getByTestId('contact-subscriptions-1')).toHaveTextContent(
+            'Уведомляем: «Мне плохо», начало, окончание',
+        )
+        expect(screen.getByTestId('contact-subscriptions-2')).toHaveTextContent('неактивен')
+    })
+
+    it('edits a contact and sends only the changed fields', async () => {
+        const mutateAsync = jest.fn().mockResolvedValue(undefined)
+        mockUpdate.mockReturnValue(idleMutation({ mutateAsync }))
+
+        renderSection()
+        fireEvent.click(screen.getByRole('button', { name: 'Изменить контакт Мама' }))
+
+        expect(screen.getByLabelText('Имя')).toHaveValue('Мама')
+        fireEvent.click(screen.getByLabelText(/Окончание тренировки/))
+        fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+        await waitFor(() => {
+            expect(mutateAsync).toHaveBeenCalledWith({
+                contactId: 1,
+                payload: { notify_on_workout_end: true },
             })
         })
     })
