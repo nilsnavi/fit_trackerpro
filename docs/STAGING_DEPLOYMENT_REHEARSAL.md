@@ -191,10 +191,10 @@ curl -fsS "${API_BASE_URL}/system/version" | jq -e '.version != null'
 curl -fsS "${FRONTEND_BASE_URL}/healthz"
 ```
 
-Если frontend использует `/health` вместо `/healthz`, проверить:
+`/health` — SPA-маршрут экрана «Здоровье», прокси отдают его фронтенду. Проверить, что там приложение, а не JSON бэкенда:
 
 ```bash
-curl -fsS "${FRONTEND_BASE_URL}/health"
+curl -fsS "${FRONTEND_BASE_URL}/health" | grep -q '<div id="root">'
 ```
 
 ## 7. Telegram golden path
@@ -256,7 +256,7 @@ sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${PREVIOUS_IMAGE_TAG}|" .env
 docker-compose -f docker-compose.prod.yml pull backend frontend
 docker-compose -f docker-compose.prod.yml up -d
 docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/ready
-curl -fk https://localhost/health
+curl -fk https://localhost/api/v1/system/health
 curl -fk https://localhost/healthz
 ```
 

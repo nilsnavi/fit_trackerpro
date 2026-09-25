@@ -43,7 +43,7 @@
 Действия:
 1. Откатить `IMAGE_TAG` на `PREVIOUS_IMAGE_TAG` (auto rollback или manual workflow).
 2. Не выполнять restore БД.
-3. Проверить `/api/v1/system/health`, `/api/v1/system/version`, `/health`, ключевые бизнес-эндпоинты.
+3. Проверить `/api/v1/system/health`, `/api/v1/system/version`, `/healthz` (frontend), ключевые бизнес-эндпоинты.
 
 Риск: низкий, потому что данные не перезаписываются.
 
@@ -146,7 +146,7 @@
 - [ ] Для restore: подтвердить допуск к потере post-backup данных.
 
 После отката:
-- [ ] Проверить `/api/v1/system/health`, `/api/v1/system/version`, `/health`.
+- [ ] Проверить `/api/v1/system/health`, `/api/v1/system/version`, `/healthz`.
 - [ ] Проверить ключевые бизнес-потоки (логин/тренировки/шаблоны).
 - [ ] Создать incident note: причина, сценарий, итог, дальнейший fix-forward план.
 
