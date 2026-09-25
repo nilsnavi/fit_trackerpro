@@ -30,10 +30,12 @@ from app.api.v1.openapi_tags import (
     TAG_EMERGENCY,
     TAG_EXERCISES,
     TAG_HEALTH_METRICS,
+    TAG_PROGRESSION,
     TAG_SYSTEM,
     TAG_USERS,
     TAG_WORKOUTS,
 )
+from app.api.v1.progression import router as progression_router
 from app.api.v1.system import router as system_router
 from app.api.v1.users import protected_users_router
 from app.api.v1.workouts import router as workouts_router
@@ -79,6 +81,12 @@ def register_v1_routes(app: FastAPI) -> None:
         **auth_mount_kw,
     )
     api_v1.include_router(analytics_router, prefix="/analytics", tags=[TAG_ANALYTICS], **auth_mount_kw)
+    api_v1.include_router(
+        progression_router,
+        prefix="/progression",
+        tags=[TAG_PROGRESSION],
+        **auth_mount_kw,
+    )
     api_v1.include_router(
         achievements_router,
         prefix="/analytics/achievements",

@@ -27,6 +27,7 @@ export interface UseAchievementsReturn {
     fetchAchievements: (category?: AchievementCategory) => void
     fetchUserStats: () => Promise<void>
     claimAchievement: (achievementId: number) => Promise<AchievementUnlockData | null>
+    checkProgress: () => Promise<void>
     getAchievementById: (id: number) => Achievement | undefined
     getUserAchievement: (achievementId: number) => UserAchievement | undefined
     onAchievementUnlocked: (callback: (data: AchievementUnlockData) => void) => () => void
@@ -111,6 +112,17 @@ export function useAchievements(): UseAchievementsReturn {
         [claimMutation],
     )
 
+    const checkProgress = useCallback(async () => {
+        // Прогресс achievements пересчитывается на backend при чтении статистики;
+        // выделенный эндпоинт прогресса в API отсутствует — тянем свежую статистику.
+        try {
+            await queryClient.invalidateQueries({ queryKey: queryKeys.achievements.user })
+            await userStatsQuery.refetch()
+        } catch (err) {
+            console.error('Failed to check progress:', err)
+        }
+    }, [queryClient, userStatsQuery])
+
     const getAchievementById = useCallback(
         (id: number): Achievement | undefined => achievements.find((a) => a.id === id),
         [achievements],
@@ -146,6 +158,7 @@ export function useAchievements(): UseAchievementsReturn {
         fetchAchievements,
         fetchUserStats,
         claimAchievement,
+        checkProgress,
         getAchievementById,
         getUserAchievement,
         onAchievementUnlocked,

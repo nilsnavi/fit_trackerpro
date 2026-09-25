@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import and_, desc, select
 
 from app.domain.emergency_contact import EmergencyContact
+from app.domain.user import User
 from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
@@ -40,6 +41,16 @@ class EmergencyRepository(SQLAlchemyRepository):
             .order_by(EmergencyContact.priority)
         )
         return result.scalars().all()
+
+    async def get_contact_owner(self, user_id: int):
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
+
+    async def get_contact_by_link_code(self, link_code: str):
+        result = await self.db.execute(
+            select(EmergencyContact).where(EmergencyContact.link_code == link_code)
+        )
+        return result.scalar_one_or_none()
 
     async def list_contacts_for_workout_start(self, user_id: int):
         result = await self.db.execute(

@@ -22,6 +22,7 @@ from app.domain.base import Base
 if TYPE_CHECKING:
     from .template_exercise import TemplateExercise
     from .user import User
+    from .workout_block import WorkoutBlock
     from .workout_log import WorkoutLog
     from .workout_set import WorkoutSet
 
@@ -42,6 +43,15 @@ class WorkoutSessionExercise(Base):
     exercise_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # SPEC-005: skipped exercises stay in the session but are excluded from volume.
+    status: Mapped[Optional[str]] = mapped_column(
+        String(16), nullable=True, index=True
+    )
+    # SPEC-005 §24: block membership (superset/triset/circuit).
+    block_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("workout_blocks.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    block_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -59,6 +69,11 @@ class WorkoutSessionExercise(Base):
         overlaps="user,workout_session_exercises",
     )
     source_template_exercise: Mapped[Optional["TemplateExercise"]] = relationship("TemplateExercise")
+    workout_block: Mapped[Optional["WorkoutBlock"]] = relationship(
+        "WorkoutBlock",
+        back_populates="session_exercises",
+        foreign_keys=[block_id],
+    )
     sets: Mapped[list["WorkoutSet"]] = relationship(
         "WorkoutSet",
         back_populates="session_exercise",
@@ -74,6 +89,10 @@ class WorkoutSessionExercise(Base):
             name="fk_session_exercises_user_session",
         ),
         CheckConstraint("order_index >= 0", name="ck_workout_session_exercises_order_index_non_negative"),
+        CheckConstraint(
+            "status IS NULL OR status IN ('skipped')",
+            name="ck_workout_session_exercises_status_allowed",
+        ),
         CheckConstraint("exercise_id >= 1", name="ck_workout_session_exercises_exercise_positive"),
         Index("ix_workout_session_exercises_session_order", "workout_session_id", "order_index"),
     )

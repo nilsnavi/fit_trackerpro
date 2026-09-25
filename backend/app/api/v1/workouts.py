@@ -12,18 +12,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.api.deps.idempotency import optional_idempotency_key
+from app.application.strength_math import calculate_plates
 from app.application.workouts_service import WorkoutsService
 from app.core.audit import get_client_ip
 from app.domain.user import User
 from app.domain.workout_template import WorkoutTemplate
 from app.infrastructure.database import get_async_db
 from app.infrastructure.repositories.workouts_repository import WorkoutsRepository
+from app.schemas.enums import ProgressionPolicy
 from app.schemas.workouts import (
+    PlateCalculationRequest,
+    PlateCalculationResponse,
+    ProgressionRecommendation,
+    SmartRestRecommendation,
+    WorkoutCancelRequest,
+    WorkoutCancelResponse,
     WorkoutCompleteRequest,
     WorkoutCompleteResponse,
+    WorkoutExercisePatchRequest,
     WorkoutHistoryItem,
     WorkoutHistoryResponse,
     WorkoutSessionCreateRequest,
+    WorkoutSessionListResponse,
     WorkoutSessionUpdateRequest,
     WorkoutSetPatchRequest,
     WorkoutSetResponse,
@@ -428,4 +438,118 @@ async def patch_workout_set(
         set_id=set_id,
         data=payload,
         client_ip=get_client_ip(request),
+    )
+
+
+# ─── SPEC-005 endpoints ──────────────────────────────────────────────────────
+
+
+@router.post("/{workout_id}/cancel", response_model=WorkoutCancelResponse)
+async def cancel_workout(
+    workout_id: int,
+    payload: WorkoutCancelRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """Отменить незавершённую тренировку (SPEC-005 §3/§48)."""
+    service = WorkoutsService(db)
+    return await service.cancel_workout(
+        user_id=current_user.id,
+        workout_id=workout_id,
+        data=payload,
+        client_ip=get_client_ip(request),
+    )
+
+
+@router.get("/sessions/incomplete", response_model=list[WorkoutSessionListResponse])
+async def list_incomplete_sessions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """Незавершённые сессии для восстановления (SPEC-005 §48)."""
+    service = WorkoutsService(db)
+    return await service.list_incomplete_sessions(user_id=current_user.id)
+
+
+@router.patch("/{workout_id}/exercises/{exercise_row_id}", response_model=WorkoutHistoryItem)
+async def patch_session_exercise(
+    workout_id: int,
+    exercise_row_id: int,
+    payload: WorkoutExercisePatchRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """Пропустить / заменить / переместить / аннотировать упражнение (SPEC-005 §25–28)."""
+    service = WorkoutsService(db)
+    return await service.patch_session_exercise(
+        user_id=current_user.id,
+        workout_id=workout_id,
+        exercise_row_id=exercise_row_id,
+        data=payload,
+    )
+
+
+@router.get("/progression/recommendation", response_model=ProgressionRecommendation)
+async def get_progression_recommendation(
+    exercise_id: int = Query(..., ge=1),
+    policy: ProgressionPolicy = Query(ProgressionPolicy.DOUBLE_PROGRESSION),
+    increment: Optional[float] = Query(None, gt=0, le=200),
+    rep_range_min: Optional[int] = Query(None, ge=0, le=100),
+    rep_range_max: Optional[int] = Query(None, ge=0, le=100),
+    target_rpe: Optional[float] = Query(None, ge=1, le=10),
+    target_rir: Optional[float] = Query(None, ge=0, le=10),
+    percent_1rm: Optional[float] = Query(None, gt=0, le=200),
+    time_increment_seconds: Optional[int] = Query(None, ge=1, le=3600),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """Explainable next-target recommendation (SPEC-005 §37–38)."""
+    service = WorkoutsService(db)
+    return await service.get_progression_recommendation(
+        user_id=current_user.id,
+        exercise_id=exercise_id,
+        policy=policy,
+        increment=increment,
+        rep_range_min=rep_range_min,
+        rep_range_max=rep_range_max,
+        target_rpe=target_rpe,
+        target_rir=target_rir,
+        percent_1rm=percent_1rm,
+        time_increment_seconds=time_increment_seconds,
+    )
+
+
+@router.post("/plate-calculator", response_model=PlateCalculationResponse)
+async def calculate_plates_endpoint(
+    payload: PlateCalculationRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Разложить блины на одну сторону штанги (SPEC-005 §42–43)."""
+    result = calculate_plates(
+        target_weight=payload.target_weight,
+        bar_weight=payload.bar_weight,
+        available_plates=payload.available_plates,
+    )
+    return PlateCalculationResponse(**result)
+
+
+@router.get("/sessions/{session_id}/exercises/{exercise_id}/smart-rest", response_model=SmartRestRecommendation)
+async def get_smart_rest_recommendation(
+    session_id: int,
+    exercise_id: int,
+    set_type: str = Query("working", pattern="^(warmup|working|dropset|failure)$"),
+    rpe: Optional[float] = Query(None, ge=1, le=10),
+    rir: Optional[float] = Query(None, ge=0, le=10),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """Рекомендация отдыха по типу подхода и интенсивности (SPEC-005 §19)."""
+    service = WorkoutsService(db)
+    return await service.get_smart_rest_recommendation(
+        user_id=current_user.id,
+        set_type=set_type,
+        rpe=rpe,
+        rir=rir,
     )

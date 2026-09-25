@@ -54,6 +54,10 @@ class UserProfileData(BaseModel):
         None,
         description="Training experience level selected during onboarding.",
     )
+    consent: Optional[HealthDataConsent] = Field(
+        None,
+        description="Recorded health-data consent (version + timestamp) for audit.",
+    )
     onboarding_completed: Optional[bool] = Field(
         None,
         description="Whether onboarding has been completed.",
@@ -267,11 +271,40 @@ class AuthResponse(BaseModel):
     )
 
 
+class HealthDataConsent(BaseModel):
+    """Proof that the user accepted a specific version of the legal texts."""
+
+    version: str = Field(
+        ...,
+        min_length=1,
+        max_length=32,
+        description="Version of the consent text the user accepted.",
+    )
+    accepted_at: datetime = Field(..., description="When the consent was recorded (UTC).")
+    source: str = Field(
+        default="onboarding",
+        max_length=32,
+        description="Where the consent was collected.",
+    )
+
+
 class OnboardingRequest(BaseModel):
     """Request model for first-login onboarding."""
 
     fitness_goal: FitnessGoal = Field(..., description="Primary fitness objective.")
     experience_level: ExperienceLevel = Field(..., description="Current training level.")
+    health_data_consent: bool = Field(
+        default=False,
+        description=(
+            "True when the user ticked the consent box for processing health data "
+            "(pulse, glucose, weight, sleep, wellbeing). Without it onboarding is rejected."
+        ),
+    )
+    consent_version: Optional[str] = Field(
+        default=None,
+        max_length=32,
+        description="Version of the consent text the user saw; defaults to the current one.",
+    )
 
 
 class OnboardingResponse(BaseModel):

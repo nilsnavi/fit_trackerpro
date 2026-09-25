@@ -57,7 +57,7 @@ export function StickyBottomBar({
         return (
             <div
                 className={cn(
-                    /* z-40: above FloatingRestTimer (z-30); keep below bottom nav (z-50) */
+                    /* z-40: keep below the bottom nav (z-50) */
                     'fixed inset-x-0 bottom-0 z-40',
                     'border-t border-border bg-telegram-bg/90 backdrop-blur-sm',
                     'px-4 py-3',

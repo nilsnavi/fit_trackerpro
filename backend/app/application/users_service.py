@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from uuid import uuid4
+from datetime import datetime, timezone
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm.attributes import flag_modified
 
 from app.domain.body_measurement import BodyMeasurement
 from app.domain.exceptions import UserNotFoundError
@@ -45,82 +43,6 @@ class UsersService:
         if user is None:
             raise UserNotFoundError()
         return user
-
-    @staticmethod
-    def _profile_coach_access(profile: dict | None) -> list[dict]:
-        if not isinstance(profile, dict):
-            return []
-        raw = profile.get("coach_access")
-        if isinstance(raw, list):
-            return [row for row in raw if isinstance(row, dict)]
-        return []
-
-    async def list_coach_access(self, user: User) -> list[dict]:
-        entries = self._profile_coach_access(user.profile)
-        now = datetime.now(timezone.utc)
-        active = [
-            row
-            for row in entries
-            if str(row.get("status") or "active") == "active"
-            and self._parse_iso_ts(row.get("expires_at")) > now
-        ]
-        return [
-            {
-                "id": str(row.get("id")),
-                "code": str(row.get("code")),
-                "created_at": str(row.get("created_at")),
-                "expires_at": str(row.get("expires_at")),
-                "status": "active",
-            }
-            for row in sorted(active, key=lambda x: str(x.get("created_at")), reverse=True)
-        ]
-
-    async def generate_coach_access(self, user: User) -> dict:
-        now = datetime.now(timezone.utc)
-        expires_at = now + timedelta(hours=24)
-        entry = {
-            "id": uuid4().hex,
-            "code": uuid4().hex[:8].upper(),
-            "created_at": now.isoformat(),
-            "expires_at": expires_at.isoformat(),
-            "status": "active",
-        }
-
-        profile = dict(user.profile or {})
-        existing = self._profile_coach_access(profile)
-        existing.append(entry)
-        profile["coach_access"] = existing[-20:]
-        user.profile = profile
-        flag_modified(user, "profile")
-        await self.db.commit()
-        await self.db.refresh(user)
-        return {"code": entry["code"], "expires_at": entry["expires_at"]}
-
-    async def revoke_coach_access(self, user: User, access_id: str) -> None:
-        profile = dict(user.profile or {})
-        entries = self._profile_coach_access(profile)
-        changed = False
-        for row in entries:
-            if str(row.get("id")) == access_id and str(row.get("status") or "active") == "active":
-                row["status"] = "revoked"
-                changed = True
-        if changed:
-            profile["coach_access"] = entries
-            user.profile = profile
-            flag_modified(user, "profile")
-            await self.db.commit()
-
-    @staticmethod
-    def _parse_iso_ts(value: object) -> datetime:
-        if not isinstance(value, str) or not value:
-            return datetime.fromtimestamp(0, tz=timezone.utc)
-        try:
-            dt = datetime.fromisoformat(value)
-        except ValueError:
-            return datetime.fromtimestamp(0, tz=timezone.utc)
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
 
     async def build_export_payload(self, user: User) -> dict:
         templates_result = await self.db.execute(
