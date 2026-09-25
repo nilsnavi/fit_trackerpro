@@ -1,36 +1,25 @@
-"""
-Health check service for dependency-aware readiness checks.
-Implements:
-- /health/live → liveness (app is running)
-- /health/ready → readiness (all dependencies are healthy)
-"""
+"""Dependency-aware liveness and readiness checks."""
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.health import run_readiness_checks
 from app.schemas.system import LivenessResponse, ReadinessResponse
 
 
 class HealthCheckService:
-    """Dependency-aware health checks for production readiness."""
+    """Expose health checks to HTTP handlers without duplicating probe logic."""
 
     @staticmethod
     async def liveness() -> LivenessResponse:
-        """
-        Liveness probe: simple check that app is running.
-        Used by Docker to determine if container should be restarted.
-        """
+        """Return process liveness without checking external dependencies."""
         return LivenessResponse(
             status="alive",
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         )
 
     @staticmethod
     async def readiness() -> ReadinessResponse:
-        """
-        Readiness probe: PostgreSQL ``SELECT 1`` and Redis ``PING`` (each with a 2s timeout).
-        Used by load balancers to route traffic only to ready instances.
-        """
+        """Check PostgreSQL, Redis, and the expected Alembic migration head."""
         return await run_readiness_checks()

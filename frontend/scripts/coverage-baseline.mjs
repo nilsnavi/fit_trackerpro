@@ -38,6 +38,22 @@ async function writeJson(p, obj) {
   await fs.writeFile(p, txt, 'utf-8')
 }
 
+function coverageEntry(summary, key) {
+  if (summary[key]) return summary[key]
+
+  const normalizedKey = key.replaceAll('\\', '/')
+  for (const [reportedPath, value] of Object.entries(summary)) {
+    if (reportedPath === 'total') continue
+
+    const normalizedPath = reportedPath.replaceAll('\\', '/')
+    if (normalizedPath === normalizedKey || normalizedPath.endsWith(`/${normalizedKey}`)) {
+      return value
+    }
+  }
+
+  return undefined
+}
+
 function computeExpected(current, slack, floor) {
   const expected = {}
   for (const k of ['lines', 'statements', 'functions', 'branches']) {
@@ -60,7 +76,7 @@ async function cmdUpdate() {
   const baseline = baselineFile.baseline ?? {}
 
   for (const key of critical) {
-    const v = summary[key]
+    const v = coverageEntry(summary, key)
     if (!v) {
       // Keep entry absent if Jest didn't report it (e.g., excluded / not collected).
       continue
@@ -85,7 +101,7 @@ async function cmdCheck() {
   const failures = []
 
   for (const key of critical) {
-    const curRaw = summary[key]
+    const curRaw = coverageEntry(summary, key)
     const baseRaw = baseline[key]
 
     if (!curRaw || !baseRaw) {
@@ -116,11 +132,11 @@ async function cmdCheck() {
   }
 
   // Helpful output for CI logs
-  const checked = critical.filter((k) => summary[k] && baseline[k])
+  const checked = critical.filter((k) => coverageEntry(summary, k) && baseline[k])
   if (checked.length) {
     console.log('Critical coverage baseline check OK:')
     for (const key of checked) {
-      const cur = normalizeEntry(summary[key])
+      const cur = normalizeEntry(coverageEntry(summary, key))
       const exp = computeExpected(baseline[key], slack, floor)
       console.log(`  - ${formatRow(key, cur, exp)}`)
     }

@@ -243,6 +243,11 @@ class AuthResponse(BaseModel):
     success: bool
     message: str = Field(..., max_length=2000)
     user: Optional[TelegramUserData] = None
+    token: Optional[str] = Field(
+        None,
+        max_length=16384,
+        description="JWT access token (Mini App / camelCase alias of access_token).",
+    )
     access_token: Optional[str] = Field(None, max_length=16384)
     refresh_token: Optional[str] = Field(
         None,
