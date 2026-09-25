@@ -6,7 +6,9 @@ from httpx import AsyncClient
 from app.application.analytics_service import AnalyticsService
 from app.domain.workout_log import WorkoutLog
 from app.settings import settings
-
+from app.application.users_service import UsersService
+from app.domain.exceptions import UserNotFoundError
+from app.schemas.users import UserCreate
 
 @pytest.mark.unit
 async def test_get_current_user(authenticated_client: AsyncClient):
@@ -213,3 +215,50 @@ async def test_export_contains_profile_and_basic_entities(authenticated_client: 
     assert "templates" in data
     assert "recent_workouts" in data
     assert data["user"]["telegram_id"] > 0
+@pytest.mark.unit
+async def test_users_service_create_user_new(db_session):
+    service = UsersService(db_session)
+
+    payload = UserCreate(
+        telegram_id=991001,
+        username="new_user",
+        first_name="New",
+    )
+
+    created = await service.create_user(payload)
+
+    assert created.telegram_id == 991001
+    assert created.username == "new_user"
+
+
+@pytest.mark.unit
+async def test_users_service_create_user_updates_existing(db_session):
+    service = UsersService(db_session)
+
+    await service.create_user(
+        UserCreate(
+            telegram_id=991002,
+            username="before",
+            first_name="Before",
+        )
+    )
+
+    updated = await service.create_user(
+        UserCreate(
+            telegram_id=991002,
+            username="after",
+            first_name="After",
+        )
+    )
+
+    assert updated.telegram_id == 991002
+    assert updated.username == "after"
+    assert updated.first_name == "After"
+
+
+@pytest.mark.unit
+async def test_users_service_get_missing_user_raises(db_session):
+    service = UsersService(db_session)
+
+    with pytest.raises(UserNotFoundError):
+        await service.get_user_by_id(999999999)
