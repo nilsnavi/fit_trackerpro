@@ -20,6 +20,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Analytics Dashboard */
+        get: operations["get_analytics_dashboard_api_v1_analytics__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analytics/achievements/": {
         parameters: {
             query?: never;
@@ -1685,26 +1702,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create User
-         * @description Create or update user from Telegram data
-         */
-        post: operations["create_user_api_v1_users__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/users/auth/logout": {
         parameters: {
             query?: never;
@@ -1988,26 +1985,6 @@ export type paths = {
          *     поэтому поля `total_calories` в ответе нет.
          */
         get: operations["get_user_stats_api_v1_users_stats_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get User
-         * @description Get user by ID
-         */
-        get: operations["get_user_api_v1_users__user_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2795,6 +2772,11 @@ export type components = {
             refresh_token?: string | null;
             /** Success */
             success: boolean;
+            /**
+             * Token
+             * @description JWT access token (Mini App / camelCase alias of access_token).
+             */
+            token?: string | null;
             /**
              * Token Type
              * @default bearer
@@ -5955,29 +5937,6 @@ export type components = {
             /** User Id */
             user_id: number;
         };
-        /** UserCreate */
-        UserCreate: {
-            /**
-             * First Name
-             * @description Given name.
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Family name.
-             */
-            last_name?: string | null;
-            /**
-             * Telegram Id
-             * @description Telegram user ID (positive integer).
-             */
-            telegram_id: number;
-            /**
-             * Username
-             * @description Telegram @username without the leading @.
-             */
-            username?: string | null;
-        };
         /**
          * UserProfileData
          * @description User profile JSON (equipment, limitations, goals).
@@ -6135,29 +6094,6 @@ export type components = {
             profile?: components["schemas"]["UserProfilePatch"] | null;
             /** @description User settings: theme, notifications, units */
             settings?: components["schemas"]["UserSettingsPatch"] | null;
-        };
-        /** UserResponse */
-        UserResponse: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** First Name */
-            first_name: string | null;
-            /** Id */
-            id: number;
-            /** Last Name */
-            last_name: string | null;
-            /** Telegram Id */
-            telegram_id: number;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /** Username */
-            username: string | null;
         };
         /**
          * UserSettingsData
@@ -7249,6 +7185,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_analytics_dashboard_api_v1_analytics__get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsDashboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -10831,39 +10798,6 @@ export interface operations {
             };
         };
     };
-    create_user_api_v1_users__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     logout_api_v1_users_auth_logout_post: {
         parameters: {
             query?: never;
@@ -11287,37 +11221,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_user_api_v1_users__user_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
