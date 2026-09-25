@@ -4,11 +4,12 @@ import pytest
 from httpx import AsyncClient
 
 from app.application.analytics_service import AnalyticsService
-from app.domain.workout_log import WorkoutLog
-from app.settings import settings
 from app.application.users_service import UsersService
 from app.domain.exceptions import UserNotFoundError
+from app.domain.workout_log import WorkoutLog
 from app.schemas.users import UserCreate
+from app.settings import settings
+
 
 @pytest.mark.unit
 async def test_get_current_user(authenticated_client: AsyncClient):
