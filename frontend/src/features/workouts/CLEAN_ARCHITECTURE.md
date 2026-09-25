@@ -8,8 +8,7 @@
 
 ```
 features/workouts/
-├── api/                    # API слой (HTTP запросы)
-│   └── workouts.api.ts    # Чистые API вызовы без бизнес-логики
+├── (API)                   # HTTP-слой живёт в shared/api/domains/workoutsApi.ts
 ├── hooks/                  # React хуки
 │   ├── useActiveWorkout.ts       # Управление активной тренировкой
 │   ├── useRestTimer.ts           # Таймер отдыха
@@ -254,7 +253,7 @@ function handleComplete() {
 ## Миграция существующего кода
 
 ### Шаг 1: Выделить API
-Переместить все API вызовы в `api/workouts.api.ts`
+Держать все API вызовы в `shared/api/domains/workoutsApi.ts`
 
 ### Шаг 2: Создать хуки
 Обернуть API вызовы в React Query хуки

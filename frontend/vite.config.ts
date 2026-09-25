@@ -66,6 +66,12 @@ function bundleStatsPlugin(): Plugin {
     }
 }
 
+/**
+ * Dev-only backend for the same-origin proxy below. `docker-compose.dev.yml` sets it to
+ * `http://backend:8000`; a plain `npm run dev` expects uvicorn on localhost:8000.
+ */
+const devBackendTarget = process.env.VITE_DEV_BACKEND_URL?.trim() || 'http://localhost:8000'
+
 export default defineConfig({
     plugins: [
         react(),
@@ -166,6 +172,15 @@ export default defineConfig({
         port: 5173,
         host: true,
         allowedHosts: true,
+        /**
+         * Same-origin API in dev, exactly like nginx in prod: the SPA calls relative
+         * `/api/v1/*` (default `API_URL`) and the readiness probe `/health/ready`.
+         * Only the probe paths are proxied — `/health` itself is an SPA route.
+         */
+        proxy: {
+            '/api': { target: devBackendTarget, changeOrigin: true },
+            '^/health/(ready|live)$': { target: devBackendTarget, changeOrigin: true },
+        },
         /**
          * Docker on Windows + large repo can exhaust watcher memory.
          * Ignore heavy non-runtime folders to prevent ENOMEM crashes.

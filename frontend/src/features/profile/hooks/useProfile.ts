@@ -13,6 +13,7 @@ import { toast } from '@shared/stores/toastStore'
 import { queryKeys } from '@shared/api/queryKeys'
 import { authApi } from '@features/profile/api/authApi'
 import { usersApi } from '@shared/api/domains/usersApi'
+import { saveBlobAsFile } from '@shared/lib/saveBlobAsFile'
 import type {
     UserProfile,
     UserStats,
@@ -50,7 +51,9 @@ export interface UseProfileReturn {
     updateSettings: (updates: Partial<UserProfile['settings']>) => Promise<void>
     updateWeight: (current: number, target?: number) => Promise<void>
     getWeightProgress: () => WeightProgress | null
+    /** Never rejects: failures are reported with a toast. */
     exportData: () => Promise<void>
+    isExporting: boolean
     refresh: () => Promise<void>
 }
 
@@ -155,21 +158,23 @@ export function useProfile(): UseProfileReturn {
         }
     }, [profile])
 
+    const exportMutation = useMutation({ mutationFn: () => usersApi.exportData() })
+    const { mutateAsync: requestExport, isPending: isExporting } = exportMutation
+
     const exportData = useCallback(async () => {
         try {
-            const response = await usersApi.exportData()
-            const url = window.URL.createObjectURL(response)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `fittracker-data-${new Date().toISOString().split('T')[0]}.json`
-            a.click()
-            window.URL.revokeObjectURL(url)
+            const blob = await requestExport()
+            const filename = `fittracker-data-${new Date().toISOString().split('T')[0]}.json`
+            const result = await saveBlobAsFile(blob, filename)
+            if (result === 'cancelled') return
             hapticFeedback({ type: 'notification', notificationType: 'success' })
+            toast.success(result === 'shared' ? 'Файл с данными готов' : 'Файл с данными скачан')
         } catch (err) {
             console.error('Failed to export data:', err)
-            throw err
+            hapticFeedback({ type: 'notification', notificationType: 'error' })
+            toast.error(`Не удалось экспортировать данные: ${getErrorMessage(err)}`)
         }
-    }, [hapticFeedback])
+    }, [requestExport, hapticFeedback])
 
     const refresh = useCallback(async () => {
         await Promise.all([
@@ -189,6 +194,7 @@ export function useProfile(): UseProfileReturn {
             updateWeight,
             getWeightProgress,
             exportData,
+            isExporting,
             refresh,
         }),
         [
@@ -201,6 +207,7 @@ export function useProfile(): UseProfileReturn {
             updateWeight,
             getWeightProgress,
             exportData,
+            isExporting,
             refresh,
         ],
     )

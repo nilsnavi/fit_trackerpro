@@ -46,6 +46,7 @@ import type {
 import { useProfile } from '@features/profile/hooks/useProfile';
 import { ProfileShowcase } from '@features/achievements/components'
 import { EmergencyContactsSection } from '@features/emergency/components';
+import { DeleteAccountSection } from '@features/profile/components/DeleteAccountSection';
 import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
 
 // ============================================
@@ -395,6 +396,7 @@ export const ProfilePage: React.FC = () => {
         updateSettings,
         getWeightProgress,
         exportData,
+        isExporting,
     } = useProfile();
     const bodyMeasurementsQuery = useBodyMeasurementsQuery({ latest: true });
     const addBodyMeasurementMutation = useAddBodyMeasurementMutation();
@@ -746,7 +748,9 @@ export const ProfilePage: React.FC = () => {
                     variant="secondary"
                     fullWidth
                     leftIcon={<Download className="w-5 h-5" />}
-                    onClick={exportData}
+                    onClick={() => void exportData()}
+                    isLoading={isExporting}
+                    disabled={isExporting}
                 >
                     Экспорт данных
                 </Button>
@@ -758,6 +762,10 @@ export const ProfilePage: React.FC = () => {
                 >
                     Выйти из аккаунта
                 </Button>
+                <DeleteAccountSection
+                    onExportData={() => void exportData()}
+                    isExporting={isExporting}
+                />
             </div>
 
             {/* Version */}

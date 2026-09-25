@@ -1,4 +1,3 @@
-import { api } from '@shared/api/client'
 import type {
     WorkoutSyncTelemetryEvent,
     WorkoutSyncTelemetryPayload,
@@ -63,28 +62,20 @@ function postToBeaconUrl(url: string, event: WorkoutSyncTelemetryEvent, payload:
 }
 
 /**
- * Подключает sink: кольцевой буфер в `window` + опционально внешний ingest или REST.
+ * Подключает sink: кольцевой буфер в `window` + опционально внешний ingest
+ * (`VITE_WORKOUT_SYNC_TELEMETRY_URL`). Отдельного REST-эндпоинта на бэкенде нет:
+ * прежняя ветка `VITE_WORKOUT_SYNC_TELEMETRY_API=1` слала события в несуществующий
+ * `POST /client/workout-sync-events` и получала 404.
  * Вызывать один раз при старте приложения (см. `main.tsx`).
  */
 export function installWorkoutSyncTelemetryInfrastructure(): void {
     const beaconUrl = trimEnv(import.meta.env.VITE_WORKOUT_SYNC_TELEMETRY_URL)
-    const apiIngest =
-        String(import.meta.env.VITE_WORKOUT_SYNC_TELEMETRY_API ?? '')
-            .trim()
-            .toLowerCase() === '1'
 
     setWorkoutSyncTelemetrySink((event, payload) => {
         pushToWindowBuffer(event, payload)
 
         if (beaconUrl) {
             postToBeaconUrl(beaconUrl, event, payload)
-            return
-        }
-
-        if (apiIngest) {
-            void api.post('/client/workout-sync-events', { event, payload }).catch(() => {
-                /* нет бэкенда / 401 / сеть — не блокируем UI */
-            })
         }
     })
 }

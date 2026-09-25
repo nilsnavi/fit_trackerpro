@@ -28,7 +28,12 @@ declare global {
     }
 }
 
-const DEFAULT_API_URL = 'http://localhost:8000/api/v1'
+/**
+ * Same-origin by default: nginx (prod), Caddy and the Vite dev server (`server.proxy`)
+ * forward `/api/*` to the backend. An absolute `localhost` default would point a
+ * Telegram WebView / phone / tunnel preview at the user's own device.
+ */
+const DEFAULT_API_URL = '/api/v1'
 
 function trim(s: string | undefined): string | undefined {
     const t = s?.trim()

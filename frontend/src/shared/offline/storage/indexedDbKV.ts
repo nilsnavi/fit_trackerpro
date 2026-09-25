@@ -67,11 +67,45 @@ export type IndexedDbKV = {
   del: (store: IndexedDbKVStoreName, key: string) => Promise<void>
 }
 
+export const DEFAULT_INDEXED_DB_KV_NAME = 'fittracker_offline'
+
+/**
+ * Closes the shared connection and deletes the whole database (account deletion).
+ * Resolves even when blocked by another tab or when IndexedDB is unavailable:
+ * returns `false` then, so callers can report a best-effort wipe.
+ */
+export async function deleteIndexedDbKV(dbName: string = DEFAULT_INDEXED_DB_KV_NAME): Promise<boolean> {
+  if (openPromise) {
+    try {
+      const db = await openPromise
+      db.close()
+    } catch {
+      // never opened successfully — nothing to close
+    }
+    openPromise = null
+  }
+  if (!isIndexedDbLikelyAvailable()) return false
+
+  return new Promise<boolean>((resolve) => {
+    let req: IDBOpenDBRequest
+    try {
+      req = indexedDB.deleteDatabase(dbName)
+    } catch {
+      resolve(false)
+      return
+    }
+    req.onsuccess = () => resolve(true)
+    req.onerror = () => resolve(false)
+    // Another tab keeps it open: deletion completes once that tab closes.
+    req.onblocked = () => resolve(false)
+  })
+}
+
 export function createIndexedDbKV(options: {
   dbName?: string
   version?: number
 } = {}): IndexedDbKV {
-  const dbName = options.dbName ?? 'fittracker_offline'
+  const dbName = options.dbName ?? DEFAULT_INDEXED_DB_KV_NAME
   const version = options.version ?? 1
   const stores: readonly IndexedDbKVStoreName[] = [
     'queryCache',

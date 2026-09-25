@@ -1,9 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { TelegramAuthGate } from '@/components/TelegramAuthGate'
 import { initSentry } from './app/sentry'
 import { installWorkoutSyncTelemetryInfrastructure } from './app/workoutSyncTelemetryBootstrap'
-import App from './App'
+import { AppRoot } from './app/AppRoot'
 import './styles/globals.css'
 
 try {
@@ -29,8 +28,6 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
     <StrictMode>
-        <TelegramAuthGate>
-            <App />
-        </TelegramAuthGate>
+        <AppRoot />
     </StrictMode>,
 )
