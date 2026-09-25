@@ -114,6 +114,7 @@ class ExercisesService:
             risk_flags=data.risk_flags.model_dump(),
             media_url=data.media_url,
             status="active" if is_admin else "pending",
+            source="user",
             author_user_id=user_id,
         )
         exercise = await self.repository.create_exercise(exercise)

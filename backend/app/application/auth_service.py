@@ -236,16 +236,22 @@ class AuthService:
         )
         return user_profile_from_db(current_user)
 
-    @staticmethod
-    def refresh_token(
+    async def refresh_token(
+        self,
         refresh_request: RefreshTokenRequest,
         client_ip: str | None = None,
     ) -> RefreshTokenResponse:
         user_id = verify_token(refresh_request.refresh_token, token_type="refresh")
         if user_id is None:
             raise AuthenticationError("Invalid or expired refresh token")
+
+        user = await self.repository.get_user_by_telegram_id(telegram_id=user_id)
+        if user is None:
+            raise AuthenticationError("Invalid or expired refresh token")
+
         audit_log(
             action=AUTH_REFRESH,
+            user_db_id=user.id,
             telegram_id=user_id,
             client_ip=client_ip,
         )
@@ -265,4 +271,3 @@ class AuthService:
             client_ip=client_ip,
         )
         return LogoutResponse()
-
