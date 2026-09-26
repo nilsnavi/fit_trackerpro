@@ -3,6 +3,7 @@ JWT encoding/decoding and HTTP Bearer scheme (no FastAPI route dependencies).
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import UUID
 
 import jwt
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -34,7 +35,7 @@ def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None)
     )
 
 
-def create_refresh_token(user_id: int) -> str:
+def create_refresh_token(user_id: int, generation: str | UUID | None = None) -> str:
     now = datetime.now(timezone.utc)
     expire = now + timedelta(days=7)
 
@@ -44,6 +45,8 @@ def create_refresh_token(user_id: int) -> str:
         "iat": now,
         "type": "refresh",
     }
+    if generation is not None:
+        to_encode["generation"] = str(generation)
 
     return jwt.encode(
         to_encode,
@@ -52,7 +55,12 @@ def create_refresh_token(user_id: int) -> str:
     )
 
 
-def verify_token(token: str, token_type: str = "access") -> Optional[int]:
+def verify_token(
+    token: str,
+    token_type: str = "access",
+    *,
+    include_generation: bool = False,
+) -> Optional[int] | tuple[int, str | None]:
     try:
         payload = jwt.decode(
             token,
@@ -67,6 +75,9 @@ def verify_token(token: str, token_type: str = "access") -> Optional[int]:
         if user_id is None:
             return None
 
+        if include_generation:
+            generation = payload.get("generation")
+            return user_id, generation if isinstance(generation, str) else None
         return user_id
 
     except (JWTError, ValueError, TypeError):

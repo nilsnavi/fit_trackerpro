@@ -75,8 +75,12 @@ async def register_via_telegram(
 
 
 @public_auth_router.post("/refresh", response_model=RefreshTokenResponse)
-async def refresh_token(refresh_request: RefreshTokenRequest, request: Request):
-    return AuthService.refresh_token(
+async def refresh_token(
+    refresh_request: RefreshTokenRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await AuthService(db).refresh_token(
         refresh_request=refresh_request,
         client_ip=get_client_ip(request),
     )

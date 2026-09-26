@@ -3,8 +3,9 @@ User Model
 """
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
+from uuid import uuid4
 
-from sqlalchemy import JSON, BigInteger, CheckConstraint, DateTime, Index, Integer, String
+from sqlalchemy import JSON, BigInteger, CheckConstraint, DateTime, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -46,6 +47,13 @@ class User(Base):
         nullable=False,
         index=True,
         comment="Telegram user ID"
+    )
+    token_generation: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False),
+        nullable=False,
+        unique=True,
+        default=lambda: str(uuid4()),
+        comment="Immutable account generation used to revoke tokens after account deletion",
     )
     username: Mapped[Optional[str]] = mapped_column(
         String(255),
@@ -176,7 +184,7 @@ class User(Base):
     authored_exercises: Mapped[list["Exercise"]] = relationship(
         "Exercise",
         back_populates="author",
-        cascade="all, delete-orphan"
+        passive_deletes=True,
     )
     water_entries: Mapped[list["WaterEntry"]] = relationship(
         "WaterEntry",
