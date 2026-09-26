@@ -27,9 +27,13 @@ def test_access_token_round_trip() -> None:
 
 
 def test_refresh_token_round_trip() -> None:
-    token = create_refresh_token(4242)
+    token = create_refresh_token(4242, "4d31a3df-53ef-4b7e-98bc-868c21216024")
 
     assert verify_token(token, token_type="refresh") == 4242
+    assert verify_token(token, token_type="refresh", include_generation=True) == (
+        4242,
+        "4d31a3df-53ef-4b7e-98bc-868c21216024",
+    )
 
 
 def test_token_types_are_not_interchangeable() -> None:

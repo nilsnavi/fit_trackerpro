@@ -22,8 +22,10 @@ class AuthRepository(SQLAlchemyRepository):
                 select(Exercise).where(Exercise.author_user_id == user.id).with_for_update()
             )).scalars().all()
             for exercise in exercises:
-                if exercise.source != "user":
+                if exercise.source == "imported":
                     exercise.author_user_id = None
+                    continue
+                if exercise.source not in {"user", "system"}:
                     continue
                 referenced = (
                     await self.db.scalar(select(TemplateExercise.id).where(TemplateExercise.exercise_id == exercise.id).limit(1))

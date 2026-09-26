@@ -42,6 +42,35 @@ async def test_deleted_account_rejects_old_refresh(client, mock_telegram_auth_bo
     assert 'refresh_token' not in response.json()
 
 
+async def test_old_refresh_stays_invalid_after_same_telegram_user_reregisters(
+    client, mock_telegram_auth_body
+):
+    first_login = await client.post('/api/v1/users/auth/telegram', json=mock_telegram_auth_body)
+    assert first_login.status_code == 200
+    old_tokens = first_login.json()
+    deleted = await client.delete('/api/v1/users/me', headers={
+        'Authorization': f"Bearer {old_tokens['access_token']}"})
+    assert deleted.status_code == 204
+
+    new_login = await client.post('/api/v1/users/auth/telegram', json=mock_telegram_auth_body)
+    assert new_login.status_code == 200
+    assert new_login.json()['is_new_user'] is True
+    assert (await client.post('/api/v1/users/auth/refresh', json={
+        'refresh_token': old_tokens['refresh_token']})).status_code == 401
+    assert (await client.post('/api/v1/users/auth/refresh', json={
+        'refresh_token': new_login.json()['refresh_token']})).status_code == 200
+
+
+async def test_refresh_access_token_authenticates_current_user(client, mock_telegram_auth_body):
+    login = await client.post('/api/v1/users/auth/telegram', json=mock_telegram_auth_body)
+    refreshed = await client.post('/api/v1/users/auth/refresh', json={
+        'refresh_token': login.json()['refresh_token']})
+    assert refreshed.status_code == 200
+    me = await client.get('/api/v1/users/auth/me', headers={
+        'Authorization': f"Bearer {refreshed.json()['access_token']}"})
+    assert me.status_code == 200
+
+
 @pytest.mark.parametrize('kind', ['invalid', 'expired', 'access'])
 async def test_refresh_rejects_invalid_credentials(client, mock_telegram_auth_body, kind):
     login = await client.post('/api/v1/users/auth/telegram', json=mock_telegram_auth_body)
@@ -114,21 +143,68 @@ async def test_delete_anonymizes_referenced_custom_exercise(authenticated_client
     assert exercise.source == 'user'
 
 
-@pytest.mark.parametrize('source', ['system', 'imported'])
-async def test_delete_preserves_catalog_exercise(authenticated_client, db_session, source):
-    owner = (await db_session.execute(select(User))).scalar_one()
+async def test_delete_preserves_catalog_exercise(authenticated_client, db_session):
     exercise = Exercise(name='Catalog exercise', description='Catalog instructions',
-                        category='strength', source=source, status='active',
-                        author_user_id=owner.id)
+                        category='strength', source='system', status='active',
+                        author_user_id=None)
     db_session.add(exercise)
     await db_session.commit()
     assert (await authenticated_client.delete('/api/v1/users/me')).status_code == 204
     await db_session.refresh(exercise)
     assert exercise.name == 'Catalog exercise'
     assert exercise.description == 'Catalog instructions'
-    assert exercise.source == source
+    assert exercise.source == 'system'
     assert exercise.status == 'active'
     assert exercise.author_user_id is None
+
+
+async def test_delete_preserves_imported_exercise_with_author(authenticated_client, db_session):
+    owner = (await db_session.execute(select(User))).scalar_one()
+    exercise = Exercise(name='Imported catalog', description='Catalog text',
+                        category='strength', source='imported', status='active',
+                        author_user_id=owner.id, slug='imported-catalog')
+    db_session.add(exercise)
+    await db_session.commit()
+    assert (await authenticated_client.delete('/api/v1/users/me')).status_code == 204
+    await db_session.refresh(exercise)
+    assert exercise.name == 'Imported catalog'
+    assert exercise.description == 'Catalog text'
+    assert exercise.source == 'imported'
+    assert exercise.author_user_id is None
+
+
+async def test_delete_anonymizes_legacy_system_sourced_custom_exercise(
+    authenticated_client, db_session
+):
+    from app.domain.template_exercise import TemplateExercise
+    from app.domain.workout_template import WorkoutTemplate
+
+    owner = (await db_session.execute(select(User))).scalar_one()
+    exercise = Exercise(name='Historical private name', description='Private instructions',
+                        category='strength', source='system', status='pending',
+                        author_user_id=owner.id, aliases=['Private alias'],
+                        media_url='https://example.com/private', slug='private-slug')
+    db_session.add(exercise)
+    await db_session.flush()
+    other = User(telegram_id=987654328)
+    db_session.add(other)
+    await db_session.flush()
+    template = WorkoutTemplate(user_id=other.id, name='Other', type='strength', exercises=[])
+    db_session.add(template)
+    await db_session.flush()
+    db_session.add(TemplateExercise(user_id=other.id, template_id=template.id,
+                                    exercise_id=exercise.id, name=exercise.name, sets=3))
+    await db_session.commit()
+
+    assert (await authenticated_client.delete('/api/v1/users/me')).status_code == 204
+    await db_session.refresh(exercise)
+    assert exercise.author_user_id is None
+    assert exercise.description is None
+    assert exercise.aliases == []
+    assert exercise.media_url is None
+    assert exercise.slug is None
+    assert exercise.status == 'archived'
+    assert exercise.source == 'system'
 
 
 async def test_delete_preserves_other_users_history(authenticated_client, db_session):
@@ -216,3 +292,4 @@ async def test_delete_preserves_template_and_progression_references(authenticate
     assert exercise.author_user_id is None
     assert slot.exercise_id == policy.exercise_id == exercise.id
     assert template.exercises == [{'exercise_id': exercise.id}]
+
