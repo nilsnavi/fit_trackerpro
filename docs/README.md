@@ -39,7 +39,9 @@
 
 ## Legal & Data
 
+- **Каталог упражнений из exercises-dataset**: `./exercises-catalog-dataset.md`
 - **Данные и приватность (процедуры, согласие, ответственные)**: `./legal/privacy-and-data.md`
+- **Лицензия и media notice exercises-dataset**: `./legal/exercises-dataset-notice.md`
 - Тексты документов для пользователя живут в приложении: `frontend/src/features/legal/content.ts`
   (версии обязаны совпадать с `backend/app/core/legal.py`)
 

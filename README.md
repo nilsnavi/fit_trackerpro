@@ -21,6 +21,7 @@ Telegram Mini App для тренировок, здоровья и аналит�
 - `docs/architecture.md` — архитектура
 - `docs/security.md` — безопасность
 - `docs/offline-pwa.md` — офлайн и PWA
+- `docs/exercises-catalog-dataset.md` — импорт каталога упражнений и условия медиа
 
 ## Source of truth (коротко)
 
