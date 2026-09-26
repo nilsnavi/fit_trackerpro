@@ -12,9 +12,8 @@ from httpx import ASGITransport, AsyncClient
 from app.application.challenges_service import ChallengesService
 from app.application.emergency_service import EmergencyService
 from app.domain.exceptions import (
-    ChallengeForbiddenError,
-    ChallengeValidationError,
     EmergencyValidationError,
+    NotImplementedFeatureError,
 )
 from app.infrastructure.telegram_sender import TelegramDeliveryError
 from app.middleware.rate_limit import (
@@ -105,20 +104,9 @@ async def test_challenges_service_covers_policy_branches(monkeypatch):
     assert created.status == "upcoming"
     assert created.join_code == "JOIN123"
 
-    service.repository = _ChallengeRepo(_challenge(status="completed"))
-    with pytest.raises(ChallengeValidationError):
-        await service.join_challenge(42, 7, None)
-
-    service.repository = _ChallengeRepo(_challenge(status="cancelled"))
-    with pytest.raises(ChallengeValidationError):
-        await service.join_challenge(42, 7, None)
-
-    service.repository = _ChallengeRepo(_challenge(is_public=False, join_code="SECRET"))
-    with pytest.raises(ChallengeForbiddenError):
-        await service.join_challenge(42, 7, "wrong")
-
-    joined = await service.join_challenge(42, 7, "secret")
-    assert joined.success is True
+    # Participation is not implemented: honest 501 instead of a fake "joined".
+    with pytest.raises(NotImplementedFeatureError):
+        await service.join_challenge(42, 7, "secret")
 
 
 class _EmergencyRepo:

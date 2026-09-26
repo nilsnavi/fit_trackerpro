@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -75,7 +76,14 @@ class AuthService:
                 },
                 settings={"theme": "telegram", "notifications": True, "units": "metric"},
             )
-            return await self.repository.insert_user(user), True
+            try:
+                return await self.repository.insert_user(user), True
+            except IntegrityError:
+                await self.repository.rollback()
+                existing = await self.repository.get_user_by_telegram_id(telegram_id=telegram_id)
+                if existing is None:
+                    raise
+                return existing, False
 
         user.username = telegram_user_data.get("username") or user.username
         user.first_name = telegram_user_data.get("first_name") or user.first_name
@@ -118,7 +126,7 @@ class AuthService:
 
         user, created = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
-        refresh_token = create_refresh_token(user.telegram_id)
+        refresh_token = create_refresh_token(user.telegram_id, user.token_generation)
         onboarding_required = bool(created or not (user.profile or {}).get("onboarding_completed", False))
 
         audit_log(
@@ -228,22 +236,35 @@ class AuthService:
         )
         return user_profile_from_db(current_user)
 
-    @staticmethod
-    def refresh_token(
+    async def refresh_token(
+        self,
         refresh_request: RefreshTokenRequest,
         client_ip: str | None = None,
     ) -> RefreshTokenResponse:
-        user_id = verify_token(refresh_request.refresh_token, token_type="refresh")
-        if user_id is None:
+        verified = verify_token(
+            refresh_request.refresh_token,
+            token_type="refresh",
+            include_generation=True,
+        )
+        if not isinstance(verified, tuple):
             raise AuthenticationError("Invalid or expired refresh token")
+        user_id, generation = verified
+        if generation is None:
+            raise AuthenticationError("Invalid or expired refresh token")
+
+        user = await self.repository.get_user_by_telegram_id(telegram_id=user_id)
+        if user is None or generation != str(user.token_generation):
+            raise AuthenticationError("Invalid or expired refresh token")
+
         audit_log(
             action=AUTH_REFRESH,
-            telegram_id=user_id,
+            user_db_id=user.id,
+            telegram_id=user.telegram_id,
             client_ip=client_ip,
         )
         return RefreshTokenResponse(
-            access_token=create_access_token(user_id),
-            refresh_token=create_refresh_token(user_id),
+            access_token=create_access_token(user.telegram_id),
+            refresh_token=create_refresh_token(user.telegram_id, user.token_generation),
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )

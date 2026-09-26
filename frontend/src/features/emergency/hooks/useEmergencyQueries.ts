@@ -3,6 +3,7 @@ import { queryKeys } from '@shared/api/queryKeys'
 import {
     emergencyApi,
     type EmergencyContactCreatePayload,
+    type EmergencyContactUpdatePayload,
     type EmergencyLogPayload,
     type EmergencyNotifyPayload,
 } from '@features/emergency/api/emergencyApi'
@@ -19,6 +20,17 @@ export function useCreateEmergencyContactMutation() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (payload: EmergencyContactCreatePayload) => emergencyApi.createContact(payload),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.emergency.contacts })
+        },
+    })
+}
+
+export function useUpdateEmergencyContactMutation() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ contactId, payload }: { contactId: number; payload: EmergencyContactUpdatePayload }) =>
+            emergencyApi.updateContact(contactId, payload),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.emergency.contacts })
         },

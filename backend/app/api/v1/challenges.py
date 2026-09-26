@@ -25,6 +25,10 @@ from app.schemas.challenges import (
 
 router = APIRouter()
 
+# Participation (join/leave/leaderboard/my-active) is not implemented yet: no
+# participants table, no progress tracking. See ChallengesService.
+_NOT_IMPLEMENTED = {501: {"description": "Challenge participation is not implemented yet"}}
+
 
 @router.get("/", response_model=ChallengeListResponse)
 async def get_challenges(
@@ -52,7 +56,7 @@ async def get_challenges(
     )
 
 
-@router.get("/my/active", response_model=ChallengeMyActiveResponse)
+@router.get("/my/active", response_model=ChallengeMyActiveResponse, responses=_NOT_IMPLEMENTED)
 async def get_my_active_challenges(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
@@ -87,7 +91,7 @@ async def create_challenge(
     )
 
 
-@router.post("/{challenge_id}/join", response_model=ChallengeJoinResponse)
+@router.post("/{challenge_id}/join", response_model=ChallengeJoinResponse, responses=_NOT_IMPLEMENTED)
 async def join_challenge(
     challenge_id: int,
     request: Request,
@@ -104,7 +108,7 @@ async def join_challenge(
     )
 
 
-@router.post("/{challenge_id}/leave", response_model=ChallengeLeaveResponse)
+@router.post("/{challenge_id}/leave", response_model=ChallengeLeaveResponse, responses=_NOT_IMPLEMENTED)
 async def leave_challenge(
     challenge_id: int,
     request: Request,
@@ -119,7 +123,11 @@ async def leave_challenge(
     )
 
 
-@router.get("/{challenge_id}/leaderboard", response_model=ChallengeLeaderboardResponse)
+@router.get(
+    "/{challenge_id}/leaderboard",
+    response_model=ChallengeLeaderboardResponse,
+    responses=_NOT_IMPLEMENTED,
+)
 async def get_challenge_leaderboard(
     challenge_id: int,
     limit: int = Query(20, ge=1, le=100),

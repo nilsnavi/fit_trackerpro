@@ -56,13 +56,16 @@ class ExercisesService:
         status: str,
         page: int,
         page_size: int,
+        pending_author_id: int | None = None,
     ) -> ExerciseListResponse:
+        """``pending_author_id`` — set for non-admins: moderation queue shows only their own."""
         total = await self.repository.count_exercises(
             category=category,
             muscle_group=muscle_group,
             equipment=equipment,
             search=search,
             status=status,
+            pending_author_id=pending_author_id,
         )
         exercises = await self.repository.list_exercises(
             category=category,
@@ -72,6 +75,7 @@ class ExercisesService:
             status=status,
             page=page,
             page_size=page_size,
+            pending_author_id=pending_author_id,
         )
         return ExerciseListResponse(
             items=[self._to_response(e) for e in exercises],
@@ -110,6 +114,7 @@ class ExercisesService:
             risk_flags=data.risk_flags.model_dump(),
             media_url=data.media_url,
             status="active" if is_admin else "pending",
+            source="user",
             author_user_id=user_id,
         )
         exercise = await self.repository.create_exercise(exercise)

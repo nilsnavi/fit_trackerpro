@@ -7,11 +7,10 @@
  * доставку «в воздух».
  */
 import { useState } from 'react'
-import { Link2, Plus, Send, Trash2, Unlink, UserPlus } from 'lucide-react'
+import { Link2, Pencil, Plus, Send, Trash2, Unlink, UserPlus } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { toast } from '@shared/stores/toastStore'
 import { Button } from '@shared/ui/Button'
-import { Input } from '@shared/ui/Input'
 import { Modal } from '@shared/ui/Modal'
 import { getErrorMessage } from '@shared/errors'
 import {
@@ -20,8 +19,17 @@ import {
     useEmergencyContactsQuery,
     useIssueEmergencyLinkCodeMutation,
     useUnlinkEmergencyContactMutation,
+    useUpdateEmergencyContactMutation,
 } from '@features/emergency/hooks/useEmergencyQueries'
-import type { EmergencyContactLink } from '@features/emergency/api/emergencyApi'
+import type { EmergencyContact, EmergencyContactLink } from '@features/emergency/api/emergencyApi'
+import {
+    buildContactUpdatePayload,
+    contactToFormValues,
+    describeSubscriptions,
+    normalizeUsername,
+    type EmergencyContactFormValues,
+} from '@features/emergency/lib/contactForm'
+import { EmergencyContactForm } from './EmergencyContactForm'
 
 export function EmergencyContactsSection() {
     const contactsQuery = useEmergencyContactsQuery()
@@ -29,36 +37,65 @@ export function EmergencyContactsSection() {
     const deleteMutation = useDeleteEmergencyContactMutation()
     const linkCodeMutation = useIssueEmergencyLinkCodeMutation()
     const unlinkMutation = useUnlinkEmergencyContactMutation()
+    const updateMutation = useUpdateEmergencyContactMutation()
 
     const [isAdding, setIsAdding] = useState(false)
-    const [name, setName] = useState('')
-    const [username, setUsername] = useState('')
-    const [phone, setPhone] = useState('')
+    const [createError, setCreateError] = useState<string | null>(null)
+    const [editing, setEditing] = useState<EmergencyContact | null>(null)
+    const [editError, setEditError] = useState<string | null>(null)
     const [invite, setInvite] = useState<EmergencyContactLink | null>(null)
 
     const contacts = contactsQuery.data?.items ?? []
-    const canSubmit = name.trim().length > 0 && (username.trim().length > 0 || phone.trim().length > 0)
 
-    const resetForm = () => {
-        setName('')
-        setUsername('')
-        setPhone('')
+    const closeCreateForm = () => {
         setIsAdding(false)
+        setCreateError(null)
     }
 
-    const handleAdd = async () => {
-        if (!canSubmit) return
+    // Ошибки формы (в т.ч. 409 «такой username/телефон уже есть») показываются
+    // прямо в форме, а введённые данные не теряются.
+    const handleAdd = async (values: EmergencyContactFormValues) => {
+        setCreateError(null)
         try {
             await createMutation.mutateAsync({
-                contact_name: name.trim(),
-                contact_username: username.trim().replace(/^@/, '') || undefined,
-                phone: phone.trim() || undefined,
-                notify_on_emergency: true,
+                contact_name: values.contact_name.trim(),
+                contact_username: normalizeUsername(values.contact_username) || undefined,
+                phone: values.phone.trim() || undefined,
+                notify_on_emergency: values.notify_on_emergency,
+                notify_on_workout_start: values.notify_on_workout_start,
+                notify_on_workout_end: values.notify_on_workout_end,
             })
             toast.success('Контакт добавлен')
-            resetForm()
+            closeCreateForm()
         } catch (error) {
-            toast.error(getErrorMessage(error))
+            setCreateError(getErrorMessage(error))
+        }
+    }
+
+    const openEdit = (contact: EmergencyContact) => {
+        setEditError(null)
+        setEditing(contact)
+    }
+
+    const closeEdit = () => {
+        setEditing(null)
+        setEditError(null)
+    }
+
+    const handleUpdate = async (values: EmergencyContactFormValues) => {
+        if (!editing) return
+        const payload = buildContactUpdatePayload(editing, values)
+        if (Object.keys(payload).length === 0) {
+            closeEdit()
+            return
+        }
+        setEditError(null)
+        try {
+            await updateMutation.mutateAsync({ contactId: editing.id, payload })
+            toast.success('Контакт обновлён')
+            closeEdit()
+        } catch (error) {
+            setEditError(getErrorMessage(error))
         }
     }
 
@@ -124,7 +161,7 @@ export function EmergencyContactsSection() {
                     variant="secondary"
                     size="sm"
                     leftIcon={<Plus className="h-4 w-4" />}
-                    onClick={() => setIsAdding((value) => !value)}
+                    onClick={() => (isAdding ? closeCreateForm() : setIsAdding(true))}
                 >
                     Добавить
                 </Button>
@@ -174,9 +211,24 @@ export function EmergencyContactsSection() {
                                 {contact.contact_username && contact.phone ? ' · ' : ''}
                                 {contact.phone ?? ''}
                             </p>
+                            <p
+                                className="truncate text-[11px] text-telegram-hint"
+                                data-testid={`contact-subscriptions-${contact.id}`}
+                            >
+                                {describeSubscriptions(contact)}
+                            </p>
                         </div>
 
                         <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                aria-label={`Изменить контакт ${contact.contact_name}`}
+                                onClick={() => openEdit(contact)}
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -215,50 +267,39 @@ export function EmergencyContactsSection() {
             </ul>
 
             {isAdding && (
-                <div className="mt-3 space-y-3 rounded-xl bg-telegram-bg/60 p-3">
-                    <Input
-                        label="Имя"
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        placeholder="Мама"
-                        fullWidth
+                <div className="mt-3 rounded-xl bg-telegram-bg/60 p-3">
+                    <EmergencyContactForm
+                        isSubmitting={createMutation.isPending}
+                        error={createError}
+                        onSubmit={(values) => void handleAdd(values)}
+                        onCancel={closeCreateForm}
                     />
-                    <Input
-                        label="Telegram username"
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
-                        placeholder="без @"
-                        fullWidth
-                    />
-                    <Input
-                        label="Телефон"
-                        value={phone}
-                        onChange={(event) => setPhone(event.target.value)}
-                        placeholder="+7…"
-                        fullWidth
-                    />
-                    <p className="text-[11px] text-telegram-hint">
-                        Имя и хотя бы один канал связи обязательны. Сам канал появится после того,
-                        как контакт подключится в боте.
-                    </p>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="primary"
-                            size="sm"
-                            className="flex-1"
-                            disabled={!canSubmit}
-                            isLoading={createMutation.isPending}
-                            onClick={handleAdd}
-                        >
-                            Сохранить
-                        </Button>
-                        <Button type="button" variant="secondary" size="sm" onClick={resetForm}>
-                            Отмена
-                        </Button>
-                    </div>
                 </div>
             )}
+
+            <Modal
+                isOpen={editing !== null}
+                onClose={closeEdit}
+                title="Изменить контакт"
+                size="sm"
+            >
+                {editing && (
+                    <EmergencyContactForm
+                        key={editing.id}
+                        initialValues={contactToFormValues(editing)}
+                        showActiveToggle
+                        note={
+                            editing.is_linked
+                                ? 'Контакт уже подключён в боте: смена username не меняет получателя. Чтобы сменить аккаунт, отвяжите контакт и отправьте новое приглашение.'
+                                : undefined
+                        }
+                        isSubmitting={updateMutation.isPending}
+                        error={editError}
+                        onSubmit={(values) => void handleUpdate(values)}
+                        onCancel={closeEdit}
+                    />
+                )}
+            </Modal>
 
             <Modal
                 isOpen={invite !== null}

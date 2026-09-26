@@ -27,8 +27,13 @@ export const exercisesApi = {
     update(exerciseId: number, payload: unknown) {
         return api.put(`/exercises/${exerciseId}`, payload)
     },
+    /** Admin only. Rejecting a submission = deleting it (`remove`). */
     remove(exerciseId: number) {
         return api.delete(`/exercises/${exerciseId}`)
+    },
+    /** Admin only: move a pending submission into the public catalog. */
+    approve(exerciseId: number): Promise<ExerciseApiItem> {
+        return api.post<ExerciseApiItem>(`/exercises/${exerciseId}/approve`)
     },
     categories() {
         return api.get<ExerciseCategoriesApiResponse>('/exercises/categories/list')

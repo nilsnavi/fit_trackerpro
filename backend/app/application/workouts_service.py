@@ -17,6 +17,7 @@ from app.application.records_service import (
     evaluate_set_records,
 )
 from app.application.session_metrics import compute_session_metrics
+from app.application.workout_contact_notifier import WorkoutContactNotifier
 from app.core.audit import (
     WORKOUT_COMPLETE,
     WORKOUT_START,
@@ -85,8 +86,14 @@ logger = logging.getLogger(__name__)
 
 
 class WorkoutsService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        contact_notifier: WorkoutContactNotifier | None = None,
+    ) -> None:
         self.repository = WorkoutsRepository(db)
+        # Emergency contacts' workout start/end messages; only the HTTP routes wire it in.
+        self.contact_notifier = contact_notifier
 
     async def get_weight_recommendation(
         self,
@@ -1060,6 +1067,9 @@ class WorkoutsService:
             },
         )
 
+        if self.contact_notifier is not None:
+            await self.contact_notifier.workout_started(user_id=user_id, workout_id=workout.id)
+
         return WorkoutStartResponse(
             id=workout.id,
             user_id=workout.user_id,
@@ -1528,6 +1538,14 @@ class WorkoutsService:
             meta={"duration_min": data.duration},
         )
 
+        # Only the first completion gets here (duplicates returned above).
+        if self.contact_notifier is not None:
+            await self.contact_notifier.workout_finished(
+                user_id=user_id,
+                workout_id=workout.id,
+                duration=workout.duration,
+            )
+
         # SPEC-005 §40: detect PRs across the completed session (warm-up excluded).
         personal_records = collect_session_records(workout.exercises or [])
 
@@ -1974,10 +1992,24 @@ class WorkoutsService:
         if not workout:
             raise WorkoutNotFoundError("Workout not found")
 
+        was_in_progress = workout.status not in (
+            WorkoutStatus.CANCELLED.value,
+            WorkoutStatus.COMPLETED.value,
+        )
         workout.status = WorkoutStatus.CANCELLED.value
         workout.comments = data.comments if data.comments is not None else workout.comments
         workout.version += 1
         workout = await self.repository.commit_workout_update(workout)
+
+        # Contacts were told "we'll let you know when it ends" — a cancelled session
+        # ends it too. Re-cancelling (retry) must not message them again.
+        if was_in_progress and self.contact_notifier is not None:
+            await self.contact_notifier.workout_finished(
+                user_id=user_id,
+                workout_id=workout.id,
+                duration=None,
+                completed_successfully=False,
+            )
 
         if data.idempotency_key:
             response = WorkoutCancelResponse(id=workout.id)

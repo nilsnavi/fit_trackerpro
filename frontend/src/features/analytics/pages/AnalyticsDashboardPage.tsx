@@ -11,14 +11,12 @@ import {
     Gauge,
     HeartPulse,
     Sparkles,
-    Target,
     Timer,
     Trophy,
 } from 'lucide-react'
 import {
     ANALYTICS_STALE_MS,
     useAchievements,
-    useChallenges,
     useWorkoutStats,
     type AnalyticsPagePeriod,
 } from '@/hooks/analytics'
@@ -74,7 +72,6 @@ export default function AnalyticsDashboardPage() {
     const [period, setPeriod] = useState<AnalyticsPagePeriod>('week')
     const workoutStatsQuery = useWorkoutStats(period)
     const achievementsQuery = useAchievements()
-    const challengesQuery = useChallenges()
     const healthQuery = useQuery({
         queryKey: ['health', 'dashboardStats', healthStatsPeriod(period), period],
         queryFn: () => healthApi.getDashboardStats(healthStatsPeriod(period)),
@@ -367,73 +364,6 @@ export default function AnalyticsDashboardPage() {
                             </li>
                         ))}
                     </ul>
-                )}
-            </section>
-
-            <section className="rounded-2xl bg-telegram-secondary-bg p-4">
-                <div className="mb-3 flex items-center gap-2">
-                    <Target className="h-4 w-4 text-primary" />
-                    <h2 className="text-sm font-semibold text-telegram-text">Челленджи</h2>
-                </div>
-                {challengesQuery.isPending ? (
-                    <div className="space-y-2">
-                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
-                        <div className="h-14 animate-pulse rounded-xl bg-telegram-bg" />
-                    </div>
-                ) : challengesQuery.error ? (
-                    <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm">
-                        <p className="text-danger">{getErrorMessage(challengesQuery.error)}</p>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            className="mt-3"
-                            onClick={() => void challengesQuery.refetch()}
-                        >
-                            Повторить
-                        </Button>
-                    </div>
-                ) : (challengesQuery.data?.active.length ?? 0) === 0 &&
-                    (challengesQuery.data?.completed.length ?? 0) === 0 ? (
-                    <SectionEmptyState
-                        icon={Target}
-                        title="Челленджей пока нет"
-                        description="Присоединяйтесь к челленджам — здесь появятся активные и завершённые."
-                    />
-                ) : (
-                    <div className="space-y-4">
-                        <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-telegram-hint">Активные</p>
-                            {(challengesQuery.data?.active.length ?? 0) === 0 ? (
-                                <p className="mt-2 text-xs text-telegram-hint">Нет активных челленджей.</p>
-                            ) : (
-                                <ul className="mt-2 space-y-2">
-                                    {challengesQuery.data!.active.map((c) => (
-                                        <li key={c.id} className="rounded-xl bg-telegram-bg px-3 py-2 text-sm text-telegram-text">
-                                            {c.name}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                        <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-telegram-hint">Завершённые</p>
-                            {(challengesQuery.data?.completed.length ?? 0) === 0 ? (
-                                <p className="mt-2 text-xs text-telegram-hint">Завершённых челленджей пока нет.</p>
-                            ) : (
-                                <ul className="mt-2 space-y-2">
-                                    {challengesQuery.data!.completed.map((c) => (
-                                        <li
-                                            key={c.id}
-                                            className="rounded-xl bg-telegram-bg/80 px-3 py-2 text-sm text-telegram-hint line-through decoration-telegram-hint/60"
-                                        >
-                                            {c.name}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    </div>
                 )}
             </section>
 

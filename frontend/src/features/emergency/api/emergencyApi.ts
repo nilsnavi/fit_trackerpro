@@ -35,6 +35,19 @@ export interface EmergencyContactCreatePayload {
     notify_on_workout_end?: boolean
 }
 
+/** PUT: передаются только изменённые поля; `null` очищает username/телефон. */
+export interface EmergencyContactUpdatePayload {
+    contact_name?: string
+    contact_username?: string | null
+    phone?: string | null
+    relationship_type?: string | null
+    is_active?: boolean
+    notify_on_emergency?: boolean
+    notify_on_workout_start?: boolean
+    notify_on_workout_end?: boolean
+    priority?: number
+}
+
 export interface EmergencyContactLink {
     contact_id: number
     contact_name: string
@@ -83,6 +96,10 @@ export const emergencyApi = {
     },
     createContact(payload: EmergencyContactCreatePayload): Promise<EmergencyContact> {
         return api.post<EmergencyContact>(`${BASE}/contact`, payload)
+    },
+    /** 409 `emergency_contact_conflict` — такой username/телефон уже есть у другого контакта. */
+    updateContact(contactId: number, payload: EmergencyContactUpdatePayload): Promise<EmergencyContact> {
+        return api.put<EmergencyContact>(`${BASE}/contact/${contactId}`, payload)
     },
     deleteContact(contactId: number): Promise<void> {
         return api.delete(`${BASE}/contact/${contactId}`)

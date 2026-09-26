@@ -1,6 +1,6 @@
 import sys
 import xml.etree.ElementTree as ET
-
+from pathlib import PurePosixPath
 
 CRITICAL_PACKAGE_THRESHOLDS = {
     # Security/auth is user-facing critical surface.
@@ -48,6 +48,22 @@ def _find_best_threshold_for_package(package_name: str) -> tuple[str, dict] | No
     return best_key, CRITICAL_PACKAGE_THRESHOLDS[best_key]
 
 
+def _module_name(package_name: str, filename: str | None = None) -> str:
+    package = package_name.strip(".")
+    if package and package != "app" and not package.startswith("app."):
+        package = f"app.{package}"
+    elif not package:
+        package = "app"
+
+    if not filename:
+        return package
+
+    stem = PurePosixPath(filename.replace("\\", "/")).stem
+    if stem == "__init__":
+        return package
+    return f"{package}.{stem}"
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python tools/check_coverage_thresholds.py <coverage.xml>")
@@ -66,15 +82,23 @@ def main() -> int:
     failures: list[str] = []
     checked: list[tuple[str, float, float, int, int]] = []
 
+    candidates: list[tuple[str, ET.Element]] = []
     for pkg in packages:
-        name = pkg.attrib.get("name", "")
-        threshold = _find_best_threshold_for_package(name)
-        if threshold is None:
-            continue
+        package_name = pkg.attrib.get("name", "")
+        candidates.append((_module_name(package_name), pkg))
+        for cls in pkg.findall("./classes/class"):
+            candidates.append((_module_name(package_name, cls.attrib.get("filename")), cls))
 
-        matched_key, limits = threshold
-        line_pct = _pct(pkg.attrib.get("line-rate"))
-        branch_pct = _pct(pkg.attrib.get("branch-rate"))
+    seen: set[str] = set()
+    for name, node in candidates:
+        limits = CRITICAL_PACKAGE_THRESHOLDS.get(name)
+        if limits is None or name in seen:
+            continue
+        seen.add(name)
+
+        matched_key = name
+        line_pct = _pct(node.attrib.get("line-rate"))
+        branch_pct = _pct(node.attrib.get("branch-rate"))
 
         # Don't fail CI on packages with 0% coverage yet.
         # We enforce only where tests already exercise the package.
@@ -93,8 +117,8 @@ def main() -> int:
             )
 
     if not checked:
-        print("No critical packages matched. Nothing to enforce.")
-        return 0
+        print("No critical packages matched. Coverage gate configuration is invalid.")
+        return 2
 
     print("Critical coverage thresholds (minimums):")
     for pkg_name, line_pct, branch_pct, min_lines, min_branches in sorted(checked, key=lambda x: x[0]):

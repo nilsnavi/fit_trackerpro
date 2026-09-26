@@ -45,6 +45,7 @@ jest.mock('@features/profile/hooks/useProfile', () => ({
         updateWeight: jest.fn(),
         getWeightProgress: () => null,
         exportData: jest.fn(),
+        isExporting: false,
         refresh: jest.fn(),
     }),
 }))

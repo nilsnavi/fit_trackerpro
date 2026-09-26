@@ -29,12 +29,15 @@ jobs:
     name: "Stage: pre-deploy validation (${{ inputs.deploy_environment }})"
     runs-on: ubuntu-latest
     environment: ${{ inputs.deploy_environment }}
+    permissions:
+      contents: read
+      packages: read
     env:
       DEPLOY_IMAGE_TAG: ${{ inputs.image_tag }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Validate required secrets and image tag
         env:
@@ -90,6 +93,16 @@ jobs:
           docker compose -f docker-compose.prod.yml config --quiet
           echo "docker-compose.prod.yml renders successfully."
 
+      - name: Confirm immutable application images exist
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker buildx imagetools inspect "ghcr.io/${{ github.repository }}/backend:${{ inputs.image_tag }}" >/dev/null
+          docker buildx imagetools inspect "ghcr.io/${{ github.repository }}/frontend:${{ inputs.image_tag }}" >/dev/null
+          echo "Backend and frontend image manifests exist for the exact deploy tag."
+
       - name: Validate nginx configuration syntax
         run: |
           set -Eeuo pipefail
@@ -115,7 +128,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup SSH
         uses: ./.github/actions/setup-ssh-deploy
@@ -222,7 +235,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup SSH
         uses: ./.github/actions/setup-ssh-deploy
@@ -263,7 +276,7 @@ jobs:
               exit 1
             fi
 
-            if curl -fk https://localhost/health; then
+            if curl -fk https://localhost/api/v1/system/health; then
               echo "Reverse proxy backend health check passed"
             else
               echo "Reverse proxy backend health check failed"
@@ -304,7 +317,8 @@ jobs:
 
           HEALTH_URL="${API_BASE_TRIMMED}/system/health"
           VERSION_URL="${API_BASE_TRIMMED}/system/version"
-          NGINX_HEALTH_URL="${FRONTEND_BASE_URL}/health"
+          NGINX_HEALTH_URL="${FRONTEND_BASE_URL}/api/v1/system/health"
+          SPA_HEALTH_ROUTE_URL="${FRONTEND_BASE_URL}/health"
           FRONTEND_HEALTHZ_URL="${FRONTEND_BASE_URL}/healthz"
           DOMAIN_URL="${API_BASE_TRIMMED}/workouts/templates?page=1&page_size=1"
 
@@ -348,8 +362,13 @@ jobs:
           curl -fsS "${READY_URL}" | jq -e '.checks.postgres == "ok" and .checks.redis == "ok"' >/dev/null
           echo "Readiness JSON validated (status=ready, postgres=ok, redis=ok)"
 
-          smoke_check "nginx→backend health (GET /health)" "${NGINX_HEALTH_URL}" "200"
+          smoke_check "nginx→backend health (GET /api/v1/system/health)" "${NGINX_HEALTH_URL}" "200"
           curl -fsS "${NGINX_HEALTH_URL}" | jq -e '.status == "healthy"' >/dev/null
+
+          # /health is the SPA route «Здоровье»: a hard reload must get the app, not backend JSON.
+          smoke_check "SPA route (GET /health)" "${SPA_HEALTH_ROUTE_URL}" "200"
+          curl -fsS "${SPA_HEALTH_ROUTE_URL}" | grep -q '<div id="root">' \
+            || { echo "::error::/health does not serve the SPA index.html"; exit 1; }
 
           smoke_check "API connectivity (GET /api/v1/system/version)" "${VERSION_URL}" "200"
           curl -fsS "${VERSION_URL}" | jq -e '.version != null' >/dev/null
@@ -372,7 +391,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup SSH
         uses: ./.github/actions/setup-ssh-deploy
@@ -410,7 +429,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup SSH
         uses: ./.github/actions/setup-ssh-deploy
@@ -472,7 +491,7 @@ jobs:
               sleep 5
             done
             docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8000/api/v1/system/version > /dev/null
-            curl -fk https://localhost/health > /dev/null
+            curl -fk https://localhost/api/v1/system/health > /dev/null
             curl -fk https://localhost/healthz > /dev/null
             echo "Rollback completed and health checks passed"
           EOF
