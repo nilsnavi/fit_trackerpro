@@ -1,0 +1,194 @@
+{
+  "source_dataset": "hasaneyldrm/exercises-dataset",
+  "dataset_commit": "7455efae41b330c265e7cd4b78dfa848e7ce5ebd",
+  "dataset_count": 1324,
+  "legacy_rows_preserved": 30,
+  "output_row_count": 1354,
+  "media_mode": "metadata",
+  "media_binaries_in_catalog": false,
+  "names_ru_overridden": 39,
+  "names_ru_generated": 1285,
+  "names_ru_failed": 0,
+  "generated_name_samples": [
+    {
+      "source_id": "0002",
+      "source_name_en": "45° side bend",
+      "name_ru": "Боковые наклоны"
+    },
+    {
+      "source_id": "0003",
+      "source_name_en": "air bike",
+      "name_ru": "Эйрбайк"
+    },
+    {
+      "source_id": "1512",
+      "source_name_en": "all fours squad stretch",
+      "name_ru": "Растяжка для квадрицепсов"
+    },
+    {
+      "source_id": "0006",
+      "source_name_en": "alternate heel touchers",
+      "name_ru": "Касания пяток (попеременный)"
+    },
+    {
+      "source_id": "0007",
+      "source_name_en": "alternate lateral pulldown",
+      "name_ru": "Тяга верхнего блока"
+    },
+    {
+      "source_id": "1368",
+      "source_name_en": "ankle circles",
+      "name_ru": "Круги стопами"
+    },
+    {
+      "source_id": "3293",
+      "source_name_en": "archer pull up",
+      "name_ru": "Подтягивание"
+    },
+    {
+      "source_id": "3294",
+      "source_name_en": "archer push up",
+      "name_ru": "Отжимание"
+    },
+    {
+      "source_id": "2355",
+      "source_name_en": "arm slingers hanging bent knee legs",
+      "name_ru": "Подъём ног в висе"
+    },
+    {
+      "source_id": "2333",
+      "source_name_en": "arm slingers hanging straight legs",
+      "name_ru": "Подъём ног в висе"
+    },
+    {
+      "source_id": "3214",
+      "source_name_en": "arms apart circular toe touch (male)",
+      "name_ru": "Касание носков"
+    },
+    {
+      "source_id": "3204",
+      "source_name_en": "arms overhead full sit-up (male)",
+      "name_ru": "Подъём корпуса"
+    },
+    {
+      "source_id": "0009",
+      "source_name_en": "assisted chest dip (kneeling)",
+      "name_ru": "Отжимание на брусьях"
+    },
+    {
+      "source_id": "0011",
+      "source_name_en": "assisted hanging knee raise",
+      "name_ru": "Подъём с помощью тренажёра"
+    },
+    {
+      "source_id": "0010",
+      "source_name_en": "assisted hanging knee raise with throw down",
+      "name_ru": "Подъём с помощью тренажёра"
+    },
+    {
+      "source_id": "1708",
+      "source_name_en": "assisted lying calves stretch",
+      "name_ru": "Растяжка для икроножных мышц (лёжа)"
+    },
+    {
+      "source_id": "1709",
+      "source_name_en": "assisted lying glutes stretch",
+      "name_ru": "Растяжка для ягодиц (лёжа)"
+    },
+    {
+      "source_id": "1710",
+      "source_name_en": "assisted lying gluteus and piriformis stretch",
+      "name_ru": "Растяжка для ягодиц (лёжа)"
+    },
+    {
+      "source_id": "0012",
+      "source_name_en": "assisted lying leg raise with lateral throw down",
+      "name_ru": "Подъём ног с помощью тренажёра"
+    },
+    {
+      "source_id": "0013",
+      "source_name_en": "assisted lying leg raise with throw down",
+      "name_ru": "Подъём ног с помощью тренажёра"
+    },
+    {
+      "source_id": "0014",
+      "source_name_en": "assisted motion russian twist",
+      "name_ru": "Русские скручивания с помощью тренажёра"
+    },
+    {
+      "source_id": "0015",
+      "source_name_en": "assisted parallel close grip pull-up",
+      "name_ru": "Подтягивание с помощью узким хватом"
+    },
+    {
+      "source_id": "0016",
+      "source_name_en": "assisted prone hamstring",
+      "name_ru": "Упражнение для задней поверхности бедра с помощью тренажёра"
+    },
+    {
+      "source_id": "1713",
+      "source_name_en": "assisted prone lying quads stretch",
+      "name_ru": "Растяжка для квадрицепсов (лёжа)"
+    },
+    {
+      "source_id": "1714",
+      "source_name_en": "assisted prone rectus femoris stretch",
+      "name_ru": "Растяжка для пресса"
+    }
+  ],
+  "unmapped_equipment": {},
+  "unmapped_muscles": {},
+  "description_truncated_count": 0,
+  "category_counts": {
+    "balance": 1,
+    "cardio": 29,
+    "flexibility": 57,
+    "strength": 1237
+  },
+  "equipment_counts": {
+    "barbell": 180,
+    "cable_machine": 167,
+    "dumbbells": 294,
+    "elliptical": 1,
+    "exercise_bike": 1,
+    "foam_roller": 10,
+    "kettlebell": 41,
+    "machine": 114,
+    "medicine_ball": 13,
+    "none": 363,
+    "resistance_bands": 61,
+    "smith_machine": 48,
+    "stability_ball": 31
+  },
+  "muscle_group_counts": {
+    "abductors": 5,
+    "abs": 265,
+    "adductors": 7,
+    "back": 192,
+    "biceps": 345,
+    "calves": 206,
+    "chest": 252,
+    "forearms": 312,
+    "full_body": 29,
+    "glutes": 280,
+    "hamstrings": 317,
+    "hip_flexors": 77,
+    "lats": 87,
+    "lower_back": 90,
+    "obliques": 72,
+    "quadriceps": 205,
+    "shoulders": 591,
+    "traps": 95,
+    "triceps": 409
+  },
+  "slug_collisions": [],
+  "invalid_categories": [],
+  "generated_rows_have_cyrillic_names": true,
+  "description_max_length": 760,
+  "notes": [
+    "English source names are stored only in metadata.aliases/source_name_en.",
+    "Russian instructions are joined into description and retained as metadata.instruction_steps_ru.",
+    "Media URLs are null unless EXERCISES_MEDIA_MODE=local is explicitly selected.",
+    "Legacy rows are preserved; only exds-* rows are managed by the dataset archive policy."
+  ]
+}

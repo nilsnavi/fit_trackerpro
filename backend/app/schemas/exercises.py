@@ -41,7 +41,7 @@ class ExerciseFilterParams(BaseModel):
     search: Optional[str] = Field(
         None,
         max_length=200,
-        description="Search in name and description",
+        description="Search in name, description, and aliases",
     )
     status: ExerciseListStatusFilter = Field(
         default=ExerciseListStatusFilter.ACTIVE,

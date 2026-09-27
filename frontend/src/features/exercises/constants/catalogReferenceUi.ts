@@ -35,7 +35,30 @@ export const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string }[] = [
     { id: 'medicine_ball', label: 'Медбол' },
     { id: 'foam_roller', label: 'Ролик' },
     { id: 'yoga_mat', label: 'Коврик' },
+    { id: 'stability_ball', label: 'Фитбол' },
 ]
+
+export const MUSCLE_LABELS: Record<string, string> = {
+    chest: 'Грудь',
+    back: 'Спина',
+    shoulders: 'Плечи',
+    biceps: 'Бицепс',
+    triceps: 'Трицепс',
+    forearms: 'Предплечья',
+    abs: 'Пресс',
+    obliques: 'Косые мышцы живота',
+    lower_back: 'Поясница',
+    lats: 'Широчайшие',
+    traps: 'Трапеции',
+    quadriceps: 'Квадрицепсы',
+    hamstrings: 'Задняя поверхность бедра',
+    glutes: 'Ягодицы',
+    calves: 'Икры',
+    hip_flexors: 'Сгибатели бедра',
+    adductors: 'Приводящие мышцы',
+    abductors: 'Отводящие мышцы',
+    full_body: 'Всё тело',
+}
 
 export const RISK_OPTIONS: { id: RiskType; label: string }[] = [
     { id: 'shoulder', label: 'Плечи' },

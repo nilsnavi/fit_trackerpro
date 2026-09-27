@@ -35,7 +35,7 @@ test.describe('@mvp-e2e offline sync (реальный API)', () => {
         await page.getByRole('button', { name: 'Силовая', exact: true }).first().click()
         await page.getByRole('button', { name: 'Силовая', exact: true }).nth(1).click()
         // Справочник упражнений на реальном бэке русскоязычный.
-        await page.getByPlaceholder('Поиск упражнений…').fill('Жим')
+        await page.getByPlaceholder('Поиск упражнений…').fill('Жим штанги лежа')
         await page.getByRole('button', { name: /Жим штанги лежа/i }).first().click()
         await expect(page.getByRole('heading', { name: 'Настроить упражнение' })).toBeVisible()
         await page.getByRole('button', { name: 'Добавить в тренировку' }).click()

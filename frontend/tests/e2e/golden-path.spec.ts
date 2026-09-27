@@ -54,8 +54,8 @@ test.describe('@mvp-e2e golden path (реальный API)', () => {
         await page.getByTestId('add-exercise-btn').click()
         const sheet = page.locator('[role="dialog"]').last()
         await expect(sheet).toBeVisible()
-        await sheet.getByPlaceholder('Поиск упражнения...').fill('Жим')
-        const exerciseResult = sheet.getByRole('button', { name: /Жим штанги лежа strength/i }).first()
+        await sheet.getByPlaceholder('Поиск упражнения...').fill('Жим штанги лежа')
+        const exerciseResult = sheet.getByRole('button', { name: /^Жим штанги лежа strength$/i }).first()
         await expect(exerciseResult).toBeVisible({ timeout: 25_000 })
         await exerciseResult.click()
 

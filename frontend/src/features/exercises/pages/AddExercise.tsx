@@ -47,6 +47,7 @@ const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string; icon: string }[]
     { value: 'bench', label: 'Скамья', icon: '🪑' },
     { value: 'cable_machine', label: 'Блочный тренажёр', icon: '🔗' },
     { value: 'machine', label: 'Тренажёр', icon: '⚙️' },
+    { value: 'stability_ball', label: 'Фитбол', icon: '⚪' },
 ];
 
 const MUSCLE_GROUPS: Record<Exclude<ExerciseCategory, 'all'>, string[]> = {

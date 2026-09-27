@@ -23,8 +23,9 @@ export interface ExerciseRiskFlagsApi {
 }
 
 export interface ExerciseApiItem extends Exercise {
-    muscle_groups: string[]
     aliases: string[]
+    attribution?: string | null
+    muscle_groups: string[]
     risk_flags: ExerciseRiskFlagsApi
     media_url: string | null
     status: string
