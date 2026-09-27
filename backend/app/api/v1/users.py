@@ -15,6 +15,7 @@ from app.core.audit import get_client_ip
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.auth import UserProfileResponse, UserProfileUpdate
+from app.schemas.users import UserStatsResponse
 
 protected_users_router = APIRouter()
 
@@ -56,8 +57,8 @@ async def delete_current_user(
 # --- Compatibility endpoints for the current frontend profile screen ---
 
 
-@protected_users_router.get("/stats")
-@protected_users_router.get("/me/stats")
+@protected_users_router.get("/stats", response_model=UserStatsResponse)
+@protected_users_router.get("/me/stats", response_model=UserStatsResponse)
 async def get_user_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),

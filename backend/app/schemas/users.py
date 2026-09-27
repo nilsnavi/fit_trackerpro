@@ -40,3 +40,13 @@ class UserResponse(BaseModel):
     last_name: Optional[str]
     created_at: datetime
     updated_at: datetime
+
+
+class UserStatsResponse(BaseModel):
+    """Profile workout statistics for the most recent 30-day window."""
+
+    active_days: int
+    total_workouts: int
+    current_streak: int
+    longest_streak: int
+    total_duration: int

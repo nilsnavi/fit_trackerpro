@@ -8912,6 +8912,40 @@
         "title": "UserSettingsPatch",
         "type": "object"
       },
+      "UserStatsResponse": {
+        "description": "Profile workout statistics for the most recent 30-day window.",
+        "properties": {
+          "active_days": {
+            "title": "Active Days",
+            "type": "integer"
+          },
+          "current_streak": {
+            "title": "Current Streak",
+            "type": "integer"
+          },
+          "longest_streak": {
+            "title": "Longest Streak",
+            "type": "integer"
+          },
+          "total_duration": {
+            "title": "Total Duration",
+            "type": "integer"
+          },
+          "total_workouts": {
+            "title": "Total Workouts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active_days",
+          "total_workouts",
+          "current_streak",
+          "longest_streak",
+          "total_duration"
+        ],
+        "title": "UserStatsResponse",
+        "type": "object"
+      },
       "UserTheme": {
         "enum": [
           "telegram",
@@ -18538,7 +18572,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/UserStatsResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18563,7 +18599,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/UserStatsResponse"
+                }
               }
             },
             "description": "Successful Response"

@@ -63,12 +63,13 @@ async def test_get_user_stats(authenticated_client: AsyncClient):
     response = await authenticated_client.get("/api/v1/users/me/stats")
     assert response.status_code == 200
     data = response.json()
-    assert "total_workouts" in data
-    assert "total_duration" in data
-    assert "current_streak" in data
-    assert "active_days" in data
-    # WS2-3: калории не считаются — поля в ответе нет, а не нулевая заглушка.
-    assert "total_calories" not in data
+    assert set(data) == {
+        "active_days",
+        "total_workouts",
+        "current_streak",
+        "longest_streak",
+        "total_duration",
+    }
 
 
 async def _seed_workout_history(db_session, user_id: int) -> None:

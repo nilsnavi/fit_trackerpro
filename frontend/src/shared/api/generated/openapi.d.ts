@@ -6162,6 +6162,22 @@ export type components = {
             units?: components["schemas"]["UserUnits"] | null;
         };
         /**
+         * UserStatsResponse
+         * @description Profile workout statistics for the most recent 30-day window.
+         */
+        UserStatsResponse: {
+            /** Active Days */
+            active_days: number;
+            /** Current Streak */
+            current_streak: number;
+            /** Longest Streak */
+            longest_streak: number;
+            /** Total Duration */
+            total_duration: number;
+            /** Total Workouts */
+            total_workouts: number;
+        };
+        /**
          * UserTheme
          * @enum {string}
          */
@@ -11256,7 +11272,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UserStatsResponse"];
                 };
             };
         };
@@ -11276,7 +11292,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UserStatsResponse"];
                 };
             };
         };
