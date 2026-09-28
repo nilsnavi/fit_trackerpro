@@ -10,7 +10,11 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.application.coach_service import CoachInvitationService, invitation_token_hash
+from app.application.coach_service import (
+    CoachInvitationService,
+    CoachRelationshipService,
+    invitation_token_hash,
+)
 from app.domain.coach_client import CoachClient, CoachClientStatus
 from app.domain.coach_invitation import CoachInvitation
 from app.domain.exceptions import (
@@ -212,3 +216,60 @@ async def test_postgres_accept_pair_integrity_error_rolls_back_cleanly(db_sessio
     finally:
         for session in open_sessions:
             await session.close()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_postgres_current_relationship_lookup_ignores_terminal_history(db_session: AsyncSession):
+    from app.schemas.coach import CoachClientUpdate
+
+    coach_id, client_id = await _users(db_session, 819041, 819042)
+    archived = CoachClient(
+        coach_id=coach_id,
+        client_id=client_id,
+        status=CoachClientStatus.ARCHIVED,
+        ended_at=datetime.now(UTC) - timedelta(days=1),
+        archived_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    active = CoachClient(coach_id=coach_id, client_id=client_id, status=CoachClientStatus.ACTIVE)
+    db_session.add_all([archived, active])
+    await db_session.commit()
+    await db_session.refresh(archived)
+    await db_session.refresh(active)
+
+    service = CoachRelationshipService(db_session)
+    detail = await service.get_client(coach_id, client_id)
+    assert detail.status == CoachClientStatus.ACTIVE
+    updated = await service.update_client(
+        coach_id, client_id, CoachClientUpdate(status=CoachClientStatus.PAUSED)
+    )
+    assert updated.status == CoachClientStatus.PAUSED
+
+    await db_session.refresh(archived)
+    await db_session.refresh(active)
+    assert archived.status == CoachClientStatus.ARCHIVED
+    assert active.status == CoachClientStatus.PAUSED
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_postgres_accept_rejects_new_invite_for_paused_current_relationship(db_session: AsyncSession):
+    coach_id, client_id = await _users(db_session, 819051, 819052)
+    paused = CoachClient(coach_id=coach_id, client_id=client_id, status=CoachClientStatus.PAUSED)
+    db_session.add(paused)
+    await db_session.commit()
+    token = "postgres-paused-relationship-token"
+    invitation = await _invitation(db_session, coach_id, token)
+
+    with pytest.raises(CoachClientAlreadyExists):
+        await CoachInvitationService(db_session).accept(client_id, token)
+
+    relationships = list(
+        await db_session.scalars(
+            select(CoachClient).where(CoachClient.coach_id == coach_id, CoachClient.client_id == client_id)
+        )
+    )
+    assert len(relationships) == 1
+    assert relationships[0].status == CoachClientStatus.PAUSED
+    await db_session.refresh(invitation)
+    assert invitation.status == "PENDING"

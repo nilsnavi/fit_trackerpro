@@ -9,7 +9,7 @@ from app.settings import settings
     [
         ("POST", "/api/v1/coach/invitations", POLICY_COACH_INVITATIONS),
         ("GET", "/api/v1/coach/invitations", None),
-        ("GET", "/api/v1/coach/invitations/resolve", None),
+        ("POST", "/api/v1/coach/invitations/resolve", None),
         ("POST", "/api/v1/coach/invitations/accept", None),
         ("DELETE", "/api/v1/coach/invitations/abc", None),
     ],

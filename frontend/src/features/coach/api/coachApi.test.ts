@@ -17,10 +17,10 @@ describe('coachApi', () => {
         expect(api.delete).toHaveBeenCalledWith('/coach/invitations/id-1')
     })
 
-    it('sends invitation token only in the resolve/accept requests', async () => {
+    it('sends invitation token in resolve/accept request bodies, not URLs', async () => {
         const token = 'secret-in-memory-token'
         await coachApi.resolveInvitation(token)
-        expect(api.get).toHaveBeenCalledWith('/coach/invitations/resolve', { token })
+        expect(api.post).toHaveBeenCalledWith('/coach/invitations/resolve', { token })
         await coachApi.acceptInvitation(token)
         expect(api.post).toHaveBeenCalledWith('/coach/invitations/accept', { token })
     })

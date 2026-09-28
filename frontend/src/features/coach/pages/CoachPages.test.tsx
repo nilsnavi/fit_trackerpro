@@ -42,6 +42,34 @@ describe('Coach pages', () => {
         expect(await screen.findByText('Не удалось загрузить клиентов')).toBeInTheDocument()
     })
 
+    it('links current relationships but renders terminal relationships as history rows', async () => {
+        const client = (client_id: number, status: string) => ({
+            client_id,
+            status,
+            permissions: {},
+            started_at: '2026-09-01T00:00:00Z',
+            ended_at: status === 'ACTIVE' || status === 'PAUSED' ? null : '2026-09-10T00:00:00Z',
+            archived_at: status === 'ARCHIVED' ? '2026-09-10T00:00:00Z' : null,
+            created_at: '2026-09-01T00:00:00Z',
+            updated_at: '2026-09-10T00:00:00Z',
+        })
+        jest.mocked(coachApi.listClients).mockResolvedValue([
+            client(21, 'ACTIVE'),
+            client(22, 'PAUSED'),
+            client(23, 'ARCHIVED'),
+            client(24, 'REVOKED'),
+        ] as never)
+
+        renderPage(<CoachClientsPage />)
+
+        expect(await screen.findByRole('link', { name: /Клиент 21/ })).toHaveAttribute('href', '/coach/clients/21')
+        expect(screen.getByRole('link', { name: /Клиент 22/ })).toHaveAttribute('href', '/coach/clients/22')
+        expect(screen.queryByRole('link', { name: /Клиент 23/ })).not.toBeInTheDocument()
+        expect(screen.queryByRole('link', { name: /Клиент 24/ })).not.toBeInTheDocument()
+        expect(screen.getByText('ARCHIVED')).toBeInTheDocument()
+        expect(screen.getByText('REVOKED')).toBeInTheDocument()
+    })
+
     it('removes invitation token from URL before resolve completes', async () => {
         window.history.replaceState({}, '', '/coach/invitations/accept?token=secret-token')
         jest.mocked(coachApi.resolveInvitation).mockResolvedValue({ coach: { display_name: 'Coach', specializations: [] } } as never)

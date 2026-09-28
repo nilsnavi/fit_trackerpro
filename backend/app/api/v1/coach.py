@@ -20,6 +20,7 @@ from app.schemas.coach import (
     CoachInvitationAccept,
     CoachInvitationCreate,
     CoachInvitationCreatedResponse,
+    CoachInvitationResolve,
     CoachInvitationResolveResponse,
     CoachInvitationResponse,
     CoachProfileCreate,
@@ -70,14 +71,13 @@ async def list_invitations(coach: User = Depends(require_coach), db: AsyncSessio
     return await CoachInvitationService(db).list(coach.id)
 
 
-@router.get("/invitations/resolve", response_model=CoachInvitationResolveResponse)
+@router.post("/invitations/resolve", response_model=CoachInvitationResolveResponse)
 async def resolve_invitation(
-    token: str,
+    data: CoachInvitationResolve,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
-    # Invitation tokens are bearer secrets; keep this query parameter out of request logs.
-    return await CoachInvitationService(db).resolve(token)
+    return await CoachInvitationService(db).resolve(data.token)
 
 
 @router.post("/invitations/accept", response_model=CoachClientResponse)

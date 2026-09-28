@@ -79,7 +79,7 @@ async def test_coach_invitation_lifecycle_hashing_and_default_permissions(client
     assert len(stored.token_hash) == 64
     assert stored.expires_at - stored.created_at <= timedelta(days=7, seconds=5)
 
-    resolved = await client.get("/api/v1/coach/invitations/resolve", headers=client_headers, params={"token": token})
+    resolved = await client.post("/api/v1/coach/invitations/resolve", headers=client_headers, json={"token": token})
     assert resolved.status_code == 200, resolved.text
     assert resolved.json()["coach"]["display_name"] == "Coach One"
     assert resolved.json()["permissions"] == DEFAULT_COACH_CLIENT_PERMISSIONS.model_dump()
@@ -132,6 +132,20 @@ async def test_coach_flag_idor_and_archived_relationship_controls(client: AsyncC
     )
     assert relationship is not None and relationship.archived_at is not None
 
+    new_invitation = await client.post("/api/v1/coach/invitations", headers=coach_a_headers, json={})
+    new_accepted = await client.post(
+        "/api/v1/coach/invitations/accept",
+        headers=client_headers,
+        json={"token": new_invitation.json()["token"]},
+    )
+    assert new_accepted.status_code == 200
+    current = await client.get(f"/api/v1/coach/clients/{client_id}", headers=coach_a_headers)
+    assert current.status_code == 200, current.text
+    assert current.json()["status"] == "ACTIVE"
+    history = await client.get("/api/v1/coach/clients", headers=coach_a_headers)
+    assert [row["status"] for row in history.json()].count("ARCHIVED") == 1
+    assert [row["status"] for row in history.json()].count("ACTIVE") == 1
+
 
 @pytest.mark.integration
 async def test_coach_invitation_expired_revoked_and_self_invite(client: AsyncClient, db_session):
@@ -151,7 +165,7 @@ async def test_coach_invitation_expired_revoked_and_self_invite(client: AsyncCli
     invitation = await db_session.get(CoachInvitation, expired_id)
     invitation.expires_at = datetime.now(UTC) - timedelta(seconds=1)
     await db_session.commit()
-    expired_response = await client.get("/api/v1/coach/invitations/resolve", headers=client_headers, params={"token": expired_token})
+    expired_response = await client.post("/api/v1/coach/invitations/resolve", headers=client_headers, json={"token": expired_token})
     assert expired_response.status_code == 410
     await db_session.refresh(invitation)
     assert invitation.status == "EXPIRED"
@@ -160,7 +174,7 @@ async def test_coach_invitation_expired_revoked_and_self_invite(client: AsyncCli
     revoked_id, revoked_token = revoked.json()["id"], revoked.json()["token"]
     revoke_response = await client.delete(f"/api/v1/coach/invitations/{revoked_id}", headers=coach_headers)
     assert revoke_response.status_code == 204
-    revoked_response = await client.get("/api/v1/coach/invitations/resolve", headers=client_headers, params={"token": revoked_token})
+    revoked_response = await client.post("/api/v1/coach/invitations/resolve", headers=client_headers, json={"token": revoked_token})
     assert revoked_response.status_code == 410
 
 
@@ -207,6 +221,23 @@ async def test_coach_profile_security_and_terminal_relationship_status(client: A
         json={"status": "ACTIVE"},
     )
     assert restore.status_code == 404
+
+
+@pytest.mark.integration
+async def test_coach_profile_patch_rejects_null_for_non_nullable_fields(client: AsyncClient, db_session):
+    await _enable_coach(db_session)
+    coach_headers = await _auth_headers(client, 950001, "Coach")
+    await _create_profile(client, coach_headers, "Coach")
+
+    for payload in ({"display_name": None}, {"specializations": None}, {"timezone": None}):
+        response = await client.patch("/api/v1/coach/profile", headers=coach_headers, json=payload)
+        assert response.status_code == 422, (payload, response.text)
+
+    omitted = await client.patch("/api/v1/coach/profile", headers=coach_headers, json={})
+    assert omitted.status_code == 200, omitted.text
+    assert omitted.json()["display_name"] == "Coach"
+    assert omitted.json()["specializations"] == ["strength"]
+    assert omitted.json()["timezone"] == "UTC"
 
 
 def test_coach_audit_action_contract():

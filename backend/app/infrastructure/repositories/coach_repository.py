@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import selectinload
 
 from app.domain.coach_client import CoachClient, CoachClientStatus
@@ -38,7 +38,15 @@ class CoachClientRepository(SQLAlchemyRepository):
         )
         return list(result.scalars())
 
-    async def get_for_coach(self, coach_id: int, client_id: int, *, active_only: bool = False, lock: bool = False) -> CoachClient | None:
+    async def get_for_coach(
+        self,
+        coach_id: int,
+        client_id: int,
+        *,
+        active_only: bool = False,
+        current_only: bool = False,
+        lock: bool = False,
+    ) -> CoachClient | None:
         statement = (
             select(CoachClient)
             .options(selectinload(CoachClient.client))
@@ -46,6 +54,16 @@ class CoachClientRepository(SQLAlchemyRepository):
         )
         if active_only:
             statement = statement.where(CoachClient.status == CoachClientStatus.ACTIVE)
+        elif current_only:
+            statement = (
+                statement.where(CoachClient.status.in_((CoachClientStatus.ACTIVE, CoachClientStatus.PAUSED)))
+                .order_by(
+                    case((CoachClient.status == CoachClientStatus.ACTIVE, 0), else_=1),
+                    CoachClient.created_at.desc(),
+                    CoachClient.id.desc(),
+                )
+                .limit(1)
+            )
         if lock:
             statement = statement.with_for_update()
         return await self.db.scalar(statement)

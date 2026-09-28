@@ -20,7 +20,7 @@ export const coachApi = {
         api.post<CreatedCoachInvitation>(`${root}/invitations`, payload),
     revokeInvitation: (id: string) => api.delete<void>(`${root}/invitations/${encodeURIComponent(id)}`),
     resolveInvitation: (token: string) =>
-        api.get<CoachInvitationResolution>(`${root}/invitations/resolve`, { token }),
+        api.post<CoachInvitationResolution>(`${root}/invitations/resolve`, { token }),
     acceptInvitation: (token: string) => api.post<CoachClient>(`${root}/invitations/accept`, { token }),
     listClients: () => api.get<CoachClient[]>(`${root}/clients`),
     getClient: (clientId: number) => api.get<CoachClientDetail>(`${root}/clients/${clientId}`),

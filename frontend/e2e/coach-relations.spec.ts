@@ -47,6 +47,8 @@ test.describe('Coach Sprint 10.1 mocked frontend flow', () => {
                 return json(method === 'POST' ? 201 : 200, coachProfile)
             }
             if (url.pathname.endsWith('/coach/invitations/resolve')) {
+                expect(method).toBe('POST')
+                expect(request.postDataJSON()).toEqual({ token: 'mock-secret-token-123456789' })
                 return json(200, { invitation_id: 'invite-1', coach: coachProfile, permissions: {}, expires_at: new Date(Date.now() + 86400000).toISOString() })
             }
             if (url.pathname.endsWith('/coach/invitations/accept')) {

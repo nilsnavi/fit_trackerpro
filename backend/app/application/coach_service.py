@@ -188,7 +188,7 @@ class CoachInvitationService:
             if invitation.coach_id == client_id:
                 raise CoachClientAlreadyExists("A coach cannot accept their own invitation")
             relationship = await self.clients.get_for_coach(
-                invitation.coach_id, client_id, active_only=True
+                invitation.coach_id, client_id, current_only=True
             )
             if relationship:
                 raise CoachClientAlreadyExists()
@@ -252,7 +252,7 @@ class CoachRelationshipService:
         return [CoachClientResponse.model_validate(item) for item in await self.clients.list_for_coach(coach_id)]
 
     async def get_client(self, coach_id: int, client_id: int) -> CoachClientDetailResponse:
-        relationship = await self.clients.get_for_coach(coach_id, client_id)
+        relationship = await self.clients.get_for_coach(coach_id, client_id, current_only=True)
         if not relationship or relationship.status in {CoachClientStatus.ARCHIVED, CoachClientStatus.REVOKED}:
             raise CoachClientRelationshipNotFound()
         client = relationship.client
@@ -263,7 +263,7 @@ class CoachRelationshipService:
         )
 
     async def update_client(self, coach_id: int, client_id: int, data: CoachClientUpdate, client_ip: str | None = None) -> CoachClientResponse:
-        relationship = await self.clients.get_for_coach(coach_id, client_id)
+        relationship = await self.clients.get_for_coach(coach_id, client_id, current_only=True)
         if not relationship or relationship.status in {CoachClientStatus.ARCHIVED, CoachClientStatus.REVOKED}:
             raise CoachClientRelationshipNotFound()
         requested_status = data.status

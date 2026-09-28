@@ -2239,6 +2239,21 @@
         "title": "CoachInvitationCreatedResponse",
         "type": "object"
       },
+      "CoachInvitationResolve": {
+        "properties": {
+          "token": {
+            "maxLength": 512,
+            "minLength": 20,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "CoachInvitationResolve",
+        "type": "object"
+      },
       "CoachInvitationResolveResponse": {
         "properties": {
           "coach": {
@@ -2544,17 +2559,10 @@
             "title": "Bio"
           },
           "display_name": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name"
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
           },
           "public_slug": {
             "anyOf": [
@@ -2571,32 +2579,18 @@
             "title": "Public Slug"
           },
           "specializations": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "maxItems": 30,
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Specializations"
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Specializations",
+            "type": "array"
           },
           "timezone": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timezone"
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Timezone",
+            "type": "string"
           }
         },
         "title": "CoachProfileUpdate",
@@ -14330,19 +14324,18 @@
       }
     },
     "/api/v1/coach/invitations/resolve": {
-      "get": {
-        "operationId": "resolve_invitation_api_v1_coach_invitations_resolve_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "token",
-            "required": true,
-            "schema": {
-              "title": "Token",
-              "type": "string"
+      "post": {
+        "operationId": "resolve_invitation_api_v1_coach_invitations_resolve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachInvitationResolve"
+              }
             }
-          }
-        ],
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {

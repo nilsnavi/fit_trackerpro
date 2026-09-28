@@ -578,10 +578,10 @@ export type paths = {
             path?: never;
             cookie?: never;
         };
-        /** Resolve Invitation */
-        get: operations["resolve_invitation_api_v1_coach_invitations_resolve_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Resolve Invitation */
+        post: operations["resolve_invitation_api_v1_coach_invitations_resolve_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3540,6 +3540,11 @@ export type components = {
              */
             token: string;
         };
+        /** CoachInvitationResolve */
+        CoachInvitationResolve: {
+            /** Token */
+            token: string;
+        };
         /** CoachInvitationResolveResponse */
         CoachInvitationResolveResponse: {
             coach: components["schemas"]["CoachProfileResponse"];
@@ -3639,13 +3644,13 @@ export type components = {
             /** Bio */
             bio?: string | null;
             /** Display Name */
-            display_name?: string | null;
+            display_name?: string;
             /** Public Slug */
             public_slug?: string | null;
             /** Specializations */
-            specializations?: string[] | null;
+            specializations?: string[];
             /** Timezone */
-            timezone?: string | null;
+            timezone?: string;
         };
         /**
          * CompletedExercise
@@ -8689,16 +8694,18 @@ export interface operations {
             };
         };
     };
-    resolve_invitation_api_v1_coach_invitations_resolve_get: {
+    resolve_invitation_api_v1_coach_invitations_resolve_post: {
         parameters: {
-            query: {
-                token: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachInvitationResolve"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

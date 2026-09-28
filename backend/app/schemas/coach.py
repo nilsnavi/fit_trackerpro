@@ -30,11 +30,11 @@ class CoachProfileCreate(BaseModel):
 class CoachProfileUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    display_name: str | None = Field(default=None, min_length=1, max_length=255)
+    display_name: str = Field(default=None, min_length=1, max_length=255)
     bio: str | None = Field(default=None, max_length=2000)
-    specializations: list[str] | None = Field(default=None, max_length=30)
+    specializations: list[str] = Field(default=None, max_length=30)
     avatar_url: str | None = Field(default=None, max_length=2048)
-    timezone: str | None = Field(default=None, min_length=1, max_length=64)
+    timezone: str = Field(default=None, min_length=1, max_length=64)
     public_slug: str | None = Field(default=None, min_length=1, max_length=128, pattern=r"^[a-z0-9-]+$")
 
 
@@ -73,6 +73,10 @@ class CoachInvitationResolveResponse(BaseModel):
     coach: CoachProfileResponse
     permissions: CoachClientPermissions = DEFAULT_COACH_CLIENT_PERMISSIONS
     expires_at: datetime
+
+
+class CoachInvitationResolve(BaseModel):
+    token: str = Field(min_length=20, max_length=512)
 
 
 class CoachInvitationAccept(BaseModel):
