@@ -332,6 +332,13 @@ class Settings(BaseSettings):
         int, Field(description="Max requests per window for /api/v1/analytics/*.", ge=1)
     ] = 30
 
+    RATE_LIMIT_COACH_INVITATIONS_WINDOW_SECONDS: Annotated[
+        int, Field(description="Window for creating coach invitations.", ge=1)
+    ] = 60
+    RATE_LIMIT_COACH_INVITATIONS_REQUESTS: Annotated[
+        int, Field(description="Max coach invitations created per window.", ge=1)
+    ] = 10
+
     # --- Optional: logging ---
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "text"
