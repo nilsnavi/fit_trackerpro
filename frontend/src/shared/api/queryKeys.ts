@@ -12,6 +12,14 @@ export const queryKeys = {
         me: ['profile', 'me'] as const,
         stats: ['profile', 'stats'] as const,
     },
+    coach: {
+        root: ['coach'] as const,
+        profile: ['coach', 'profile'] as const,
+        clients: ['coach', 'clients'] as const,
+        client: (clientId: number) => ['coach', 'client', clientId] as const,
+        invitations: ['coach', 'invitations'] as const,
+        invitationResolve: (safeKey: string) => ['coach', 'invitation-resolve', safeKey] as const,
+    },
     achievements: {
         list: (category: AchievementListFilter) => ['achievements', 'list', category] as const,
         user: ['achievements', 'user'] as const,
