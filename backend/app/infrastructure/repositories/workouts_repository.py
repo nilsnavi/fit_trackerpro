@@ -22,6 +22,18 @@ from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
 class WorkoutsRepository(SQLAlchemyRepository):
+    async def get_idempotent_source_workout(
+        self, *, user_id: int, source_type: str, source_id: int, idempotency_key: str
+    ) -> WorkoutLog | None:
+        return await self.db.scalar(
+            select(WorkoutLog).where(
+                WorkoutLog.user_id == user_id,
+                WorkoutLog.source_type == source_type,
+                WorkoutLog.source_id == source_id,
+                WorkoutLog.idempotency_key == idempotency_key,
+            )
+        )
+
     async def get_workout_set(
         self,
         *,

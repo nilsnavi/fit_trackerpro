@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -581,6 +583,9 @@ class WorkoutsService:
         if data.source_type == WorkoutSessionSourceType.PROGRAM_DAY:
             return None, None, None
 
+        if data.source_type == WorkoutSessionSourceType.COACH_PROGRAM:
+            raise WorkoutNotFoundError("Coach program source must be started through the client assignment endpoint")
+
         if data.source_id is None:
             raise WorkoutNotFoundError("Template source not found")
 
@@ -963,11 +968,39 @@ class WorkoutsService:
         user_id: int,
         data: WorkoutSessionCreateRequest,
         client_ip: str | None = None,
+        *,
+        authorized_template: WorkoutTemplate | None = None,
+        source_metadata: dict | None = None,
+        idempotency_key: str | None = None,
     ) -> WorkoutStartResponse:
-        template, source_session, template_id_for_session = await self._resolve_session_start_source(
-            user_id=user_id,
-            data=data,
-        )
+        request_hash = None
+        if idempotency_key is not None:
+            idempotency_key = idempotency_key.strip()
+            if not idempotency_key or len(idempotency_key) > 256:
+                raise WorkoutConflictError("Idempotency-Key must contain 1 to 256 characters")
+            if data.source_id is None:
+                raise WorkoutConflictError("Idempotent workout source requires a source id")
+            request_hash = hashlib.sha256(json.dumps(
+                {"source_type": data.source_type.value, "source_id": data.source_id,
+                 "metadata": source_metadata}, sort_keys=True, separators=(",", ":"),
+            ).encode()).hexdigest()
+            cached = await self.repository.get_idempotent_source_workout(
+                user_id=user_id, source_type=data.source_type.value,
+                source_id=data.source_id, idempotency_key=idempotency_key,
+            )
+            if cached:
+                if cached.idempotency_request_hash != request_hash:
+                    raise WorkoutConflictError("Idempotency key reused with a different program day")
+                return self._workout_start_response(cached)
+        if authorized_template is not None:
+            if data.source_type != WorkoutSessionSourceType.COACH_PROGRAM:
+                raise WorkoutConflictError("Authorized templates are only valid for coach program starts")
+            template, source_session, template_id_for_session = authorized_template, None, None
+        else:
+            template, source_session, template_id_for_session = await self._resolve_session_start_source(
+                user_id=user_id,
+                data=data,
+            )
 
         apply_progression_targets = False
         if template is not None:
@@ -1030,6 +1063,9 @@ class WorkoutsService:
             template_id=template_id_for_session,
             source_type=data.source_type.value,
             source_id=data.source_id,
+            source_metadata=source_metadata,
+            idempotency_key=idempotency_key,
+            idempotency_request_hash=request_hash,
             date=date.today(),
             exercises=initial_exercises,
             session_metrics=compute_session_metrics(initial_exercises, None),
@@ -1040,7 +1076,21 @@ class WorkoutsService:
             status=WorkoutStatus.ACTIVE.value,
             started_at=datetime.now(timezone.utc),
         )
-        workout = await self.repository.create_workout_log(workout)
+        try:
+            workout = await self.repository.create_workout_log(workout)
+        except IntegrityError:
+            if not idempotency_key:
+                raise
+            await self.repository.db.rollback()
+            cached = await self.repository.get_idempotent_source_workout(
+                user_id=user_id, source_type=data.source_type.value,
+                source_id=int(data.source_id), idempotency_key=idempotency_key,
+            )
+            if not cached:
+                raise
+            if cached.idempotency_request_hash != request_hash:
+                raise WorkoutConflictError("Idempotency key reused with a different program day") from None
+            return self._workout_start_response(cached)
         await self.repository.replace_session_snapshot(
             user_id=user_id,
             workout_session_id=workout.id,
@@ -1070,6 +1120,9 @@ class WorkoutsService:
         if self.contact_notifier is not None:
             await self.contact_notifier.workout_started(user_id=user_id, workout_id=workout.id)
 
+        return self._workout_start_response(workout)
+
+    def _workout_start_response(self, workout: WorkoutLog) -> WorkoutStartResponse:
         return WorkoutStartResponse(
             id=workout.id,
             user_id=workout.user_id,

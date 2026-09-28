@@ -2596,6 +2596,613 @@
         "title": "CoachProfileUpdate",
         "type": "object"
       },
+      "CoachProgramAssignmentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "minimum": 1.0,
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "coach_message": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coach Message"
+          },
+          "program_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Id"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          }
+        },
+        "required": [
+          "client_id"
+        ],
+        "title": "CoachProgramAssignmentCreate",
+        "type": "object"
+      },
+      "CoachProgramAssignmentResponse": {
+        "properties": {
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "client_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Message"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "coach_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coach Message"
+          },
+          "coach_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coach Name"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "paused_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused At"
+          },
+          "program": {
+            "$ref": "#/components/schemas/CoachProgramResponse"
+          },
+          "program_id": {
+            "title": "Program Id",
+            "type": "integer"
+          },
+          "program_version": {
+            "title": "Program Version",
+            "type": "integer"
+          },
+          "relationship_id": {
+            "title": "Relationship Id",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachProgramAssignmentStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "client_id",
+          "relationship_id",
+          "program_id",
+          "program_version",
+          "status",
+          "program",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachProgramAssignmentResponse",
+        "type": "object"
+      },
+      "CoachProgramAssignmentStatus": {
+        "enum": [
+          "ACTIVE",
+          "PAUSED",
+          "COMPLETED",
+          "CANCELLED"
+        ],
+        "title": "CoachProgramAssignmentStatus",
+        "type": "string"
+      },
+      "CoachProgramAssignmentStatusUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "client_message": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Message"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachProgramAssignmentStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CoachProgramAssignmentStatusUpdate",
+        "type": "object"
+      },
+      "CoachProgramCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/CoachProgramDayCreate"
+            },
+            "maxItems": 60,
+            "title": "Days",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CoachProgramCreate",
+        "type": "object"
+      },
+      "CoachProgramDayCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "day_number": {
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Day Number",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "workout_template_id": {
+            "minimum": 1.0,
+            "title": "Workout Template Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day_number",
+          "name",
+          "workout_template_id"
+        ],
+        "title": "CoachProgramDayCreate",
+        "type": "object"
+      },
+      "CoachProgramDayResponse": {
+        "properties": {
+          "day_number": {
+            "title": "Day Number",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "template_version": {
+            "title": "Template Version",
+            "type": "integer"
+          },
+          "workout_template_id": {
+            "title": "Workout Template Id",
+            "type": "integer"
+          },
+          "workout_template_name": {
+            "title": "Workout Template Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "day_number",
+          "name",
+          "workout_template_id",
+          "workout_template_name",
+          "template_version",
+          "position"
+        ],
+        "title": "CoachProgramDayResponse",
+        "type": "object"
+      },
+      "CoachProgramDayUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "day_number": {
+            "anyOf": [
+              {
+                "maximum": 60.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Number"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "workout_template_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Template Id"
+          }
+        },
+        "title": "CoachProgramDayUpdate",
+        "type": "object"
+      },
+      "CoachProgramResponse": {
+        "properties": {
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/CoachProgramDayResponse"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachProgramStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "name",
+          "description",
+          "status",
+          "version",
+          "days",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachProgramResponse",
+        "type": "object"
+      },
+      "CoachProgramStatus": {
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "ARCHIVED"
+        ],
+        "title": "CoachProgramStatus",
+        "type": "string"
+      },
+      "CoachProgramUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "CoachProgramUpdate",
+        "type": "object"
+      },
+      "CoachProgramWorkoutStartResponse": {
+        "properties": {
+          "assignment_id": {
+            "title": "Assignment Id",
+            "type": "integer"
+          },
+          "program_day_id": {
+            "title": "Program Day Id",
+            "type": "integer"
+          },
+          "program_id": {
+            "title": "Program Id",
+            "type": "integer"
+          },
+          "program_version": {
+            "title": "Program Version",
+            "type": "integer"
+          },
+          "source_metadata": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Source Metadata",
+            "type": "object"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "workout_session_id": {
+            "title": "Workout Session Id",
+            "type": "integer"
+          },
+          "workout_template_id": {
+            "title": "Workout Template Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "program_id",
+          "program_version",
+          "program_day_id",
+          "workout_template_id",
+          "workout_session_id",
+          "source_type",
+          "source_metadata"
+        ],
+        "title": "CoachProgramWorkoutStartResponse",
+        "type": "object"
+      },
       "CompletedExercise-Input": {
         "description": "Completed exercise data",
         "properties": {
@@ -11259,7 +11866,8 @@
           "system_template",
           "community_template",
           "program_day",
-          "previous_session"
+          "previous_session",
+          "coach_program"
         ],
         "title": "WorkoutSessionSourceType",
         "type": "string"
@@ -14033,6 +14641,207 @@
         ]
       }
     },
+    "/api/v1/client/coach-programs": {
+      "get": {
+        "operationId": "client_programs_api_v1_client_coach_programs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachProgramAssignmentResponse"
+                  },
+                  "title": "Response Client Programs Api V1 Client Coach Programs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Client Programs",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/client/coach-programs/{assignment_id}": {
+      "get": {
+        "operationId": "client_program_api_v1_client_coach_programs__assignment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Client Program",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/client/coach-programs/{assignment_id}/days/{day_id}/start": {
+      "post": {
+        "operationId": "start_client_program_day_api_v1_client_coach_programs__assignment_id__days__day_id__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "day_id",
+            "required": true,
+            "schema": {
+              "title": "Day Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramWorkoutStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Client Program Day",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/assignments/{assignment_id}": {
+      "patch": {
+        "operationId": "patch_assignment_api_v1_coach_assignments__assignment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProgramAssignmentStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Assignment",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
     "/api/v1/coach/clients": {
       "get": {
         "operationId": "list_clients_api_v1_coach_clients_get",
@@ -14198,6 +15007,57 @@
           }
         ],
         "summary": "Patch Client",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/programs": {
+      "get": {
+        "operationId": "list_client_programs_api_v1_coach_clients__client_id__programs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachProgramAssignmentResponse"
+                  },
+                  "title": "Response List Client Programs Api V1 Coach Clients  Client Id  Programs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Client Programs",
         "tags": [
           "Coach"
         ]
@@ -14518,6 +15378,550 @@
           }
         ],
         "summary": "Create Profile",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/programs": {
+      "get": {
+        "operationId": "list_programs_api_v1_coach_programs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachProgramResponse"
+                  },
+                  "title": "Response List Programs Api V1 Coach Programs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Programs",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "create_program_api_v1_coach_programs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProgramCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Program",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/programs/{program_id}": {
+      "delete": {
+        "operationId": "archive_program_api_v1_coach_programs__program_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Program",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "get": {
+        "operationId": "get_program_api_v1_coach_programs__program_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Program",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "patch": {
+        "operationId": "update_program_api_v1_coach_programs__program_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProgramUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Program",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/programs/{program_id}/activate": {
+      "post": {
+        "operationId": "activate_program_api_v1_coach_programs__program_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Activate Program",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/programs/{program_id}/assignments": {
+      "get": {
+        "operationId": "list_program_assignments_api_v1_coach_programs__program_id__assignments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachProgramAssignmentResponse"
+                  },
+                  "title": "Response List Program Assignments Api V1 Coach Programs  Program Id  Assignments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Program Assignments",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "assign_program_nested_api_v1_coach_programs__program_id__assignments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProgramAssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assign Program Nested",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/programs/{program_id}/days": {
+      "post": {
+        "operationId": "create_program_day_api_v1_coach_programs__program_id__days_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProgramDayCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Program Day",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/programs/{program_id}/days/{day_id}": {
+      "delete": {
+        "operationId": "delete_program_day_api_v1_coach_programs__program_id__days__day_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "day_id",
+            "required": true,
+            "schema": {
+              "title": "Day Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Program Day",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "patch": {
+        "operationId": "update_program_day_api_v1_coach_programs__program_id__days__day_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "day_id",
+            "required": true,
+            "schema": {
+              "title": "Day Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProgramDayUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Program Day",
         "tags": [
           "Coach"
         ]

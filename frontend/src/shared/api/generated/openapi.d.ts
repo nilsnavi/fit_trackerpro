@@ -500,6 +500,74 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/coach-programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Client Programs */
+        get: operations["client_programs_api_v1_client_coach_programs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/coach-programs/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Client Program */
+        get: operations["client_program_api_v1_client_coach_programs__assignment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/coach-programs/{assignment_id}/days/{day_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Client Program Day */
+        post: operations["start_client_program_day_api_v1_client_coach_programs__assignment_id__days__day_id__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Assignment */
+        patch: operations["patch_assignment_api_v1_coach_assignments__assignment_id__patch"];
+        trace?: never;
+    };
     "/api/v1/coach/clients": {
         parameters: {
             query?: never;
@@ -534,6 +602,23 @@ export type paths = {
         head?: never;
         /** Patch Client */
         patch: operations["patch_client_api_v1_coach_clients__client_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/coach/clients/{client_id}/programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Client Programs */
+        get: operations["list_client_programs_api_v1_coach_clients__client_id__programs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/coach/invitations": {
@@ -622,6 +707,113 @@ export type paths = {
         head?: never;
         /** Patch Profile */
         patch: operations["patch_profile_api_v1_coach_profile_patch"];
+        trace?: never;
+    };
+    "/api/v1/coach/programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Programs */
+        get: operations["list_programs_api_v1_coach_programs_get"];
+        put?: never;
+        /** Create Program */
+        post: operations["create_program_api_v1_coach_programs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/programs/{program_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Program */
+        get: operations["get_program_api_v1_coach_programs__program_id__get"];
+        put?: never;
+        post?: never;
+        /** Archive Program */
+        delete: operations["archive_program_api_v1_coach_programs__program_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Program */
+        patch: operations["update_program_api_v1_coach_programs__program_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/coach/programs/{program_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate Program */
+        post: operations["activate_program_api_v1_coach_programs__program_id__activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/programs/{program_id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Program Assignments */
+        get: operations["list_program_assignments_api_v1_coach_programs__program_id__assignments_get"];
+        put?: never;
+        /** Assign Program Nested */
+        post: operations["assign_program_nested_api_v1_coach_programs__program_id__assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/programs/{program_id}/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Program Day */
+        post: operations["create_program_day_api_v1_coach_programs__program_id__days_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/programs/{program_id}/days/{day_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Program Day */
+        delete: operations["delete_program_day_api_v1_coach_programs__program_id__days__day_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Program Day */
+        patch: operations["update_program_day_api_v1_coach_programs__program_id__days__day_id__patch"];
         trace?: never;
     };
     "/api/v1/exercises/": {
@@ -3651,6 +3843,184 @@ export type components = {
             specializations?: string[];
             /** Timezone */
             timezone?: string;
+        };
+        /** CoachProgramAssignmentCreate */
+        CoachProgramAssignmentCreate: {
+            /** Client Id */
+            client_id: number;
+            /** Coach Message */
+            coach_message?: string | null;
+            /** Program Id */
+            program_id?: number | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
+        /** CoachProgramAssignmentResponse */
+        CoachProgramAssignmentResponse: {
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            /** Client Id */
+            client_id: number;
+            /** Client Message */
+            client_message?: string | null;
+            /** Coach Id */
+            coach_id: number;
+            /** Coach Message */
+            coach_message?: string | null;
+            /** Coach Name */
+            coach_name?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** End Date */
+            end_date?: string | null;
+            /** Id */
+            id: number;
+            /** Paused At */
+            paused_at?: string | null;
+            program: components["schemas"]["CoachProgramResponse"];
+            /** Program Id */
+            program_id: number;
+            /** Program Version */
+            program_version: number;
+            /** Relationship Id */
+            relationship_id: number;
+            /** Start Date */
+            start_date?: string | null;
+            status: components["schemas"]["CoachProgramAssignmentStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * CoachProgramAssignmentStatus
+         * @enum {string}
+         */
+        CoachProgramAssignmentStatus: "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED";
+        /** CoachProgramAssignmentStatusUpdate */
+        CoachProgramAssignmentStatusUpdate: {
+            /** Client Message */
+            client_message?: string | null;
+            status: components["schemas"]["CoachProgramAssignmentStatus"];
+        };
+        /** CoachProgramCreate */
+        CoachProgramCreate: {
+            /** Days */
+            days?: components["schemas"]["CoachProgramDayCreate"][];
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+        };
+        /** CoachProgramDayCreate */
+        CoachProgramDayCreate: {
+            /** Day Number */
+            day_number: number;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Position */
+            position?: number | null;
+            /** Workout Template Id */
+            workout_template_id: number;
+        };
+        /** CoachProgramDayResponse */
+        CoachProgramDayResponse: {
+            /** Day Number */
+            day_number: number;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Position */
+            position: number;
+            /** Template Version */
+            template_version: number;
+            /** Workout Template Id */
+            workout_template_id: number;
+            /** Workout Template Name */
+            workout_template_name: string;
+        };
+        /** CoachProgramDayUpdate */
+        CoachProgramDayUpdate: {
+            /** Day Number */
+            day_number?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Position */
+            position?: number | null;
+            /** Workout Template Id */
+            workout_template_id?: number | null;
+        };
+        /** CoachProgramResponse */
+        CoachProgramResponse: {
+            /** Coach Id */
+            coach_id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Days */
+            days: components["schemas"]["CoachProgramDayResponse"][];
+            /** Description */
+            description: string | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            status: components["schemas"]["CoachProgramStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * CoachProgramStatus
+         * @enum {string}
+         */
+        CoachProgramStatus: "DRAFT" | "ACTIVE" | "ARCHIVED";
+        /** CoachProgramUpdate */
+        CoachProgramUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** CoachProgramWorkoutStartResponse */
+        CoachProgramWorkoutStartResponse: {
+            /** Assignment Id */
+            assignment_id: number;
+            /** Program Day Id */
+            program_day_id: number;
+            /** Program Id */
+            program_id: number;
+            /** Program Version */
+            program_version: number;
+            /** Source Metadata */
+            source_metadata: {
+                [key: string]: number;
+            };
+            /** Source Type */
+            source_type: string;
+            /** Workout Session Id */
+            workout_session_id: number;
+            /** Workout Template Id */
+            workout_template_id: number;
         };
         /**
          * CompletedExercise
@@ -7223,7 +7593,7 @@ export type components = {
          * WorkoutSessionSourceType
          * @enum {string}
          */
-        WorkoutSessionSourceType: "quick_start" | "personal_template" | "system_template" | "community_template" | "program_day" | "previous_session";
+        WorkoutSessionSourceType: "quick_start" | "personal_template" | "system_template" | "community_template" | "program_day" | "previous_session" | "coach_program";
         /**
          * WorkoutSessionType
          * @enum {string}
@@ -8493,6 +8863,126 @@ export interface operations {
             };
         };
     };
+    client_programs_api_v1_client_coach_programs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramAssignmentResponse"][];
+                };
+            };
+        };
+    };
+    client_program_api_v1_client_coach_programs__assignment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_client_program_day_api_v1_client_coach_programs__assignment_id__days__day_id__start_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                assignment_id: number;
+                day_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramWorkoutStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_assignment_api_v1_coach_assignments__assignment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramAssignmentStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_clients_api_v1_coach_clients_get: {
         parameters: {
             query?: never;
@@ -8595,6 +9085,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoachClientResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_client_programs_api_v1_coach_clients__client_id__programs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramAssignmentResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -8829,6 +9350,354 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoachProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_programs_api_v1_coach_programs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"][];
+                };
+            };
+        };
+    };
+    create_program_api_v1_coach_programs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_program_api_v1_coach_programs__program_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_program_api_v1_coach_programs__program_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_program_api_v1_coach_programs__program_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_program_api_v1_coach_programs__program_id__activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_program_assignments_api_v1_coach_programs__program_id__assignments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramAssignmentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_program_nested_api_v1_coach_programs__program_id__assignments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramAssignmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_program_day_api_v1_coach_programs__program_id__days_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramDayCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_program_day_api_v1_coach_programs__program_id__days__day_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+                day_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_program_day_api_v1_coach_programs__program_id__days__day_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+                day_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramDayUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramResponse"];
                 };
             };
             /** @description Validation Error */

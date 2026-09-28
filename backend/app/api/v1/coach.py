@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.api.deps.coach import require_coach, require_coach_feature
+from app.application.coach_program_service import CoachProgramService
 from app.application.coach_service import (
     CoachIdentityService,
     CoachInvitationService,
@@ -27,8 +28,21 @@ from app.schemas.coach import (
     CoachProfileResponse,
     CoachProfileUpdate,
 )
+from app.schemas.coach_programs import (
+    CoachProgramAssignmentCreate,
+    CoachProgramAssignmentResponse,
+    CoachProgramAssignmentStatusUpdate,
+    CoachProgramCreate,
+    CoachProgramDayCreate,
+    CoachProgramDayUpdate,
+    CoachProgramResponse,
+    CoachProgramStatusUpdate,
+    CoachProgramUpdate,
+    CoachProgramWorkoutStartResponse,
+)
 
 router = APIRouter(dependencies=[Depends(require_coach_feature)])
+client_program_router = APIRouter(dependencies=[Depends(require_coach_feature)])
 
 
 @router.post("/profile", response_model=CoachProfileResponse, status_code=status.HTTP_201_CREATED)
@@ -124,3 +138,94 @@ async def delete_client(
 ):
     await CoachRelationshipService(db).revoke_client(coach.id, client_id, get_client_ip(request))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/programs", response_model=list[CoachProgramResponse])
+async def list_programs(coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).list_programs(coach.id)
+
+
+@router.post("/programs", response_model=CoachProgramResponse, status_code=status.HTTP_201_CREATED)
+async def create_program(data: CoachProgramCreate, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).create_program(coach.id, data)
+
+
+@router.patch("/programs/{program_id}", response_model=CoachProgramResponse)
+async def update_program(program_id: int, data: CoachProgramUpdate, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).update_program(coach.id, program_id, data)
+
+
+@router.get("/programs/{program_id}", response_model=CoachProgramResponse)
+async def get_program(program_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).get_program(coach.id, program_id)
+
+
+@router.post("/programs/{program_id}/days", response_model=CoachProgramResponse, status_code=status.HTTP_201_CREATED)
+async def create_program_day(program_id: int, data: CoachProgramDayCreate, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).create_day(coach.id, program_id, data)
+
+
+@router.patch("/programs/{program_id}/days/{day_id}", response_model=CoachProgramResponse)
+async def update_program_day(program_id: int, day_id: int, data: CoachProgramDayUpdate, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).update_day(coach.id, program_id, day_id, data)
+
+
+@router.delete("/programs/{program_id}/days/{day_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_program_day(program_id: int, day_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    await CoachProgramService(db).delete_day(coach.id, program_id, day_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/programs/{program_id}/activate", response_model=CoachProgramResponse)
+async def activate_program(program_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    from app.domain.coach_program import CoachProgramStatus
+    return await CoachProgramService(db).set_program_status(coach.id, program_id, CoachProgramStatusUpdate(status=CoachProgramStatus.ACTIVE))
+
+
+@router.delete("/programs/{program_id}", response_model=CoachProgramResponse)
+async def archive_program(program_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    from app.domain.coach_program import CoachProgramStatus
+    return await CoachProgramService(db).set_program_status(coach.id, program_id, CoachProgramStatusUpdate(status=CoachProgramStatus.ARCHIVED))
+
+
+@router.post("/programs/{program_id}/assignments", response_model=CoachProgramAssignmentResponse, status_code=status.HTTP_201_CREATED)
+async def assign_program_nested(program_id: int, data: CoachProgramAssignmentCreate, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).assign(coach.id, data.model_copy(update={"program_id": program_id}))
+
+
+@router.get("/programs/{program_id}/assignments", response_model=list[CoachProgramAssignmentResponse])
+async def list_program_assignments(program_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    program = await CoachProgramService(db).get_program(coach.id, program_id)
+    assignments = await CoachProgramService(db).list_assignments(coach_id=coach.id)
+    return [assignment for assignment in assignments if assignment.program_id == program.id]
+
+
+@router.get("/clients/{client_id}/programs", response_model=list[CoachProgramAssignmentResponse])
+async def list_client_programs(client_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).list_client_programs_for_coach(coach.id, client_id)
+
+
+@router.patch("/assignments/{assignment_id}", response_model=CoachProgramAssignmentResponse)
+async def patch_assignment(assignment_id: int, data: CoachProgramAssignmentStatusUpdate, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).update_assignment(coach.id, assignment_id, data)
+
+
+@client_program_router.get("", response_model=list[CoachProgramAssignmentResponse])
+async def client_programs(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).list_assignments(client_id=current_user.id)
+
+
+@client_program_router.get("/{assignment_id}", response_model=CoachProgramAssignmentResponse)
+async def client_program(assignment_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+    return await CoachProgramService(db).get_assignment(assignment_id=assignment_id, client_id=current_user.id)
+
+
+@client_program_router.post("/{assignment_id}/days/{day_id}/start", response_model=CoachProgramWorkoutStartResponse)
+async def start_client_program_day(
+    assignment_id: int,
+    day_id: int,
+    idempotency_key: str = Header(..., alias="Idempotency-Key", min_length=1, max_length=256),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachProgramService(db).start_day(current_user.id, assignment_id, day_id, idempotency_key)
