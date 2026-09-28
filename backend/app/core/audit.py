@@ -32,6 +32,13 @@ ACHIEVEMENT_CLAIM = "achievement.claim"
 CHALLENGE_CREATE = "challenge.create"
 CHALLENGE_JOIN = "challenge.join"
 CHALLENGE_LEAVE = "challenge.leave"
+COACH_PROFILE_CREATE = "coach.profile.created"
+COACH_PROFILE_UPDATE = "coach.profile.updated"
+COACH_INVITATION_CREATE = "coach.invitation.created"
+COACH_INVITATION_ACCEPT = "coach.invitation.accepted"
+COACH_INVITATION_REVOKE = "coach.invitation.revoked"
+COACH_RELATIONSHIP_STATUS_CHANGE = "coach.relationship.status_changed"
+COACH_RELATIONSHIP_CREATE = "coach.relationship.created"
 
 
 def get_client_ip(request: Request | None) -> str | None:

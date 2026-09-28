@@ -14,6 +14,9 @@ from app.domain.base import Base
 if TYPE_CHECKING:
     from .body_measurement import BodyMeasurement
     from .challenge import Challenge
+    from .coach_client import CoachClient
+    from .coach_invitation import CoachInvitation
+    from .coach_profile import CoachProfile
     from .daily_wellness import DailyWellness
     from .emergency_contact import EmergencyContact
     from .exercise import Exercise
@@ -23,6 +26,7 @@ if TYPE_CHECKING:
     from .template_exercise import TemplateExercise
     from .training_load_daily import TrainingLoadDaily
     from .user_achievement import UserAchievement
+    from .user_role import UserRole
     from .water_entry import WaterEntry
     from .water_goal import WaterGoal
     from .water_reminder import WaterReminder
@@ -202,6 +206,19 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+    roles: Mapped[list["UserRole"]] = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+    coach_profile: Mapped[Optional["CoachProfile"]] = relationship(
+        "CoachProfile", back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+    coached_clients: Mapped[list["CoachClient"]] = relationship(
+        "CoachClient", foreign_keys="CoachClient.coach_id", back_populates="coach", passive_deletes=True
+    )
+    client_relationships: Mapped[list["CoachClient"]] = relationship(
+        "CoachClient", foreign_keys="CoachClient.client_id", back_populates="client", passive_deletes=True
+    )
+    coach_invitations: Mapped[list["CoachInvitation"]] = relationship(
+        "CoachInvitation", foreign_keys="CoachInvitation.coach_id", back_populates="coach", passive_deletes=True
     )
 
     __table_args__ = (
