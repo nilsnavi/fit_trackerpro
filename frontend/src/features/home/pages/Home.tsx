@@ -1,4 +1,4 @@
-import { ChevronRight, Clock3, Dumbbell, Layers3, Play, TrendingUp, Zap } from 'lucide-react'
+import { ChevronRight, Clock3, Dumbbell, Layers3, Play, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
@@ -6,7 +6,6 @@ import { useWorkoutHistoryQuery } from '@features/workouts/hooks/useWorkoutHisto
 import { useWorkoutSessionStarter } from '@features/workouts/hooks/useWorkoutSessionStarter'
 import { toWorkoutListItem } from '@features/workouts/lib/workoutListItem'
 import { useCurrentUserQuery } from '@features/profile/hooks/useCurrentUserQuery'
-import { useUserStatsQuery } from '@features/profile/hooks/useUserStatsQuery'
 import { useHomeWorkoutTemplatesQuery } from '@features/home/hooks'
 import { HomeHealthSection } from '@features/home/components'
 import { useWorkoutSessionDraftStore } from '@/state/local'
@@ -30,6 +29,18 @@ function formatDashboardDate(date = new Date()): string {
         day: 'numeric',
         month: 'long',
     }).format(date)
+}
+
+/** Честная относительная дата вместо захардкоженного «Вчера». */
+function formatRelativeDay(dateIso: string): string {
+    const parsed = new Date(dateIso)
+    if (Number.isNaN(parsed.getTime())) return ''
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+    const diffDays = Math.round((startOfDay(new Date()) - startOfDay(parsed)) / 86_400_000)
+    if (diffDays <= 0) return 'Сегодня'
+    if (diffDays === 1) return 'Вчера'
+    if (diffDays < 7) return `${diffDays} дн. назад`
+    return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(parsed)
 }
 
 function getCompletedSetsCount(workout: WorkoutHistoryItem | null): number {
@@ -77,44 +88,6 @@ function EqualizerMark({ className }: { className?: string }) {
     )
 }
 
-function BarbellArt() {
-    return (
-        <div className="pointer-events-none absolute -right-16 top-2 h-36 w-56 overflow-hidden opacity-90" aria-hidden="true">
-            <div className="absolute left-0 top-[68px] h-[3px] w-64 rotate-[-13deg] rounded-full bg-gradient-to-r from-transparent via-slate-500 to-slate-200 shadow-[0_0_18px_rgba(59,130,246,0.35)]" />
-            <div className="absolute right-14 top-5 h-28 w-9 rotate-[-13deg] rounded-full border border-slate-500/50 bg-gradient-to-r from-slate-950 via-slate-800 to-slate-950 shadow-[inset_8px_0_16px_rgba(255,255,255,0.08),0_12px_36px_rgba(0,0,0,0.8)]" />
-            <div className="absolute right-7 top-0 h-32 w-12 rotate-[-13deg] rounded-full border border-slate-400/25 bg-gradient-to-r from-slate-950 via-slate-700 to-black shadow-[inset_9px_0_18px_rgba(255,255,255,0.12),0_18px_34px_rgba(0,0,0,0.86)]" />
-            <div className="absolute right-1 top-9 h-20 w-8 rotate-[-13deg] rounded-full border border-slate-500/30 bg-gradient-to-r from-black via-slate-800 to-black" />
-            <div className="absolute right-8 top-[54px] h-8 w-8 rotate-[-13deg] rounded-full border border-slate-500/40 bg-black/80 shadow-[inset_0_0_0_5px_rgba(15,23,42,0.95)]" />
-            <div className="absolute right-[-30px] top-[64px] h-[5px] w-28 rotate-[-13deg] rounded-full bg-gradient-to-r from-slate-300 to-slate-900" />
-            <div className="absolute left-11 top-[52px] h-16 w-5 rotate-[-13deg] rounded-full border border-slate-500/40 bg-gradient-to-r from-slate-950 via-slate-800 to-black shadow-[0_10px_24px_rgba(0,0,0,0.72)]" />
-            <div className="absolute left-20 top-[42px] h-20 w-7 rotate-[-13deg] rounded-full border border-slate-500/30 bg-gradient-to-r from-slate-950 via-slate-700 to-black shadow-[0_10px_24px_rgba(0,0,0,0.74)]" />
-        </div>
-    )
-}
-
-function StatusBar() {
-    return (
-        <div className="flex h-8 items-center justify-between px-4 text-[15px] font-semibold leading-none text-white">
-            <span>9:41</span>
-            <div className="flex items-center gap-1.5">
-                <span className="flex h-4 items-end gap-[2px]" aria-hidden="true">
-                    <span className="h-1.5 w-[3px] rounded-full bg-white" />
-                    <span className="h-2.5 w-[3px] rounded-full bg-white" />
-                    <span className="h-3.5 w-[3px] rounded-full bg-white" />
-                    <span className="h-4 w-[3px] rounded-full bg-white" />
-                </span>
-                <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M4 9.6a12.2 12.2 0 0 1 16 0M7.4 13a7 7 0 0 1 9.2 0M10.3 16.1a2.8 2.8 0 0 1 3.4 0" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
-                </svg>
-                <span className="relative h-[12px] w-[24px] rounded-[4px] border border-white/80" aria-hidden="true">
-                    <span className="absolute -right-[3px] top-[3px] h-[5px] w-[2px] rounded-r bg-white/80" />
-                    <span className="absolute inset-[2px] rounded-[2px] bg-white" />
-                </span>
-            </div>
-        </div>
-    )
-}
-
 const fallbackTemplates = [
     { id: 'fallback-upper', name: 'Верх тела', exerciseCount: 8, minutes: 45, icon: StrengthMark },
     { id: 'fallback-legs', name: 'Ноги', exerciseCount: 7, minutes: 50, icon: LegsMark },
@@ -144,34 +117,21 @@ function MiniTemplateCard({
             type="button"
             onClick={() => onClick(template.id)}
             className={cn(
-                'h-[148px] min-w-[113px] rounded-[12px] border border-[#2a3442] bg-gradient-to-br from-[#141b22] via-[#0d1116] to-[#07090d] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition active:scale-[0.98]',
+                'h-[132px] min-w-[113px] rounded-[12px] border border-line-strong bg-gradient-to-br from-panel-inset2 via-void-panel2 to-void-deeper p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition active:scale-[0.98]',
                 isCustom
                     ? 'border-dashed border-white/15 bg-transparent'
                     : '',
             )}
         >
-            <span className="flex h-[42px] w-[42px] items-center justify-center rounded-[10px] border border-[#263241] bg-[#121b24] text-[#168cff] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_6px_18px_rgba(0,0,0,0.35)]">
+            <span className="flex h-[42px] w-[42px] items-center justify-center rounded-[10px] border border-line-midlow2 bg-panel-inset2 text-azure-solid shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_6px_18px_rgba(0,0,0,0.35)]">
                 <Icon className="h-7 w-7" />
             </span>
             <span className="mt-4 block truncate text-[15px] font-semibold leading-[18px] text-white">
                 {template.name}
-            </span>
-            <span className="mt-1 block text-[12px] font-medium leading-4 text-[#818891]">
+            </span>            <span className="mt-1 block text-[12px] font-medium leading-4 text-ink-fainter">
                 {isCustom ? 'Новый' : `${template.exerciseCount} упражнений`}
-            </span>
-            <span className="block text-[12px] font-medium leading-4 text-[#818891]">
+            </span>            <span className="block text-[12px] font-medium leading-4 text-ink-fainter">
                 {minutes} мин
-            </span>
-            <span className="mt-4 grid grid-cols-6 gap-1">
-                {Array.from({ length: 6 }).map((_, index) => (
-                    <span
-                        key={index}
-                        className={cn(
-                            'h-[3px] rounded-full',
-                            index < Math.min(4, fallbackIndex + 3) ? 'bg-[#168cff]' : 'bg-[#3b4149]',
-                        )}
-                    />
-                ))}
             </span>
         </button>
     )
@@ -181,7 +141,6 @@ export function Home() {
     const { hapticFeedback } = useTelegramWebApp()
     const navigate = useNavigate()
     const { data: profile } = useCurrentUserQuery()
-    const { data: userStats } = useUserStatsQuery()
     const { templates, data: templatesData, isPending: templatesLoading } = useHomeWorkoutTemplatesQuery()
     const { startWorkoutSession, isStartingSession } = useWorkoutSessionStarter()
     const activeWorkoutId = useWorkoutSessionDraftStore((s) => s.workoutId)
@@ -216,7 +175,6 @@ export function Home() {
     )
 
     const userName = profile?.first_name || profile?.username || 'Атлет'
-    const workoutsCount = userStats?.total_workouts ?? 0
     const templateCards = regularTemplates.length > 0 ? regularTemplates : fallbackTemplates
 
     const handleRepeatWorkout = async () => {
@@ -276,14 +234,13 @@ export function Home() {
                 paddingBottom: 'env(safe-area-inset-bottom)',
             }}
         >
-            <div className="mx-auto flex min-h-dvh w-full max-w-[464px] flex-col px-7 pb-8 pt-[70px]">
-                <StatusBar />
+            <div className="mx-auto flex min-h-dvh w-full max-w-[464px] flex-col px-7 pb-8 pt-[38px]">
                 <header className="flex items-start justify-between gap-4 pb-[22px] pt-[18px]">
                     <div className="min-w-0">
                         <p className="truncate text-[27px] font-bold leading-8 tracking-normal text-white">
                             Привет, {userName}
                         </p>
-                        <p className="mt-1 text-[17px] font-medium leading-5 text-[#8b8f98]">
+                        <p className="mt-1 text-[17px] font-medium leading-5 text-ink-dim">
                             {formatDashboardDate()}
                         </p>
                     </div>
@@ -294,21 +251,20 @@ export function Home() {
                                 hapticFeedback({ type: 'selection' })
                                 navigate(`/workouts/active/${activeWorkoutId}`)
                             }}
-                            className="min-h-10 rounded-[14px] border border-[#168cff]/40 bg-[#168cff]/15 px-4 text-sm font-semibold text-[#168cff] active:scale-[0.98]"
+                            className="min-h-10 rounded-[14px] border border-azure-solid/40 bg-azure-solid/15 px-4 text-sm font-semibold text-azure-solid active:scale-[0.98]"
                         >
                             Активна
                         </button>
                     ) : null}
                 </header>
 
-                <section className="relative overflow-hidden rounded-[20px] border border-[#202734] bg-gradient-to-br from-[#0d1118] via-[#05070a] to-[#030405] p-[18px] shadow-[0_18px_50px_rgba(0,0,0,0.55)]">
-                    <BarbellArt />
+                <section className="relative overflow-hidden rounded-[20px] border border-line-mid bg-gradient-to-br from-void-panel via-void-deepest to-void-pitch p-[18px] shadow-[0_18px_50px_rgba(0,0,0,0.55)]">
                     <div className="relative z-10 min-h-[184px]">
                         <div className="flex items-center gap-3">
-                            <span className="flex h-[42px] w-[42px] items-center justify-center rounded-[10px] border border-[#213046] bg-[#111b27] text-[#168cff] shadow-[0_8px_20px_rgba(0,0,0,0.45)]">
+                            <span className="flex h-[42px] w-[42px] items-center justify-center rounded-[10px] border border-line-soft2 bg-panel-inset text-azure-solid shadow-[0_8px_20px_rgba(0,0,0,0.45)]">
                                 <EqualizerMark className="h-7 w-7" />
                             </span>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#737984]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-ghost">
                                 Последняя тренировка
                             </p>
                         </div>
@@ -316,28 +272,28 @@ export function Home() {
                             <h1 className="truncate text-[26px] font-bold leading-8 tracking-normal text-white">
                                 {lastWorkout?.title ?? 'Нет тренировок'}
                             </h1>
-                            <p className="mt-1 text-[15px] font-semibold leading-5 text-[#8b8f98]">
-                                {lastWorkout ? 'Вчера' : 'Сегодня'}
+                            <p className="mt-1 text-[15px] font-semibold leading-5 text-ink-dim">
+                                {lastWorkoutRaw ? formatRelativeDay(lastWorkoutRaw.date) : 'Пока пусто'}
                             </p>
                         </div>
 
                         <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-4">
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-2">
-                                    <Clock3 className="h-[22px] w-[22px] text-[#168cff]" strokeWidth={2.2} />
+                                    <Clock3 className="h-[22px] w-[22px] text-azure-solid" strokeWidth={2.2} />
                                     <div>
                                         <p className="text-[20px] font-bold leading-6 text-white">
                                             {lastWorkout?.duration ?? 0} <span className="text-[14px] font-bold">мин</span>
                                         </p>
-                                        <p className="text-[11px] font-medium leading-4 text-[#858b94]">Длительность</p>
+                                        <p className="text-[11px] font-medium leading-4 text-ink-faint">Длительность</p>
                                     </div>
                                 </div>
-                                <div className="h-[32px] w-px bg-[#2c333d]" />
+                                <div className="h-[32px] w-px bg-line-soft" />
                                 <div className="flex items-center gap-2">
-                                    <Layers3 className="h-[22px] w-[22px] text-[#168cff]" strokeWidth={2.2} />
+                                    <Layers3 className="h-[22px] w-[22px] text-azure-solid" strokeWidth={2.2} />
                                     <div>
                                         <p className="text-[20px] font-bold leading-6 text-white">{completedSets}</p>
-                                        <p className="text-[11px] font-medium leading-4 text-[#858b94]">подходов</p>
+                                        <p className="text-[11px] font-medium leading-4 text-ink-faint">подходов</p>
                                     </div>
                                 </div>
                             </div>
@@ -345,7 +301,7 @@ export function Home() {
                                 type="button"
                                 onClick={() => void handleRepeatWorkout()}
                                 disabled={!lastWorkoutRaw || isStartingSession}
-                                className="mb-1 flex h-[42px] shrink-0 items-center rounded-[10px] border border-[#1e72bd] bg-[#0c1724]/80 px-[18px] text-[14px] font-bold text-[#168cff] transition active:scale-[0.98] disabled:border-white/10 disabled:text-white/35"
+                                className="mb-1 flex h-[42px] shrink-0 items-center rounded-[10px] border border-azure-border bg-void-deep/80 px-[18px] text-[14px] font-bold text-azure-solid transition active:scale-[0.98] disabled:border-white/10 disabled:text-white/35"
                             >
                                 Повторить
                             </button>
@@ -360,7 +316,7 @@ export function Home() {
                         setIsStartSheetOpen(true)
                     }}
                     disabled={isStartingSession}
-                    className="mt-[20px] flex min-h-[75px] w-full items-center justify-center rounded-[12px] bg-gradient-to-br from-[#1da0ff] to-[#006be8] text-left text-white shadow-[0_18px_36px_rgba(0,111,255,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] transition active:scale-[0.985] disabled:opacity-60"
+                    className="mt-[20px] flex min-h-[75px] w-full items-center justify-center rounded-[12px] bg-gradient-to-br from-azure-bright to-azure-deep text-left text-white shadow-[0_18px_36px_rgba(0,111,255,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] transition active:scale-[0.985] disabled:opacity-60"
                 >
                     <span className="flex items-center gap-4 text-[20px] font-bold leading-6">
                         <Play className="h-8 w-8" fill="currentColor" strokeWidth={0} />
@@ -368,7 +324,7 @@ export function Home() {
                     </span>
                 </button>
 
-                <section className="mt-[20px] rounded-[12px] border border-[#171e28] bg-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]">
+                <section className="mt-[20px] rounded-[12px] border border-line-low bg-void-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]">
                     <div className="mb-[14px] flex items-center justify-between">
                         <h2 className="text-[17px] font-bold leading-5 tracking-normal text-white">Мои шаблоны</h2>
                         <button
@@ -377,7 +333,7 @@ export function Home() {
                                 hapticFeedback({ type: 'selection' })
                                 navigate('/workouts/templates')
                             }}
-                            className="flex min-h-8 items-center gap-1 rounded-[8px] px-1 text-[13px] font-semibold text-[#168cff] active:bg-white/5"
+                            className="flex min-h-8 items-center gap-1 rounded-[8px] px-1 text-[13px] font-semibold text-azure-solid active:bg-white/5"
                         >
                             Все
                             <ChevronRight className="h-4 w-4" />
@@ -388,7 +344,7 @@ export function Home() {
                             Array.from({ length: 3 }).map((_, index) => (
                                 <div
                                     key={index}
-                                    className="h-[148px] animate-pulse rounded-[12px] border border-[#2a3442] bg-[#111821]"
+                                    className="h-[132px] animate-pulse rounded-[12px] border border-line-strong bg-panel-card2"
                                 />
                             ))
                         ) : (
@@ -415,52 +371,7 @@ export function Home() {
 
                 <HomeHealthSection />
 
-                <section className="mt-[12px] rounded-[12px] border border-[#171e28] bg-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-[17px] font-bold leading-5 text-white">Прогресс</h2>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                hapticFeedback({ type: 'selection' })
-                                navigate('/progress')
-                            }}
-                            className="flex min-h-8 items-center gap-1 rounded-[8px] px-1 text-[13px] font-semibold text-[#168cff] active:bg-white/5"
-                        >
-                            Подробнее
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
-                    </div>
-                    <div className="mt-[14px] grid min-h-[109px] grid-cols-[1fr_auto_1fr] items-center rounded-[10px] border border-[#26313e] bg-gradient-to-br from-[#111820] via-[#070a0e] to-[#050608] px-4">
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border border-[#263241] bg-[#121b24] text-[#168cff]">
-                                <TrendingUp className="h-6 w-6" />
-                            </span>
-                            <div>
-                                <p className="text-[28px] font-bold leading-8 text-white">{workoutsCount}</p>
-                                <p className="text-[13px] font-medium leading-4 text-[#8d939c]">тренировок</p>
-                                <p className="mt-1 text-[11px] font-medium leading-4 text-[#6e747d]">за последние 4 недели</p>
-                            </div>
-                        </div>
-                        <div className="mx-4 h-[46px] w-px bg-[#252d37]" />
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border border-[#263241] bg-[#121b24] text-[#168cff]">
-                                <TrendingUp className="h-6 w-6" />
-                            </span>
-                            <div>
-                                <p className="text-[28px] font-bold leading-8 text-white">+8%</p>
-                                <p className="text-[13px] font-medium leading-4 text-[#8d939c]">объем</p>
-                                <p className="mt-1 text-[11px] font-medium leading-4 text-[#6e747d]">
-                                    по сравнению с прошл. 4 нед.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
                 <EmergencyButton className="mt-[12px]" />
-
-                <div className="mt-auto flex justify-center pt-8">
-                    <div className="h-[5px] w-[155px] rounded-full bg-white" />
-                </div>
             </div>
 
             <StartWorkoutSheet

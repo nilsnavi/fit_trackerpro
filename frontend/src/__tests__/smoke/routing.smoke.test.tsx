@@ -45,10 +45,6 @@ jest.mock('@features/analytics/pages/AnalyticsDashboardPage', () => {
     const React = require('react')
     return { default: () => React.createElement('div', null, 'Analytics dashboard') }
 })
-jest.mock('@features/analytics/pages/ProgressOverviewPage', () => {
-    const React = require('react')
-    return { default: () => React.createElement('div', null, 'Progress overview') }
-})
 jest.mock('@features/analytics/pages/ExerciseProgressPage', () => {
     const React = require('react')
     return { default: () => React.createElement('div', null, 'Exercise progress') }
@@ -186,6 +182,10 @@ describe('smoke: app routing', () => {
         '/progress/exercises',
         '/progress/recovery',
         '/health',
+        '/health/water',
+        '/health/glucose',
+        '/health/wellness',
+        '/health/measurements',
         '/profile',
         '/login',
         '/exercises/add',

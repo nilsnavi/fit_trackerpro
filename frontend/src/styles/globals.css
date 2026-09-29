@@ -10,10 +10,21 @@
     /* App shell (Telegram WebApp safe areas + tab bar) */
     --app-shell-header-inner-h: 3.25rem;
     --app-shell-nav-h: 4rem;
-    --active-workout-banner-h: 0px;
-
-    /* Border Radius */
+    --active-workout-banner-h: 0px;    /* Border Radius */
     --radius: 0.75rem;
+
+    /* Emergency block (inline JS colors: iOS red, no alpha — can't go through Tailwind opacity) */
+    --emergency-btn: #ff3b30;
+    --emergency-danger: #ff453a;
+    --emergency-panel: #1b0f11;
+    --emergency-line: #3a1a1e;
+    --emergency-line-soft: #3f2024;
+
+    /* Chart theme (recharts/SVG accept color strings only — see shared/lib/chartTheme.ts) */
+    --chart-grid-color: #374151;
+    --chart-tick-color: #9ca3af;
+    --chart-primary-color: #2481cc;
+    --chart-success-color: #22c55e;
 
     /* Primary Color Scale (Blue) */
     --primary: 217 91% 60%;

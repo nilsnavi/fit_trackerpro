@@ -300,7 +300,7 @@ function TargetRow({
                 >
                     <Check className="h-3.5 w-3.5" />
                 </button>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#38BDF8]/15 text-[#7DD3FC]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-azure-light/15 text-azure-light">
                     <Target className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -308,7 +308,7 @@ function TargetRow({
                         <span className="truncate text-base font-black text-telegram-text">
                             {name}
                         </span>
-                        <span className="text-sm font-black tabular-nums text-[#7DD3FC]">
+                        <span className="text-sm font-black tabular-nums text-azure-light">
                             {formatTargetValue(value, unit)}
                         </span>
                     </div>
@@ -333,7 +333,7 @@ function TargetRow({
                             data-testid="progression-target-state"
                             className={cn(
                                 'text-xs font-bold',
-                                declined ? 'text-warning' : 'text-[#7DD3FC]',
+                                declined ? 'text-warning' : 'text-azure-light',
                             )}
                         >
                             {declined
@@ -379,7 +379,7 @@ function TargetRow({
                             aria-label={`Изменить цель: ${name}`}
                             disabled={item.id == null}
                             onClick={onEdit}
-                            className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                            className="mt-2 flex items-center gap-1.5 text-xs font-bold text-azure-light disabled:opacity-50"
                         >
                             <Pencil className="h-3.5 w-3.5" />
                             Изменить значение и политику
@@ -439,7 +439,7 @@ function BulkToolbar({
                     type="button"
                     data-testid="progression-targets-select-all"
                     onClick={onToggleAll}
-                    className="text-xs font-bold text-[#7DD3FC]"
+                    className="text-xs font-bold text-azure-light"
                 >
                     {allSelected ? 'Снять выделение' : 'Выбрать все'}
                 </button>
@@ -587,7 +587,7 @@ function UndoSweepsPanel({
                         data-testid="progression-undo-sweeps-restore-all"
                         disabled={isPending}
                         onClick={onUndoAll}
-                        className="flex items-center gap-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                        className="flex items-center gap-1.5 text-xs font-bold text-azure-light disabled:opacity-50"
                     >
                         {undoing?.kind === 'chain' ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -624,7 +624,7 @@ function UndoSweepsPanel({
                             }
                             disabled={isPending}
                             onClick={() => onUndo(row)}
-                            className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-white/[0.08] px-2.5 py-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                            className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-white/[0.08] px-2.5 py-1.5 text-xs font-bold text-azure-light disabled:opacity-50"
                         >
                             {undoing?.kind === 'sweep' && undoing.sweepId === row.sweepId ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -677,7 +677,7 @@ function BulkOutcomeNotice({
                     type="button"
                     data-testid="progression-bulk-outcome-dismiss"
                     onClick={onDismiss}
-                    className="text-xs font-bold text-[#7DD3FC]"
+                    className="text-xs font-bold text-azure-light"
                 >
                     Понятно
                 </button>

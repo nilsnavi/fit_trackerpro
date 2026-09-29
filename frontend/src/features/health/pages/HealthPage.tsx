@@ -1,119 +1,84 @@
-/**
- * Экран здоровья (WS2-1).
- *
- * Раньше здесь были мок-значения (вес, шаги, пульс, калории) и нарисованный
- * «график» — этих данных нет ни в API, ни в интеграциях. Теперь экран собран
- * из реальных блоков: вода, глюкоза, самочувствие/сон и замеры тела.
- *
- * Блоки ввода (трекеры) подгружаются отдельными чанками: каждый из них большой
- * и нужен не всем, а бюджет асинхронного маршрута — 45 КиБ на чанк.
- */
+/** Compact daily dashboard for the health feature. */
 import { Suspense, lazy, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Activity, Droplets, Moon, Ruler } from 'lucide-react'
-import { BodyMeasurementsSection } from '@features/health/components/BodyMeasurementsSection'
+import { useNavigate } from 'react-router-dom'
+import { ChevronRight, Ruler } from 'lucide-react'
+import { cn } from '@shared/lib/cn'
 
-const WaterBlock = lazy(() =>
-    import('@features/health/components/WaterTracker').then((m) => ({ default: m.WaterTracker })),
+const WaterCard = lazy(() =>
+    import('@features/health/components/WaterTracker').then((m) => ({ default: m.WaterCompactWidget })),
 )
-const GlucoseBlock = lazy(() =>
-    import('@features/health/components/GlucoseTracker').then((m) => ({ default: m.GlucoseTracker })),
+const GlucoseCard = lazy(() =>
+    import('@features/health/components/GlucoseTracker').then((m) => ({ default: m.GlucoseCompactWidget })),
 )
-const WellnessBlock = lazy(() =>
+const WellnessCard = lazy(() =>
     import('@features/health/components/WellnessCheckin').then((m) => ({
-        default: m.WellnessCheckin,
+        default: m.WellnessCompactWidget,
     })),
 )
 
-function BlockSkeleton({ testId }: { testId: string }) {
-    return (
-        <div
-            className="h-24 animate-pulse rounded-2xl bg-gray-100 dark:bg-neutral-800"
-            data-testid={testId}
-        />
-    )
+function CardSkeleton() {
+    return <div className="h-36 animate-pulse rounded-2xl bg-gray-100 dark:bg-neutral-800" />
 }
 
-function BlockHeading({
-    icon,
+function DashboardEntry({
     title,
-    hint,
-    action,
+    description,
+    icon,
+    onClick,
 }: {
-    icon: ReactNode
     title: string
-    hint: string
-    action?: ReactNode
+    description: string
+    icon: ReactNode
+    onClick: () => void
 }) {
     return (
-        <div className="flex items-start justify-between gap-3">
-            <div>
-                <h2 className="flex items-center gap-2 text-sm font-semibold text-telegram-text">
-                    {icon}
-                    {title}
-                </h2>
-                <p className="mt-1 text-xs text-telegram-hint">{hint}</p>
-            </div>
-            {action}
-        </div>
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+                'col-span-2 flex w-full items-center gap-3 rounded-2xl bg-telegram-secondary-bg p-4 text-left',
+                'transition-transform active:scale-[0.98] sm:col-span-1',
+            )}
+        >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-telegram-bg">
+                {icon}
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-telegram-text">{title}</span>
+                <span className="mt-1 block text-xs text-telegram-hint">{description}</span>
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-telegram-hint" />
+        </button>
     )
 }
 
 export function HealthPage() {
+    const navigate = useNavigate()
+
     return (
-        <div className="space-y-6 p-4">
+        <div className="space-y-5 p-4">
             <div>
-                <h1 className="text-lg font-semibold text-telegram-text">Здоровье</h1>
-                <p className="text-sm text-telegram-hint">
-                    Данные, которые вы ведёте сами: вода, глюкоза, самочувствие и замеры тела.
-                </p>
+                <p className="text-sm font-medium text-primary">Сегодня</p>
+                <h1 className="mt-1 text-xl font-semibold text-telegram-text">Здоровье</h1>
+                <p className="mt-1 text-sm text-telegram-hint">Быстрые отметки и актуальные показатели.</p>
             </div>
 
-            <section className="space-y-3" data-testid="health-water-section">
-                <BlockHeading
-                    icon={<Droplets className="h-4 w-4 text-blue-500" />}
-                    title="Вода"
-                    hint="Дневная цель и порции — считаются по вашим записям"
-                />
-                <Suspense fallback={<BlockSkeleton testId="water-block-loading" />}>
-                    <WaterBlock />
+            <section aria-label="Ежедневные показатели" className="grid grid-cols-2 gap-3">
+                <Suspense fallback={<CardSkeleton />}>
+                    <WaterCard onClick={() => navigate('/health/water')} className="col-span-1 w-full" />
                 </Suspense>
-            </section>
-
-            <section className="space-y-3" data-testid="health-glucose-section">
-                <BlockHeading
-                    icon={<Activity className="h-4 w-4 text-purple-500" />}
-                    title="Глюкоза"
-                    hint="Замеры и клинический статус по вашим значениям"
-                />
-                <Suspense fallback={<BlockSkeleton testId="glucose-block-loading" />}>
-                    <GlucoseBlock />
+                <Suspense fallback={<CardSkeleton />}>
+                    <GlucoseCard onClick={() => navigate('/health/glucose')} className="col-span-1 w-full" />
                 </Suspense>
-            </section>
-
-            <section className="space-y-3" data-testid="health-wellness-section">
-                <BlockHeading
-                    icon={<Moon className="h-4 w-4 text-indigo-500" />}
-                    title="Самочувствие и сон"
-                    hint="Утренняя отметка: сон, энергия, зоны боли"
-                />
-                <Suspense fallback={<BlockSkeleton testId="wellness-block-loading" />}>
-                    <WellnessBlock />
+                <Suspense fallback={<CardSkeleton />}>
+                    <WellnessCard onClick={() => navigate('/health/wellness')} className="col-span-1 w-full" />
                 </Suspense>
-            </section>
-
-            <section className="space-y-3" data-testid="health-measurements-section">
-                <BlockHeading
-                    icon={<Ruler className="h-4 w-4 text-emerald-500" />}
+                <DashboardEntry
                     title="Замеры тела"
-                    hint="Обхваты в сантиметрах и динамика по каждому замеру"
-                    action={
-                        <Link to="/profile" className="text-sm font-medium text-primary">
-                            Добавить
-                        </Link>
-                    }
+                    description="Обхваты и динамика"
+                    icon={<Ruler className="h-5 w-5 text-emerald-500" />}
+                    onClick={() => navigate('/health/measurements')}
                 />
-                <BodyMeasurementsSection />
             </section>
         </div>
     )

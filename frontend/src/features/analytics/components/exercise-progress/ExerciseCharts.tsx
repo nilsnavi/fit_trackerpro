@@ -13,6 +13,13 @@ import {
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { cn } from '@shared/lib/cn'
+import {
+    CHART_AXIS_TICK,
+    CHART_GRID_COLOR,
+    CHART_PRIMARY_COLOR,
+    CHART_SUCCESS_COLOR,
+    CHART_SUCCESS_GRADIENT,
+} from '@shared/lib/chartTheme'
 
 function WeightTooltip({ active, payload, label }: { 
     active?: boolean
@@ -87,16 +94,16 @@ export function ExerciseWeightChart({ dates, weights, className }: {
             <h3 className="mb-3 text-sm font-semibold text-telegram-text">Прогресс веса</h3>
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #374151)" opacity={0.3} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} opacity={0.3} />
                     <XAxis
                         dataKey="formattedDate"
-                        tick={{ fontSize: 11, fill: 'var(--text-hint, #9CA3AF)' }}
+                        tick={CHART_AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
                         interval="preserveStartEnd"
                     />
                     <YAxis
-                        tick={{ fontSize: 11, fill: 'var(--text-hint, #9CA3AF)' }}
+                        tick={CHART_AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
                         domain={['dataMin - 5', 'dataMax + 5']}
@@ -105,9 +112,9 @@ export function ExerciseWeightChart({ dates, weights, className }: {
                     <Line
                         type="monotone"
                         dataKey="weight"
-                        stroke="#2481cc"
+                        stroke={CHART_PRIMARY_COLOR}
                         strokeWidth={2}
-                        dot={{ fill: '#2481cc', r: 3, strokeWidth: 0 }}
+                        dot={{ fill: CHART_PRIMARY_COLOR, r: 3, strokeWidth: 0 }}
                         activeDot={{ r: 5, strokeWidth: 0 }}
                         connectNulls={false}
                     />
@@ -147,20 +154,20 @@ export function ExerciseVolumeChart({ dates, volumes, className }: {
                 <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
                     <defs>
                         <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                            <stop offset="5%" stopColor={CHART_SUCCESS_GRADIENT.from.color} stopOpacity={CHART_SUCCESS_GRADIENT.from.opacity} />
+                            <stop offset="95%" stopColor={CHART_SUCCESS_GRADIENT.to.color} stopOpacity={CHART_SUCCESS_GRADIENT.to.opacity} />
                         </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #374151)" opacity={0.3} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} opacity={0.3} />
                     <XAxis
                         dataKey="formattedDate"
-                        tick={{ fontSize: 11, fill: 'var(--text-hint, #9CA3AF)' }}
+                        tick={CHART_AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
                         interval="preserveStartEnd"
                     />
                     <YAxis
-                        tick={{ fontSize: 11, fill: 'var(--text-hint, #9CA3AF)' }}
+                        tick={CHART_AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}т` : `${value}`}
@@ -169,7 +176,7 @@ export function ExerciseVolumeChart({ dates, volumes, className }: {
                     <Area
                         type="monotone"
                         dataKey="volume"
-                        stroke="#22c55e"
+                        stroke={CHART_SUCCESS_COLOR}
                         strokeWidth={2}
                         fill="url(#volumeGradient)"
                         connectNulls={false}

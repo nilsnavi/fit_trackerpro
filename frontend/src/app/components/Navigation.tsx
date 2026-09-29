@@ -8,13 +8,14 @@ const navItems = [
     { path: '/home', icon: Home, label: 'Главная' },
     { path: '/exercises', icon: LayoutGrid, label: 'Каталог' },
     { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
-    { path: '/analytics', icon: BarChart3, label: 'Прогресс' },
+    { path: '/progress', icon: BarChart3, label: 'Прогресс' },
     { path: '/profile', icon: User, label: 'Профиль' },
 ]
 
 function isNavRouteActive(path: string, pathname: string): boolean {
-    if (path === '/analytics') {
-        return pathname === '/analytics' || pathname.startsWith('/progress')
+    if (path === '/progress') {
+        // /analytics — легаси-путь с редиректом на /progress.
+        return pathname.startsWith('/progress') || pathname === '/analytics'
     }
     if (path === '/home') return pathname === '/home'
     return pathname === path || pathname.startsWith(`${path}/`)

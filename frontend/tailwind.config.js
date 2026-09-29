@@ -107,6 +107,74 @@ export default {
                     critical: "#ef4444", // Red for critical
                 },
 
+                // ============================================
+                // Premium dark palette (tokens, no per-file hex)
+                // Used by home + workouts "black premium" surfaces.
+                // Map every former hardcoded hex to exactly one token
+                // so the rendered output is pixel-identical.
+                // ============================================
+                azure: {
+                    // #168cff / #1da0ff / #1e72bd / #2563eb / #1d4ed8 / #60a5fa / #7dd3fc / #93c5fd / #dbeafe
+                    solid: "#168cff",
+                    bright: "#1da0ff",
+                    deep: "#006be8",
+                    border: "#1e72bd",
+                    button: "#2563eb",
+                    "button-active": "#1d4ed8",
+                    soft: "#60a5fa",
+                    light: "#7dd3fc",
+                    pale: "#93c5fd",
+                    wash: "#dbeafe",
+                },
+                ink: {
+                    // #f8fafc / #d1d9e6 / #8a94a6 / #8b8f98 / #858b94 / #818891 / #8d939c / #737984 / #888888 / #999999
+                    bright: "#f8fafc",
+                    soft: "#d1d9e6",
+                    muted: "#8a94a6",
+                    dim: "#8b8f98",
+                    faint: "#858b94",
+                    fainter: "#818891",
+                    dimmer: "#8d939c",
+                    ghost: "#737984",
+                    gray: "#888888",
+                    gray2: "#999999",
+                },
+                panel: {
+                    // #101720 / #151c26 / #111821 / #161616 / #1a1a1a / #1c1c1e / #111b27 / #121b24
+                    raised: "#101720",
+                    card: "#151c26",
+                    card2: "#111821",
+                    deep: "#161616",
+                    deep2: "#1a1a1a",
+                    deep3: "#1c1c1e",
+                    inset: "#111b27",
+                    inset2: "#121b24",
+                },
+                line: {
+                    // #2a3442 / #202734 / #171e28 / #26313e / #263241 / #2c333d / #213046
+                    strong: "#2a3442",
+                    mid: "#202734",
+                    low: "#171e28",
+                    midlow: "#26313e",
+                    midlow2: "#263241",
+                    soft: "#2c333d",
+                    soft2: "#213046",
+                },
+                void: {
+                    // #090d12 / #0b0e13 / #0b1118 / #0b1626 / #0d1118 / #0d1116 / #0c1724 / #07090d / #05070a / #030405 / #000000
+                    base: "#090d12",
+                    sheet: "#0b0e13",
+                    input: "#0b1118",
+                    select: "#0b1626",
+                    panel: "#0d1118",
+                    panel2: "#0d1116",
+                    deep: "#0c1724",
+                    deeper: "#07090d",
+                    deepest: "#05070a",
+                    pitch: "#030405",
+                    black: "#000000",
+                },
+
                 // Legacy compatibility
                 secondary: {
                     DEFAULT: "hsl(var(--secondary))",

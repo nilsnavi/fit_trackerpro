@@ -1,15 +1,13 @@
 import { lazy } from 'react'
-import { Route } from 'react-router-dom'
+import { Navigate, Route } from 'react-router-dom'
 import { RouteGuard } from '@shared/auth/RouteGuard'
 import {
     AnalyticsPageSkeleton,
     ProgressExercisesSkeleton,
-    ProgressOverviewSkeleton,
     ProgressRecoverySkeleton,
 } from '@shared/ui/page-skeletons'
 
 const AnalyticsDashboardPage = lazy(() => import('@features/analytics/pages/AnalyticsDashboardPage'))
-const ProgressOverviewPage = lazy(() => import('@features/analytics/pages/ProgressOverviewPage'))
 const ExerciseProgressPage = lazy(() =>
     import('@features/analytics/pages/ExerciseProgressPage').then((m) => ({ default: m.ExerciseProgressPage })),
 )
@@ -18,19 +16,13 @@ const RecoveryPage = lazy(() => import('@features/analytics/pages/RecoveryPage')
 export function analyticsRoutes() {
     return (
         <>
-            <Route
-                path="/analytics"
-                element={
-                    <RouteGuard screenTitle="Аналитика" skeleton={<AnalyticsPageSkeleton />}>
-                        <AnalyticsDashboardPage />
-                    </RouteGuard>
-                }
-            />
+            {/* Legacy alias: единый дашборд прогресса живёт на /progress. */}
+            <Route path="/analytics" element={<Navigate to="/progress" replace />} />
             <Route
                 path="/progress"
                 element={
-                    <RouteGuard screenTitle="Прогресс" skeleton={<ProgressOverviewSkeleton />}>
-                        <ProgressOverviewPage />
+                    <RouteGuard screenTitle="Прогресс" skeleton={<AnalyticsPageSkeleton />}>
+                        <AnalyticsDashboardPage />
                     </RouteGuard>
                 }
             />

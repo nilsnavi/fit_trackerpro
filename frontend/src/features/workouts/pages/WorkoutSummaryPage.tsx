@@ -182,69 +182,69 @@ export function WorkoutSummaryPage() {
 
     if (!isValid) {
         return (
-            <div className="min-h-full bg-[#090D12] p-4 text-sm text-[#FCA5A5]">
+            <div className="min-h-full bg-void-base p-4 text-sm text-danger-400">
                 Неверный идентификатор тренировки
             </div>
         )
     }
 
     if (isLoading) {
-        return <div className="min-h-full bg-[#090D12] p-4 text-sm text-[#8A94A6]">Загрузка...</div>
+        return <div className="min-h-full bg-void-base p-4 text-sm text-ink-muted">Загрузка...</div>
     }
 
     if (isError) {
         return (
-            <div className="min-h-full bg-[#090D12] p-4 text-sm text-[#FCA5A5]">
+            <div className="min-h-full bg-void-base p-4 text-sm text-danger-400">
                 {getErrorMessage(error)}
             </div>
         )
     }
 
     return (
-        <div className="min-h-full bg-[#090D12] p-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+        <div className="min-h-full bg-void-base p-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
             <div className="mx-auto max-w-screen-sm space-y-5">
                 <header className="pt-[max(0px,env(safe-area-inset-top))]">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[#22C55E]/15 text-[#4ADE80]">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-success-500/15 text-success-400">
                         <Trophy className="h-7 w-7" />
                     </div>
-                    <p className="mt-5 text-sm font-black uppercase tracking-wide text-[#4ADE80]">Готово</p>
-                    <h1 className="mt-2 text-3xl font-black leading-tight text-[#F8FAFC]">{title}</h1>
+                    <p className="mt-5 text-sm font-black uppercase tracking-wide text-success-400">Готово</p>
+                    <h1 className="mt-2 text-3xl font-black leading-tight text-ink-bright">{title}</h1>
                     {routeState?.finishedAt ? (
-                        <p className="mt-2 text-sm font-semibold text-[#8A94A6]">
+                        <p className="mt-2 text-sm font-semibold text-ink-muted">
                             Завершено {new Date(routeState.finishedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                     ) : null}
                 </header>
 
                 <section className="grid grid-cols-3 gap-2">
-                    <div className="rounded-[20px] border border-white/[0.08] bg-[#101720] p-3">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-[#8A94A6]">Время</p>
-                        <p className="mt-2 text-lg font-black tabular-nums text-[#F8FAFC]">
+                    <div className="rounded-[20px] border border-white/[0.08] bg-panel-raised p-3">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-ink-muted">Время</p>
+                        <p className="mt-2 text-lg font-black tabular-nums text-ink-bright">
                             {formatDurationRu(metrics.totalDurationSeconds)}
                         </p>
                     </div>
-                    <div className="rounded-[20px] border border-white/[0.08] bg-[#101720] p-3">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-[#8A94A6]">Подходы</p>
-                        <p className="mt-2 text-lg font-black tabular-nums text-[#F8FAFC]">
+                    <div className="rounded-[20px] border border-white/[0.08] bg-panel-raised p-3">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-ink-muted">Подходы</p>
+                        <p className="mt-2 text-lg font-black tabular-nums text-ink-bright">
                             {metrics.totalSetsCompleted}
                         </p>
                     </div>
-                    <div className="rounded-[20px] border border-white/[0.08] bg-[#101720] p-3">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-[#8A94A6]">Объём</p>
-                        <p className="mt-2 text-lg font-black tabular-nums text-[#F8FAFC]">
+                    <div className="rounded-[20px] border border-white/[0.08] bg-panel-raised p-3">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-ink-muted">Объём</p>
+                        <p className="mt-2 text-lg font-black tabular-nums text-ink-bright">
                             {formatKg(metrics.totalVolumeKg)} кг
                         </p>
                     </div>
                 </section>
 
-                <section className="rounded-[24px] border border-white/[0.08] bg-[#101720] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
+                <section className="rounded-[24px] border border-white/[0.08] bg-panel-raised p-4 shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FACC15]/15 text-[#FACC15]">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-warning-500/15 text-warning-500">
                             <Award className="h-5 w-5" />
                         </div>
                         <div>
-                            <h2 className="text-base font-black text-[#F8FAFC]">Рекорды</h2>
-                            <p className="text-xs font-semibold text-[#8A94A6]">
+                            <h2 className="text-base font-black text-ink-bright">Рекорды</h2>
+                            <p className="text-xs font-semibold text-ink-muted">
                                 {records.length > 0 ? `${records.length} улучшений` : 'Новых рекордов нет'}
                             </p>
                         </div>
@@ -256,12 +256,12 @@ export function WorkoutSummaryPage() {
                                 <article key={record.id} className="rounded-2xl bg-black/20 px-3 py-3">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
-                                            <p className="truncate text-sm font-black text-[#F8FAFC]">{record.name}</p>
-                                            <p className="mt-1 text-xs font-semibold text-[#8A94A6]">
+                                            <p className="truncate text-sm font-black text-ink-bright">{record.name}</p>
+                                            <p className="mt-1 text-xs font-semibold text-ink-muted">
                                                 {formatKg(record.weight)} кг x {record.reps}
                                             </p>
                                         </div>
-                                        <span className="shrink-0 rounded-xl bg-[#22C55E]/15 px-2.5 py-1 text-xs font-black text-[#4ADE80]">
+                                        <span className="shrink-0 rounded-xl bg-success-500/15 px-2.5 py-1 text-xs font-black text-success-400">
                                             {record.label}
                                         </span>
                                     </div>
@@ -273,22 +273,22 @@ export function WorkoutSummaryPage() {
 
                 {routeState?.personalRecords && routeState.personalRecords.length > 0 ? (
                     <section
-                        className="rounded-[24px] border border-[#FACC15]/25 bg-[#FACC15]/[0.06] p-4"
+                        className="rounded-[24px] border border-warning-500/25 bg-warning-500/[0.06] p-4"
                         data-testid="summary-pr-list"
                     >
-                        <h2 className="text-base font-black text-[#FACC15]">
+                        <h2 className="text-base font-black text-warning-500">
                             🏆 Новые рекорды: {routeState.personalRecords.length}
                         </h2>
                         <div className="mt-3 space-y-2">
                             {routeState.personalRecords.slice(0, 6).map((record, index) => (
                                 <div key={`${record.record_type}-${record.exercise_id}-${index}`} className="rounded-2xl bg-black/25 px-3 py-2">
                                     <div className="flex items-center justify-between gap-2">
-                                        <p className="truncate text-sm font-black text-[#F8FAFC]">{record.exercise_name}</p>
-                                        <span className="shrink-0 text-xs font-bold uppercase text-[#8A94A6]">
+                                        <p className="truncate text-sm font-black text-ink-bright">{record.exercise_name}</p>
+                                        <span className="shrink-0 text-xs font-bold uppercase text-ink-muted">
                                             {record.record_type.replace(/_/g, ' ')}
                                         </span>
                                     </div>
-                                    <p className="mt-0.5 text-xs font-semibold text-[#8A94A6]">
+                                    <p className="mt-0.5 text-xs font-semibold text-ink-muted">
                                         {formatKg(record.value)} {record.unit === 'sec' ? 'сек' : 'кг'}
                                         {record.previous_value != null
                                             ? ` (прошлый: ${formatKg(record.previous_value)} ${record.unit === 'sec' ? 'сек' : 'кг'})`
@@ -302,10 +302,10 @@ export function WorkoutSummaryPage() {
 
                 {actionableProgressionRecommendations.length > 0 ? (
                     <section
-                        className="rounded-[24px] border border-white/[0.08] bg-[#101720] p-4"
+                        className="rounded-[24px] border border-white/[0.08] bg-panel-raised p-4"
                         data-testid="summary-progression"
                     >
-                        <h2 className="text-base font-black text-[#F8FAFC]">Следующая цель</h2>
+                        <h2 className="text-base font-black text-ink-bright">Следующая цель</h2>
                         <div className="mt-3 space-y-2">
                             {actionableProgressionRecommendations.slice(0, 6).map((rec, index) => {
                                 const name =
@@ -322,11 +322,11 @@ export function WorkoutSummaryPage() {
                                 return (
                                     <div key={`${rec.exercise_id}-${index}`} className="rounded-2xl bg-black/20 px-3 py-2">
                                         <div className="flex items-center justify-between gap-2">
-                                            <p className="truncate text-sm font-black text-[#F8FAFC]">{name}</p>
+                                            <p className="truncate text-sm font-black text-ink-bright">{name}</p>
                                             <span
                                                 className={cn(
                                                     'shrink-0 text-sm font-black tabular-nums',
-                                                    isDeload ? 'text-warning' : 'text-[#4ADE80]',
+                                                    isDeload ? 'text-warning' : 'text-success-400',
                                                 )}
                                             >
                                                 {hasTarget ? `${formatKg(rec.recommended_value as number)} ${unit}` : '—'}
@@ -334,7 +334,7 @@ export function WorkoutSummaryPage() {
                                         </div>
                                         {/* SPEC-006 §27/§45: status + reason always accompany the number. */}
                                         {rec.status ? (
-                                            <p className="mt-0.5 text-[11px] font-black uppercase tracking-wide text-[#8A94A6]">
+                                            <p className="mt-0.5 text-[11px] font-black uppercase tracking-wide text-ink-muted">
                                                 {SUMMARY_STATUS_LABELS[rec.status] ?? rec.status}
                                                 {rec.lifecycle_status && rec.lifecycle_status !== 'generated'
                                                     ? ` · ${rec.lifecycle_status}`
@@ -342,12 +342,12 @@ export function WorkoutSummaryPage() {
                                             </p>
                                         ) : null}
                                         {rec.reason_text ? (
-                                            <p className="mt-0.5 text-xs font-semibold text-[#8A94A6]">{rec.reason_text}</p>
+                                            <p className="mt-0.5 text-xs font-semibold text-ink-muted">{rec.reason_text}</p>
                                         ) : null}
                                         {isDecided ? (
                                             <p
                                                 data-testid="summary-target-decided"
-                                                className="mt-2 text-xs font-black uppercase tracking-wide text-[#4ADE80]"
+                                                className="mt-2 text-xs font-black uppercase tracking-wide text-success-400"
                                             >
                                                 {decidedValue != null
                                                     ? `Принято · ${formatKg(decidedValue)} ${unit} — подставим в следующую тренировку`
@@ -359,7 +359,7 @@ export function WorkoutSummaryPage() {
                                                 data-testid="summary-accept-target"
                                                 disabled={acceptProgression.isPending}
                                                 onClick={() => handleAcceptTarget(rec)}
-                                                className="mt-2 min-h-9 rounded-xl border border-[#4ADE80]/40 bg-[#4ADE80]/15 px-3 text-xs font-black text-[#4ADE80] disabled:opacity-50"
+                                                className="mt-2 min-h-9 rounded-xl border border-success-400/40 bg-success-400/15 px-3 text-xs font-black text-success-400 disabled:opacity-50"
                                             >
                                                 Принять {formatKg(rec.recommended_value as number)} {unit}
                                             </button>
@@ -374,7 +374,7 @@ export function WorkoutSummaryPage() {
                 <div className="grid gap-2">
                     <Button
                         type="button"
-                        className="min-h-[54px] rounded-2xl bg-[#22C55E] text-base font-black text-white hover:bg-[#16A34A]"
+                        className="min-h-[54px] rounded-2xl bg-success-500 text-base font-black text-white hover:bg-success-600"
                         onClick={() => navigate('/progress/exercises')}
                     >
                         <BarChart3 className="mr-2 h-5 w-5" />
@@ -383,7 +383,7 @@ export function WorkoutSummaryPage() {
                     <Button
                         type="button"
                         variant="secondary"
-                        className="min-h-[54px] rounded-2xl bg-[#151C26] text-base font-black text-[#F8FAFC]"
+                        className="min-h-[54px] rounded-2xl bg-panel-card text-base font-black text-ink-bright"
                         onClick={() => navigate('/')}
                     >
                         <Home className="mr-2 h-5 w-5" />

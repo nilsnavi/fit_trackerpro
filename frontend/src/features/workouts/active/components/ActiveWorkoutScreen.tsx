@@ -176,25 +176,25 @@ const WorkoutTopBar = memo(function WorkoutTopBar({
                 <button
                     type="button"
                     onClick={onBack}
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-[#F8FAFC] active:bg-white/10"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-ink-bright active:bg-white/10"
                     aria-label="Назад"
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </button>
                 <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-xl font-black leading-tight text-[#F8FAFC]">{title}</h1>
-                    <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-[#8A94A6]">
+                    <h1 className="truncate text-xl font-black leading-tight text-ink-bright">{title}</h1>
+                    <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-ink-muted">
                         <span className="flex items-center gap-1 tabular-nums">
                             <Clock3 className="h-3.5 w-3.5" />
                             {elapsedLabel}
                         </span>
-                        <span className="h-1 w-1 rounded-full bg-[#8A94A6]" />
+                        <span className="h-1 w-1 rounded-full bg-ink-muted" />
                         <span>LIVE</span>
                     </div>
                 </div>
                 <button
                     type="button"
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-[#F8FAFC] active:bg-white/10"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-ink-bright active:bg-white/10"
                     aria-label="Меню тренировки"
                 >
                     <MoreHorizontal className="h-5 w-5" />
@@ -218,24 +218,24 @@ const WorkoutProgress = memo(function WorkoutProgress({
     const percent = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
 
     return (
-        <section className="rounded-[22px] border border-white/[0.08] bg-[#101720] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
+        <section className="rounded-[22px] border border-white/[0.08] bg-panel-raised p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
             <div className="flex items-end justify-between gap-3">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#8A94A6]">Прогресс</p>
-                    <p className="mt-1 text-2xl font-black tabular-nums text-[#F8FAFC]">
+                    <p className="text-xs font-bold uppercase tracking-wide text-ink-muted">Прогресс</p>
+                    <p className="mt-1 text-2xl font-black tabular-nums text-ink-bright">
                         {completedExercises}/{totalExercises}
                     </p>
                 </div>
                 <div className="text-right">
-                    <p className="text-4xl font-black tabular-nums text-[#4ADE80]">{percent}%</p>
-                    <p className="text-xs font-semibold text-[#8A94A6]">
+                    <p className="text-4xl font-black tabular-nums text-success-400">{percent}%</p>
+                    <p className="text-xs font-semibold text-ink-muted">
                         {completedSets}/{totalSets} подходов
                     </p>
                 </div>
             </div>
             <div className="mt-4 h-3 overflow-hidden rounded-full bg-black/35">
                 <div
-                    className="h-full rounded-full bg-[#4ADE80] shadow-[0_0_22px_rgba(74,222,128,0.35)] transition-[width] duration-300"
+                    className="h-full rounded-full bg-success-400 shadow-[0_0_22px_rgba(74,222,128,0.35)] transition-[width] duration-300"
                     style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
                 />
             </div>
@@ -249,13 +249,13 @@ function InlineRestTimer() {
     if (!isVisible) return null
 
     return (
-        <div className="rounded-[18px] border border-[#60A5FA]/20 bg-[#0B1626] p-3">
+        <div className="rounded-[18px] border border-azure-soft/20 bg-void-select p-3">
             <div className="flex min-h-12 items-center gap-3">
                 <div className="min-w-0 flex-1">
-                    <p className="text-base font-black tabular-nums text-[#F8FAFC]">Отдых {remainingLabel}</p>
+                    <p className="text-base font-black tabular-nums text-ink-bright">Отдых {remainingLabel}</p>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
                         <div
-                            className="h-full rounded-full bg-[#60A5FA] transition-[width] duration-300"
+                            className="h-full rounded-full bg-azure-soft transition-[width] duration-300"
                             style={{ width: `${progressPercent}%` }}
                         />
                     </div>
@@ -266,14 +266,14 @@ function InlineRestTimer() {
                     onClick={() => adjust(-30)}
                     data-testid="rest-minus-30"
                     aria-label="Минус 30 секунд"
-                    className="flex h-11 min-w-11 items-center justify-center rounded-2xl bg-white/[0.06] px-2 text-xs font-black tabular-nums text-[#F8FAFC] active:bg-white/10"
+                    className="flex h-11 min-w-11 items-center justify-center rounded-2xl bg-white/[0.06] px-2 text-xs font-black tabular-nums text-ink-bright active:bg-white/10"
                 >
                     −30
                 </button>
                 <button
                     type="button"
                     onClick={skip}
-                    className="min-h-11 rounded-2xl bg-white/[0.06] px-3 text-sm font-bold text-[#F8FAFC] active:bg-white/10"
+                    className="min-h-11 rounded-2xl bg-white/[0.06] px-3 text-sm font-bold text-ink-bright active:bg-white/10"
                 >
                     Пропустить
                 </button>
@@ -282,14 +282,14 @@ function InlineRestTimer() {
                     onClick={() => adjust(30)}
                     data-testid="rest-plus-30"
                     aria-label="Плюс 30 секунд"
-                    className="flex h-11 min-w-11 items-center justify-center rounded-2xl bg-white/[0.06] px-2 text-xs font-black tabular-nums text-[#F8FAFC] active:bg-white/10"
+                    className="flex h-11 min-w-11 items-center justify-center rounded-2xl bg-white/[0.06] px-2 text-xs font-black tabular-nums text-ink-bright active:bg-white/10"
                 >
                     +30
                 </button>
                 <button
                     type="button"
                     onClick={reset}
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.06] text-[#F8FAFC] active:bg-white/10"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.06] text-ink-bright active:bg-white/10"
                     aria-label="Сбросить таймер"
                 >
                     <RotateCcw className="h-4 w-4" />
@@ -310,7 +310,7 @@ function SetStatusCell({
 }) {
     if (state === 'completed') {
         return (
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#22C55E]/15 text-[#4ADE80]">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-success-500/15 text-success-400">
                 <CheckCircle2 className="h-5 w-5" />
             </span>
         )
@@ -318,7 +318,7 @@ function SetStatusCell({
 
     if (state === 'locked') {
         return (
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.04] text-[#64748B]">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.04] text-neutral-500">
                 <Lock className="h-5 w-5" />
             </span>
         )
@@ -329,7 +329,7 @@ function SetStatusCell({
             type="button"
             onClick={onComplete}
             disabled={disabled}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#22C55E] text-white shadow-[0_10px_24px_rgba(34,197,94,0.25)] active:scale-95 disabled:opacity-50"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-success-500 text-white shadow-[0_10px_24px_rgba(34,197,94,0.25)] active:scale-95 disabled:opacity-50"
             aria-label="Завершить подход"
         >
             <Check className="h-5 w-5" />
@@ -371,7 +371,7 @@ function SetsTable({
 
     if (exercise.sets_completed.length === 0) {
         return (
-            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/20 p-4 text-sm font-semibold text-[#8A94A6]">
+            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/20 p-4 text-sm font-semibold text-ink-muted">
                 Нет подходов
             </div>
         )
@@ -380,7 +380,7 @@ function SetsTable({
     return (
         <div className="space-y-2">
             <div className="overflow-hidden rounded-[18px] border border-white/[0.08] bg-black/20">
-                <div className="grid grid-cols-[0.7fr_1fr_1fr_3.25rem] gap-2 border-b border-white/[0.06] px-3 py-2 text-[11px] font-black uppercase tracking-wide text-[#8A94A6]">
+                <div className="grid grid-cols-[0.7fr_1fr_1fr_3.25rem] gap-2 border-b border-white/[0.06] px-3 py-2 text-[11px] font-black uppercase tracking-wide text-ink-muted">
                     <span>Подход</span>
                     <span>Вес</span>
                     <span>Повторы</span>
@@ -401,13 +401,13 @@ function SetsTable({
                                 key={set.set_number}
                                 className={cn(
                                     'grid min-h-[64px] grid-cols-[0.7fr_1fr_1fr_3.25rem] items-center gap-2 px-3 py-2',
-                                    isActive && 'bg-[#162033]',
+                                    isActive && 'bg-primary-900/60',
                                     state === 'locked' && 'opacity-60',
-                                    isWarmup && 'bg-[#FACC15]/[0.04]',
+                                    isWarmup && 'bg-warning-500/[0.04]',
                                 )}
                                 data-testid={`set-row-${set.set_number}`}
                             >
-                                <span className="text-sm font-black tabular-nums text-[#F8FAFC]">
+                                <span className="text-sm font-black tabular-nums text-ink-bright">
                                     {set.set_type === 'warmup' ? 'W' : '#'}{isWarmup ? set.set_number : set.set_number}
                                 </span>
 
@@ -420,7 +420,7 @@ function SetsTable({
                                             step="0.5"
                                             value={set.weight ?? ''}
                                             onChange={(event) => onUpdateSet(exerciseIndex, set.set_number, { weight: event.target.value === '' ? undefined : Number(event.target.value) })}
-                                            className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-[#0B1118] px-3 text-base font-black tabular-nums text-[#F8FAFC] outline-none focus:border-[#4ADE80]"
+                                            className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-void-input px-3 text-base font-black tabular-nums text-ink-bright outline-none focus:border-success-400"
                                             aria-label="Вес"
                                         />
                                         {isTimed ? (
@@ -430,7 +430,7 @@ function SetsTable({
                                                 min={0}
                                                 value={set.duration ?? ''}
                                                 onChange={(event) => onUpdateSet(exerciseIndex, set.set_number, { duration: event.target.value === '' ? undefined : Number.parseInt(event.target.value, 10) })}
-                                                className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-[#0B1118] px-3 text-base font-black tabular-nums text-[#F8FAFC] outline-none focus:border-[#4ADE80]"
+                                                className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-void-input px-3 text-base font-black tabular-nums text-ink-bright outline-none focus:border-success-400"
                                                 aria-label="Длительность, сек"
                                             />
                                         ) : (
@@ -441,7 +441,7 @@ function SetsTable({
                                                 max={999}
                                                 value={set.reps ?? ''}
                                                 onChange={(event) => onUpdateSet(exerciseIndex, set.set_number, { reps: event.target.value === '' ? undefined : Number.parseInt(event.target.value, 10) })}
-                                                className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-[#0B1118] px-3 text-base font-black tabular-nums text-[#F8FAFC] outline-none focus:border-[#4ADE80]"
+                                                className="h-12 min-w-0 rounded-2xl border border-white/[0.08] bg-void-input px-3 text-base font-black tabular-nums text-ink-bright outline-none focus:border-success-400"
                                                 aria-label="Повторы"
                                             />
                                         )}
@@ -451,12 +451,12 @@ function SetsTable({
                                         <button
                                             type="button"
                                             onClick={() => onOpenPlateCalculator?.(set.weight ?? 0)}
-                                            className="truncate text-left text-base font-black tabular-nums text-[#F8FAFC]"
+                                            className="truncate text-left text-base font-black tabular-nums text-ink-bright"
                                             title="Рассчитать блины"
                                         >
                                             {formatKg(set.weight)} кг
                                         </button>
-                                        <span className="text-base font-black tabular-nums text-[#F8FAFC]">
+                                        <span className="text-base font-black tabular-nums text-ink-bright">
                                             {isTimed ? `${set.duration} сек` : set.reps ?? 0}
                                         </span>
                                     </>
@@ -468,7 +468,7 @@ function SetsTable({
                                     <div className="col-span-4 space-y-2 pt-1">
                                         {/* SPEC-005 §10: set type quick switch. */}
                                         <div className="flex items-center gap-2" data-testid="set-type-switch">
-                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">Тип</span>
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-ink-muted">Тип</span>
                                             <div className="grid flex-1 grid-cols-4 gap-1.5">
                                                 {SET_TYPE_OPTIONS.map((option) => (
                                                     <button
@@ -478,8 +478,8 @@ function SetsTable({
                                                         className={cn(
                                                             'min-h-9 rounded-xl border text-xs font-black',
                                                             (set.set_type ?? 'working') === option.value
-                                                                ? 'border-[#60A5FA]/60 bg-[#60A5FA]/20 text-[#DBEAFE]'
-                                                                : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                                ? 'border-azure-soft/60 bg-azure-soft/20 text-primary-100'
+                                                                : 'border-white/[0.08] bg-white/[0.04] text-ink-muted active:bg-white/[0.08]',
                                                         )}
                                                         aria-label={`Тип подхода: ${option.value}`}
                                                     >
@@ -490,7 +490,7 @@ function SetsTable({
                                         </div>
                                         {/* SPEC-005 §20: measurement toggle — reps or time. */}
                                         <div className="flex items-center gap-2" data-testid="set-measure-switch">
-                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">Измерение</span>
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-ink-muted">Измерение</span>
                                             <div className="grid flex-1 grid-cols-2 gap-1.5">
                                                 <button
                                                     type="button"
@@ -502,8 +502,8 @@ function SetsTable({
                                                     className={cn(
                                                         'min-h-9 rounded-xl border text-xs font-black',
                                                         !isTimed
-                                                            ? 'border-[#4ADE80]/60 bg-[#4ADE80]/20 text-[#DCFCE7]'
-                                                            : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                            ? 'border-success-400/60 bg-success-400/20 text-success-100'
+                                                            : 'border-white/[0.08] bg-white/[0.04] text-ink-muted active:bg-white/[0.08]',
                                                     )}
                                                 >
                                                     Повторы
@@ -518,8 +518,8 @@ function SetsTable({
                                                     className={cn(
                                                         'min-h-9 rounded-xl border text-xs font-black',
                                                         isTimed
-                                                            ? 'border-[#4ADE80]/60 bg-[#4ADE80]/20 text-[#DCFCE7]'
-                                                            : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                            ? 'border-success-400/60 bg-success-400/20 text-success-100'
+                                                            : 'border-white/[0.08] bg-white/[0.04] text-ink-muted active:bg-white/[0.08]',
                                                     )}
                                                 >
                                                     Время
@@ -528,7 +528,7 @@ function SetsTable({
                                         </div>
                                         {/* SPEC-005 §12: quick weight controls. */}
                                         <div className="flex items-center gap-1.5" data-testid="weight-quick-controls">
-                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">Вес</span>
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-ink-muted">Вес</span>
                                             <div className="grid flex-1 grid-cols-4 gap-1.5">
                                                 {WEIGHT_DELTAS.map((delta) => (
                                                     <button
@@ -539,7 +539,7 @@ function SetsTable({
                                                             const next = Math.max(0, Number((current + delta).toFixed(2)))
                                                             onUpdateSet(exerciseIndex, set.set_number, { weight: next })
                                                         }}
-                                                        className="min-h-9 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-black tabular-nums text-[#F8FAFC] active:bg-white/[0.08]"
+                                                        className="min-h-9 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-black tabular-nums text-ink-bright active:bg-white/[0.08]"
                                                     >
                                                         {delta > 0 ? `+${delta}` : delta}
                                                     </button>
@@ -547,7 +547,7 @@ function SetsTable({
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-[#8A94A6]">RPE</span>
+                                            <span className="shrink-0 text-xs font-black uppercase tracking-wide text-ink-muted">RPE</span>
                                             <div className="grid flex-1 grid-cols-5 gap-1.5">
                                                 {RPE_OPTIONS.slice(0, 5).map((value) => (
                                                     <button
@@ -557,8 +557,8 @@ function SetsTable({
                                                         className={cn(
                                                             'min-h-9 rounded-xl border text-sm font-black tabular-nums',
                                                             set.rpe === value
-                                                                ? 'border-[#FACC15]/60 bg-[#FACC15]/20 text-[#FEF3C7]'
-                                                                : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                                ? 'border-warning-500/60 bg-warning-500/20 text-warning-100'
+                                                                : 'border-white/[0.08] bg-white/[0.04] text-ink-muted active:bg-white/[0.08]',
                                                         )}
                                                     >
                                                         {value}
@@ -577,8 +577,8 @@ function SetsTable({
                                                         className={cn(
                                                             'min-h-9 rounded-xl border text-sm font-black tabular-nums',
                                                             set.rpe === value
-                                                                ? 'border-[#FACC15]/60 bg-[#FACC15]/20 text-[#FEF3C7]'
-                                                                : 'border-white/[0.08] bg-white/[0.04] text-[#8A94A6] active:bg-white/[0.08]',
+                                                                ? 'border-warning-500/60 bg-warning-500/20 text-warning-100'
+                                                                : 'border-white/[0.08] bg-white/[0.04] text-ink-muted active:bg-white/[0.08]',
                                                         )}
                                                     >
                                                         {value}
@@ -590,14 +590,14 @@ function SetsTable({
                                             <button
                                                 type="button"
                                                 onClick={() => setEditingSetNumber(isEditing ? null : set.set_number)}
-                                                className="flex min-h-12 w-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-[#F8FAFC] active:bg-white/10"
+                                                className="flex min-h-12 w-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-ink-bright active:bg-white/10"
                                                 aria-label="Редактировать подход"
                                             >
                                                 <Pencil className="h-5 w-5" />
                                             </button>
                                             <Button
                                                 type="button"
-                                                className="min-h-12 flex-1 rounded-2xl bg-[#22C55E] text-base font-black text-white hover:bg-[#16A34A]"
+                                                className="min-h-12 flex-1 rounded-2xl bg-success-500 text-base font-black text-white hover:bg-success-600"
                                                 onClick={() => onCompleteActiveSet(set)}
                                                 disabled={!canComplete}
                                                 isLoading={isSaving}
@@ -618,14 +618,14 @@ function SetsTable({
                     type="button"
                     data-testid="add-set-btn"
                     onClick={onAddSet}
-                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-dashed border-white/[0.14] bg-white/[0.02] text-sm font-black text-[#8A94A6] active:bg-white/[0.06]"
+                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-dashed border-white/[0.14] bg-white/[0.02] text-sm font-black text-ink-muted active:bg-white/[0.06]"
                 >
                     <Plus className="h-4 w-4" />
                     Добавить подход
                 </button>
             ) : null}
             {errorMessage ? (
-                <p className="rounded-2xl border border-[#EF4444]/30 bg-[#EF4444]/10 px-3 py-2 text-sm font-semibold text-[#FCA5A5]">
+                <p className="rounded-2xl border border-danger-500/30 bg-danger-500/10 px-3 py-2 text-sm font-semibold text-danger-400">
                     {errorMessage}
                 </p>
             ) : null}
@@ -664,16 +664,16 @@ function ExerciseMenu({
                     event.stopPropagation()
                     setOpen((value) => !value)
                 }}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.06] text-[#F8FAFC] active:bg-white/10"
+                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.06] text-ink-bright active:bg-white/10"
                 aria-label="Меню упражнения"
             >
                 <MoreHorizontal className="h-5 w-5" />
             </button>
             {open ? (
-                <div className="absolute right-0 top-12 z-20 w-52 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#151C26] shadow-2xl">
+                <div className="absolute right-0 top-12 z-20 w-52 overflow-hidden rounded-2xl border border-white/[0.08] bg-panel-card shadow-2xl">
                     <button
                         type="button"
-                        className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#F8FAFC]"
+                        className="block min-h-12 w-full px-4 text-left text-sm font-bold text-ink-bright"
                         onClick={(event) => {
                             event.stopPropagation()
                             setOpen(false)
@@ -686,7 +686,7 @@ function ExerciseMenu({
                         <button
                             type="button"
                             data-testid="exercise-skip-btn"
-                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#FACC15]"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-warning-500"
                             onClick={(event) => {
                                 event.stopPropagation()
                                 setOpen(false)
@@ -700,7 +700,7 @@ function ExerciseMenu({
                         <button
                             type="button"
                             data-testid="exercise-unskip-btn"
-                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#4ADE80]"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-success-400"
                             onClick={(event) => {
                                 event.stopPropagation()
                                 setOpen(false)
@@ -714,7 +714,7 @@ function ExerciseMenu({
                         <button
                             type="button"
                             data-testid="exercise-superset-btn"
-                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#60A5FA]"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-azure-soft"
                             onClick={(event) => {
                                 event.stopPropagation()
                                 setOpen(false)
@@ -728,7 +728,7 @@ function ExerciseMenu({
                         <button
                             type="button"
                             data-testid="exercise-unsuperset-btn"
-                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-[#93C5FD]"
+                            className="block min-h-12 w-full px-4 text-left text-sm font-bold text-azure-pale"
                             onClick={(event) => {
                                 event.stopPropagation()
                                 setOpen(false)
@@ -740,7 +740,7 @@ function ExerciseMenu({
                     ) : null}
                     <button
                         type="button"
-                        className="flex min-h-12 w-full items-center gap-2 px-4 text-left text-sm font-bold text-[#EF4444]"
+                        className="flex min-h-12 w-full items-center gap-2 px-4 text-left text-sm font-bold text-danger-500"
                         onClick={(event) => {
                             event.stopPropagation()
                             setOpen(false)
@@ -787,7 +787,7 @@ function CollapsedExerciseCard({
     return (
         <div
             className={cn(
-                'rounded-[20px] border bg-[#101720] p-4 shadow-[0_12px_32px_rgba(0,0,0,0.22)]',
+                'rounded-[20px] border bg-panel-raised p-4 shadow-[0_12px_32px_rgba(0,0,0,0.22)]',
                 isSkipped ? 'border-white/[0.05] opacity-70' : 'border-white/[0.08]',
             )}
             data-testid={isSkipped ? 'exercise-card-skipped' : 'exercise-card'}
@@ -795,7 +795,7 @@ function CollapsedExerciseCard({
             {slot?.header ? (
                 <p
                     data-testid="superset-block-header"
-                    className="mb-2 text-[11px] font-black uppercase tracking-wide text-[#60A5FA]"
+                    className="mb-2 text-[11px] font-black uppercase tracking-wide text-azure-soft"
                 >
                     {slot.header}
                 </p>
@@ -806,19 +806,19 @@ function CollapsedExerciseCard({
                     onClick={() => onSelect(exerciseIndex)}
                     className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left active:opacity-80"
                 >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-[#8A94A6]">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-ink-muted">
                         <Dumbbell className={cn('h-5 w-5', isSkipped && 'line-through')} />
                     </span>
                     <span className="min-w-0 flex-1">
-                        <span className={cn('block truncate text-base font-black text-[#F8FAFC]', isSkipped && 'line-through')}>
+                        <span className={cn('block truncate text-base font-black text-ink-bright', isSkipped && 'line-through')}>
                             {exercise.name}
                         </span>
-                        <span className="mt-1 flex items-center gap-2 text-xs font-semibold text-[#8A94A6]">
+                        <span className="mt-1 flex items-center gap-2 text-xs font-semibold text-ink-muted">
                             {isSkipped ? 'Пропущено' : `${completed}/${total} подходов`}
                             {slot?.label ? (
                                 <span
                                     data-testid="exercise-block-label"
-                                    className="rounded-md bg-[#60A5FA]/15 px-1.5 py-0.5 font-black text-[#93C5FD]"
+                                    className="rounded-md bg-azure-soft/15 px-1.5 py-0.5 font-black text-azure-pale"
                                 >
                                     {slot.label}
                                 </span>
@@ -852,7 +852,7 @@ function WeightRecommendationInline({
 }) {
     if (isLoading) {
         return (
-            <div className="rounded-[16px] border border-white/[0.08] bg-black/20 px-3 py-2 text-sm font-bold text-[#8A94A6]">
+            <div className="rounded-[16px] border border-white/[0.08] bg-black/20 px-3 py-2 text-sm font-bold text-ink-muted">
                 Расчёт...
             </div>
         )
@@ -860,7 +860,7 @@ function WeightRecommendationInline({
 
     if (isError) {
         return (
-            <div className="rounded-[16px] border border-white/[0.06] bg-black/10 px-3 py-2 text-xs font-semibold text-[#64748B]">
+            <div className="rounded-[16px] border border-white/[0.06] bg-black/10 px-3 py-2 text-xs font-semibold text-neutral-500">
                 Рекомендация недоступна
             </div>
         )
@@ -874,8 +874,8 @@ function WeightRecommendationInline({
             className={cn(
                 'rounded-[16px] border px-3 py-2 text-sm font-black',
                 label.tone === 'warning'
-                    ? 'border-[#FACC15]/25 bg-[#FACC15]/10 text-[#FEF3C7]'
-                    : 'border-[#60A5FA]/20 bg-[#60A5FA]/10 text-[#DBEAFE]',
+                    ? 'border-warning-500/25 bg-warning-500/10 text-warning-100'
+                    : 'border-azure-soft/20 bg-azure-soft/10 text-primary-100',
             )}
         >
             {label.text}
@@ -985,23 +985,23 @@ function ActiveExerciseCard({
     })
 
     return (
-        <section className="rounded-[24px] border border-[#4ADE80]/25 bg-[#111821] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.35)]">
+        <section className="rounded-[24px] border border-success-400/25 bg-panel-card2 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.35)]">
             <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-xs font-black uppercase tracking-wide text-[#4ADE80]">Активное</p>
+                        <p className="text-xs font-black uppercase tracking-wide text-success-400">Активное</p>
                         {slot?.label ? (
                             <span
                                 data-testid="active-superset-badge"
-                                className="rounded-md bg-[#60A5FA]/15 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#93C5FD]"
+                                className="rounded-md bg-azure-soft/15 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-azure-pale"
                             >
                                 {slot.header ? `${slot.header} · ` : 'SUPERSET · '}
                                 {slot.label}
                             </span>
                         ) : null}
                     </div>
-                    <h2 className="mt-1 text-xl font-black leading-tight text-[#F8FAFC]">{exercise.name}</h2>
-                    <p className="mt-2 text-sm font-semibold text-[#8A94A6]">
+                    <h2 className="mt-1 text-xl font-black leading-tight text-ink-bright">{exercise.name}</h2>
+                    <p className="mt-2 text-sm font-semibold text-ink-muted">
                         {completed}/{total} подходов
                     </p>
                 </div>
@@ -1090,13 +1090,13 @@ function WorkoutBottomBar({
     onFinishWorkout: () => void
 }) {
     return (
-        <div className="fixed bottom-[var(--app-shell-nav-h)] left-0 right-0 z-20 border-t border-white/[0.08] bg-[#090D12]/95 px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur">
+        <div className="fixed bottom-[var(--app-shell-nav-h)] left-0 right-0 z-20 border-t border-white/[0.08] bg-void-base/95 px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur">
             <div className="mx-auto grid max-w-screen-sm grid-cols-[1fr_1fr] gap-2">
-                <Button type="button" variant="secondary" className="min-h-[54px] rounded-2xl border-white/[0.08] bg-[#151C26] text-[#F8FAFC]" onClick={onAddExercise}>
+                <Button type="button" variant="secondary" className="min-h-[54px] rounded-2xl border-white/[0.08] bg-panel-card text-ink-bright" onClick={onAddExercise}>
                     <Plus className="mr-1 h-5 w-5" />
                     Упражнение
                 </Button>
-                <Button type="button" className="min-h-[54px] rounded-2xl bg-[#22C55E] font-black text-white hover:bg-[#16A34A]" onClick={onFinishWorkout} disabled={isSavingSet}>
+                <Button type="button" className="min-h-[54px] rounded-2xl bg-success-500 font-black text-white hover:bg-success-600" onClick={onFinishWorkout} disabled={isSavingSet}>
                     <Check className="mr-1 h-5 w-5" />
                     Завершить
                 </Button>
@@ -1178,10 +1178,10 @@ export function ActiveWorkoutScreen({
 
     if (workout.exercises.length === 0) {
         return (
-            <div className="min-h-full bg-[#090D12] p-4 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
+            <div className="min-h-full bg-void-base p-4 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
                 <WorkoutTopBar title={workoutTitle} elapsedLabel={elapsedLabel} onBack={onBack} />
-                <div className="mt-6 rounded-[22px] border border-dashed border-white/[0.08] bg-[#101720] p-5 text-center">
-                    <p className="text-sm font-semibold text-[#8A94A6]">Нет упражнений</p>
+                <div className="mt-6 rounded-[22px] border border-dashed border-white/[0.08] bg-panel-raised p-5 text-center">
+                    <p className="text-sm font-semibold text-ink-muted">Нет упражнений</p>
                     <Button type="button" className="mt-4 w-full rounded-2xl" onClick={onAddExercise}>
                         Добавить упражнение
                     </Button>
@@ -1192,7 +1192,7 @@ export function ActiveWorkoutScreen({
     }
 
     return (
-        <div className="min-h-full bg-[#090D12] p-4 pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
+        <div className="min-h-full bg-void-base p-4 pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
             <div className="mx-auto max-w-screen-sm space-y-4">
                 <WorkoutTopBar title={workoutTitle} elapsedLabel={elapsedLabel} onBack={onBack} />
                 <WorkoutProgress
@@ -1259,7 +1259,7 @@ export function ActiveWorkoutScreen({
                     })}
                 </div>
                 {finishWarning ? (
-                    <div className="rounded-[18px] border border-[#FACC15]/25 bg-[#FACC15]/10 px-4 py-3 text-sm font-bold text-[#FEF3C7]">
+                    <div className="rounded-[18px] border border-warning-500/25 bg-warning-500/10 px-4 py-3 text-sm font-bold text-warning-100">
                         {finishWarning}
                     </div>
                 ) : null}

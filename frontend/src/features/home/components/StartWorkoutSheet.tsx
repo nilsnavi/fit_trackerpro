@@ -112,7 +112,7 @@ export function StartWorkoutSheet({
             title="Начать тренировку"
             description="Выберите источник сессии"
             size="md"
-            className="!rounded-t-[28px] bg-[#0b0e13] text-white"
+            className="!rounded-t-[28px] bg-void-sheet text-white"
             headerClassName="border-white/[0.06]"
             bodyClassName="space-y-5 pb-[max(env(safe-area-inset-bottom),16px)]"
             closeOnOverlayClick={!isBusy}
