@@ -36,6 +36,14 @@ export function useCoachClient(clientId: number) {
     })
 }
 
+export function useCoachMonitoring(filters: import('../types/coach').MonitoringFilters = {}) {
+    return useQuery({ queryKey: queryKeys.coach.monitoring.list(filters), queryFn: () => coachApi.getMonitoring(filters), retry: false })
+}
+
+export function useCoachMonitoringClient(clientId: number) {
+    return useQuery({ queryKey: queryKeys.coach.monitoring.detail(clientId), queryFn: () => coachApi.getMonitoringClient(clientId), enabled: Number.isSafeInteger(clientId) && clientId > 0, retry: false })
+}
+
 export function useCoachPrograms() {
     return useQuery({ queryKey: queryKeys.coach.programs, queryFn: coachApi.listPrograms, retry: false })
 }

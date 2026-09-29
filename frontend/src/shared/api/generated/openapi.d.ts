@@ -690,6 +690,40 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/monitoring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Monitoring */
+        get: operations["list_monitoring_api_v1_coach_monitoring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/monitoring/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Monitoring Detail */
+        get: operations["get_monitoring_detail_api_v1_coach_monitoring__client_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/profile": {
         parameters: {
             query?: never;
@@ -2884,6 +2918,15 @@ export type components = {
             /** Unlocked */
             unlocked: boolean;
         };
+        /** ActiveWorkoutSummary */
+        ActiveWorkoutSummary: {
+            /** Started At */
+            started_at: string | null;
+            /** Status */
+            status: string;
+            /** Workout Id */
+            workout_id: number;
+        };
         /**
          * AnalyticsDashboardResponse
          * @description Aggregated analytics for the main dashboard (period filter).
@@ -3076,6 +3119,34 @@ export type components = {
              * Format: date
              */
             date: string;
+        };
+        /**
+         * AttentionSeverity
+         * @enum {string}
+         */
+        AttentionSeverity: "INFO" | "NOTICE" | "ATTENTION" | "HIGH";
+        /** AttentionSignal */
+        AttentionSignal: {
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /** Metadata */
+            metadata?: {
+                [key: string]: string | number | null;
+            };
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            severity: components["schemas"]["AttentionSeverity"];
+            /** Source Id */
+            source_id?: number | null;
+            /** Source Type */
+            source_type: string;
+            /** Title */
+            title: string;
         };
         /**
          * AuthResponse
@@ -3620,6 +3691,38 @@ export type components = {
          * @enum {string}
          */
         ChallengeType: "workout_count" | "duration" | "calories" | "distance" | "custom";
+        /** ClientMonitoringPage */
+        ClientMonitoringPage: {
+            /** Attention Count */
+            attention_count: number;
+            /** Items */
+            items: components["schemas"]["ClientMonitoringSummary"][];
+            /** Ok Count */
+            ok_count: number;
+            /** Total */
+            total: number;
+        };
+        /** ClientMonitoringSummary */
+        ClientMonitoringSummary: {
+            active_assignment: components["schemas"]["MonitoringAssignment"] | null;
+            active_workout: components["schemas"]["ActiveWorkoutSummary"] | null;
+            attention_status: components["schemas"]["MonitoringStatus"];
+            /** Client Id */
+            client_id: number;
+            /** Days Since Last Workout */
+            days_since_last_workout: number | null;
+            /** Display Name */
+            display_name: string;
+            /** Last Completed Workout At */
+            last_completed_workout_at: string | null;
+            relationship_status: components["schemas"]["CoachClientStatus"];
+            /** Signal Count */
+            signal_count: number;
+            /** Signals */
+            signals: components["schemas"]["AttentionSignal"][];
+            /** Sort Priority */
+            sort_priority: number;
+        };
         /** CoachClientDetailResponse */
         CoachClientDetailResponse: {
             /** Archived At */
@@ -5255,6 +5358,25 @@ export type components = {
              */
             message: string;
         };
+        /** MonitoringAssignment */
+        MonitoringAssignment: {
+            /** Assignment Id */
+            assignment_id: number;
+            /** Program Id */
+            program_id: number;
+            /** Program Name */
+            program_name: string;
+            /** Program Version */
+            program_version: number;
+            /** Start Date */
+            start_date: string | null;
+            status: components["schemas"]["CoachProgramAssignmentStatus"];
+        };
+        /**
+         * MonitoringStatus
+         * @enum {string}
+         */
+        MonitoringStatus: "OK" | "NOTICE" | "ATTENTION" | "HIGH";
         /**
          * MuscleImbalanceSignalsDetail
          * @description Row from ``muscle_imbalance_signals_by_user`` (see DB migration).
@@ -9265,6 +9387,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_monitoring_api_v1_coach_monitoring_get: {
+        parameters: {
+            query?: {
+                status?: string;
+                severity?: components["schemas"]["AttentionSeverity"] | null;
+                search?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientMonitoringPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_monitoring_detail_api_v1_coach_monitoring__client_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientMonitoringSummary"];
+                };
             };
             /** @description Validation Error */
             422: {

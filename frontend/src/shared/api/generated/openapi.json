@@ -298,6 +298,37 @@
         "title": "AchievementUnlockResponse",
         "type": "object"
       },
+      "ActiveWorkoutSummary": {
+        "properties": {
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "workout_id": {
+            "title": "Workout Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "workout_id",
+          "status",
+          "started_at"
+        ],
+        "title": "ActiveWorkoutSummary",
+        "type": "object"
+      },
       "AnalyticsDashboardResponse": {
         "description": "Aggregated analytics for the main dashboard (period filter).",
         "properties": {
@@ -695,6 +726,82 @@
           "count"
         ],
         "title": "AnalyticsWeeklyChartPoint",
+        "type": "object"
+      },
+      "AttentionSeverity": {
+        "enum": [
+          "INFO",
+          "NOTICE",
+          "ATTENTION",
+          "HIGH"
+        ],
+        "title": "AttentionSeverity",
+        "type": "string"
+      },
+      "AttentionSignal": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Metadata",
+            "type": "object"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/AttentionSeverity"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "title",
+          "description",
+          "occurred_at",
+          "source_type"
+        ],
+        "title": "AttentionSignal",
         "type": "object"
       },
       "AuthResponse": {
@@ -1926,6 +2033,128 @@
         ],
         "title": "ChallengeType",
         "type": "string"
+      },
+      "ClientMonitoringPage": {
+        "properties": {
+          "attention_count": {
+            "title": "Attention Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientMonitoringSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "ok_count": {
+            "title": "Ok Count",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "attention_count",
+          "ok_count"
+        ],
+        "title": "ClientMonitoringPage",
+        "type": "object"
+      },
+      "ClientMonitoringSummary": {
+        "properties": {
+          "active_assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MonitoringAssignment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_workout": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActiveWorkoutSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attention_status": {
+            "$ref": "#/components/schemas/MonitoringStatus"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "days_since_last_workout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Since Last Workout"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "last_completed_workout_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Completed Workout At"
+          },
+          "relationship_status": {
+            "$ref": "#/components/schemas/CoachClientStatus"
+          },
+          "signal_count": {
+            "title": "Signal Count",
+            "type": "integer"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionSignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "sort_priority": {
+            "title": "Sort Priority",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "client_id",
+          "display_name",
+          "relationship_status",
+          "active_assignment",
+          "last_completed_workout_at",
+          "days_since_last_workout",
+          "active_workout",
+          "attention_status",
+          "signals",
+          "signal_count",
+          "sort_priority"
+        ],
+        "title": "ClientMonitoringSummary",
+        "type": "object"
       },
       "CoachClientDetailResponse": {
         "properties": {
@@ -6308,6 +6537,61 @@
         },
         "title": "LogoutResponse",
         "type": "object"
+      },
+      "MonitoringAssignment": {
+        "properties": {
+          "assignment_id": {
+            "title": "Assignment Id",
+            "type": "integer"
+          },
+          "program_id": {
+            "title": "Program Id",
+            "type": "integer"
+          },
+          "program_name": {
+            "title": "Program Name",
+            "type": "string"
+          },
+          "program_version": {
+            "title": "Program Version",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachProgramAssignmentStatus"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "program_id",
+          "program_name",
+          "status",
+          "start_date",
+          "program_version"
+        ],
+        "title": "MonitoringAssignment",
+        "type": "object"
+      },
+      "MonitoringStatus": {
+        "enum": [
+          "OK",
+          "NOTICE",
+          "ATTENTION",
+          "HIGH"
+        ],
+        "title": "MonitoringStatus",
+        "type": "string"
       },
       "MuscleImbalanceSignalsDetail": {
         "additionalProperties": true,
@@ -15271,6 +15555,158 @@
           }
         ],
         "summary": "Revoke Invitation",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/monitoring": {
+      "get": {
+        "operationId": "list_monitoring_api_v1_coach_monitoring_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "pattern": "^(all|attention|ok)$",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AttentionSeverity"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientMonitoringPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Monitoring",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/monitoring/{client_id}": {
+      "get": {
+        "operationId": "get_monitoring_detail_api_v1_coach_monitoring__client_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientMonitoringSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Monitoring Detail",
         "tags": [
           "Coach"
         ]

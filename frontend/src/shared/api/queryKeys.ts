@@ -17,6 +17,11 @@ export const queryKeys = {
         profile: ['coach', 'profile'] as const,
         clients: ['coach', 'clients'] as const,
         client: (clientId: number) => ['coach', 'client', clientId] as const,
+        monitoring: {
+            all: ['coach', 'monitoring'] as const,
+            list: (filters: Record<string, unknown>) => ['coach', 'monitoring', 'list', filters] as const,
+            detail: (clientId: number) => ['coach', 'monitoring', 'detail', clientId] as const,
+        },
         invitations: ['coach', 'invitations'] as const,
         invitationResolve: (safeKey: string) => ['coach', 'invitation-resolve', safeKey] as const,
         programs: ['coach', 'programs'] as const,

@@ -7,6 +7,8 @@ const Dashboard = lazy(() => import('./pages/CoachDashboardPage').then((m) => ({
 const Onboarding = lazy(() => import('./pages/CoachOnboardingPage').then((m) => ({ default: m.CoachOnboardingPage })))
 const Clients = lazy(() => import('./pages/CoachClientsPage').then((m) => ({ default: m.CoachClientsPage })))
 const Client = lazy(() => import('./pages/CoachClientPage').then((m) => ({ default: m.CoachClientPage })))
+const Monitoring = lazy(() => import('./pages/CoachMonitoringPage').then((m) => ({ default: m.CoachMonitoringPage })))
+const MonitoringDetail = lazy(() => import('./pages/CoachMonitoringDetailPage').then((m) => ({ default: m.CoachMonitoringDetailPage })))
 const Invite = lazy(() => import('./pages/CoachInvitePage').then((m) => ({ default: m.CoachInvitePage })))
 const Accept = lazy(() => import('./pages/CoachInvitationAcceptPage').then((m) => ({ default: m.CoachInvitationAcceptPage })))
 const Programs = lazy(() => import('./pages/CoachProgramsPage').then((m) => ({ default: m.CoachProgramsPage })))
@@ -20,6 +22,8 @@ export function coachRoutes() {
         <Route path="/coach/onboarding" element={<RouteGuard screenTitle="Стать тренером" skeleton={<ProfilePageSkeleton />}><Onboarding /></RouteGuard>} />
         <Route path="/coach/clients" element={<RouteGuard screenTitle="Клиенты" skeleton={<ProfilePageSkeleton />}><Clients /></RouteGuard>} />
         <Route path="/coach/clients/:clientId" element={<RouteGuard screenTitle="Клиент" skeleton={<ProfilePageSkeleton />}><Client /></RouteGuard>} />
+        <Route path="/coach/monitoring" element={<RouteGuard screenTitle="Мониторинг клиентов" skeleton={<ProfilePageSkeleton />}><Monitoring /></RouteGuard>} />
+        <Route path="/coach/monitoring/:clientId" element={<RouteGuard screenTitle="Мониторинг клиента" skeleton={<ProfilePageSkeleton />}><MonitoringDetail /></RouteGuard>} />
         <Route path="/coach/programs" element={<RouteGuard screenTitle="Программы тренера" skeleton={<ProfilePageSkeleton />}><Programs /></RouteGuard>} />
         <Route path="/coach/programs/new" element={<RouteGuard screenTitle="Новая программа" skeleton={<ProfilePageSkeleton />}><ProgramBuilder /></RouteGuard>} />
         <Route path="/coach/programs/:programId/edit" element={<RouteGuard screenTitle="Редактировать программу" skeleton={<ProfilePageSkeleton />}><ProgramBuilder /></RouteGuard>} />
