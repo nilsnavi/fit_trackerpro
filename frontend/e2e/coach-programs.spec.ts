@@ -6,6 +6,8 @@ test('coach assigns a template based program and client starts it in Active Work
     let authToken = 'coach-program-coach'
     let programStatus: 'DRAFT' | 'ACTIVE' = 'DRAFT'
     let assigned = false
+    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    let assignmentStartDate: string | null = futureDate
     const now = new Date().toISOString()
     const program = () => ({
         id: 31, coach_id: 10, name: 'Sprint 10.2 strength plan', description: 'Two day starter plan',
@@ -17,7 +19,7 @@ test('coach assigns a template based program and client starts it in Active Work
     })
     const assignment = () => ({
         id: 61, coach_id: 10, client_id: 22, relationship_id: 51, program_id: 31,
-        program_version: 1, status: 'ACTIVE', start_date: null, end_date: null,
+        program_version: 1, status: 'ACTIVE', start_date: assignmentStartDate, end_date: null,
         coach_message: 'Let me know how it feels', client_message: null,
         paused_at: null, completed_at: null, cancelled_at: null, coach_name: 'Coach One',
         program: program(), created_at: now, updated_at: now,
@@ -94,7 +96,8 @@ test('coach assigns a template based program and client starts it in Active Work
     })
     await page.addInitScript(() => localStorage.setItem('auth_token', 'coach-program-coach'))
 
-    await page.goto('/coach/programs')
+    await page.goto('/coach')
+    await page.getByRole('link', { name: 'Программы' }).click()
     await page.getByRole('button', { name: 'Создать программу' }).click()
     await page.getByLabel('Название').first().fill('Sprint 10.2 strength plan')
     await page.getByLabel('Описание').fill('Two day starter plan')
@@ -112,6 +115,10 @@ test('coach assigns a template based program and client starts it in Active Work
     await page.goto('/client/coach-programs')
     await expect(page.getByRole('heading', { name: 'Программа тренера' })).toBeVisible()
     await expect(page.getByText('Existing strength template')).toBeVisible()
+    await expect(page.getByText(`Программа начнётся ${futureDate}`)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeDisabled()
+    assignmentStartDate = null
+    await page.reload()
     await page.getByRole('button', { name: 'Начать тренировку' }).click()
     await expect(page).toHaveURL(/\/workouts\/active\/501$/)
     await expect(page.getByRole('heading', { name: 'Активная тренировка' })).toBeVisible()

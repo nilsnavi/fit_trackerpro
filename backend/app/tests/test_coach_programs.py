@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import date, timedelta
 from uuid import uuid4
 
 import pytest
@@ -146,3 +147,99 @@ async def test_coach_program_concurrent_start_reuses_workout_session(client: Asy
     results = await asyncio.gather(client.post(path, headers=headers), client.post(path, headers=headers))
     assert [result.status_code for result in results] == [200, 200]
     assert results[0].json()["workout_session_id"] == results[1].json()["workout_session_id"]
+
+
+@pytest.mark.integration
+async def test_deleting_template_used_by_program_day_preserves_program_snapshot(client: AsyncClient, db_session):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach_headers = await _headers(client, 962001, "Coach")
+    await _profile(client, coach_headers, "Coach")
+    template_id = await _template(client, coach_headers, "Template to delete")
+    program = await client.post("/api/v1/coach/programs", headers=coach_headers, json={
+        "name": "Saved program",
+        "days": [{"day_number": 1, "name": "Day 1", "workout_template_id": template_id}],
+    })
+    assert program.status_code == 201, program.text
+
+    deleted = await client.delete(f"/api/v1/workouts/templates/{template_id}", headers=coach_headers)
+    assert deleted.status_code == 204, deleted.text
+
+    persisted = await client.get(f"/api/v1/coach/programs/{program.json()['id']}", headers=coach_headers)
+    assert persisted.status_code == 200, persisted.text
+    day = persisted.json()["days"][0]
+    assert day["workout_template_id"] is None
+    assert day["workout_template_name"] == "Template to delete"
+    assert day["template_version"] == 1
+
+
+@pytest.mark.integration
+async def test_future_assignment_start_date_blocks_before_idempotency_cache(client: AsyncClient, db_session, monkeypatch):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach_headers = await _headers(client, 963001, "Coach")
+    await _profile(client, coach_headers, "Coach")
+    client_headers = await _headers(client, 963002, "Client")
+    client_id = await _connected_pair(client, coach_headers, client_headers)
+    template_id = await _template(client, coach_headers, "Future template")
+    program = await client.post("/api/v1/coach/programs", headers=coach_headers, json={
+        "name": "Future program",
+        "days": [{"day_number": 1, "name": "Day 1", "workout_template_id": template_id}],
+    })
+    program_id = program.json()["id"]
+    day_id = program.json()["days"][0]["id"]
+    assert (await client.post(f"/api/v1/coach/programs/{program_id}/activate", headers=coach_headers)).status_code == 200
+    assignment = await client.post(f"/api/v1/coach/programs/{program_id}/assignments", headers=coach_headers, json={
+        "client_id": client_id, "start_date": (date.today() + timedelta(days=1)).isoformat(),
+    })
+    assert assignment.status_code == 201, assignment.text
+
+    async def unexpected_idempotency_call(**_kwargs):
+        pytest.fail("future assignment reached the idempotency/cache path")
+
+    monkeypatch.setattr("app.application.coach_program_service.run_idempotent", unexpected_idempotency_call)
+    response = await client.post(
+        f"/api/v1/client/coach-programs/{assignment.json()['id']}/days/{day_id}/start",
+        headers={**client_headers, "Idempotency-Key": "future-assignment-start"},
+    )
+    assert response.status_code == 409, response.text
+
+
+@pytest.mark.integration
+async def test_future_start_date_is_rechecked_inside_locked_start_path(client: AsyncClient, db_session, monkeypatch):
+    from sqlalchemy import update
+
+    from app.application import coach_program_service as service_module
+    from app.domain.coach_program import CoachProgramAssignment
+    from app.tests.conftest import TestingSessionLocal
+
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach_headers = await _headers(client, 964001, "Coach")
+    await _profile(client, coach_headers, "Coach")
+    client_headers = await _headers(client, 964002, "Client")
+    client_id = await _connected_pair(client, coach_headers, client_headers)
+    template_id = await _template(client, coach_headers, "Authoritative template")
+    program = await client.post("/api/v1/coach/programs", headers=coach_headers, json={
+        "name": "Authoritative program",
+        "days": [{"day_number": 1, "name": "Day 1", "workout_template_id": template_id}],
+    })
+    program_id = program.json()["id"]
+    day_id = program.json()["days"][0]["id"]
+    assert (await client.post(f"/api/v1/coach/programs/{program_id}/activate", headers=coach_headers)).status_code == 200
+    assignment = await client.post(f"/api/v1/coach/programs/{program_id}/assignments", headers=coach_headers, json={"client_id": client_id})
+    assert assignment.status_code == 201, assignment.text
+    assignment_id = assignment.json()["id"]
+
+    async def move_start_date_then_execute(**kwargs):
+        async with TestingSessionLocal() as session:
+            await session.execute(update(CoachProgramAssignment).where(CoachProgramAssignment.id == assignment_id).values(start_date=date.today() + timedelta(days=1)))
+            await session.commit()
+        return await kwargs["execute"]()
+
+    monkeypatch.setattr(service_module, "run_idempotent", move_start_date_then_execute)
+    response = await client.post(
+        f"/api/v1/client/coach-programs/{assignment_id}/days/{day_id}/start",
+        headers={**client_headers, "Idempotency-Key": "authoritative-future-start"},
+    )
+    assert response.status_code == 409, response.text

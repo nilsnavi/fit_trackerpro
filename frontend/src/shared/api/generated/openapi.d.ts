@@ -3946,7 +3946,7 @@ export type components = {
             /** Template Version */
             template_version: number;
             /** Workout Template Id */
-            workout_template_id: number;
+            workout_template_id: number | null;
             /** Workout Template Name */
             workout_template_name: string;
         };

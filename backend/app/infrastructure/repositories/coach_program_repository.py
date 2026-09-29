@@ -42,7 +42,7 @@ class CoachProgramRepository:
         if client_id is not None:
             query = query.where(CoachProgramAssignment.client_id == client_id)
         if lock:
-            query = query.with_for_update()
+            query = query.with_for_update().execution_options(populate_existing=True)
         return await self.db.scalar(query)
 
     async def list_assignments(self, *, coach_id: int | None = None, client_id: int | None = None) -> list[CoachProgramAssignment]:

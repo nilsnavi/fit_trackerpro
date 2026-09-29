@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -358,6 +358,8 @@ class CoachProgramService:
             raise CoachClientRelationshipNotFound()
         if assignment.status != CoachProgramAssignmentStatus.ACTIVE.value:
             raise WorkoutConflictError("Only active program assignments can start a day")
+        if assignment.start_date and assignment.start_date > date.today():
+            raise WorkoutConflictError("Program assignment has not started yet")
         return await run_idempotent(
             user_id=client_id,
             scope=f"coach_program_start:{assignment_id}:{day_id}",
@@ -377,6 +379,8 @@ class CoachProgramService:
             raise CoachClientRelationshipNotFound()
         if assignment.status != CoachProgramAssignmentStatus.ACTIVE.value:
             raise WorkoutConflictError("Only active program assignments can start a day")
+        if assignment.start_date and assignment.start_date > date.today():
+            raise WorkoutConflictError("Program assignment has not started yet")
         program = await self._owned_program(assignment.coach_id, assignment.program_id, lock=True)
         if program.status != CoachProgramStatus.ACTIVE.value or program.version != assignment.program_version:
             raise WorkoutConflictError("Program assignment is no longer startable")

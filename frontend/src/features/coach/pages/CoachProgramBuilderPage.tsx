@@ -39,13 +39,16 @@ export function CoachProgramBuilderPage() {
         setDescription(existing.data.description ?? '')
         setDays(existing.data.days.map((day) => ({
             id: day.id, day_number: day.day_number, name: day.name,
-            workout_template_id: day.workout_template_id, notes: day.notes ?? '', position: day.position,
+            workout_template_id: day.workout_template_id ?? 0, notes: day.notes ?? '', position: day.position,
         })))
         setInitialized(true)
     }, [existing.data, initialized, navigate, programId])
 
     const updateDay = (index: number, patch: Partial<DayDraft>) => setDays((items) => items.map((item, i) => i === index ? { ...item, ...patch } : item))
-    const addDay = () => setDays((items) => [...items, { day_number: items.length + 1, name: `День ${items.length + 1}`, workout_template_id: 0, notes: '', position: items.length }])
+    const addDay = () => setDays((items) => {
+        const dayNumber = Math.max(...items.map((item) => item.day_number), 0) + 1
+        return [...items, { day_number: dayNumber, name: `День ${dayNumber}`, workout_template_id: 0, notes: '', position: items.length }]
+    })
     const removeDay = (index: number) => setDays((items) => items.filter((_, i) => i !== index).map((item, i) => ({ ...item, position: i })))
 
     const save = async () => {

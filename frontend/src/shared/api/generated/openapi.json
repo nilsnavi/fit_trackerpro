@@ -2957,8 +2957,15 @@
             "type": "integer"
           },
           "workout_template_id": {
-            "title": "Workout Template Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Template Id"
           },
           "workout_template_name": {
             "title": "Workout Template Name",

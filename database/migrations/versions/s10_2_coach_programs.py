@@ -34,7 +34,7 @@ def upgrade() -> None:
         sa.Column("program_id", sa.Integer(), sa.ForeignKey("coach_programs.id", ondelete="CASCADE"), nullable=False),
         sa.Column("day_number", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("workout_template_id", sa.Integer(), sa.ForeignKey("workout_templates.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("workout_template_id", sa.Integer(), sa.ForeignKey("workout_templates.id", ondelete="SET NULL"), nullable=True),
         sa.Column("workout_template_name", sa.String(255), nullable=False),
         sa.Column("template_version", sa.Integer(), nullable=False),
         sa.Column("notes", sa.String(1000), nullable=True),

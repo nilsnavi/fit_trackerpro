@@ -64,7 +64,7 @@ class CoachProgramDay(Base):
     program_id: Mapped[int] = mapped_column(ForeignKey("coach_programs.id", ondelete="CASCADE"), nullable=False)
     day_number: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    workout_template_id: Mapped[int] = mapped_column(ForeignKey("workout_templates.id", ondelete="RESTRICT"), nullable=False)
+    workout_template_id: Mapped[int | None] = mapped_column(ForeignKey("workout_templates.id", ondelete="SET NULL"), nullable=True)
     workout_template_name: Mapped[str] = mapped_column(String(255), nullable=False)
     template_version: Mapped[int] = mapped_column(Integer, nullable=False)
     notes: Mapped[str | None] = mapped_column(String(1000))

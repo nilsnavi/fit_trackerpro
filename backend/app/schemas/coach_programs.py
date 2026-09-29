@@ -62,7 +62,7 @@ class CoachProgramDayResponse(BaseModel):
     id: int
     day_number: int
     name: str
-    workout_template_id: int
+    workout_template_id: int | None
     workout_template_name: str
     template_version: int
     notes: str | None = None

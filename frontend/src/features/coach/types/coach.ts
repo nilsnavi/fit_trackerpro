@@ -33,7 +33,7 @@ export type CoachProgramDay = {
     id: number
     day_number: number
     name: string
-    workout_template_id: number
+    workout_template_id: number | null
     workout_template_name: string
     template_version: number
     notes: string | null
