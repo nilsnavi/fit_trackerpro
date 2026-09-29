@@ -19,6 +19,8 @@ from app.api.v1.achievements import router as achievements_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import protected_auth_router, public_auth_router
 from app.api.v1.challenges import router as challenges_router
+from app.api.v1.coach import client_program_router
+from app.api.v1.coach import router as coach_router
 from app.api.v1.emergency import router as emergency_router
 from app.api.v1.exercises import router as exercises_router
 from app.api.v1.health_metrics import router as health_metrics_router
@@ -27,6 +29,7 @@ from app.api.v1.openapi_tags import (
     TAG_ANALYTICS,
     TAG_AUTHENTICATION,
     TAG_CHALLENGES,
+    TAG_COACH,
     TAG_EMERGENCY,
     TAG_EXERCISES,
     TAG_HEALTH_METRICS,
@@ -105,6 +108,8 @@ def register_v1_routes(app: FastAPI) -> None:
         tags=[TAG_EMERGENCY],
         **auth_mount_kw,
     )
+    api_v1.include_router(coach_router, prefix="/coach", tags=[TAG_COACH], **auth_mount_kw)
+    api_v1.include_router(client_program_router, prefix="/client/coach-programs", tags=[TAG_COACH], **auth_mount_kw)
 
     app.include_router(api_v1)
 

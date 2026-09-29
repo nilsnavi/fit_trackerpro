@@ -131,6 +131,72 @@ class NotImplementedFeatureError(DomainError):
     default_message = "This feature is not implemented yet"
 
 
+class CoachProfileAlreadyExists(DomainError):
+    code = "coach_profile_exists"
+    http_status = 409
+    default_message = "Coach profile already exists"
+
+
+class CoachProfileNotFound(DomainError):
+    code = "coach_profile_not_found"
+    http_status = 404
+    default_message = "Coach profile not found"
+
+
+class CoachRoleRequired(DomainError):
+    code = "coach_role_required"
+    http_status = 403
+    default_message = "Coach role is required"
+
+
+class CoachClientRelationshipNotFound(DomainError):
+    code = "coach_client_relationship_not_found"
+    http_status = 404
+    default_message = "Coach-client relationship not found"
+
+
+class CoachClientAlreadyExists(DomainError):
+    code = "coach_client_exists"
+    http_status = 409
+    default_message = "An active coach-client relationship already exists"
+
+
+class CoachInvitationNotFound(DomainError):
+    code = "coach_invitation_not_found"
+    http_status = 404
+    default_message = "Coach invitation not found"
+
+
+class CoachInvitationExpired(DomainError):
+    code = "coach_invitation_expired"
+    http_status = 410
+    default_message = "Coach invitation has expired"
+
+
+class CoachInvitationAlreadyUsed(DomainError):
+    code = "coach_invitation_already_used"
+    http_status = 409
+    default_message = "Coach invitation has already been used"
+
+
+class CoachInvitationRevoked(DomainError):
+    code = "coach_invitation_revoked"
+    http_status = 410
+    default_message = "Coach invitation has been revoked"
+
+
+class CoachPermissionDenied(DomainError):
+    code = "coach_permission_denied"
+    http_status = 403
+    default_message = "Coach permission denied"
+
+
+class CoachFeatureDisabled(DomainError):
+    code = "coach_feature_disabled"
+    http_status = 404
+    default_message = "Coach feature is disabled"
+
+
 class UserNotFoundError(DomainError):
     code = "user_not_found"
     http_status = 404

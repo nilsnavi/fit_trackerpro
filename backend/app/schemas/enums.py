@@ -51,6 +51,7 @@ class WorkoutSessionSourceType(StrEnum):
     COMMUNITY_TEMPLATE = "community_template"
     PROGRAM_DAY = "program_day"
     PREVIOUS_SESSION = "previous_session"
+    COACH_PROGRAM = "coach_program"
 
 
 class WorkoutSetType(StrEnum):
