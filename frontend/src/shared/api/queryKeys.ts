@@ -19,6 +19,11 @@ export const queryKeys = {
         client: (clientId: number) => ['coach', 'client', clientId] as const,
         invitations: ['coach', 'invitations'] as const,
         invitationResolve: (safeKey: string) => ['coach', 'invitation-resolve', safeKey] as const,
+        programs: ['coach', 'programs'] as const,
+        program: (programId: number) => ['coach', 'programs', programId] as const,
+        assignments: ['coach', 'assignments'] as const,
+        programAssignments: (programId: number) => ['coach', 'programs', programId, 'assignments'] as const,
+        clientPrograms: (clientId: number | 'self') => ['coach', 'client-programs', clientId] as const,
     },
     achievements: {
         list: (category: AchievementListFilter) => ['achievements', 'list', category] as const,

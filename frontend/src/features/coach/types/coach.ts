@@ -26,3 +26,51 @@ export type CreatedCoachInvitation = Omit<GeneratedCoachInvitationCreated, 'stat
 export type CoachClient = components['schemas']['CoachClientResponse']
 export type CoachClientDetail = components['schemas']['CoachClientDetailResponse']
 export type CoachInvitationResolution = components['schemas']['CoachInvitationResolveResponse']
+
+export type CoachProgramStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+export type CoachAssignmentStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
+export type CoachProgramDay = {
+    id: number
+    day_number: number
+    name: string
+    workout_template_id: number | null
+    workout_template_name: string
+    template_version: number
+    notes: string | null
+    position: number
+}
+export type CoachProgram = {
+    id: number
+    coach_id: number
+    name: string
+    description: string | null
+    status: CoachProgramStatus
+    version: number
+    days: CoachProgramDay[]
+    created_at: string
+    updated_at: string
+}
+export type CoachProgramAssignment = {
+    id: number
+    coach_id: number
+    client_id: number
+    relationship_id: number
+    program_id: number
+    program_version: number
+    status: CoachAssignmentStatus
+    start_date: string | null
+    end_date: string | null
+    coach_message: string | null
+    client_message: string | null
+    coach_name: string | null
+    program: CoachProgram
+    created_at: string
+    updated_at: string
+}
+export type CoachProgramDayInput = {
+    day_number: number
+    name: string
+    workout_template_id: number
+    notes?: string | null
+    position?: number
+}

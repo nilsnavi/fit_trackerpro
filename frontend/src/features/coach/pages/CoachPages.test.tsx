@@ -4,10 +4,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { CoachOnboardingPage } from './CoachOnboardingPage'
 import { CoachClientsPage } from './CoachClientsPage'
 import { CoachInvitationAcceptPage } from './CoachInvitationAcceptPage'
+import { CoachDashboardPage } from './CoachDashboardPage'
 import { coachApi } from '../api/coachApi'
 
 jest.mock('../api/coachApi', () => ({ coachApi: {
-    createProfile: jest.fn(), listClients: jest.fn(), resolveInvitation: jest.fn(), acceptInvitation: jest.fn(),
+    getProfile: jest.fn(), createProfile: jest.fn(), listClients: jest.fn(), resolveInvitation: jest.fn(), acceptInvitation: jest.fn(),
 } }))
 
 function renderPage(element: React.ReactNode) {
@@ -16,6 +17,16 @@ function renderPage(element: React.ReactNode) {
 }
 
 describe('Coach pages', () => {
+    it('provides a dashboard link to Coach Programs', async () => {
+        jest.mocked(coachApi.getProfile).mockResolvedValue({
+            id: 1, user_id: 10, display_name: 'Coach', bio: null, specializations: [],
+        } as never)
+        jest.mocked(coachApi.listClients).mockResolvedValue([] as never)
+        renderPage(<CoachDashboardPage />)
+
+        expect(await screen.findByRole('link', { name: 'Программы' })).toHaveAttribute('href', '/coach/programs')
+    })
+
     it('validates and submits onboarding', async () => {
         jest.mocked(coachApi.createProfile).mockResolvedValue({ id: 1 } as never)
         renderPage(<CoachOnboardingPage />)

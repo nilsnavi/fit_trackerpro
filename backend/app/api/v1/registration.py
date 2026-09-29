@@ -19,6 +19,7 @@ from app.api.v1.achievements import router as achievements_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import protected_auth_router, public_auth_router
 from app.api.v1.challenges import router as challenges_router
+from app.api.v1.coach import client_program_router
 from app.api.v1.coach import router as coach_router
 from app.api.v1.emergency import router as emergency_router
 from app.api.v1.exercises import router as exercises_router
@@ -108,6 +109,7 @@ def register_v1_routes(app: FastAPI) -> None:
         **auth_mount_kw,
     )
     api_v1.include_router(coach_router, prefix="/coach", tags=[TAG_COACH], **auth_mount_kw)
+    api_v1.include_router(client_program_router, prefix="/client/coach-programs", tags=[TAG_COACH], **auth_mount_kw)
 
     app.include_router(api_v1)
 

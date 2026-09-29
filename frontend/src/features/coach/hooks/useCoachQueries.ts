@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
 import { coachApi } from '../api/coachApi'
-import type { CoachProfileInput } from '../types/coach'
+import type { CoachAssignmentStatus, CoachProfileInput } from '../types/coach'
 
 export function useCoachProfile(enabled = true) {
     return useQuery({ queryKey: queryKeys.coach.profile, queryFn: coachApi.getProfile, enabled, retry: false })
@@ -33,6 +33,64 @@ export function useCoachClient(clientId: number) {
         queryFn: () => coachApi.getClient(clientId),
         enabled: Number.isSafeInteger(clientId) && clientId > 0,
         retry: false,
+    })
+}
+
+export function useCoachPrograms() {
+    return useQuery({ queryKey: queryKeys.coach.programs, queryFn: coachApi.listPrograms, retry: false })
+}
+
+export function useCoachProgram(programId: number) {
+    return useQuery({
+        queryKey: queryKeys.coach.program(programId), queryFn: () => coachApi.getProgram(programId),
+        enabled: Number.isSafeInteger(programId) && programId > 0, retry: false,
+    })
+}
+
+export function useCoachProgramAssignments(programId: number) {
+    return useQuery({
+        queryKey: queryKeys.coach.programAssignments(programId),
+        queryFn: () => coachApi.listProgramAssignments(programId),
+        enabled: Number.isSafeInteger(programId) && programId > 0, retry: false,
+    })
+}
+
+export function useMyCoachPrograms() {
+    return useQuery({ queryKey: queryKeys.coach.clientPrograms('self'), queryFn: coachApi.listMyPrograms, retry: false })
+}
+
+export function useCreateCoachProgram() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: coachApi.createProgram,
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.programs }),
+    })
+}
+
+export function useCoachProgramAction(programId: number) {
+    const qc = useQueryClient()
+    const invalidate = async () => Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.coach.programs }),
+        qc.invalidateQueries({ queryKey: queryKeys.coach.program(programId) }),
+        qc.invalidateQueries({ queryKey: queryKeys.coach.programAssignments(programId) }),
+        qc.invalidateQueries({ queryKey: queryKeys.coach.assignments }),
+        qc.invalidateQueries({ queryKey: queryKeys.coach.root }),
+    ])
+    const activate = useMutation({ mutationFn: () => coachApi.activateProgram(programId), onSuccess: invalidate })
+    const archive = useMutation({ mutationFn: () => coachApi.archiveProgram(programId), onSuccess: invalidate })
+    const assign = useMutation({ mutationFn: (payload: { client_id: number; start_date?: string; coach_message?: string }) => coachApi.assignProgram(programId, payload), onSuccess: invalidate })
+    return { activate, archive, assign }
+}
+
+export function useUpdateCoachAssignment(assignmentId: number, programId: number, clientId: number) {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (payload: { status: CoachAssignmentStatus; client_message?: string }) => coachApi.updateAssignment(assignmentId, payload),
+        onSuccess: async () => Promise.all([
+            qc.invalidateQueries({ queryKey: queryKeys.coach.programAssignments(programId) }),
+            qc.invalidateQueries({ queryKey: queryKeys.coach.clientPrograms(clientId) }),
+            qc.invalidateQueries({ queryKey: queryKeys.coach.clientPrograms('self') }),
+        ]),
     })
 }
 
