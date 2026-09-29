@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.api.deps.coach import require_coach, require_coach_feature
+from app.application.coach_monitoring_service import CoachMonitoringService
 from app.application.coach_program_service import CoachProgramService
 from app.application.coach_service import (
     CoachIdentityService,
@@ -27,6 +28,11 @@ from app.schemas.coach import (
     CoachProfileCreate,
     CoachProfileResponse,
     CoachProfileUpdate,
+)
+from app.schemas.coach_monitoring import (
+    AttentionSeverity,
+    ClientMonitoringPage,
+    ClientMonitoringSummary,
 )
 from app.schemas.coach_programs import (
     CoachProgramAssignmentCreate,
@@ -118,6 +124,31 @@ async def revoke_invitation(
 @router.get("/clients", response_model=list[CoachClientResponse])
 async def list_clients(coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
     return await CoachRelationshipService(db).list_clients(coach.id)
+
+
+@router.get("/monitoring", response_model=ClientMonitoringPage)
+async def list_monitoring(
+    status_filter: str = Query("all", alias="status", pattern="^(all|attention|ok)$"),
+    severity: AttentionSeverity | None = None,
+    search: str | None = Query(None, max_length=100),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachMonitoringService(db).list_clients(
+        coach.id, status=status_filter, severity=severity.value if severity else None,
+        search=search, limit=limit, offset=offset,
+    )
+
+
+@router.get("/monitoring/{client_id}", response_model=ClientMonitoringSummary)
+async def get_monitoring_detail(
+    client_id: int,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachMonitoringService(db).get_client(coach.id, client_id)
 
 
 @router.get("/clients/{client_id}", response_model=CoachClientDetailResponse)

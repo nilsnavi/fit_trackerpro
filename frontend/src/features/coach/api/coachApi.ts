@@ -11,6 +11,9 @@ import type {
     CoachProgramAssignment,
     CoachProgramDayInput,
     CoachAssignmentStatus,
+    ClientMonitoring,
+    ClientMonitoringPage,
+    MonitoringFilters,
 } from '../types/coach'
 
 const root = '/coach'
@@ -28,6 +31,12 @@ export const coachApi = {
     acceptInvitation: (token: string) => api.post<CoachClient>(`${root}/invitations/accept`, { token }),
     listClients: () => api.get<CoachClient[]>(`${root}/clients`),
     getClient: (clientId: number) => api.get<CoachClientDetail>(`${root}/clients/${clientId}`),
+    getMonitoring: (filters: MonitoringFilters = {}) => {
+        const params = new URLSearchParams()
+        Object.entries(filters).forEach(([key, value]) => { if (value !== undefined && value !== '') params.set(key, String(value)) })
+        return api.get<ClientMonitoringPage>(`${root}/monitoring${params.size ? `?${params.toString()}` : ''}`)
+    },
+    getMonitoringClient: (clientId: number) => api.get<ClientMonitoring>(`${root}/monitoring/${clientId}`),
     updateClient: (clientId: number, payload: { status: CoachClient['status'] }) =>
         api.patch<CoachClient>(`${root}/clients/${clientId}`, payload),
     revokeClient: (clientId: number) => api.delete<void>(`${root}/clients/${clientId}`),

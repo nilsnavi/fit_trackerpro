@@ -74,3 +74,29 @@ export type CoachProgramDayInput = {
     notes?: string | null
     position?: number
 }
+
+export type MonitoringSignal = {
+    code: string
+    severity: 'INFO' | 'NOTICE' | 'ATTENTION' | 'HIGH'
+    title: string
+    description: string
+    occurred_at: string
+    source_type: string
+    source_id: number | null
+    metadata: Record<string, string | number | null>
+}
+export type ClientMonitoring = {
+    client_id: number
+    display_name: string
+    relationship_status: RelationshipStatus
+    active_assignment: { assignment_id: number; program_id: number; program_name: string; status: CoachAssignmentStatus; start_date: string | null; program_version: number } | null
+    last_completed_workout_at: string | null
+    days_since_last_workout: number | null
+    active_workout: { workout_id: number; status: string; started_at: string | null } | null
+    attention_status: 'OK' | 'NOTICE' | 'ATTENTION' | 'HIGH'
+    signals: MonitoringSignal[]
+    signal_count: number
+    sort_priority: number
+}
+export type ClientMonitoringPage = { items: ClientMonitoring[]; total: number; attention_count: number; ok_count: number }
+export type MonitoringFilters = { status?: 'all' | 'attention' | 'ok'; severity?: string; search?: string; limit?: number; offset?: number }

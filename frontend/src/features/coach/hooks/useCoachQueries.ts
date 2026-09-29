@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
 import { coachApi } from '../api/coachApi'
 import type { CoachAssignmentStatus, CoachProfileInput } from '../types/coach'
@@ -34,6 +34,24 @@ export function useCoachClient(clientId: number) {
         enabled: Number.isSafeInteger(clientId) && clientId > 0,
         retry: false,
     })
+}
+
+export function useCoachMonitoring(filters: Omit<import('../types/coach').MonitoringFilters, 'offset' | 'limit'> = {}) {
+    const limit = 50
+    return useInfiniteQuery({
+        queryKey: queryKeys.coach.monitoring.list({ ...filters, limit }),
+        initialPageParam: 0,
+        queryFn: ({ pageParam }) => coachApi.getMonitoring({ ...filters, limit, offset: pageParam }),
+        getNextPageParam: (lastPage, pages) => {
+            const loaded = pages.reduce((count, page) => count + page.items.length, 0)
+            return loaded < lastPage.total ? loaded : undefined
+        },
+        retry: false,
+    })
+}
+
+export function useCoachMonitoringClient(clientId: number) {
+    return useQuery({ queryKey: queryKeys.coach.monitoring.detail(clientId), queryFn: () => coachApi.getMonitoringClient(clientId), enabled: Number.isSafeInteger(clientId) && clientId > 0, retry: false })
 }
 
 export function useCoachPrograms() {

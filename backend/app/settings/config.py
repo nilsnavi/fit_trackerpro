@@ -339,6 +339,10 @@ class Settings(BaseSettings):
         int, Field(description="Max coach invitations created per window.", ge=1)
     ] = 10
 
+    COACH_MONITORING_NO_WORKOUT_DAYS: Annotated[
+        int, Field(description="Elapsed UTC days without a completed workout before monitoring attention.", ge=1, le=365)
+    ] = 7
+
     # --- Optional: logging ---
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "text"
