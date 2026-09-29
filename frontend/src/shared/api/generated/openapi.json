@@ -2344,6 +2344,29 @@
         "title": "CoachClientUpdate",
         "type": "object"
       },
+      "CoachFeatures": {
+        "properties": {
+          "advanced_monitoring_filters": {
+            "title": "Advanced Monitoring Filters",
+            "type": "boolean"
+          },
+          "client_monitoring": {
+            "title": "Client Monitoring",
+            "type": "boolean"
+          },
+          "program_assignments": {
+            "title": "Program Assignments",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "client_monitoring",
+          "program_assignments",
+          "advanced_monitoring_filters"
+        ],
+        "title": "CoachFeatures",
+        "type": "object"
+      },
       "CoachInvitationAccept": {
         "properties": {
           "token": {
@@ -2593,6 +2616,43 @@
           "created_at"
         ],
         "title": "CoachInvitationResponse",
+        "type": "object"
+      },
+      "CoachPlanResponse": {
+        "properties": {
+          "available_features": {
+            "$ref": "#/components/schemas/CoachFeatures"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "limits": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Limits",
+            "type": "object"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "display_name",
+          "limits",
+          "available_features"
+        ],
+        "title": "CoachPlanResponse",
         "type": "object"
       },
       "CoachProfileCreate": {
@@ -3437,6 +3497,198 @@
           "source_metadata"
         ],
         "title": "CoachProgramWorkoutStartResponse",
+        "type": "object"
+      },
+      "CoachQuota": {
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "used",
+          "limit",
+          "remaining"
+        ],
+        "title": "CoachQuota",
+        "type": "object"
+      },
+      "CoachSubscriptionResponse": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "active_clients": {
+            "$ref": "#/components/schemas/CoachQuota"
+          },
+          "active_programs": {
+            "$ref": "#/components/schemas/CoachQuota"
+          },
+          "cancel_at_period_end": {
+            "title": "Cancel At Period End",
+            "type": "boolean"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "features": {
+            "$ref": "#/components/schemas/CoachFeatures"
+          },
+          "grace_days_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Days Remaining"
+          },
+          "grace_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Ends At"
+          },
+          "period_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Ends At"
+          },
+          "period_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Started At"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_days_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Days Remaining"
+          },
+          "trial_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Ends At"
+          },
+          "trial_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Started At"
+          },
+          "upgrade_required": {
+            "title": "Upgrade Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plan",
+          "status",
+          "trial_started_at",
+          "trial_ends_at",
+          "trial_days_remaining",
+          "grace_ends_at",
+          "grace_days_remaining",
+          "period_started_at",
+          "period_ends_at",
+          "activated_at",
+          "cancelled_at",
+          "cancel_at_period_end",
+          "active_clients",
+          "active_programs",
+          "features",
+          "upgrade_required"
+        ],
+        "title": "CoachSubscriptionResponse",
         "type": "object"
       },
       "CompletedExercise-Input": {
@@ -15712,6 +15964,36 @@
         ]
       }
     },
+    "/api/v1/coach/plans": {
+      "get": {
+        "operationId": "list_coach_plans_api_v1_coach_plans_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachPlanResponse"
+                  },
+                  "title": "Response List Coach Plans Api V1 Coach Plans Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Coach Plans",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
     "/api/v1/coach/profile": {
       "get": {
         "operationId": "get_profile_api_v1_coach_profile_get",
@@ -16365,6 +16647,32 @@
           }
         ],
         "summary": "Update Program Day",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/subscription": {
+      "get": {
+        "operationId": "get_coach_subscription_api_v1_coach_subscription_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachSubscriptionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Coach Subscription",
         "tags": [
           "Coach"
         ]

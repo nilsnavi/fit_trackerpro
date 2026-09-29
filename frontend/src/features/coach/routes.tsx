@@ -15,10 +15,12 @@ const Programs = lazy(() => import('./pages/CoachProgramsPage').then((m) => ({ d
 const ProgramBuilder = lazy(() => import('./pages/CoachProgramBuilderPage').then((m) => ({ default: m.CoachProgramBuilderPage })))
 const ProgramDetail = lazy(() => import('./pages/CoachProgramDetailPage').then((m) => ({ default: m.CoachProgramDetailPage })))
 const ClientPrograms = lazy(() => import('./pages/ClientCoachProgramsPage').then((m) => ({ default: m.ClientCoachProgramsPage })))
+const Subscription = lazy(() => import('./pages/CoachSubscriptionPage').then((m) => ({ default: m.CoachSubscriptionPage })))
 
 export function coachRoutes() {
     return <>
         <Route path="/coach" element={<RouteGuard screenTitle="Кабинет тренера" skeleton={<ProfilePageSkeleton />}><Dashboard /></RouteGuard>} />
+        <Route path="/coach/subscription" element={<RouteGuard screenTitle="Тариф тренера" skeleton={<ProfilePageSkeleton />}><Subscription /></RouteGuard>} />
         <Route path="/coach/onboarding" element={<RouteGuard screenTitle="Стать тренером" skeleton={<ProfilePageSkeleton />}><Onboarding /></RouteGuard>} />
         <Route path="/coach/clients" element={<RouteGuard screenTitle="Клиенты" skeleton={<ProfilePageSkeleton />}><Clients /></RouteGuard>} />
         <Route path="/coach/clients/:clientId" element={<RouteGuard screenTitle="Клиент" skeleton={<ProfilePageSkeleton />}><Client /></RouteGuard>} />

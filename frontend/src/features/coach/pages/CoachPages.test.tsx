@@ -9,7 +9,7 @@ import { coachApi } from '../api/coachApi'
 import { CoachMonitoringPage } from './CoachMonitoringPage'
 
 jest.mock('../api/coachApi', () => ({ coachApi: {
-    getProfile: jest.fn(), createProfile: jest.fn(), listClients: jest.fn(), resolveInvitation: jest.fn(), acceptInvitation: jest.fn(), getMonitoring: jest.fn(),
+    getProfile: jest.fn(), createProfile: jest.fn(), listClients: jest.fn(), resolveInvitation: jest.fn(), acceptInvitation: jest.fn(), getMonitoring: jest.fn(), getSubscription: jest.fn(), listPlans: jest.fn(),
 } }))
 
 function renderPage(element: React.ReactNode) {
@@ -23,6 +23,7 @@ describe('Coach pages', () => {
             id: 1, user_id: 10, display_name: 'Coach', bio: null, specializations: [],
         } as never)
         jest.mocked(coachApi.listClients).mockResolvedValue([] as never)
+        jest.mocked(coachApi.getSubscription).mockResolvedValue({ plan: 'FREE', active_clients: { used: 0, limit: 3, remaining: 3 } } as never)
         renderPage(<CoachDashboardPage />)
 
         expect(await screen.findByRole('link', { name: 'Программы' })).toHaveAttribute('href', '/coach/programs')

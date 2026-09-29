@@ -13,6 +13,7 @@ from app.domain.challenge import Challenge  # noqa: F401
 from app.domain.coach_client import CoachClient  # noqa: F401
 from app.domain.coach_invitation import CoachInvitation  # noqa: F401
 from app.domain.coach_profile import CoachProfile  # noqa: F401
+from app.domain.coach_subscription import CoachSubscription  # noqa: F401
 from app.domain.coach_program import (  # noqa: F401
     CoachProgram,
     CoachProgramAssignment,

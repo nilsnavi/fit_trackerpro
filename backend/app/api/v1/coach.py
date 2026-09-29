@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps.auth import get_current_user
 from app.api.deps.coach import require_coach, require_coach_feature
 from app.application.coach_monitoring_service import CoachMonitoringService
+from app.application.coach_entitlement_service import CoachEntitlementService
 from app.application.coach_program_service import CoachProgramService
 from app.application.coach_service import (
     CoachIdentityService,
@@ -46,9 +47,20 @@ from app.schemas.coach_programs import (
     CoachProgramUpdate,
     CoachProgramWorkoutStartResponse,
 )
+from app.schemas.coach_entitlements import CoachPlanResponse, CoachSubscriptionResponse
 
 router = APIRouter(dependencies=[Depends(require_coach_feature)])
 client_program_router = APIRouter(dependencies=[Depends(require_coach_feature)])
+
+
+@router.get("/plans", response_model=list[CoachPlanResponse])
+async def list_coach_plans(current_user: User = Depends(get_current_user)):
+    return CoachEntitlementService.catalog_payload()
+
+
+@router.get("/subscription", response_model=CoachSubscriptionResponse)
+async def get_coach_subscription(coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
+    return await CoachEntitlementService(db).current_payload(coach.id)
 
 
 @router.post("/profile", response_model=CoachProfileResponse, status_code=status.HTTP_201_CREATED)
@@ -136,6 +148,9 @@ async def list_monitoring(
     coach: User = Depends(require_coach),
     db: AsyncSession = Depends(get_async_db),
 ):
+    if severity is not None:
+        from app.application.coach_entitlement_service import CoachEntitlementService
+        await CoachEntitlementService(db).require_feature(coach.id, "advanced_monitoring_filters")
     return await CoachMonitoringService(db).list_clients(
         coach.id, status=status_filter, severity=severity.value if severity else None,
         search=search, limit=limit, offset=offset,

@@ -10,6 +10,7 @@ export class AppHttpError extends Error {
     readonly status: number | null
     readonly code: string
     readonly fieldErrors?: ClientError['fieldErrors']
+    readonly details?: ClientError['details']
     readonly requestUrl?: string
 
     constructor(readonly payload: ClientError) {
@@ -17,6 +18,7 @@ export class AppHttpError extends Error {
         this.status = payload.status
         this.code = payload.code
         this.fieldErrors = payload.fieldErrors
+        this.details = payload.details
         this.requestUrl = payload.requestUrl
         Object.setPrototypeOf(this, new.target.prototype)
     }

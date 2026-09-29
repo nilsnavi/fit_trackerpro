@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.coach_entitlement_service import CoachEntitlementService
 from app.core.audit import (
     COACH_INVITATION_ACCEPT,
     COACH_INVITATION_CREATE,
@@ -81,6 +82,7 @@ class CoachIdentityService:
             if not await self.roles.has_role(user_id, UserRoleName.COACH):
                 await self.roles.activate_coach(user_id)
             profile = await self.profiles.create(CoachProfile(user_id=user_id, **data.model_dump()))
+            await CoachEntitlementService(self.db).create_trial_for_new_profile(user_id)
             await self.db.commit()
             await self.db.refresh(profile)
         except IntegrityError as exc:
@@ -123,6 +125,7 @@ class CoachInvitationService:
         self.clients = CoachClientRepository(db)
 
     async def create(self, coach_id: int, data: CoachInvitationCreate, client_ip: str | None = None) -> CoachInvitationCreatedResponse:
+        await CoachEntitlementService(self.db).require_capacity(coach_id, "clients")
         token = secrets.token_urlsafe(32)
         invitation = CoachInvitation(coach_id=coach_id, client_hint=data.client_hint, token_hash=invitation_token_hash(token), expires_at=_now() + INVITATION_TTL)
         await self.invitations.create(invitation)
@@ -187,6 +190,7 @@ class CoachInvitationService:
             self._ensure_usable(invitation)
             if invitation.coach_id == client_id:
                 raise CoachClientAlreadyExists("A coach cannot accept their own invitation")
+            await CoachEntitlementService(self.db).require_capacity(invitation.coach_id, "clients")
             relationship = await self.clients.get_for_coach(
                 invitation.coach_id, client_id, current_only=True
             )
@@ -267,6 +271,8 @@ class CoachRelationshipService:
         if not relationship or relationship.status in {CoachClientStatus.ARCHIVED, CoachClientStatus.REVOKED}:
             raise CoachClientRelationshipNotFound()
         requested_status = data.status
+        if requested_status == CoachClientStatus.ACTIVE and relationship.status != CoachClientStatus.ACTIVE:
+            await CoachEntitlementService(self.db).require_capacity(coach_id, "clients")
         if relationship.status == CoachClientStatus.REVOKED and requested_status not in (None, CoachClientStatus.REVOKED):
             raise CoachClientRelationshipNotFound()
         if requested_status is not None:

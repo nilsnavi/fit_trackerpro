@@ -7,6 +7,14 @@ export function useCoachProfile(enabled = true) {
     return useQuery({ queryKey: queryKeys.coach.profile, queryFn: coachApi.getProfile, enabled, retry: false })
 }
 
+export function useCoachSubscription() {
+    return useQuery({ queryKey: queryKeys.coachSubscription.current, queryFn: coachApi.getSubscription, retry: false })
+}
+
+export function useCoachPlans() {
+    return useQuery({ queryKey: queryKeys.coachSubscription.plans, queryFn: coachApi.listPlans, retry: false })
+}
+
 export function useCreateCoachProfile() {
     const qc = useQueryClient()
     return useMutation({
