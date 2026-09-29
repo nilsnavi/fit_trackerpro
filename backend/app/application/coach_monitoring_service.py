@@ -161,8 +161,9 @@ class CoachMonitoringService:
             select(
                 CoachProgramAssignment.id.label("assignment_id"),
                 CoachProgramAssignment.client_id.label("client_id"),
+                CoachClient.id.label("relationship_id"),
                 func.row_number().over(
-                    partition_by=CoachProgramAssignment.client_id,
+                    partition_by=CoachClient.id,
                     order_by=(
                         case((CoachProgramAssignment.status == "ACTIVE", 0), else_=1),
                         CoachProgramAssignment.updated_at.desc(),
@@ -170,12 +171,15 @@ class CoachMonitoringService:
                     ),
                 ).label("row_number"),
             )
+            .join(CoachClient, CoachClient.id == CoachProgramAssignment.relationship_id)
             .where(CoachProgramAssignment.coach_id == coach_id,
+                   CoachClient.coach_id == coach_id,
+                   CoachClient.status.in_((CoachClientStatus.ACTIVE, CoachClientStatus.PAUSED)),
                    CoachProgramAssignment.status.in_(("ACTIVE", "PAUSED")))
             .subquery()
         )
         latest_assignment = select(
-            assignment_ranked.c.client_id, assignment_ranked.c.assignment_id
+            assignment_ranked.c.client_id, assignment_ranked.c.relationship_id, assignment_ranked.c.assignment_id
         ).where(assignment_ranked.c.row_number == 1).subquery()
         statement = (
             select(CoachClient, User, last_completed.c.last_completed_at, WorkoutLog,
@@ -184,7 +188,7 @@ class CoachMonitoringService:
             .outerjoin(last_completed, last_completed.c.user_id == User.id)
             .outerjoin(active_workouts, active_workouts.c.user_id == User.id)
             .outerjoin(WorkoutLog, WorkoutLog.id == active_workouts.c.workout_id)
-            .outerjoin(latest_assignment, latest_assignment.c.client_id == User.id)
+            .outerjoin(latest_assignment, (latest_assignment.c.client_id == User.id) & (latest_assignment.c.relationship_id == CoachClient.id))
             .outerjoin(CoachProgramAssignment, CoachProgramAssignment.id == latest_assignment.c.assignment_id)
             .outerjoin(CoachProgram, CoachProgram.id == CoachProgramAssignment.program_id)
             .outerjoin(program_activity, program_activity.c.assignment_id == CoachProgramAssignment.id)
@@ -290,9 +294,6 @@ class CoachMonitoringService:
         contexts = await self._contexts(coach_id)
         for context in contexts:
             if context.client.id == client_id:
-                if context.relationship.status != CoachClientStatus.ACTIVE:
-                    from app.domain.exceptions import CoachClientRelationshipNotFound
-                    raise CoachClientRelationshipNotFound()
                 return self._summary(context)
         from app.domain.exceptions import CoachClientRelationshipNotFound
         raise CoachClientRelationshipNotFound()

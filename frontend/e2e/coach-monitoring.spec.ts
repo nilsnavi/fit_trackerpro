@@ -1,19 +1,24 @@
 import { expect, test } from '@playwright/test'
 import { setupTelegramWebApp } from './helpers/telegram-mock'
 
-test('coach monitoring identifies stale client, filters and opens monitoring detail', async ({ page }) => {
+test('coach monitoring pages through clients, filters and opens paused detail', async ({ page }) => {
     await setupTelegramWebApp(page)
     const now = new Date().toISOString()
     const clients = [
         { client_id: 21, display_name: 'Client A', relationship_status: 'ACTIVE', active_assignment: null,
             last_completed_workout_at: now, days_since_last_workout: 1, active_workout: null,
             attention_status: 'OK', signals: [], signal_count: 0, sort_priority: 0 },
-        { client_id: 22, display_name: 'Client B', relationship_status: 'ACTIVE', active_assignment: null,
+        { client_id: 22, display_name: 'Client B', relationship_status: 'PAUSED', active_assignment: null,
             last_completed_workout_at: null, days_since_last_workout: null, active_workout: null,
             attention_status: 'ATTENTION', signals: [{ code: 'NO_RECENT_WORKOUT', severity: 'ATTENTION',
                 title: 'Нет недавних тренировок', description: 'Нет завершённых тренировок 7 дней',
                 occurred_at: now, source_type: 'workout_log', source_id: null, metadata: {} }], signal_count: 1, sort_priority: 200 },
     ]
+    for (let id = 100; id < 149; id += 1) clients.push({
+        client_id: id, display_name: `Client ${id}`, relationship_status: 'ACTIVE', active_assignment: null,
+        last_completed_workout_at: now, days_since_last_workout: 1, active_workout: null,
+        attention_status: 'OK', signals: [], signal_count: 0, sort_priority: 0,
+    })
     await page.route('**/*', async (route) => {
         const request = route.request()
         const url = new URL(request.url())
@@ -29,7 +34,9 @@ test('coach monitoring identifies stale client, filters and opens monitoring det
         if (path.endsWith('/coach/monitoring')) {
             const status = url.searchParams.get('status')
             const filtered = status === 'attention' ? [clients[1]] : status === 'ok' ? [clients[0]] : clients
-            return json({ items: filtered, total: filtered.length, attention_count: 1, ok_count: 1 })
+            const offset = Number(url.searchParams.get('offset') ?? 0)
+            const limit = Number(url.searchParams.get('limit') ?? 50)
+            return json({ items: filtered.slice(offset, offset + limit), total: filtered.length, attention_count: 1, ok_count: 50 })
         }
         return json([])
     })
@@ -38,10 +45,14 @@ test('coach monitoring identifies stale client, filters and opens monitoring det
     await expect(page.getByRole('heading', { name: 'Мониторинг клиентов' })).toBeVisible()
     await expect(page.getByText('Client B')).toBeVisible()
     await expect(page.getByText('Client A')).toBeVisible()
+    await page.getByRole('button', { name: 'Показать ещё' }).click()
+    await expect(page.getByText('Client 148')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Показать ещё' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Требуют внимания' }).click()
     await expect(page.getByText('Client B')).toBeVisible()
     await expect(page.getByText('Client A')).toHaveCount(0)
     await page.getByRole('link', { name: 'Открыть клиента' }).click()
     await expect(page).toHaveURL(/\/coach\/monitoring\/22$/)
     await expect(page.getByText('Нет завершённых тренировок 7 дней')).toBeVisible()
+    await expect(page.getByText('Статус связи: PAUSED')).toBeVisible()
 })

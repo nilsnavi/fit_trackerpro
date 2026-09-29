@@ -86,4 +86,71 @@ async def test_monitoring_access_rules_search_pagination_and_postgres_query_coun
     assert listing.json()["ok_count"] == 1
     paused_item = next(entry for entry in listing.json()["items"] if entry["client_id"] == client_ids[1])
     assert "RELATIONSHIP_PAUSED" in {signal["code"] for signal in paused_item["signals"]}
-    assert (await client.get(f"/api/v1/coach/monitoring/{client_ids[1]}", headers=coach)).status_code == 404
+    paused_detail = await client.get(f"/api/v1/coach/monitoring/{client_ids[1]}", headers=coach)
+    assert paused_detail.status_code == 200
+    assert paused_detail.json()["relationship_status"] == "PAUSED"
+
+
+@pytest.mark.integration
+async def test_monitoring_does_not_carry_assignment_across_archived_relationship(client: AsyncClient, db_session):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach = await _auth(client, 974001, "Coach")
+    client_headers = await _auth(client, 974002, "Client")
+    client_id = await _relationship(client, coach, client_headers)
+    relationship_a_id = (await db_session.execute(
+        text("SELECT id FROM coach_clients WHERE coach_id=(SELECT id FROM users WHERE telegram_id=974001) AND client_id=(SELECT id FROM users WHERE telegram_id=974002) AND status='ACTIVE'")
+    )).scalar_one()
+
+    template = await client.post("/api/v1/workouts/templates", headers=coach, json={
+        "name": "Monitoring template", "type": "strength", "is_public": False,
+        "exercises": [{"exercise_id": 1, "name": "Push-up", "sets": 3, "reps": 10, "rest_seconds": 60}],
+    })
+    assert template.status_code in (200, 201), template.text
+    program = await client.post("/api/v1/coach/programs", headers=coach, json={"name": "Monitoring program"})
+    assert program.status_code == 201, program.text
+    program_id = program.json()["id"]
+    day = await client.post(f"/api/v1/coach/programs/{program_id}/days", headers=coach, json={
+        "day_number": 1, "name": "Day 1", "workout_template_id": template.json()["id"],
+    })
+    assert day.status_code == 201, day.text
+    activated = await client.post(f"/api/v1/coach/programs/{program_id}/activate", headers=coach)
+    assert activated.status_code == 200, activated.text
+    assignment = await client.post(f"/api/v1/coach/programs/{program_id}/assignments", headers=coach, json={"client_id": client_id})
+    assert assignment.status_code == 201, assignment.text
+    assert assignment.json()["relationship_id"] == relationship_a_id
+
+    paused = await client.patch(f"/api/v1/coach/clients/{client_id}", headers=coach, json={"status": "PAUSED"})
+    assert paused.status_code == 200, paused.text
+    paused_detail = await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)
+    assert paused_detail.status_code == 200
+    assert paused_detail.json()["relationship_status"] == "PAUSED"
+    blocked_coach_update = await client.patch(
+        f"/api/v1/coach/assignments/{assignment.json()['id']}", headers=coach, json={"status": "PAUSED"}
+    )
+    assert blocked_coach_update.status_code == 404
+    day_id = (await db_session.execute(
+        text("SELECT id FROM coach_program_days WHERE program_id=:program_id"), {"program_id": program_id}
+    )).scalar_one()
+    blocked_start = await client.post(
+        f"/api/v1/client/coach-programs/{assignment.json()['id']}/days/{day_id}/start",
+        headers={**client_headers, "Idempotency-Key": "paused-relationship-start"},
+    )
+    assert blocked_start.status_code == 404
+
+    archived = await client.patch(f"/api/v1/coach/clients/{client_id}", headers=coach, json={"status": "ARCHIVED"})
+    assert archived.status_code == 200, archived.text
+    invite = await client.post("/api/v1/coach/invitations", headers=coach, json={})
+    assert invite.status_code == 201, invite.text
+    relationship_b = await client.post("/api/v1/coach/invitations/accept", headers=client_headers, json={"token": invite.json()["token"]})
+    assert relationship_b.status_code == 200, relationship_b.text
+    relationship_b_id = (await db_session.execute(
+        text("SELECT id FROM coach_clients WHERE coach_id=(SELECT id FROM users WHERE telegram_id=974001) AND client_id=(SELECT id FROM users WHERE telegram_id=974002) AND status='ACTIVE'")
+    )).scalar_one()
+    assert relationship_b_id != relationship_a_id
+
+    listing = await client.get("/api/v1/coach/monitoring", headers=coach)
+    assert listing.status_code == 200, listing.text
+    item = next(value for value in listing.json()["items"] if value["client_id"] == client_id)
+    assert item["relationship_status"] == "ACTIVE"
+    assert item["active_assignment"] is None
