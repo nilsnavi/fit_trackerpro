@@ -201,10 +201,47 @@ describe('WorkoutDetailPage (workout session flow)', () => {
         renderWorkoutDetailPage({ id: String(workoutId), queryClient: qc })
 
         expect(await screen.findByText('Итоги')).toBeInTheDocument()
+        expect(screen.queryByText('Практические инсайты')).not.toBeInTheDocument()
+        fireEvent.click(screen.getByRole('tab', { name: 'Анализ' }))
         expect(await screen.findByText('Практические инсайты')).toBeInTheDocument()
         expect(screen.getByText('Усталость росла к концу')).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('tab', { name: 'Обзор' }))
         expect(screen.getByRole('button', { name: /повторить/i })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /сохранить как шаблон/i })).toBeInTheDocument()
+    })
+
+    it('shows only populated values for sets in the exercises segment', async () => {
+        const { workoutsApi } = await import('@shared/api/domains/workoutsApi')
+        const workoutId = 126
+        // Sets are deliberately distinct so chip texts stay unique per getByText below
+        const workout = makeDraftWorkout({
+            id: workoutId,
+            duration: 45,
+            exercises: [
+                {
+                    exercise_id: 1,
+                    name: 'Bench Press',
+                    sets_completed: [
+                        { set_number: 1, completed: true, reps: 8, weight: 60 },
+                        { set_number: 2, completed: true, reps: 10, weight: 65 },
+                    ],
+                },
+            ],
+        })
+        ;(workoutsApi.getHistoryItem as jest.Mock).mockResolvedValue(workout)
+
+        const qc = makeQueryClient()
+        qc.setQueryData(queryKeys.workouts.historyItem(workoutId), workout)
+        renderWorkoutDetailPage({ id: String(workoutId), queryClient: qc })
+
+        fireEvent.click(await screen.findByRole('tab', { name: 'Упражнения' }))
+
+        expect(await screen.findByText('Повторы: 8 повт')).toBeInTheDocument()
+        expect(screen.getByText('Повторы: 10 повт')).toBeInTheDocument()
+        expect(screen.getByText('Вес: 65 кг')).toBeInTheDocument()
+        expect(screen.getByText('Вес: 60 кг')).toBeInTheDocument()
+        expect(screen.queryByText('RPE: —')).not.toBeInTheDocument()
+        expect(screen.queryByText('Время: —')).not.toBeInTheDocument()
     })
 })
 
