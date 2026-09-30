@@ -41,6 +41,28 @@ jobs:
 
           import yaml
 
+          # Strict-режим: PyYAML по умолчанию МОЛЧА схлопывает дубликаты ключей
+          # (last wins) — а «двойной uses:» это как раз сигнатура битого
+          # dependabot-мержа (кейсы security.yml и e2e-smoke-real.yml).
+          class StrictLoader(yaml.SafeLoader):
+              pass
+
+          def construct_no_dupes(loader, node):
+              seen = set()
+              for key_node, _ in node.value:
+                  key = getattr(key_node, "value", None)
+                  if key is not None:
+                      if key in seen:
+                          raise yaml.constructor.ConstructorError(
+                              None, None, f"duplicate key {key!r}", key_node.start_mark
+                          )
+                      seen.add(key)
+              return yaml.SafeLoader.construct_mapping(loader, node, deep=True)
+
+          StrictLoader.add_constructor(
+              yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_no_dupes
+          )
+
           files = sorted(
               glob.glob(".github/workflows/*.yml")
               + glob.glob(".github/workflows/*.yaml")
@@ -49,7 +71,7 @@ jobs:
           failures = 0
           for path in files:
               try:
-                  yaml.safe_load(io.open(path, encoding="utf-8"))
+                  yaml.load(io.open(path, encoding="utf-8"), Loader=StrictLoader)
                   print(f"OK   {path}")
               except Exception as exc:
                   failures += 1
@@ -57,7 +79,7 @@ jobs:
           if failures:
               print(f"::error::{failures} workflow file(s) failed YAML parsing", file=sys.stderr)
               sys.exit(1)
-          print(f"All {len(files)} files parsed cleanly.")
+          print(f"All {len(files)} files parsed cleanly (strict, no duplicate keys).")
           PYEOF
 
       # 2. Семантическая проверка воркфлоу actionlint'ом (пин версии, без
