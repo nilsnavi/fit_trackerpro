@@ -41,6 +41,25 @@ jest.mock('@features/health/pages/HealthPage', () => {
     const React = require('react')
     return { HealthPage: () => React.createElement('div', null, 'Health') }
 })
+// healthRoutes() lazy-mounts real subpages on smoke routes; without these mocks
+// real react-query requests go through jsdom XHR, fail with NETWORK_ERROR and
+// poison the console.error counter of a later route in the same suite (flake).
+jest.mock('@features/health/pages/HealthWaterPage', () => {
+    const React = require('react')
+    return { HealthWaterPage: () => React.createElement('div', null, 'Health water') }
+})
+jest.mock('@features/health/pages/HealthGlucosePage', () => {
+    const React = require('react')
+    return { HealthGlucosePage: () => React.createElement('div', null, 'Health glucose') }
+})
+jest.mock('@features/health/pages/HealthWellnessPage', () => {
+    const React = require('react')
+    return { HealthWellnessPage: () => React.createElement('div', null, 'Health wellness') }
+})
+jest.mock('@features/health/pages/HealthMeasurementsPage', () => {
+    const React = require('react')
+    return { HealthMeasurementsPage: () => React.createElement('div', null, 'Health measurements') }
+})
 jest.mock('@features/analytics/pages/AnalyticsDashboardPage', () => {
     const React = require('react')
     return { default: () => React.createElement('div', null, 'Analytics dashboard') }
@@ -209,4 +228,3 @@ describe('smoke: app routing', () => {
         expect(console.error).not.toHaveBeenCalled()
     })
 })
-
