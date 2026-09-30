@@ -50,6 +50,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # Скрипт гейта зависит только от встроенных модулей Node — гоняется до npm ci.
+      # Проверяется контракт, а не только exit code: деградировавшая версия скрипта
+      # (см. fix 2a589bb — в коммит попала report-only версия) молча выходит с 0,
+      # но отчёт deadcode-report.md не пишет. Это sanity-шаг и ловит.
+      - name: Sanity: committed deadcode gate is functional (no deps)
+        working-directory: ./frontend
+        run: |
+          set -euo pipefail
+          npm run deadcode:check
+          test -f deadcode-report.md || {
+            echo "::error::deadcode-report.md was not generated: committed script lost the --check implementation (report-only regression)"
+            exit 1
+          }
+          grep -q "Unreachable prod modules" deadcode-report.md || {
+            echo "::error::deadcode-report.md lacks the prod-modules section: gate report contract violated"
+            exit 1
+          }
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
