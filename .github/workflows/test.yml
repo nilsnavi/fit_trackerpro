@@ -51,10 +51,11 @@ jobs:
         uses: actions/checkout@v7
 
       # Скрипт гейта зависит только от встроенных модулей Node — гоняется до npm ci.
-      # Проверяется контракт, а не только exit code: деградировавшая версия скрипта
+      # Это единственный прогон гейта в job (fail-fast до установки зависимостей и тестов):
+      # проверяется контракт, а не только exit code — деградировавшая версия скрипта
       # (см. fix 2a589bb — в коммит попала report-only версия) молча выходит с 0,
       # но отчёт deadcode-report.md не пишет. Это sanity-шаг и ловит.
-      - name: Sanity: committed deadcode gate is functional (no deps)
+      - name: "Sanity: committed deadcode gate is functional (no deps)"
         working-directory: ./frontend
         run: |
           set -euo pipefail
@@ -89,9 +90,6 @@ jobs:
 
       - name: Enforce frontend coverage baseline (no regressions)
         run: npm run coverage:baseline:check
-
-      - name: Enforce no new dead frontend modules (reachability gate)
-        run: npm run deadcode:check
 
       - name: Upload dead code reachability report
         if: always()
