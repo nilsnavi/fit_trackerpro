@@ -1,0 +1,74 @@
+name: Workflow Lint
+
+# Проверяем сами CI-воркфлоу: битый YAML не должен обнаруживаться только тем,
+# что все job'ы репозитория разом пропадают с PR (как это случилось с
+# security.yml, починенным в 9a1d385 — файл не парсился с dependabot-мержа,
+# и security-проверки молча отсутствовали бы). actionlint дополнительно ловит
+# семантику: несуществующие steps.<id>.outputs, неверные матрицы, тайпинги
+# выражений, неизвестные поля шагов.
+
+on:
+  pull_request: {}
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+env:
+  ACTIONLINT_VERSION: "1.7.11"
+
+jobs:
+  workflow-lint:
+    name: Lint GitHub workflows (yaml + actionlint)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # 1. Строгий YAML-парс всех воркфлоу + dependabot.yml: без зависимостей,
+      #    падает с явным пофайловым отчётом. actionlint сам не парсит файл,
+      #    который не читается как YAML, — но отдельный шаг даёт читаемую
+      #    диагностику и покрывает dependabot.yml, который actionlint не знает.
+      - name: Parse all workflows as YAML
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import glob
+          import io
+          import sys
+
+          import yaml
+
+          files = sorted(
+              glob.glob(".github/workflows/*.yml")
+              + glob.glob(".github/workflows/*.yaml")
+              + [".github/dependabot.yml"]
+          )
+          failures = 0
+          for path in files:
+              try:
+                  yaml.safe_load(io.open(path, encoding="utf-8"))
+                  print(f"OK   {path}")
+              except Exception as exc:
+                  failures += 1
+                  print(f"FAIL {path} -> {exc}", file=sys.stderr)
+          if failures:
+              print(f"::error::{failures} workflow file(s) failed YAML parsing", file=sys.stderr)
+              sys.exit(1)
+          print(f"All {len(files)} files parsed cleanly.")
+          PYEOF
+
+      # 2. Семантическая проверка воркфлоу actionlint'ом (пин версии, без
+      #    сторонних wrapper-экшенов). -shellcheck= отключает интеграцию с
+      #    shellcheck (предустановлен на раннерах): иначе прееxистящие шелл-ниты
+      #    во всех run-блоках репозитория завалили бы проверку не по делу —
+      #    здесь проверяется семантика workflow, а не стиль shell.
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz actionlint
+          ./actionlint -color -shellcheck=
