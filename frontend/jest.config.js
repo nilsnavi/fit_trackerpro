@@ -10,7 +10,10 @@ export default {
     // Used for low-level polyfills (crypto, fetch) that need to be in place before any imports.
     setupFiles: ['<rootDir>/src/__mocks__/jest.globals.ts'],
     roots: ['<rootDir>/src'],
-    /** Vitest-only suites (`*.vitest.*`) — см. `vite.config.ts` → `test`. */
+    // Vitest-проекта нет (см. package.json/vite.config.ts): все сюиты гоняет jest.
+    // Паттерн оставлен защитным — legacy-файл `*.vitest.*` не должен молча
+    // запускаться под jest, если кто-то его вернёт. Такой файл в репо был один
+    // (useExerciseMutations.vitest.tsx) — переименован в .test.tsx и оживлён.
     testPathIgnorePatterns: ['/node_modules/', '\\.vitest\\.(tsx?|jsx?)$'],
     testMatch: [
         '**/__tests__/**/*.+(ts|tsx|js)',
