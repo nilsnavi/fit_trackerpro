@@ -72,6 +72,16 @@ jobs:
       - name: Enforce frontend coverage baseline (no regressions)
         run: npm run coverage:baseline:check
 
+      - name: Enforce no new dead frontend modules (reachability gate)
+        run: npm run deadcode:check
+
+      - name: Upload dead code reachability report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadcode-reachability-report
+          path: ./frontend/deadcode-report.md
+
       - name: Build (emit bundle stats)
         run: BUNDLE_STATS=1 npm run build
 
