@@ -9,8 +9,7 @@ name: Workflow Lint
 
 on:
   pull_request: {}
-  push:
-    branches: [main, develop]
+  push: {}
 
 permissions:
   contents: read
