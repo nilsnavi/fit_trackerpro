@@ -10,10 +10,10 @@ python-multipart==0.0.32
 gunicorn==26.2.0
 
 # Database
-sqlalchemy==2.0.54
+sqlalchemy==2.1.0
 alembic==1.20.0
 asyncpg==0.31.0
-psycopg[binary]==3.3.5
+psycopg[binary]==3.3.6
 
 # Pydantic and Validation
 pydantic==2.13.5
@@ -25,7 +25,7 @@ email-validator==2.3.0
 # is flagged by pip-audit (PYSEC-2026-1325) and cannot be updated independently.
 # Only HS256 is used (see app/core/security/tokens.py), so PyJWT + cryptography
 # covers every code path without the vulnerable transitive dependency.
-pyjwt==2.14.0
+pyjwt==2.15.0
 passlib[bcrypt]==1.7.4
 python-telegram-bot==22.8
 
@@ -41,4 +41,4 @@ slowapi==0.1.10
 
 # Logging and Monitoring
 structlog==26.1.0
-sentry-sdk==2.69.2
+sentry-sdk==2.70.0
