@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
+from weakref import WeakKeyDictionary
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,6 +52,14 @@ from app.schemas.coach import (
     CoachProfileResponse,
     CoachProfileUpdate,
 )
+
+_SQLITE_ACCEPT_LOCKS: WeakKeyDictionary[asyncio.AbstractEventLoop, dict[int, asyncio.Lock]] = WeakKeyDictionary()
+
+
+def _sqlite_accept_lock(coach_id: int) -> asyncio.Lock:
+    loop = asyncio.get_running_loop()
+    coach_locks = _SQLITE_ACCEPT_LOCKS.setdefault(loop, {})
+    return coach_locks.setdefault(coach_id, asyncio.Lock())
 
 INVITATION_TTL = timedelta(days=7)
 
@@ -183,6 +193,21 @@ class CoachInvitationService:
     async def accept(
         self, client_id: int, token: str, client_ip: str | None = None
     ) -> CoachClientResponse:
+        if self.db.get_bind().dialect.name == "sqlite":
+            invitation = await self.invitations.get_by_hash(invitation_token_hash(token))
+            if not invitation:
+                raise CoachInvitationNotFound()
+            coach_id = invitation.coach_id
+            # End the initial read transaction before waiting so a queued SQLite request
+            # starts a fresh transaction and sees the slot consumed by the prior accept.
+            await self.db.rollback()
+            async with _sqlite_accept_lock(coach_id):
+                return await self._accept_locked(client_id, token, client_ip)
+        return await self._accept_locked(client_id, token, client_ip)
+
+    async def _accept_locked(
+        self, client_id: int, token: str, client_ip: str | None
+    ) -> CoachClientResponse:
         try:
             invitation = await self.invitations.get_by_hash(invitation_token_hash(token), lock=True)
             if not invitation:
@@ -271,8 +296,6 @@ class CoachRelationshipService:
         if not relationship or relationship.status in {CoachClientStatus.ARCHIVED, CoachClientStatus.REVOKED}:
             raise CoachClientRelationshipNotFound()
         requested_status = data.status
-        if requested_status == CoachClientStatus.ACTIVE and relationship.status != CoachClientStatus.ACTIVE:
-            await CoachEntitlementService(self.db).require_capacity(coach_id, "clients")
         if relationship.status == CoachClientStatus.REVOKED and requested_status not in (None, CoachClientStatus.REVOKED):
             raise CoachClientRelationshipNotFound()
         if requested_status is not None:

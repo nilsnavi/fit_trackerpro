@@ -7,7 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import audit_log
 from app.domain.coach_client import CoachClient, CoachClientStatus
-from app.domain.coach_entitlement import CoachPlan, CoachSubscriptionStatus, EntitlementCheck, EntitlementDecision, PLAN_CATALOG
+from app.domain.coach_entitlement import (
+    PLAN_CATALOG,
+    CoachPlan,
+    CoachSubscriptionStatus,
+    EntitlementCheck,
+    EntitlementDecision,
+)
 from app.domain.coach_profile import CoachProfile
 from app.domain.coach_program import CoachProgram
 from app.domain.coach_subscription import CoachSubscription

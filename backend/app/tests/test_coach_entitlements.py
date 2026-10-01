@@ -4,8 +4,8 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
 from httpx import AsyncClient
+from sqlalchemy import select
 
 from app.application.coach_entitlement_service import CoachEntitlementService
 from app.domain.coach_subscription import CoachSubscription
@@ -65,6 +65,18 @@ async def test_legacy_free_limits_and_feature_gate_return_business_codes(client:
     assert invite.status_code == 403
     assert invite.json()["error"]["code"] == "CLIENT_LIMIT_REACHED"
     assert invite.json()["error"]["details"]["limit"] == 3
+    paused_client = await client.patch(
+        f"/api/v1/coach/clients/{accepted.json()['client_id']}",
+        headers=headers,
+        json={"status": "PAUSED"},
+    )
+    assert paused_client.status_code == 200, paused_client.text
+    resumed_client = await client.patch(
+        f"/api/v1/coach/clients/{accepted.json()['client_id']}",
+        headers=headers,
+        json={"status": "ACTIVE"},
+    )
+    assert resumed_client.status_code == 200, resumed_client.text
     for name in ("Program 1", "Program 2"):
         created = await client.post("/api/v1/coach/programs", headers=headers, json={"name": name})
         assert created.status_code == 201, created.text
