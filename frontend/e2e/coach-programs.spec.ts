@@ -48,6 +48,9 @@ test('coach assigns a template based program and client starts it in Active Work
                 created_at: now, updated_at: now,
             })
         }
+        if (path === '/api/v1/coach/subscription' && method === 'GET') return json(route, 200, {
+            plan: 'TRAINER_PRO', active_clients: { used: 0, limit: 4, remaining: 4 },
+        })
         if (path.endsWith('/coach/profile')) return json(route, 200, {
             id: 1, user_id: 10, display_name: 'Coach One', bio: null, specializations: [],
             avatar_url: null, timezone: 'UTC', public_slug: null, is_active: true,

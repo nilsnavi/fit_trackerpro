@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.coach_entitlement_service import CoachEntitlementService
 from app.application.workouts_service import WorkoutsService
 from app.core.audit import (
     CLIENT_ASSIGNED_WORKOUT_STARTED,
@@ -182,6 +183,7 @@ class CoachProgramService:
         audit_log(action=COACH_PROGRAM_DAY_DELETED, user_db_id=coach_id, resource_type="coach_program_day", resource_id=day_id, meta={"program_id": program.id, "program_version": program.version, "day_id": day_id})
 
     async def create_program(self, coach_id: int, data: CoachProgramCreate) -> CoachProgramResponse:
+        await CoachEntitlementService(self.db).require_capacity(coach_id, "programs")
         numbers = [day.day_number for day in data.days]
         if len(numbers) != len(set(numbers)):
             raise WorkoutConflictError("Program day numbers must be unique")

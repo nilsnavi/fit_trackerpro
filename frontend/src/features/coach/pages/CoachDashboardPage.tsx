@@ -3,11 +3,12 @@ import { Users, UserPlus, AlertCircle, ClipboardList, Activity } from 'lucide-re
 import { EmptyState } from '@shared/ui/EmptyState'
 import { getErrorMessage } from '@shared/errors'
 import { AppHttpError } from '@shared/errors'
-import { useCoachClients, useCoachProfile } from '../hooks/useCoachQueries'
+import { useCoachClients, useCoachProfile, useCoachSubscription } from '../hooks/useCoachQueries'
 
 export function CoachDashboardPage() {
     const profile = useCoachProfile()
     const clients = useCoachClients()
+    const subscription = useCoachSubscription()
     if (profile.error instanceof AppHttpError && profile.error.status === 404) return <div className="p-4"><EmptyState icon={AlertCircle} tone="telegram" title="Кабинет тренера недоступен" description="Функция выключена или профиль не найден." /></div>
     if (profile.error instanceof AppHttpError && profile.error.status === 403) return <Navigate to="/coach/onboarding" replace />
     if (profile.isLoading || clients.isLoading) return <div className="space-y-3 p-4" role="status"><div className="h-20 animate-pulse rounded-2xl bg-telegram-secondary-bg" /><div className="h-28 animate-pulse rounded-2xl bg-telegram-secondary-bg" /></div>
@@ -16,6 +17,7 @@ export function CoachDashboardPage() {
     return <div className="mx-auto max-w-2xl space-y-4 p-4 pb-24">
         <section className="rounded-2xl bg-telegram-secondary-bg p-5"><p className="text-xs text-telegram-hint">Кабинет тренера</p><h1 className="mt-1 text-2xl font-bold">{profile.data.display_name}</h1>{profile.data.bio ? <p className="mt-2 whitespace-pre-wrap text-sm text-telegram-hint">{profile.data.bio}</p> : null}{profile.data.specializations.length ? <p className="mt-3 text-sm">{profile.data.specializations.join(' · ')}</p> : null}</section>
         <section className="rounded-2xl bg-telegram-secondary-bg p-4"><div className="flex items-center gap-3"><span className="rounded-xl bg-primary/10 p-3 text-primary"><Users /></span><div><p className="text-2xl font-bold">{clients.data?.length ?? 0}</p><p className="text-sm text-telegram-hint">Клиентов</p></div></div></section>
+        {subscription.data ? <Link className="flex items-center justify-between rounded-2xl bg-telegram-secondary-bg p-4 text-sm" to="/coach/subscription"><span>Тариф: {subscription.data.plan === 'TRAINER_PRO' ? 'Trainer Pro' : 'Бесплатный'}</span><span>{subscription.data.active_clients.used}/{subscription.data.active_clients.limit ?? '∞'} клиентов · Подробнее</span></Link> : null}
         <div className="grid gap-3 sm:grid-cols-2"><Link className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-telegram-secondary-bg px-4 text-sm font-medium" to="/coach/clients"><Users className="h-5 w-5" />Клиенты</Link><Link className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-telegram-secondary-bg px-4 text-sm font-medium" to="/coach/monitoring"><Activity className="h-5 w-5" />Мониторинг</Link><Link className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-telegram-secondary-bg px-4 text-sm font-medium" to="/coach/programs"><ClipboardList className="h-5 w-5" />Программы</Link><Link className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground" to="/coach/invite"><UserPlus className="h-5 w-5" />Пригласить клиента</Link></div>
     </div>
 }

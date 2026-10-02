@@ -724,6 +724,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Coach Plans */
+        get: operations["list_coach_plans_api_v1_coach_plans_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/profile": {
         parameters: {
             query?: never;
@@ -848,6 +865,23 @@ export type paths = {
         head?: never;
         /** Update Program Day */
         patch: operations["update_program_day_api_v1_coach_programs__program_id__days__day_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/coach/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Coach Subscription */
+        get: operations["get_coach_subscription_api_v1_coach_subscription_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/exercises/": {
@@ -3793,6 +3827,15 @@ export type components = {
         CoachClientUpdate: {
             status?: components["schemas"]["CoachClientStatus"] | null;
         };
+        /** CoachFeatures */
+        CoachFeatures: {
+            /** Advanced Monitoring Filters */
+            advanced_monitoring_filters: boolean;
+            /** Client Monitoring */
+            client_monitoring: boolean;
+            /** Program Assignments */
+            program_assignments: boolean;
+        };
         /** CoachInvitationAccept */
         CoachInvitationAccept: {
             /** Token */
@@ -3879,6 +3922,18 @@ export type components = {
             revoked_at: string | null;
             /** Status */
             status: string;
+        };
+        /** CoachPlanResponse */
+        CoachPlanResponse: {
+            available_features: components["schemas"]["CoachFeatures"];
+            /** Display Name */
+            display_name: string;
+            /** Limits */
+            limits: {
+                [key: string]: number | null;
+            };
+            /** Plan */
+            plan: string;
         };
         /** CoachProfileCreate */
         CoachProfileCreate: {
@@ -4124,6 +4179,47 @@ export type components = {
             workout_session_id: number;
             /** Workout Template Id */
             workout_template_id: number;
+        };
+        /** CoachQuota */
+        CoachQuota: {
+            /** Limit */
+            limit: number | null;
+            /** Remaining */
+            remaining: number | null;
+            /** Used */
+            used: number;
+        };
+        /** CoachSubscriptionResponse */
+        CoachSubscriptionResponse: {
+            /** Activated At */
+            activated_at: string | null;
+            active_clients: components["schemas"]["CoachQuota"];
+            active_programs: components["schemas"]["CoachQuota"];
+            /** Cancel At Period End */
+            cancel_at_period_end: boolean;
+            /** Cancelled At */
+            cancelled_at: string | null;
+            features: components["schemas"]["CoachFeatures"];
+            /** Grace Days Remaining */
+            grace_days_remaining: number | null;
+            /** Grace Ends At */
+            grace_ends_at: string | null;
+            /** Period Ends At */
+            period_ends_at: string | null;
+            /** Period Started At */
+            period_started_at: string | null;
+            /** Plan */
+            plan: string;
+            /** Status */
+            status: string;
+            /** Trial Days Remaining */
+            trial_days_remaining: number | null;
+            /** Trial Ends At */
+            trial_ends_at: string | null;
+            /** Trial Started At */
+            trial_started_at: string | null;
+            /** Upgrade Required */
+            upgrade_required: boolean;
         };
         /**
          * CompletedExercise
@@ -8238,8 +8334,8 @@ export interface operations {
     get_workout_calendar_api_v1_analytics_calendar_get: {
         parameters: {
             query?: {
-                year?: number;
-                month?: number;
+                year?: number | null;
+                month?: number | null;
             };
             header?: never;
             path?: never;
@@ -9465,6 +9561,26 @@ export interface operations {
             };
         };
     };
+    list_coach_plans_api_v1_coach_plans_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachPlanResponse"][];
+                };
+            };
+        };
+    };
     get_profile_api_v1_coach_profile_get: {
         parameters: {
             query?: never;
@@ -9895,6 +10011,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_coach_subscription_api_v1_coach_subscription_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachSubscriptionResponse"];
                 };
             };
         };
@@ -13038,8 +13174,8 @@ export interface operations {
     get_workouts_calendar_month_api_v1_workouts_calendar_get: {
         parameters: {
             query?: {
-                year?: number;
-                month?: number;
+                year?: number | null;
+                month?: number | null;
             };
             header?: never;
             path?: never;

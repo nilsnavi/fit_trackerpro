@@ -367,8 +367,8 @@ async def get_workout_detail(
 
 @router.get("/calendar")
 async def get_workouts_calendar_month(
-    year: int = Query(date.today().year, ge=2020, le=2030),
-    month: int = Query(date.today().month, ge=1, le=12),
+    year: int | None = Query(None, ge=2020, le=2030),
+    month: int | None = Query(None, ge=1, le=12),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -377,6 +377,8 @@ async def get_workouts_calendar_month(
 
     Returns a flat list of workouts in the selected month (frontend groups by day).
     """
+    year = year or date.today().year
+    month = month or date.today().month
     first_day = date(year, month, 1)
     last_day = date(year, month, calendar.monthrange(year, month)[1])
     repo = WorkoutsRepository(db)

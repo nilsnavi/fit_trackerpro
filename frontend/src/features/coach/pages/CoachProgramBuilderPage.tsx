@@ -5,6 +5,8 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@shared/ui/Button'
 import { Input } from '@shared/ui/Input'
 import { getErrorMessage } from '@shared/errors'
+import { AppHttpError } from '@shared/errors'
+import { EntitlementPaywall } from '../components/EntitlementPaywall'
 import { useWorkoutTemplatesQuery } from '@features/workouts/hooks/useWorkoutTemplatesQuery'
 import { useCoachProfile, useCoachProgram, useCreateCoachProgram } from '../hooks/useCoachQueries'
 import { coachApi } from '../api/coachApi'
@@ -24,6 +26,7 @@ export function CoachProgramBuilderPage() {
     const create = useCreateCoachProgram()
     const [initialized, setInitialized] = useState(!programId)
     const [saveError, setSaveError] = useState<unknown>(null)
+    const [paywallCode, setPaywallCode] = useState<string | null>(null)
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
     const [days, setDays] = useState<DayDraft[]>([{ day_number: 1, name: 'День 1', workout_template_id: 0, notes: '', position: 0 }])
@@ -77,7 +80,14 @@ export function CoachProgramBuilderPage() {
             }
             navigate(`/coach/programs/${saved.id}`)
         } catch (error) {
-            setSaveError(error)
+            const code = error instanceof AppHttpError ? error.code : ''
+            if (code === 'PROGRAM_LIMIT_REACHED') {
+                setSaveError(null)
+                create.reset()
+                setPaywallCode(code)
+            } else {
+                setSaveError(error)
+            }
         }
     }
 
@@ -100,5 +110,6 @@ export function CoachProgramBuilderPage() {
         </section>
         {saveError || create.error ? <p role="alert" className="text-sm text-danger">{getErrorMessage(saveError ?? create.error)}</p> : null}
         <div className="sticky bottom-3 rounded-2xl bg-telegram-bg/95 p-2"><Button className="w-full" disabled={!initialized || !name.trim() || days.some((day) => !day.name.trim() || !day.workout_template_id) || templates.isPending} isLoading={create.isPending} onClick={() => void save()}>Сохранить программу</Button></div>
+        <EntitlementPaywall code={paywallCode} onClose={() => setPaywallCode(null)} />
     </main>
 }

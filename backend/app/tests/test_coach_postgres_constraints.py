@@ -17,6 +17,7 @@ from app.application.coach_service import (
 )
 from app.domain.coach_client import CoachClient, CoachClientStatus
 from app.domain.coach_invitation import CoachInvitation
+from app.domain.coach_profile import CoachProfile
 from app.domain.exceptions import (
     CoachClientAlreadyExists,
     CoachInvitationAlreadyUsed,
@@ -29,6 +30,8 @@ from app.infrastructure.repositories.coach_repository import CoachInvitationRepo
 async def _users(session: AsyncSession, *telegram_ids: int) -> tuple[int, ...]:
     users = [User(telegram_id=telegram_id, first_name=f"User {telegram_id}") for telegram_id in telegram_ids]
     session.add_all(users)
+    await session.commit()
+    session.add(CoachProfile(user_id=users[0].id, display_name=f"Coach {telegram_ids[0]}"))
     await session.commit()
     return tuple(user.id for user in users)
 
