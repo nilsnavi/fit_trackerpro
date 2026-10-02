@@ -80,9 +80,14 @@ export function CoachProgramBuilderPage() {
             }
             navigate(`/coach/programs/${saved.id}`)
         } catch (error) {
-            setSaveError(error)
             const code = error instanceof AppHttpError ? error.code : ''
-            if (code === 'PROGRAM_LIMIT_REACHED') setPaywallCode(code)
+            if (code === 'PROGRAM_LIMIT_REACHED') {
+                setSaveError(null)
+                create.reset()
+                setPaywallCode(code)
+            } else {
+                setSaveError(error)
+            }
         }
     }
 

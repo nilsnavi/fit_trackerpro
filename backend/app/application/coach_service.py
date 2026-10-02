@@ -215,12 +215,12 @@ class CoachInvitationService:
             self._ensure_usable(invitation)
             if invitation.coach_id == client_id:
                 raise CoachClientAlreadyExists("A coach cannot accept their own invitation")
-            await CoachEntitlementService(self.db).require_capacity(invitation.coach_id, "clients")
             relationship = await self.clients.get_for_coach(
                 invitation.coach_id, client_id, current_only=True
             )
             if relationship:
                 raise CoachClientAlreadyExists()
+            await CoachEntitlementService(self.db).require_capacity(invitation.coach_id, "clients")
             relationship = await self.clients.create(
                 CoachClient(coach_id=invitation.coach_id, client_id=client_id)
             )

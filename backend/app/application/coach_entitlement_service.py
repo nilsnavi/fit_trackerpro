@@ -94,6 +94,13 @@ class CoachEntitlementService:
             row.expired_at = grace_end
             audit_log(action="coach.subscription.downgraded", user_db_id=row.coach_id, resource_type="coach_subscription", meta={"reason": "grace_ended"})
 
+    @staticmethod
+    def _transition_state(row: CoachSubscription) -> tuple:
+        return (
+            row.plan, row.status, row.grace_started_at, row.grace_ends_at,
+            row.cancelled_at, row.expired_at, row.cancel_at_period_end,
+        )
+
     async def _decision(self, row: CoachSubscription) -> EntitlementDecision:
         clients = int(await self.db.scalar(
             select(func.count(CoachClient.id)).where(
@@ -125,6 +132,7 @@ class CoachEntitlementService:
 
     async def require_capacity(self, coach_id: int, kind: str) -> EntitlementDecision:
         row = await self._locked_subscription(coach_id)
+        before_advance = self._transition_state(row)
         await self._advance(row, datetime.now(UTC))
         decision = await self._decision(row)
         limit = decision.limit(kind)
@@ -134,16 +142,21 @@ class CoachEntitlementService:
             message = "Достигнут лимит клиентов тарифа" if kind == "clients" else "Достигнут лимит программ тарифа"
             details = {"plan": decision.plan.value, "used": used, "limit": limit, "remaining": 0, "upgrade_required": True}
             audit_log(action="coach.entitlement.blocked", user_db_id=coach_id, resource_type="coach_entitlement", meta={"coach_id": coach_id, "entitlement_code": code, "plan": decision.plan.value, "used": used, "limit": limit})
+            if self._transition_state(row) != before_advance:
+                await self.db.commit()
             raise CoachEntitlementDenied(message, business_code=code, details=details)
         return decision
 
     async def require_feature(self, coach_id: int, feature: str) -> EntitlementDecision:
         row = await self._locked_subscription(coach_id)
+        before_advance = self._transition_state(row)
         await self._advance(row, datetime.now(UTC))
         decision = await self._decision(row)
         if not decision.has_feature(feature):
             details = {"plan": decision.plan.value, "upgrade_required": True, "feature": feature}
             audit_log(action="coach.entitlement.blocked", user_db_id=coach_id, resource_type="coach_entitlement", meta={"coach_id": coach_id, "entitlement_code": "FEATURE_REQUIRES_TRAINER_PRO", "plan": decision.plan.value, "feature": feature})
+            if self._transition_state(row) != before_advance:
+                await self.db.commit()
             raise CoachEntitlementDenied("Эта функция доступна в тарифе Trainer Pro", business_code="FEATURE_REQUIRES_TRAINER_PRO", details=details)
         return decision
 

@@ -11,7 +11,7 @@ test('coach sees current Trainer Pro trial and actual quota catalog', async ({ p
         const request = route.request()
         const url = new URL(request.url())
         const path = url.pathname
-        const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+        const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
         if (!path.startsWith('/api/v1/')) return route.fallback()
         if (path.endsWith('/health/ready')) return json({ status: 'ready', dependencies: {} })
         if (path.endsWith('/users/auth/telegram')) return json({ success: true, message: 'ok', access_token: 'coach-entitlement', refresh_token: null, is_new_user: false, onboarding_required: false })
@@ -85,6 +85,7 @@ test('free plan client limit opens code-specific paywall', async ({ page }) => {
     await page.screenshot({ path: test.info().outputPath('client-limit-paywall.png') })
     await dialog.getByRole('button', { name: 'Позже' }).click()
     await expect(dialog).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
 test('free plan program limit opens code-specific paywall', async ({ page }) => {
@@ -110,4 +111,7 @@ test('free plan program limit opens code-specific paywall', async ({ page }) => 
     await page.getByLabel('WorkoutTemplate').selectOption('41')
     await page.getByRole('button', { name: 'Сохранить программу' }).click()
     await expect(page.getByRole('heading', { name: 'Лимит программ достигнут' })).toBeVisible()
+    await page.getByRole('button', { name: 'Позже' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveCount(0)
 })

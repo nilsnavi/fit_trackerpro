@@ -31,7 +31,7 @@ export function CoachInvitePage() {
             setShareUrl(url.toString())
         } catch (error) {
             const code = error instanceof AppHttpError ? error.code : ''
-            if (code === 'CLIENT_LIMIT_REACHED') { setPaywallCode(code); return }
+            if (code === 'CLIENT_LIMIT_REACHED') { create.reset(); setPaywallCode(code); return }
             // Error is rendered from the mutation state below.
         }
     }

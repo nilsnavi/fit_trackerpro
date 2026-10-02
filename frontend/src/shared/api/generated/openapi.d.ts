@@ -8334,8 +8334,8 @@ export interface operations {
     get_workout_calendar_api_v1_analytics_calendar_get: {
         parameters: {
             query?: {
-                year?: number;
-                month?: number;
+                year?: number | null;
+                month?: number | null;
             };
             header?: never;
             path?: never;
@@ -13174,8 +13174,8 @@ export interface operations {
     get_workouts_calendar_month_api_v1_workouts_calendar_get: {
         parameters: {
             query?: {
-                year?: number;
-                month?: number;
+                year?: number | null;
+                month?: number | null;
             };
             header?: never;
             path?: never;

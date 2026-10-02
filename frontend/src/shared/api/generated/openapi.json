@@ -13609,11 +13609,17 @@
             "name": "year",
             "required": false,
             "schema": {
-              "default": 2026,
-              "maximum": 2030,
-              "minimum": 2020,
-              "title": "Year",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 2030,
+                  "minimum": 2020,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
             }
           },
           {
@@ -13621,11 +13627,17 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 9,
-              "maximum": 12,
-              "minimum": 1,
-              "title": "Month",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
             }
           }
         ],
@@ -21904,11 +21916,17 @@
             "name": "year",
             "required": false,
             "schema": {
-              "default": 2026,
-              "maximum": 2030,
-              "minimum": 2020,
-              "title": "Year",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 2030,
+                  "minimum": 2020,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
             }
           },
           {
@@ -21916,11 +21934,17 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 9,
-              "maximum": 12,
-              "minimum": 1,
-              "title": "Month",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
             }
           }
         ],

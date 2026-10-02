@@ -5,10 +5,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.application.coach_entitlement_service import CoachEntitlementService
+from app.domain.coach_client import CoachClient
 from app.domain.coach_subscription import CoachSubscription
+from app.domain.user import User
 from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
 
@@ -109,6 +111,61 @@ async def test_expired_trial_uses_three_day_grace_then_downgrades(client: AsyncC
     free = await client.get("/api/v1/coach/subscription", headers=headers)
     assert free.json()["status"] == "ACTIVE"
     assert free.json()["plan"] == "FREE"
+
+
+@pytest.mark.integration
+async def test_denied_entitlement_persists_expired_grace_transition(client: AsyncClient, db_session):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    headers = await _coach(client, 975032)
+    user = await db_session.scalar(select(User).where(User.telegram_id == 975032))
+    subscription = await db_session.scalar(
+        select(CoachSubscription).where(CoachSubscription.coach_id == user.id)
+    )
+    subscription.status = "GRACE"
+    subscription.grace_ends_at = datetime.now(UTC) - timedelta(seconds=1)
+    await db_session.commit()
+
+    denied = await client.get("/api/v1/coach/monitoring?severity=ATTENTION", headers=headers)
+    assert denied.status_code == 403
+    assert denied.json()["error"]["code"] == "FEATURE_REQUIRES_TRAINER_PRO"
+    await db_session.refresh(subscription)
+    assert subscription.plan == "FREE"
+    assert subscription.status == "ACTIVE"
+    assert subscription.expired_at == subscription.grace_ends_at
+
+    repeated = await client.get("/api/v1/coach/monitoring?severity=ATTENTION", headers=headers)
+    assert repeated.status_code == 403
+    await db_session.refresh(subscription)
+    assert subscription.plan == "FREE"
+    assert subscription.status == "ACTIVE"
+
+
+@pytest.mark.integration
+async def test_denied_capacity_persists_expired_grace_transition(client: AsyncClient, db_session):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    headers = await _coach(client, 975033)
+    coach = await db_session.scalar(select(User).where(User.telegram_id == 975033))
+    subscription = await db_session.scalar(
+        select(CoachSubscription).where(CoachSubscription.coach_id == coach.id)
+    )
+    clients = []
+    for telegram_id in (975034, 975035, 975036):
+        await _auth(client, telegram_id)
+        clients.append(await db_session.scalar(select(User).where(User.telegram_id == telegram_id)))
+    db_session.add_all(CoachClient(coach_id=coach.id, client_id=item.id) for item in clients)
+    subscription.status = "GRACE"
+    subscription.grace_ends_at = datetime.now(UTC) - timedelta(seconds=1)
+    await db_session.commit()
+
+    denied = await client.post("/api/v1/coach/invitations", headers=headers, json={})
+    assert denied.status_code == 403
+    assert denied.json()["error"]["code"] == "CLIENT_LIMIT_REACHED"
+    await db_session.refresh(subscription)
+    assert subscription.plan == "FREE"
+    assert subscription.status == "ACTIVE"
+    assert subscription.expired_at == subscription.grace_ends_at
 
 
 @pytest.mark.integration

@@ -224,16 +224,16 @@ async def get_workout_post_summary(
 
 @router.get("/calendar", response_model=WorkoutCalendarResponse)
 async def get_workout_calendar(
-    year: int = Query(datetime.now().year, ge=2020, le=2030),
-    month: int = Query(datetime.now().month, ge=1, le=12),
+    year: int | None = Query(None, ge=2020, le=2030),
+    month: int | None = Query(None, ge=1, le=12),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
     service = AnalyticsService(db)
     return await service.get_workout_calendar(
         user_id=current_user.id,
-        year=year,
-        month=month,
+        year=year or datetime.now().year,
+        month=month or datetime.now().month,
     )
 
 
