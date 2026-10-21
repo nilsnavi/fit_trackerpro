@@ -100,6 +100,11 @@ class WorkoutLog(Base):
         index=True,
         comment="Source entity id for template/program/previous session starts",
     )
+    source_metadata: Mapped[Optional[dict]] = mapped_column(
+        JSONB, nullable=True, comment="Immutable metadata identifying a workout source"
+    )
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    idempotency_request_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
     # Completed exercises stored as JSONB
     exercises: Mapped[list[dict]] = mapped_column(
@@ -206,7 +211,7 @@ class WorkoutLog(Base):
             name="ck_workout_logs_status_allowed",
         ),
         CheckConstraint(
-            "source_type IS NULL OR source_type IN ('quick_start','personal_template','system_template','community_template','program_day','previous_session')",
+            "source_type IS NULL OR source_type IN ('quick_start','personal_template','system_template','community_template','program_day','previous_session','coach_program')",
             name="ck_workout_logs_source_type_allowed",
         ),
         CheckConstraint(
@@ -226,6 +231,7 @@ class WorkoutLog(Base):
         Index('ix_workout_logs_user_date', 'user_id', 'date'),
         Index('ix_workout_logs_user_id_id_version', 'user_id', 'id', 'version'),
         Index('ix_workout_logs_user_source', 'user_id', 'source_type', 'source_id'),
+        UniqueConstraint('user_id', 'source_type', 'source_id', 'idempotency_key', name='uq_workout_logs_source_idempotency'),
         Index('ix_workout_logs_user_status', 'user_id', 'status'),
     )
 

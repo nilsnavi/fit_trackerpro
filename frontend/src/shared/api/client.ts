@@ -205,8 +205,8 @@ class ApiService {
         return response.data
     }
 
-    async post<T>(url: string, data?: unknown) {
-        const response = await this.client.post<T>(url, data)
+    async post<T>(url: string, data?: unknown, config?: { headers?: Record<string, string> }) {
+        const response = await this.client.post<T>(url, data, config)
         return response.data
     }
 

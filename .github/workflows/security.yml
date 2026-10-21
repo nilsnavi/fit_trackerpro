@@ -117,6 +117,8 @@ jobs:
           pip install pip-audit
 
       - name: Run pip-audit
+        # PYSEC-2026-1325 no longer needs an ignore: WS1-4 replaced python-jose
+        # with PyJWT, removing its vulnerable ecdsa transitive dependency.
         run: pip-audit -r requirements/dev.txt
 
   npm-audit:
@@ -152,6 +154,9 @@ jobs:
           set -Eeuo pipefail
           {
             echo '### npm audit — full tree (dev tooling, non-blocking)'
+            echo ''
+            echo 'Tracked remediation: WS1-5 / #164 (Vite, eslint tooling, and OpenAPI tooling).'
+            echo 'The production-only audit above remains a blocking merge gate.'
             echo ''
             echo '```'
             npm audit --audit-level=moderate || true

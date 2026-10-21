@@ -298,6 +298,37 @@
         "title": "AchievementUnlockResponse",
         "type": "object"
       },
+      "ActiveWorkoutSummary": {
+        "properties": {
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "workout_id": {
+            "title": "Workout Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "workout_id",
+          "status",
+          "started_at"
+        ],
+        "title": "ActiveWorkoutSummary",
+        "type": "object"
+      },
       "AnalyticsDashboardResponse": {
         "description": "Aggregated analytics for the main dashboard (period filter).",
         "properties": {
@@ -695,6 +726,82 @@
           "count"
         ],
         "title": "AnalyticsWeeklyChartPoint",
+        "type": "object"
+      },
+      "AttentionSeverity": {
+        "enum": [
+          "INFO",
+          "NOTICE",
+          "ATTENTION",
+          "HIGH"
+        ],
+        "title": "AttentionSeverity",
+        "type": "string"
+      },
+      "AttentionSignal": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Metadata",
+            "type": "object"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/AttentionSeverity"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "title",
+          "description",
+          "occurred_at",
+          "source_type"
+        ],
+        "title": "AttentionSignal",
         "type": "object"
       },
       "AuthResponse": {
@@ -2875,24 +2982,58 @@
       "CompletedSet-Input": {
         "description": "Completed set data",
         "properties": {
-          "actual_rest_seconds": {
+          "cancelled_at": {
             "anyOf": [
               {
-                "maximum": 3600.0,
-                "minimum": 0.0,
-                "type": "integer"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Tracked actual rest before the set, in seconds.",
-            "title": "Actual Rest Seconds"
+            "title": "Cancelled At"
           },
-          "completed": {
-            "default": true,
-            "title": "Completed",
-            "type": "boolean"
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "client_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Message"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "coach_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coach Message"
+          },
+          "coach_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coach Name"
           },
           "completed_at": {
             "anyOf": [
@@ -2904,132 +3045,179 @@
                 "type": "null"
               }
             ],
-            "description": "Set completion timestamp (client).",
             "title": "Completed At"
           },
-          "duration": {
-            "anyOf": [
-              {
-                "maximum": 86400.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Duration in seconds",
-            "title": "Duration"
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
           },
-          "id": {
+          "end_date": {
             "anyOf": [
               {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Database ID of the workout_set row, if persisted.",
-            "title": "Id"
-          },
-          "incline_pct": {
-            "anyOf": [
-              {
-                "maximum": 100.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Treadmill incline in percent",
-            "title": "Incline Pct"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "maxLength": 1000,
+                "format": "date",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Set-level notes/comments.",
-            "title": "Notes"
+            "title": "End Date"
           },
-          "planned_duration": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "paused_at": {
             "anyOf": [
               {
-                "maximum": 86400.0,
-                "minimum": 0.0,
-                "type": "integer"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Duration planned before the progression target was applied.",
-            "title": "Planned Duration"
+            "title": "Paused At"
           },
-          "planned_rest_seconds": {
+          "program": {
+            "$ref": "#/components/schemas/CoachProgramResponse"
+          },
+          "program_id": {
+            "title": "Program Id",
+            "type": "integer"
+          },
+          "program_version": {
+            "title": "Program Version",
+            "type": "integer"
+          },
+          "relationship_id": {
+            "title": "Relationship Id",
+            "type": "integer"
+          },
+          "start_date": {
             "anyOf": [
               {
-                "maximum": 3600.0,
-                "minimum": 0.0,
-                "type": "integer"
+                "format": "date",
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Planned rest for the set, in seconds.",
-            "title": "Planned Rest Seconds"
+            "title": "Start Date"
           },
-          "planned_weight": {
+          "status": {
+            "$ref": "#/components/schemas/CoachProgramAssignmentStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "client_id",
+          "relationship_id",
+          "program_id",
+          "program_version",
+          "status",
+          "program",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachProgramAssignmentResponse",
+        "type": "object"
+      },
+      "CoachProgramAssignmentStatus": {
+        "enum": [
+          "ACTIVE",
+          "PAUSED",
+          "COMPLETED",
+          "CANCELLED"
+        ],
+        "title": "CoachProgramAssignmentStatus",
+        "type": "string"
+      },
+      "CoachProgramAssignmentStatusUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "client_message": {
             "anyOf": [
               {
-                "maximum": 2000.0,
-                "minimum": 0.0,
-                "type": "number"
+                "maxLength": 2000,
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Weight planned before the progression target was applied.",
-            "title": "Planned Weight"
+            "title": "Client Message"
           },
-          "reps": {
+          "status": {
+            "$ref": "#/components/schemas/CoachProgramAssignmentStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CoachProgramAssignmentStatusUpdate",
+        "type": "object"
+      },
+      "CoachProgramCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/CoachProgramDayCreate"
+            },
+            "maxItems": 60,
+            "title": "Days",
+            "type": "array"
+          },
+          "description": {
             "anyOf": [
               {
-                "maximum": 10000.0,
-                "minimum": 0.0,
-                "type": "integer"
+                "maxLength": 2000,
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Reps"
+            "title": "Description"
           },
-          "rest_seconds": {
-            "anyOf": [
-              {
-                "maximum": 3600.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Rest before the set (single-field tracking), in seconds.",
-            "title": "Rest Seconds"
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CoachProgramCreate",
+        "type": "object"
+      },
+      "CoachProgramDayCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "day_number": {
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Day Number",
+            "type": "integer"
           },
-          "rir": {
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
             "anyOf": [
               {
                 "maximum": 10.0,
@@ -3044,10 +3232,9 @@
                 "type": "null"
               }
             ],
-            "description": "Reps in Reserve",
-            "title": "Rir"
+            "title": "Notes"
           },
-          "rpe": {
+          "position": {
             "anyOf": [
               {
                 "maximum": 10.0,
@@ -3062,66 +3249,81 @@
                 "type": "null"
               }
             ],
-            "description": "Rate of Perceived Exertion (1-10).",
-            "title": "Rpe"
+            "title": "Position"
           },
-          "set_number": {
-            "description": "1-based set index within the exercise.",
-            "maximum": 1000.0,
+          "workout_template_id": {
             "minimum": 1.0,
-            "title": "Set Number",
+            "title": "Workout Template Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day_number",
+          "name",
+          "workout_template_id"
+        ],
+        "title": "CoachProgramDayCreate",
+        "type": "object"
+      },
+      "CoachProgramDayResponse": {
+        "properties": {
+          "day_number": {
+            "title": "Day Number",
             "type": "integer"
           },
-          "set_type": {
-            "$ref": "#/components/schemas/WorkoutSetType",
-            "default": "working",
-            "description": "Set type: warmup, working, dropset, failure."
+          "id": {
+            "title": "Id",
+            "type": "integer"
           },
-          "speed_kmh": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
             "anyOf": [
               {
-                "maximum": 150.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Treadmill speed in km/h",
-            "title": "Speed Kmh"
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Set start timestamp (client, for time-under-tension).",
-            "title": "Started At"
+            "title": "Notes"
           },
-          "weight": {
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "template_version": {
+            "title": "Template Version",
+            "type": "integer"
+          },
+          "workout_template_id": {
             "anyOf": [
               {
-                "maximum": 2000.0,
-                "minimum": 0.0,
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Weight"
+            "title": "Workout Template Id"
+          },
+          "workout_template_name": {
+            "title": "Workout Template Name",
+            "type": "string"
           }
         },
         "required": [
-          "set_number"
+          "id",
+          "day_number",
+          "name",
+          "workout_template_id",
+          "workout_template_name",
+          "template_version",
+          "position"
         ],
-        "title": "CompletedSet",
+        "title": "CoachProgramDayResponse",
         "type": "object"
       },
       "CompletedSet-Output": {
@@ -3336,8 +3538,8 @@
           "started_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "minimum": 0.0,
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -3740,10 +3942,16 @@
             "title": "Notify On Workout Start",
             "type": "boolean"
           },
-          "phone": {
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
             "anyOf": [
               {
-                "maxLength": 50,
+                "maxLength": 1000,
                 "type": "string"
               },
               {
@@ -3761,10 +3969,20 @@
             "title": "Priority",
             "type": "integer"
           },
-          "relationship_type": {
+          "sets_completed": {
+            "description": "Recorded sets (max 100 per exercise).",
+            "items": {
+              "$ref": "#/components/schemas/CompletedSet-Output"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Sets Completed",
+            "type": "array"
+          },
+          "status": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EmergencyRelationship"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -4378,7 +4596,9 @@
           }
         },
         "required": [
-          "date"
+          "date",
+          "sleep_score",
+          "energy_score"
         ],
         "title": "ExerciseBestPerformance",
         "type": "object"
@@ -4452,7 +4672,7 @@
             "$ref": "#/components/schemas/ExerciseCategory",
             "description": "Exercise category."
           },
-          "description": {
+          "notes": {
             "anyOf": [
               {
                 "maxLength": 2000,
@@ -4489,7 +4709,11 @@
             "description": "URL to image or video.",
             "title": "Media Url"
           },
-          "muscle_group": {
+          "sleep_score": {
+            "title": "Sleep Score",
+            "type": "integer"
+          },
+          "stress_level": {
             "anyOf": [
               {
                 "maxLength": 64,
@@ -4541,6 +4765,10 @@
           "value": {
             "title": "Value",
             "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
           }
         },
         "required": [
@@ -4760,6 +4988,25 @@
           "value": {
             "title": "Value",
             "type": "string"
+          },
+          "deep_link": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "t.me link that prefills the command; None if TELEGRAM_BOT_USERNAME is unset.",
+            "title": "Deep Link"
+          },
+          "is_linked": {
+            "default": false,
+            "description": "True when the contact is already linked (a new code re-links them).",
+            "title": "Is Linked",
+            "type": "boolean"
           }
         },
         "required": [
@@ -4958,6 +5205,8 @@
           "author_user_id": {
             "anyOf": [
               {
+                "maximum": 10.0,
+                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -5041,6 +5290,10 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "successful_count": {
+            "title": "Successful Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -5307,7 +5560,9 @@
           "max_value": {
             "anyOf": [
               {
-                "type": "number"
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -5318,6 +5573,8 @@
           "min_value": {
             "anyOf": [
               {
+                "maximum": 2000.0,
+                "minimum": 0.0,
                 "type": "number"
               },
               {
@@ -5702,7 +5959,7 @@
           "avg_rir_7d": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -5713,7 +5970,7 @@
           "avg_rpe_7d": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -5790,7 +6047,7 @@
           "core_share_ratio_28d": {
             "anyOf": [
               {
-                "type": "number"
+                "$ref": "#/components/schemas/ExerciseCategory"
               },
               {
                 "type": "null"
@@ -5812,7 +6069,8 @@
           "days_since_back_session": {
             "anyOf": [
               {
-                "type": "integer"
+                "maxLength": 2000,
+                "type": "string"
               },
               {
                 "type": "null"
@@ -5834,7 +6092,13 @@
           "forearms_volume_28d": {
             "anyOf": [
               {
-                "type": "number"
+                "items": {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
               },
               {
                 "type": "null"
@@ -5845,7 +6109,8 @@
           "glutes_volume_28d": {
             "anyOf": [
               {
-                "type": "number"
+                "maxLength": 2000,
+                "type": "string"
               },
               {
                 "type": "null"
@@ -5889,7 +6154,9 @@
           "posterior_vs_anterior_ratio_28d": {
             "anyOf": [
               {
-                "type": "number"
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
               },
               {
                 "type": "null"
@@ -5933,7 +6200,8 @@
           "shoulders_volume_28d": {
             "anyOf": [
               {
-                "type": "number"
+                "maxLength": 500,
+                "type": "string"
               },
               {
                 "type": "null"
@@ -5955,7 +6223,8 @@
           "triceps_volume_28d": {
             "anyOf": [
               {
-                "type": "number"
+                "minimum": 1.0,
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -6017,6 +6286,1457 @@
             "format": "date",
             "title": "Date",
             "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "loadScore": {
+            "title": "Loadscore",
+            "type": "number"
+          },
+          "muscleGroup": {
+            "title": "Musclegroup",
+            "type": "string"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "muscleGroup",
+          "date",
+          "loadScore"
+        ],
+        "title": "MuscleLoadEntry",
+        "type": "object"
+      },
+      "MuscleLoadTableResponse": {
+        "description": "Paginated muscle load response for table views",
+        "properties": {
+          "dateFrom": {
+            "format": "date",
+            "title": "Datefrom",
+            "type": "string"
+          },
+          "dateTo": {
+            "format": "date",
+            "title": "Dateto",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MuscleLoadEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "dateFrom",
+          "dateTo"
+        ],
+        "title": "MuscleLoadTableResponse",
+        "type": "object"
+      },
+      "NotificationResult": {
+        "description": "Individual notification result",
+        "properties": {
+          "contact_id": {
+            "title": "Contact Id",
+            "type": "integer"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "method": {
+            "description": "Notification channel used",
+            "maxLength": 64,
+            "title": "Method",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "contact_id",
+          "contact_name",
+          "method",
+          "success"
+        ],
+        "title": "NotificationResult",
+        "type": "object"
+      },
+      "OnboardingRequest": {
+        "description": "Request model for first-login onboarding.",
+        "properties": {
+          "consent_version": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Version of the consent text the user saw; defaults to the current one.",
+            "title": "Consent Version"
+          },
+          "experience_level": {
+            "$ref": "#/components/schemas/ExperienceLevel",
+            "description": "Current training level."
+          },
+          "fitness_goal": {
+            "$ref": "#/components/schemas/FitnessGoal",
+            "description": "Primary fitness objective."
+          },
+          "health_data_consent": {
+            "default": false,
+            "description": "True when the user ticked the consent box for processing health data (pulse, glucose, weight, sleep, wellbeing). Without it onboarding is rejected.",
+            "title": "Health Data Consent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fitness_goal",
+          "experience_level"
+        ],
+        "title": "OnboardingRequest",
+        "type": "object"
+      },
+      "OnboardingResponse": {
+        "description": "Response for onboarding save operation.",
+        "properties": {
+          "message": {
+            "default": "Onboarding saved",
+            "maxLength": 500,
+            "title": "Message",
+            "type": "string"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfileData"
+          },
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "title": "OnboardingResponse",
+        "type": "object"
+      },
+      "PainZones": {
+        "description": "Pain levels by body zone",
+        "properties": {
+          "ankles": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Ankles",
+            "type": "integer"
+          },
+          "arms": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Arms",
+            "type": "integer"
+          },
+          "back": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Back",
+            "type": "integer"
+          },
+          "chest": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Chest",
+            "type": "integer"
+          },
+          "head": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Head",
+            "type": "integer"
+          },
+          "hips": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Hips",
+            "type": "integer"
+          },
+          "knees": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Knees",
+            "type": "integer"
+          },
+          "neck": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Neck",
+            "type": "integer"
+          },
+          "shoulders": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Shoulders",
+            "type": "integer"
+          },
+          "wrists": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Wrists",
+            "type": "integer"
+          }
+        },
+        "title": "PainZones",
+        "type": "object"
+      },
+      "PersonalRecord": {
+        "description": "Personal record entry",
+        "properties": {
+          "date_achieved": {
+            "format": "date",
+            "title": "Date Achieved",
+            "type": "string"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "improvement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement"
+          },
+          "previous_record": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Record"
+          },
+          "record_type": {
+            "title": "Record Type",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "exercise_name",
+          "record_type",
+          "value",
+          "unit",
+          "date_achieved",
+          "previous_record",
+          "improvement"
+        ],
+        "title": "PersonalRecord",
+        "type": "object"
+      },
+      "PersonalRecordEntry": {
+        "description": "Personal record achieved or matched (SPEC-005 §40).",
+        "properties": {
+          "achieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achieved At"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "is_new_record": {
+            "default": true,
+            "title": "Is New Record",
+            "type": "boolean"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "record_type": {
+            "$ref": "#/components/schemas/PersonalRecordType"
+          },
+          "set_number": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Number"
+          },
+          "unit": {
+            "default": "kg",
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "record_type",
+          "exercise_id",
+          "exercise_name",
+          "value"
+        ],
+        "title": "PersonalRecordEntry",
+        "type": "object"
+      },
+      "PersonalRecordType": {
+        "description": "Personal record types tracked per exercise (SPEC-005 §40).",
+        "enum": [
+          "MAX_WEIGHT",
+          "MAX_REPS_AT_WEIGHT",
+          "ESTIMATED_1RM",
+          "MAX_VOLUME",
+          "MAX_DURATION"
+        ],
+        "title": "PersonalRecordType",
+        "type": "string"
+      },
+      "PlateCalculationRequest": {
+        "description": "Plate calculator request (SPEC-005 §42–43).",
+        "properties": {
+          "available_plates": {
+            "description": "Available plate weights in kg.",
+            "items": {
+              "type": "number"
+            },
+            "title": "Available Plates",
+            "type": "array"
+          },
+          "bar_weight": {
+            "default": 20,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Bar Weight",
+            "type": "number"
+          },
+          "target_weight": {
+            "maximum": 2000.0,
+            "minimum": 0.0,
+            "title": "Target Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "target_weight"
+        ],
+        "title": "PlateCalculationRequest",
+        "type": "object"
+      },
+      "PlateCalculationResponse": {
+        "description": "Plate calculator result per side (SPEC-005 §42–43).",
+        "properties": {
+          "achievable": {
+            "title": "Achievable",
+            "type": "boolean"
+          },
+          "exact_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact Weight"
+          },
+          "nearest_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nearest Weight"
+          },
+          "plates_per_side": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Plates Per Side",
+            "type": "array"
+          },
+          "remainder": {
+            "default": 0.0,
+            "title": "Remainder",
+            "type": "number"
+          }
+        },
+        "required": [
+          "achievable"
+        ],
+        "title": "PlateCalculationResponse",
+        "type": "object"
+      },
+      "ProgressInsightsBestSetItem": {
+        "description": "Top set by volume/weight in selected period.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "set_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Number"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "number"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "exercise_name",
+          "date",
+          "volume"
+        ],
+        "title": "ProgressInsightsBestSetItem",
+        "type": "object"
+      },
+      "ProgressInsightsFrequencyPoint": {
+        "description": "Weekly frequency aggregate point.",
+        "properties": {
+          "active_days": {
+            "title": "Active Days",
+            "type": "integer"
+          },
+          "week_end": {
+            "format": "date",
+            "title": "Week End",
+            "type": "string"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          },
+          "workout_count": {
+            "title": "Workout Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "week_start",
+          "week_end",
+          "active_days",
+          "workout_count"
+        ],
+        "title": "ProgressInsightsFrequencyPoint",
+        "type": "object"
+      },
+      "ProgressInsightsPRItem": {
+        "description": "Detected personal record event for an exercise.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "improvement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement"
+          },
+          "improvement_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement Pct"
+          },
+          "is_first_entry": {
+            "default": false,
+            "title": "Is First Entry",
+            "type": "boolean"
+          },
+          "previous_best_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Best Weight"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "exercise_name",
+          "date"
+        ],
+        "title": "ProgressInsightsPRItem",
+        "type": "object"
+      },
+      "ProgressInsightsResponse": {
+        "description": "Combined progress analytics payload for overview screens.",
+        "properties": {
+          "best_sets": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsBestSetItem"
+            },
+            "title": "Best Sets",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "frequency_trend": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsFrequencyPoint"
+            },
+            "title": "Frequency Trend",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "pr_events": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsPRItem"
+            },
+            "title": "Pr Events",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ProgressInsightsSummary"
+          },
+          "volume_trend": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressInsightsVolumePoint"
+            },
+            "title": "Volume Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "date_from",
+          "date_to",
+          "summary"
+        ],
+        "title": "ProgressInsightsResponse",
+        "type": "object"
+      },
+      "ProgressInsightsSummary": {
+        "description": "Compact overview of progress in selected period.",
+        "properties": {
+          "active_days": {
+            "title": "Active Days",
+            "type": "integer"
+          },
+          "average_workouts_per_week": {
+            "title": "Average Workouts Per Week",
+            "type": "number"
+          },
+          "total_reps": {
+            "title": "Total Reps",
+            "type": "integer"
+          },
+          "total_sets": {
+            "title": "Total Sets",
+            "type": "integer"
+          },
+          "total_volume": {
+            "title": "Total Volume",
+            "type": "number"
+          },
+          "total_workouts": {
+            "title": "Total Workouts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_workouts",
+          "active_days",
+          "total_sets",
+          "total_reps",
+          "total_volume",
+          "average_workouts_per_week"
+        ],
+        "title": "ProgressInsightsSummary",
+        "type": "object"
+      },
+      "ProgressInsightsVolumePoint": {
+        "description": "Daily volume aggregate point for trend charts.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "total_reps": {
+            "title": "Total Reps",
+            "type": "integer"
+          },
+          "total_sets": {
+            "title": "Total Sets",
+            "type": "integer"
+          },
+          "total_volume": {
+            "title": "Total Volume",
+            "type": "number"
+          },
+          "workout_count": {
+            "title": "Workout Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "workout_count",
+          "total_sets",
+          "total_reps",
+          "total_volume"
+        ],
+        "title": "ProgressInsightsVolumePoint",
+        "type": "object"
+      },
+      "ProgressionBulkResult": {
+        "description": "Outcome of a bulk change across accepted targets (SPEC §58).",
+        "properties": {
+          "applied_to_all": {
+            "default": false,
+            "description": "True when the request addressed every current target of the user.",
+            "title": "Applied To All",
+            "type": "boolean"
+          },
+          "changed_ids": {
+            "description": "Exactly the targets the change applied to — not the ids that were requested. A caller can hand them straight back to undo the action without re-deriving what changed from the response.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Changed Ids",
+            "type": "array"
+          },
+          "released_ids": {
+            "description": "Sweep members an undo released: targets a newer one replaced, which no undo can switch back on. Their prefill stays off and only the sweep stamp is cleared, so the entry stops holding a goal nobody can restore. Empty for every other bulk action.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Released Ids",
+            "type": "array"
+          },
+          "skipped": {
+            "description": "Targets the change did not apply to, each with the reason: unknown, someone else's, no longer an accepted target, or — for switching the prefill off — already switched off.",
+            "items": {
+              "$ref": "#/components/schemas/ProgressionBulkSkipped"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "updated": {
+            "default": 0,
+            "description": "Targets the change actually applied to.",
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "title": "ProgressionBulkResult",
+        "type": "object"
+      },
+      "ProgressionBulkSkipReason": {
+        "description": "Why a bulk action left one selected target alone (SPEC-006 §58).",
+        "enum": [
+          "not_found",
+          "already_disabled",
+          "already_enabled",
+          "superseded"
+        ],
+        "title": "ProgressionBulkSkipReason",
+        "type": "string"
+      },
+      "ProgressionBulkSkipped": {
+        "description": "One selected target a bulk action did not change, explained (SPEC §58).\n\nReporting the id alone leaves the user guessing which goal was left behind;\nthe name, the value it still carries and the scope come along so the screen\ncan name the row exactly like the list does. A target that is not a current\naccepted target can only be identified by its id — and a record that a newer\ntarget replaced says which id to address instead, so the caller never has to\nguess which row the slot belongs to now.",
+        "properties": {
+          "exercise_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exercise Id"
+          },
+          "exercise_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Catalog name; null when the target no longer exists.",
+            "title": "Exercise Name"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ProgressionBulkSkipReason"
+          },
+          "recommendation_id": {
+            "title": "Recommendation Id",
+            "type": "integer"
+          },
+          "scope_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Progression scope the skipped target belongs to.",
+            "title": "Scope Key"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The target that owns this scope now, when the skipped record was replaced by a newer one (`superseded`); null for every other reason.",
+            "title": "Superseded By"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "'kg' or 'seconds'.",
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The target's current value (kg, or seconds when timed).",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "recommendation_id",
+          "reason"
+        ],
+        "title": "ProgressionBulkSkipped",
+        "type": "object"
+      },
+      "ProgressionPolicy": {
+        "description": "Supported progression policies (SPEC-005 §29).",
+        "enum": [
+          "MANUAL",
+          "LINEAR",
+          "DOUBLE_PROGRESSION",
+          "RPE_BASED",
+          "RIR_BASED",
+          "PERCENT_1RM",
+          "TIME_PROGRESSION"
+        ],
+        "title": "ProgressionPolicy",
+        "type": "string"
+      },
+      "ProgressionPolicyResponse": {
+        "description": "Effective policy for one progression scope (SPEC §6/§7).",
+        "properties": {
+          "deload_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deload Percent"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "equipment_increment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipment Increment"
+          },
+          "exercise_id": {
+            "title": "Exercise Id",
+            "type": "integer"
+          },
+          "failure_threshold": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Threshold"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the scope still uses defaults.",
+            "title": "Id"
+          },
+          "increment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hamstrings Volume 28D"
+          },
+          "hamstrings_vs_quads_ratio_28d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hamstrings Vs Quads Ratio 28D"
+          },
+          "posterior_leg_underload_signal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posterior Leg Underload Signal"
+          },
+          "posterior_vs_anterior_ratio_28d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posterior Vs Anterior Ratio 28D"
+          },
+          "policy_scope_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Scope the stored policy row actually lives in; differs from scope_key when a template-level or user-level policy is inherited. Null for defaults.",
+            "title": "Policy Scope Key"
+          },
+          "policy_version": {
+            "default": "MANUAL_V1",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "reps_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pull Underload Signal"
+          },
+          "pull_vs_push_ratio_28d": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pull Vs Push Ratio 28D"
+          },
+          "scope_key": {
+            "description": "Progression scope: user + template + exercise + program slot.",
+            "title": "Scope Key",
+            "type": "string"
+          },
+          "sets_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quads Volume 28D"
+          },
+          "shoulders_volume_28d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shoulders Volume 28D"
+          },
+          "total_volume_28d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Volume 28D"
+          },
+          "template_exercise_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Exercise Id"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "time_increment_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triceps Volume 28D"
+          },
+          "time_priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimePriority"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weak_back_signal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Target Seconds"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ProgressionPolicy",
+            "default": "MANUAL"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "exercise_id",
+          "scope_key"
+        ],
+        "title": "ProgressionPolicyResponse",
+        "type": "object"
+      },
+      "ProgressionPolicyUpdate": {
+        "description": "PUT body: configure progression for one exercise scope.",
+        "properties": {
+          "deload_percent": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 90.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deload Percent"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "equipment_increment": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 50.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipment Increment"
+          },
+          "failure_threshold": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Threshold"
+          },
+          "increment": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 200.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Increment"
+          },
+          "max_value": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "percent_1rm": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 200.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent 1Rm"
+          },
+          "reps_max": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Max"
+          },
+          "reps_min": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps Min"
+          },
+          "sets_target": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sets Target"
+          },
+          "target_rir": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rir"
+          },
+          "target_rpe": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rpe"
+          },
+          "time_increment_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Increment Seconds"
+          },
+          "time_priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimePriority"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Weight+time exercises: TIME_FIRST or WEIGHT_FIRST (SPEC §24)."
+          },
+          "time_target_seconds": {
+            "anyOf": [
+              {
+                "maximum": 86400.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Target Seconds"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ProgressionPolicy",
+            "default": "MANUAL",
+            "description": "MANUAL never computes a target; the engine only proposes for other types."
+          }
+        },
+        "title": "ProgressionPolicyUpdate",
+        "type": "object"
+      },
+      "ProgressionPrefillBulkDisable": {
+        "description": "POST body: switch the automatic prefill off for many targets at once.",
+        "properties": {
+          "recommendation_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Targets to switch off. Omit (or send null) to switch off every accepted target the settings screen lists.",
+            "title": "Recommendation Ids"
+          }
+        },
+        "title": "ProgressionPrefillBulkDisable",
+        "type": "object"
+      },
+      "ProgressionPrefillBulkEnable": {
+        "description": "POST body: switch the automatic prefill back on — the undo of a sweep.\n\nTwo addresses, never both: the exact targets an action reported as changed,\nor whole sweeps. A sweep id is the honest way to undo one link of the chain\n(and to undo several at once): the caller does not have to re-state a set of\nids it merely read, and a chain longer than the id cap is still one call.",
+        "properties": {
+          "recommendation_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 200,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The targets to switch back on (the changed set of one action).",
+            "title": "Recommendation Ids"
           },
           "id": {
             "title": "Id",
@@ -11259,7 +12979,8 @@
           "system_template",
           "community_template",
           "program_day",
-          "previous_session"
+          "previous_session",
+          "coach_program"
         ],
         "title": "WorkoutSessionSourceType",
         "type": "string"
@@ -13729,20 +15450,957 @@
             "description": "Validation Error"
           }
         },
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "type",
+          "exercises",
+          "is_public",
+          "is_archived",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WorkoutTemplateResponse",
+        "type": "object"
+      },
+      "WorkoutTemplateType": {
+        "enum": [
+          "cardio",
+          "strength",
+          "flexibility",
+          "mixed"
+        ],
+        "title": "WorkoutTemplateType",
+        "type": "string"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "\n    Backend API for FitTracker Pro Telegram Mini App\n    \n    ## Authentication\n    **Public (no JWT):** ``GET /`` and ``GET /health``, ``/api/v1/system/*``,\n    ``POST /api/v1/users/auth/telegram``, ``POST /api/v1/users/auth/refresh``,\n    plus explicitly registered integration webhooks.\n\n    **Authenticated:** all other ``/api/v1`` routes require a Bearer access token:\n    ```\n    Authorization: Bearer <access_token>\n    ```\n    \n    ## Rate Limiting\n    Tiered limits via ``RateLimitMiddleware`` (Redis or in-memory): default reads, auth,\n    ``/workouts`` (60/min per Bearer user), ``/analytics`` (30/min per user), system, writes,\n    export, emergency notify. ``POST .../users/auth/telegram`` (and legacy ``/auth/telegram``)\n    uses **SlowAPI**: 10 requests/minute **per client IP** (429 with ``Retry-After``).\n    Other routes: per Telegram user id when a valid access token or refresh body is present;\n    otherwise per client IP. Responses include ``X-RateLimit-Limit``, ``X-RateLimit-Remaining``,\n    ``X-RateLimit-Reset``, ``X-RateLimit-Window``, ``X-RateLimit-Policy``, and ``RateLimit-*``.\n    ",
+    "title": "FitTracker Pro API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "description": "JSON for API clients. Telegram Mini App / browser document loads are redirected to\n``TELEGRAM_WEBAPP_URL`` so a misconfigured WebApp URL on the API host still opens the UI.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Root",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/v1/analytics/": {
+      "get": {
+        "operationId": "get_analytics_dashboard_api_v1_analytics__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "week",
+              "pattern": "^(week|month|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsDashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
         "security": [
           {
             "HTTPBearer": []
           }
         ],
-        "summary": "Get Analytics Summary",
+        "summary": "Get Analytics Dashboard",
         "tags": [
           "Analytics"
         ]
       }
     },
-    "/api/v1/analytics/training-load/daily": {
+    "/api/v1/analytics/achievements/": {
       "get": {
-        "operationId": "get_daily_training_load_api_v1_analytics_training_load_daily_get",
+        "operationId": "get_achievements_api_v1_analytics_achievements__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(workouts|health|streaks|social|general)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AchievementListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Achievements",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/api/v1/analytics/achievements/leaderboard": {
+      "get": {
+        "operationId": "get_achievements_leaderboard_api_v1_analytics_achievements_leaderboard_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AchievementLeaderboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Achievements Leaderboard",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/api/v1/analytics/achievements/user": {
+      "get": {
+        "operationId": "get_user_achievements_api_v1_analytics_achievements_user_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAchievementListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Achievements",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/api/v1/analytics/achievements/user/{achievement_id}": {
+      "get": {
+        "operationId": "get_user_achievement_detail_api_v1_analytics_achievements_user__achievement_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "achievement_id",
+            "required": true,
+            "schema": {
+              "title": "Achievement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAchievementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Achievement Detail",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/api/v1/analytics/achievements/{achievement_id}/claim": {
+      "post": {
+        "operationId": "claim_achievement_api_v1_analytics_achievements__achievement_id__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "achievement_id",
+            "required": true,
+            "schema": {
+              "title": "Achievement Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Client-generated key; duplicate requests replay the first successful response.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client-generated key; duplicate requests replay the first successful response.",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AchievementUnlockResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Claim Achievement",
+        "tags": [
+          "Achievements"
+        ]
+      }
+    },
+    "/api/v1/analytics/calendar": {
+      "get": {
+        "operationId": "get_workout_calendar_api_v1_analytics_calendar_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "default": 2026,
+              "maximum": 2030,
+              "minimum": 2020,
+              "title": "Year",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "default": 9,
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Month",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutCalendarResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Workout Calendar",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/challenges/": {
+      "get": {
+        "operationId": "get_challenges_api_v1_analytics_challenges__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(upcoming|active|completed|cancelled)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "challenge_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(workout_count|duration|calories|distance|custom)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Challenge Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_public",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Public"
+            }
+          },
+          {
+            "description": "If true, return only challenges created by the authenticated user.",
+            "in": "query",
+            "name": "mine",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "If true, return only challenges created by the authenticated user.",
+              "title": "Mine",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Challenges",
+        "tags": [
+          "Challenges"
+        ]
+      },
+      "post": {
+        "operationId": "create_challenge_api_v1_analytics_challenges__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Challenge",
+        "tags": [
+          "Challenges"
+        ]
+      }
+    },
+    "/api/v1/analytics/challenges/my/active": {
+      "get": {
+        "operationId": "get_my_active_challenges_api_v1_analytics_challenges_my_active_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeMyActiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get My Active Challenges",
+        "tags": [
+          "Challenges"
+        ]
+      }
+    },
+    "/api/v1/analytics/challenges/{challenge_id}": {
+      "get": {
+        "operationId": "get_challenge_api_v1_analytics_challenges__challenge_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "challenge_id",
+            "required": true,
+            "schema": {
+              "title": "Challenge Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Challenge",
+        "tags": [
+          "Challenges"
+        ]
+      }
+    },
+    "/api/v1/analytics/challenges/{challenge_id}/join": {
+      "post": {
+        "operationId": "join_challenge_api_v1_analytics_challenges__challenge_id__join_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "challenge_id",
+            "required": true,
+            "schema": {
+              "title": "Challenge Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "join_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Join Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeJoinResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Join Challenge",
+        "tags": [
+          "Challenges"
+        ]
+      }
+    },
+    "/api/v1/analytics/challenges/{challenge_id}/leaderboard": {
+      "get": {
+        "operationId": "get_challenge_leaderboard_api_v1_analytics_challenges__challenge_id__leaderboard_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "challenge_id",
+            "required": true,
+            "schema": {
+              "title": "Challenge Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeLeaderboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Challenge Leaderboard",
+        "tags": [
+          "Challenges"
+        ]
+      }
+    },
+    "/api/v1/analytics/challenges/{challenge_id}/leave": {
+      "post": {
+        "operationId": "leave_challenge_api_v1_analytics_challenges__challenge_id__leave_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "challenge_id",
+            "required": true,
+            "schema": {
+              "title": "Challenge Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeLeaveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Challenge participation is not implemented yet"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Leave Challenge",
+        "tags": [
+          "Challenges"
+        ]
+      }
+    },
+    "/api/v1/analytics/export": {
+      "post": {
+        "operationId": "export_data_api_v1_analytics_export_post",
+        "parameters": [
+          {
+            "description": "Client-generated key; duplicate requests replay the first successful response.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client-generated key; duplicate requests replay the first successful response.",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Data",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/export/{export_id}": {
+      "get": {
+        "operationId": "get_export_status_api_v1_analytics_export__export_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Export Status",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/muscle-load": {
+      "get": {
+        "operationId": "get_muscle_load_api_v1_analytics_muscle_load_get",
         "parameters": [
           {
             "in": "query",
@@ -13785,6 +16443,723 @@
               "application/json": {
                 "schema": {
                   "items": {
+                    "$ref": "#/components/schemas/MuscleLoadEntry"
+                  },
+                  "title": "Response Get Muscle Load Api V1 Analytics Muscle Load Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Muscle Load",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/muscle-load/table": {
+      "get": {
+        "operationId": "get_muscle_load_table_api_v1_analytics_muscle_load_table_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "muscle_group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Muscle Group"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuscleLoadTableResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Muscle Load Table",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/muscle-signals": {
+      "get": {
+        "operationId": "get_muscle_imbalance_signals_api_v1_analytics_muscle_signals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuscleImbalanceSignalsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Muscle Imbalance Signals",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/performance-overview": {
+      "get": {
+        "operationId": "get_analytics_performance_overview_api_v1_analytics_performance_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "30d",
+              "pattern": "^(7d|30d|90d|1y|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "summary": "List Invitations",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "create_invitation_api_v1_coach_invitations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachInvitationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsPerformanceOverviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Analytics Performance Overview",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/progress": {
+      "get": {
+        "operationId": "get_exercise_progress_api_v1_analytics_progress_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "exercise_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exercise Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "30d",
+              "pattern": "^(7d|30d|90d|1y|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_exercises",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Max Exercises",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_data_points",
+            "required": false,
+            "schema": {
+              "default": 120,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Max Data Points",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExerciseProgressResponse"
+                  },
+                  "title": "Response Get Exercise Progress Api V1 Analytics Progress Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Exercise Progress",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/progress-insights": {
+      "get": {
+        "operationId": "get_progress_insights_api_v1_analytics_progress_insights_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "30d",
+              "pattern": "^(7d|30d|90d|1y|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit_best_sets",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit Best Sets",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit_pr_events",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit Pr Events",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressInsightsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Progress Insights",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/recovery-state": {
+      "get": {
+        "operationId": "get_recovery_state_api_v1_analytics_recovery_state_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recovery State",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/recovery-state/recalculate": {
+      "post": {
+        "operationId": "recalculate_recovery_state_api_v1_analytics_recovery_state_recalculate_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "target_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryStateRecalculateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recalculate Recovery State",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/analytics/summary": {
+      "get": {
+        "operationId": "get_analytics_summary_api_v1_analytics_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "30d",
+              "pattern": "^(7d|30d|90d|1y|all)$",
+              "title": "Period",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Analytics Summary",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/analytics/training-load/daily": {
+      "get": {
+        "operationId": "get_daily_training_load_api_v1_analytics_training_load_daily_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Profile",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_profile_api_v1_coach_profile_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
                     "$ref": "#/components/schemas/TrainingLoadDailyEntry"
                   },
                   "title": "Response Get Daily Training Load Api V1 Analytics Training Load Daily Get",
@@ -13812,7 +17187,7 @@
         ],
         "summary": "Get Daily Training Load",
         "tags": [
-          "Analytics"
+          "Coach"
         ]
       }
     },
@@ -13879,7 +17254,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -13907,7 +17282,7 @@
         ],
         "summary": "Get Daily Training Load Table",
         "tags": [
-          "Analytics"
+          "Coach"
         ]
       }
     },
@@ -13979,7 +17354,7 @@
         ],
         "summary": "Get Workout Post Summary",
         "tags": [
-          "Analytics"
+          "Coach"
         ]
       }
     },
@@ -14037,7 +17412,7 @@
       "get": {
         "operationId": "list_clients_api_v1_coach_clients_get",
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -14383,6 +17758,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachProgramDayCreate"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
