@@ -34,8 +34,8 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
             className={cn(
                 'flex min-w-[110px] flex-col items-start gap-3 rounded-[14px] p-3 text-left transition-all active:scale-95',
                 isCustom
-                    ? 'border border-dashed border-[#2a2a2a] bg-transparent'
-                    : 'bg-[#1a1a1a]',
+                    ? 'border border-dashed border-line-deep bg-transparent'
+                    : 'bg-panel-deep2',
             )}
         >
             <div
@@ -51,7 +51,7 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
                     {template.name}
                 </p>
                 {!isCustom && (
-                    <p className="text-xs text-[#888888]">
+                    <p className="text-xs text-ink-gray">
                         {template.exerciseCount} упр
                     </p>
                 )}

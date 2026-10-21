@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Minus, RefreshCw, Ruler, TrendingDown, TrendingUp } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
+import { CHART_PRIMARY_COLOR, CHART_TICK_COLOR } from '@shared/lib/chartTheme'
 import type { BodyMeasurement, BodyMeasurementType } from '@features/health/types/metrics'
 import {
     defaultMeasurementType,
@@ -152,13 +153,13 @@ export function BodyMeasurementsCard({
                                 <LineChart data={active.points}>
                                     <XAxis
                                         dataKey="label"
-                                        tick={{ fontSize: 11 }}
+                                        tick={{ fontSize: 11, fill: CHART_TICK_COLOR }}
                                         stroke="currentColor"
                                         className="text-telegram-hint"
                                     />
                                     <YAxis
                                         domain={['dataMin - 1', 'dataMax + 1']}
-                                        tick={{ fontSize: 11 }}
+                                        tick={{ fontSize: 11, fill: CHART_TICK_COLOR }}
                                         width={32}
                                         stroke="currentColor"
                                         className="text-telegram-hint"
@@ -170,7 +171,7 @@ export function BodyMeasurementsCard({
                                     <Line
                                         type="monotone"
                                         dataKey="value"
-                                        stroke="var(--color-primary, #2AABEE)"
+                                        stroke={CHART_PRIMARY_COLOR}
                                         strokeWidth={2}
                                         dot={{ r: 3 }}
                                     />

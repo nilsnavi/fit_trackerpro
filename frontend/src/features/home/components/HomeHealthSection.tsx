@@ -33,7 +33,7 @@ export function HomeHealthSection() {
     return (
         <section
             data-testid="home-health-section"
-            className="mt-[12px] rounded-[12px] border border-[#171e28] bg-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]"
+            className="mt-[12px] rounded-[12px] border border-line-low bg-void-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]"
         >
             <div className="mb-[14px] flex items-center justify-between">
                 <h2 className="text-[17px] font-bold leading-5 text-white">Здоровье сегодня</h2>
@@ -41,7 +41,7 @@ export function HomeHealthSection() {
                     type="button"
                     data-testid="home-health-all"
                     onClick={openHealth}
-                    className="flex min-h-8 items-center gap-1 rounded-[8px] px-1 text-[13px] font-semibold text-[#168cff] active:bg-white/5"
+                    className="flex min-h-8 items-center gap-1 rounded-[8px] px-1 text-[13px] font-semibold text-azure-solid active:bg-white/5"
                 >
                     Все
                     <ChevronRight className="h-4 w-4" />
@@ -49,15 +49,15 @@ export function HomeHealthSection() {
             </div>
 
             {healthWidgets.isError ? (
-                <div className="flex items-center justify-between rounded-[10px] border border-[#26313e] px-3 py-2">
-                    <span className="text-[13px] text-[#8d939c]">
+                <div className="flex items-center justify-between rounded-[10px] border border-line-midlow px-3 py-2">
+                    <span className="text-[13px] text-ink-dimmer">
                         Данные здоровья не загрузились
                     </span>
                     <button
                         type="button"
                         data-testid="home-health-retry"
                         onClick={() => void healthWidgets.refetch()}
-                        className="text-[13px] font-semibold text-[#168cff]"
+                        className="text-[13px] font-semibold text-azure-solid"
                     >
                         Повторить
                     </button>
@@ -69,7 +69,7 @@ export function HomeHealthSection() {
                             <div
                                 key={index}
                                 data-testid="health-widget-skeleton"
-                                className="h-[132px] w-36 shrink-0 animate-pulse rounded-2xl border border-[#2a3442] bg-[#111821]"
+                                className="h-[132px] w-36 shrink-0 animate-pulse rounded-2xl border border-line-strong bg-panel-card2"
                             />
                         ))
                     ) : (

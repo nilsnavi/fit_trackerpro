@@ -34,6 +34,23 @@ import { buildRepeatSessionPayload } from '@features/workouts/lib/workoutModeHel
 import { EditSetSheet } from '@features/workouts/components/EditSetSheet'
 import type { CompletedSet, WorkoutHistoryItem, WorkoutSessionMetrics } from '@features/workouts/types/workouts'
 
+type DetailSection = 'overview' | 'exercises' | 'analysis'
+
+const getSetDetails = (set: CompletedSet): string[] => {
+    const values: Array<[string, number | undefined, string | undefined]> = [
+        ['Повторы', set.reps, 'повт'],
+        ['Вес', set.weight, 'кг'],
+        ['RPE', set.rpe, undefined],
+        ['RIR', set.rir, undefined],
+        ['Время', set.duration, 'сек'],
+        ['Дистанция', set.distance, 'км'],
+    ]
+
+    return values
+        .filter(([, value]) => typeof value === 'number' && !Number.isNaN(value))
+        .map(([label, value, unit]) => `${label}: ${formatSetValue(value, unit)}`)
+}
+
 const buildTemplateName = (workout: WorkoutHistoryItem): string => {
     const base = workout.comments?.trim()
     if (base && base.length > 0) return base
@@ -86,6 +103,7 @@ export function WorkoutDetailPage() {
     const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false)
     const [templateNameDraft, setTemplateNameDraft] = useState('')
     const [templateNameError, setTemplateNameError] = useState<string | null>(null)
+    const [activeSection, setActiveSection] = useState<DetailSection>('overview')
     const [editingSet, setEditingSet] = useState<{
         exerciseIndex: number
         exerciseId: number
@@ -100,7 +118,7 @@ export function WorkoutDetailPage() {
     const workoutSummaryQuery = useQuery({
         queryKey: queryKeys.analytics.workoutSummary(workoutId),
         queryFn: () => getAnalyticsWorkoutSummary({ workout_id: workoutId }),
-        enabled: isValidWorkoutId && isCompletedWorkout,
+        enabled: isValidWorkoutId && isCompletedWorkout && activeSection === 'analysis',
         staleTime: 60_000,
     })
 
@@ -217,6 +235,28 @@ export function WorkoutDetailPage() {
 
             {!isFetching && !errorMessage && workout && isCompletedWorkout && (
                 <>
+                    <div className="grid grid-cols-3 rounded-xl bg-telegram-secondary-bg p-1" role="tablist" aria-label="Детали тренировки">
+                        {([
+                            ['overview', 'Обзор'],
+                            ['exercises', 'Упражнения'],
+                            ['analysis', 'Анализ'],
+                        ] as const).map(([section, label]) => (
+                            <button
+                                key={section}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeSection === section}
+                                onClick={() => setActiveSection(section)}
+                                className={`rounded-lg px-2 py-2 text-sm font-medium transition-colors ${activeSection === section
+                                    ? 'bg-telegram-bg text-telegram-text shadow-sm'
+                                    : 'text-telegram-hint'}`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {activeSection === 'overview' && <>
                     <section className="space-y-3 rounded-xl bg-telegram-secondary-bg p-4">
                         <h2 className="text-base font-semibold text-telegram-text">Итоги</h2>
                         <div className="flex items-center gap-2 text-sm text-telegram-hint">
@@ -290,7 +330,35 @@ export function WorkoutDetailPage() {
                         )}
                     </section>
 
-                    <section className="space-y-3 rounded-xl bg-telegram-secondary-bg p-4">
+                    <section className="space-y-2">
+                        <h2 className="text-base font-semibold text-telegram-text">Действия</h2>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <Button
+                                type="button"
+                                leftIcon={<RotateCcw className="h-4 w-4" />}
+                                onClick={() => void handleRepeatWorkout()}
+                                isLoading={isStartingSession}
+                                disabled={isStartingSession}
+                            >
+                                Повторить
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                leftIcon={<LayoutTemplate className="h-4 w-4" />}
+                                onClick={handleOpenSaveAsTemplate}
+                                isLoading={createTemplateFromWorkoutMutation.isPending}
+                                disabled={createTemplateFromWorkoutMutation.isPending}
+                            >
+                                Сохранить как шаблон
+                            </Button>
+                        </div>
+                        {templateSavedName && <p className="text-sm text-primary">Шаблон сохранен: {templateSavedName}</p>}
+                        {sessionError && <p className="text-sm text-danger">{sessionError}</p>}
+                    </section>
+                    </>}
+
+                    {activeSection === 'analysis' && <section className="space-y-3 rounded-xl bg-telegram-secondary-bg p-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-base font-semibold text-telegram-text">Аналитика тренировки</h2>
                             <Trophy className="h-4 w-4 text-amber-500" />
@@ -420,38 +488,9 @@ export function WorkoutDetailPage() {
                                 </div>
                             </>
                         )}
-                    </section>
+                    </section>}
 
-                    <section className="space-y-2">
-                        <h2 className="text-base font-semibold text-telegram-text">Действия</h2>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            <Button
-                                type="button"
-                                leftIcon={<RotateCcw className="h-4 w-4" />}
-                                onClick={() => void handleRepeatWorkout()}
-                                isLoading={isStartingSession}
-                                disabled={isStartingSession}
-                            >
-                                Повторить
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                leftIcon={<LayoutTemplate className="h-4 w-4" />}
-                                onClick={handleOpenSaveAsTemplate}
-                                isLoading={createTemplateFromWorkoutMutation.isPending}
-                                disabled={createTemplateFromWorkoutMutation.isPending}
-                            >
-                                Сохранить как шаблон
-                            </Button>
-                        </div>
-                        {templateSavedName && (
-                            <p className="text-sm text-primary">Шаблон сохранен: {templateSavedName}</p>
-                        )}
-                        {sessionError && <p className="text-sm text-danger">{sessionError}</p>}
-                    </section>
-
-                    <section className="space-y-3">
+                    {activeSection === 'exercises' && <section className="space-y-3">
                         <h2 className="text-base font-semibold text-telegram-text">Упражнения</h2>
                         {workout.exercises.map((exercise, exerciseIndex) => (
                             <article
@@ -497,26 +536,13 @@ export function WorkoutDetailPage() {
                                                     <Pencil className="w-4 h-4 text-telegram-hint opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </div>
                                             </div>
-                                            <div className="flex flex-wrap gap-2 text-xs">
-                                                <span className="rounded-md bg-telegram-bg/60 px-2 py-1">
-                                                    Повторы: {formatSetValue(set.reps, 'повт')}
-                                                </span>
-                                                <span className="rounded-md bg-telegram-bg/60 px-2 py-1">
-                                                    Вес: {formatSetValue(set.weight, 'кг')}
-                                                </span>
-                                                <span className="rounded-md bg-telegram-bg/60 px-2 py-1">
-                                                    RPE: {formatSetValue(set.rpe)}
-                                                </span>
-                                                <span className="rounded-md bg-telegram-bg/60 px-2 py-1">
-                                                    RIR: {formatSetValue(set.rir)}
-                                                </span>
-                                                <span className="rounded-md bg-telegram-bg/60 px-2 py-1">
-                                                    Время: {formatSetValue(set.duration, 'сек')}
-                                                </span>
-                                                <span className="rounded-md bg-telegram-bg/60 px-2 py-1">
-                                                    Дистанция: {formatSetValue(set.distance, 'км')}
-                                                </span>
-                                            </div>
+                                            {getSetDetails(set).length > 0 && (
+                                                <div className="flex flex-wrap gap-2 text-xs">
+                                                    {getSetDetails(set).map((detail) => (
+                                                        <span key={detail} className="rounded-md bg-telegram-bg/60 px-2 py-1">{detail}</span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -529,7 +555,7 @@ export function WorkoutDetailPage() {
                                 )}
                             </article>
                         ))}
-                    </section>
+                    </section>}
 
                     <Modal
                         isOpen={isSaveTemplateOpen}

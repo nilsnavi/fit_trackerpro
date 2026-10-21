@@ -6,6 +6,7 @@ import { RouteFallbackSpinner } from '@shared/ui/page-skeletons'
 import { workoutRoutes } from '@features/workouts/routes'
 import { analyticsRoutes } from '@features/analytics/routes'
 import { profileRoutes } from '@features/profile/routes'
+import { healthRoutes } from '@features/health/routes'
 import { legalRoutes } from '@features/legal/routes'
 import { coachRoutes } from '@features/coach/routes'
 
@@ -41,6 +42,7 @@ export function AppRoutes() {
                     {workoutRoutes()}
                     {analyticsRoutes()}
                     {profileRoutes()}
+                    {healthRoutes()}
                     {legalRoutes()}
                     {coachRoutes()}
                     <Route path="*" element={<Navigate to="/home" replace />} />

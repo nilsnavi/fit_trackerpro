@@ -1,0 +1,5 @@
+{
+  "_comment": "Baseline недостижимых прод-модулей. Обновляйте осознанно: node scripts/deadcode-reachability.cjs --update (из frontend/). Новый файл в списке = кандидат на удаление или явное связывание.",
+  "generated_at": "2026-09-30T10:18:41.145Z",
+  "unreachable_prod_modules": []
+}

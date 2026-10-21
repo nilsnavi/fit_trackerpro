@@ -31,11 +31,11 @@ export const ProgressionPrefillNotice = memo(function ProgressionPrefillNotice({
             data-testid="progression-prefill-notice"
             data-unit={target.unit}
             className={cn(
-                'flex items-start gap-3 rounded-[16px] border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-3',
+                'flex items-start gap-3 rounded-[16px] border border-azure-light/25 bg-azure-light/10 px-3 py-3',
                 className,
             )}
         >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#38BDF8]/15 text-[#7DD3FC]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-azure-light/15 text-azure-light">
                 <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">

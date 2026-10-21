@@ -117,3 +117,29 @@ global.console = {
     error: jest.fn(),
     warn: jest.fn(),
 };
+
+// Юнит-тесты не ходят в сеть: реальные XHR/fetch в jsdom падают с NETWORK_ERROR
+// асинхронно в интерцепторе (client.ts) и рандомно портят console.error-ассерты
+// соседних тестов (классический источник флаков). Гард роняет нарушителя сразу
+// на месте вызова. Изоляция — jest.mock доменного api (образец: routing.smoke.test.tsx).
+// Редкая отладка против живого бэкенда: JEST_ALLOW_NETWORK=1 npx jest …
+if (process.env.JEST_ALLOW_NETWORK !== '1') {
+    const networkNotAllowed = (kind: string, url: string): never => {
+        throw new Error(
+            `[network-guard] ${kind} ${url} — юнит-тесты не ходят в сеть. ` +
+                'Замокай доменный api (jest.mock) или доменный хук; ' +
+                'образец — src/__tests__/smoke/routing.smoke.test.tsx. ' +
+                'Разовая отладка против живого бэкенда: JEST_ALLOW_NETWORK=1.',
+        )
+    }
+
+    XMLHttpRequest.prototype.open = function (method: string, url: string) {
+        networkNotAllowed(`XHR ${method}`, String(url))
+    } as typeof XMLHttpRequest.prototype.open
+
+    if (typeof globalThis.fetch === 'function') {
+        globalThis.fetch = function (input: unknown) {
+            networkNotAllowed('fetch', String(input))
+        } as typeof globalThis.fetch
+    }
+}
