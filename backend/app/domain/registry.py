@@ -10,6 +10,14 @@ to avoid loading the entire model graph through ``app.domain``.
 from app.domain.achievement import Achievement  # noqa: F401
 from app.domain.body_measurement import BodyMeasurement  # noqa: F401
 from app.domain.challenge import Challenge  # noqa: F401
+from app.domain.coach_client import CoachClient  # noqa: F401
+from app.domain.coach_invitation import CoachInvitation  # noqa: F401
+from app.domain.coach_profile import CoachProfile  # noqa: F401
+from app.domain.coach_program import (  # noqa: F401
+    CoachProgram,
+    CoachProgramAssignment,
+    CoachProgramDay,
+)
 from app.domain.daily_wellness import DailyWellness  # noqa: F401
 from app.domain.emergency_contact import EmergencyContact  # noqa: F401
 from app.domain.exercise import Exercise  # noqa: F401
@@ -32,6 +40,7 @@ from app.domain.template_exercise import TemplateExercise  # noqa: F401
 from app.domain.training_load_daily import TrainingLoadDaily  # noqa: F401
 from app.domain.user import User  # noqa: F401
 from app.domain.user_achievement import UserAchievement  # noqa: F401
+from app.domain.user_role import UserRole  # noqa: F401
 from app.domain.workout_block import WorkoutBlock  # noqa: F401
 from app.domain.workout_log import WorkoutLog  # noqa: F401
 from app.domain.workout_session_exercise import WorkoutSessionExercise  # noqa: F401

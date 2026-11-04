@@ -48,6 +48,8 @@ import { ProfileShowcase } from '@features/achievements/components'
 import { EmergencyContactsSection } from '@features/emergency/components';
 import { DeleteAccountSection } from '@features/profile/components/DeleteAccountSection';
 import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
+import { useCoachProfile } from '@features/coach/hooks/useCoachQueries'
+import { AppHttpError } from '@shared/errors'
 
 // ============================================
 // Constants
@@ -399,6 +401,7 @@ export const ProfilePage: React.FC = () => {
         isExporting,
     } = useProfile();
     const bodyMeasurementsQuery = useBodyMeasurementsQuery({ latest: true });
+    const coachProfileQuery = useCoachProfile()
     const addBodyMeasurementMutation = useAddBodyMeasurementMutation();
 
     const [, setShowAllAchievements] = useState(false);
@@ -717,6 +720,31 @@ export const ProfilePage: React.FC = () => {
 
             {/* Emergency contacts (safety feature) */}
             <EmergencyContactsSection />
+
+            {/* Coach entry point: visibility is based on a server response, never a local role flag. */}
+            <section className="rounded-2xl bg-telegram-secondary-bg p-4">
+                <h3 className="text-sm font-semibold text-telegram-text">FitTracker Coach</h3>
+                <p className="mt-1 text-xs text-telegram-hint">
+                    {coachProfileQuery.data
+                        ? 'Управляйте профилем и связью с клиентами.'
+                        : coachProfileQuery.isError && coachProfileQuery.error instanceof AppHttpError && coachProfileQuery.error.status === 403
+                            ? 'Создайте профиль тренера и пригласите клиента.'
+                            : 'Проверяем доступность кабинета тренера.'}
+                </p>
+                <Link
+                    to={coachProfileQuery.data ? '/coach' : '/coach/onboarding'}
+                    className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
+                    aria-disabled={coachProfileQuery.isLoading || (coachProfileQuery.isError && !(coachProfileQuery.error instanceof AppHttpError && coachProfileQuery.error.status === 403))}
+                    onClick={(event) => {
+                        if (coachProfileQuery.isLoading || (coachProfileQuery.isError && !(coachProfileQuery.error instanceof AppHttpError && coachProfileQuery.error.status === 403))) event.preventDefault()
+                    }}
+                >
+                    {coachProfileQuery.data ? 'Кабинет тренера' : coachProfileQuery.isError && coachProfileQuery.error instanceof AppHttpError && coachProfileQuery.error.status === 403 ? 'Стать тренером' : 'Кабинет тренера'}
+                </Link>
+                {coachProfileQuery.isError && !(coachProfileQuery.error instanceof AppHttpError && coachProfileQuery.error.status === 403) ? (
+                    <p className="mt-2 text-xs text-telegram-hint">Кабинет сейчас недоступен.</p>
+                ) : null}
+            </section>
 
             {/* Legal documents */}
             <div className="bg-telegram-secondary-bg rounded-2xl p-4 space-y-2">

@@ -183,6 +183,7 @@ async def _clear_data() -> None:
         if _is_postgres_url(_test_db_url):
             quoted_names = ", ".join(f'"{name}"' for name in table_names)
             await conn.execute(text(f"TRUNCATE TABLE {quoted_names} RESTART IDENTITY CASCADE"))
+            await conn.execute(text("DELETE FROM feature_flags"))
         else:
             await conn.execute(text("PRAGMA foreign_keys=OFF"))
             for name in table_names:
