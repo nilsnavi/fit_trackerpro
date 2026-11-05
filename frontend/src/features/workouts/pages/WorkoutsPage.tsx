@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
     Activity,
     CalendarDays,
@@ -244,6 +244,10 @@ export function WorkoutsPage() {
                     </div>
                 </div>
             </section>
+
+            <Link to="/client/coach-programs" className="flex min-h-14 items-center justify-between rounded-[20px] bg-telegram-secondary-bg px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary">
+                <span>Программа тренера</span><ChevronRight className="h-5 w-5 text-telegram-hint" />
+            </Link>
 
             <button
                 type="button"

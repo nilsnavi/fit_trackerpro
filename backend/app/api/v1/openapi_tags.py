@@ -21,6 +21,7 @@ TAG_ACHIEVEMENTS = "Achievements"
 TAG_CHALLENGES = "Challenges"
 TAG_EMERGENCY = "Emergency"
 TAG_PROGRESSION = "Progression"
+TAG_COACH = "Coach"
 
 OPENAPI_TAGS: list[dict[str, Any]] = [
     {
@@ -73,5 +74,9 @@ OPENAPI_TAGS: list[dict[str, Any]] = [
             "Progression engine (SPEC-006): per-scope policies, explainable next-target "
             "recommendations, and accept/modify/reject lifecycle."
         ),
+    },
+    {
+        "name": TAG_COACH,
+        "description": "Coach identity, invitations, and coach-client relationship management.",
     },
 ]

@@ -7,6 +7,7 @@ import { workoutRoutes } from '@features/workouts/routes'
 import { analyticsRoutes } from '@features/analytics/routes'
 import { profileRoutes } from '@features/profile/routes'
 import { legalRoutes } from '@features/legal/routes'
+import { coachRoutes } from '@features/coach/routes'
 
 const Home = lazy(() =>
     import('@features/home/pages/Home').then((m) => ({ default: m.Home })),
@@ -41,6 +42,7 @@ export function AppRoutes() {
                     {analyticsRoutes()}
                     {profileRoutes()}
                     {legalRoutes()}
+                    {coachRoutes()}
                     <Route path="*" element={<Navigate to="/home" replace />} />
                 </Route>
             </Routes>

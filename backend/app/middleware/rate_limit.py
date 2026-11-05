@@ -34,6 +34,7 @@ POLICY_EXPORT = "export"
 POLICY_EMERGENCY_NOTIFY = "emergency-notify"
 POLICY_WORKOUTS = "workouts"
 POLICY_ANALYTICS = "analytics"
+POLICY_COACH_INVITATIONS = "coach-invitations"
 
 
 def _is_telegram_login_slowapi_path(path: str, method: str) -> bool:
@@ -219,6 +220,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 POLICY_ANALYTICS,
                 s.RATE_LIMIT_ANALYTICS_REQUESTS,
                 s.RATE_LIMIT_ANALYTICS_WINDOW_SECONDS,
+            )
+
+        coach_invitation_path = f"{API_V1_PREFIX}/coach/invitations"
+        if method == "POST" and path == coach_invitation_path:
+            return (
+                POLICY_COACH_INVITATIONS,
+                s.RATE_LIMIT_COACH_INVITATIONS_REQUESTS,
+                s.RATE_LIMIT_COACH_INVITATIONS_WINDOW_SECONDS,
             )
 
         if any(path.startswith(p) for p in auth_prefixes):

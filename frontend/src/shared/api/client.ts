@@ -29,6 +29,11 @@ function isPublicAuthRequest(config: RetryableRequestConfig | undefined): boolea
     )
 }
 
+function isCoachInvitationSecretRequest(config: RetryableRequestConfig | undefined): boolean {
+    const requestUrl = config?.url ?? ''
+    return requestUrl.includes('/coach/invitations/resolve') || requestUrl.includes('/coach/invitations/accept')
+}
+
 function isTelegramContext(): boolean {
     try {
         const webApp = (window as { Telegram?: { WebApp?: { initData?: string } } })
@@ -162,7 +167,10 @@ class ApiService {
                     }
                 }
                 if (clientError.status != null) {
-                    console.error('API Error:', clientError)
+                    const safeError = isCoachInvitationSecretRequest(originalConfig)
+                        ? { ...clientError, requestUrl: '/coach/invitations/resolve' }
+                        : clientError
+                    console.error('API Error:', safeError)
                 } else {
                     console.error('API Error:', clientError.message, clientError.code)
                 }
@@ -171,8 +179,11 @@ class ApiService {
                     clientError.status != null &&
                     clientError.status >= 500
                 ) {
-                    const captured =
-                        isAxiosError(error) && error instanceof Error
+                    // Axios errors retain request config (including the raw invitation token
+                    // in resolve params). Never hand that object to Sentry.
+                    const captured = isCoachInvitationSecretRequest(originalConfig)
+                        ? new Error(clientError.message || 'Invitation request failed')
+                        : isAxiosError(error) && error instanceof Error
                             ? error
                             : new Error(clientError.message || 'API request failed')
                     Sentry.captureException(captured, {
@@ -194,8 +205,8 @@ class ApiService {
         return response.data
     }
 
-    async post<T>(url: string, data?: unknown) {
-        const response = await this.client.post<T>(url, data)
+    async post<T>(url: string, data?: unknown, config?: { headers?: Record<string, string> }) {
+        const response = await this.client.post<T>(url, data, config)
         return response.data
     }
 
