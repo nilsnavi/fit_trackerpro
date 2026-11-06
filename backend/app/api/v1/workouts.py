@@ -367,8 +367,8 @@ async def get_workout_detail(
 
 @router.get("/calendar")
 async def get_workouts_calendar_month(
-    year: int = Query(date.today().year, ge=2020, le=2030),
-    month: int = Query(date.today().month, ge=1, le=12),
+    year: int | None = Query(None, ge=2020, le=2030),
+    month: int | None = Query(None, ge=1, le=12),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -377,8 +377,11 @@ async def get_workouts_calendar_month(
 
     Returns a flat list of workouts in the selected month (frontend groups by day).
     """
-    first_day = date(year, month, 1)
-    last_day = date(year, month, calendar.monthrange(year, month)[1])
+    today = date.today()
+    resolved_year = year if year is not None else today.year
+    resolved_month = month if month is not None else today.month
+    first_day = date(resolved_year, resolved_month, 1)
+    last_day = date(resolved_year, resolved_month, calendar.monthrange(resolved_year, resolved_month)[1])
     repo = WorkoutsRepository(db)
     rows = await repo.list_workouts_in_range(user_id=current_user.id, date_from=first_day, date_to=last_day)
     template_ids = {int(w.template_id) for w in rows if w.template_id is not None}
