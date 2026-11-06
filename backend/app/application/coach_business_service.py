@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.coach_notification_service import CoachNotificationService
 from app.core.audit import (
     COACH_CLIENT_PACKAGE_CANCELLED,
     COACH_CLIENT_PACKAGE_CONSUMED,
@@ -253,6 +254,14 @@ class CoachBusinessService:
             package.status = CoachClientPackageStatus.EXHAUSTED.value
         await self.db.commit()
         await self.db.refresh(package)
+        remaining = package.sessions_total - package.sessions_used
+        if remaining <= PACKAGE_LOW_THRESHOLD:
+            await CoachNotificationService(self.db).enqueue(
+                event="coach.package.low",
+                dedupe_key=f"package-low:{package.id}:{package.sessions_used}",
+                payload={"remaining": remaining},
+                recipient_user_id=coach_id,
+            )
         audit_log(
             action=COACH_CLIENT_PACKAGE_CONSUMED,
             user_db_id=coach_id,
@@ -310,16 +319,16 @@ class CoachBusinessService:
         if package.status != CoachClientPackageStatus.CANCELLED.value:
             package.status = CoachClientPackageStatus.CANCELLED.value
             package.cancelled_at = _now()
-            await self.db.commit()
-            await self.db.refresh(package)
-            audit_log(
-                action=COACH_CLIENT_PACKAGE_CANCELLED,
-                user_db_id=coach_id,
-                resource_type="coach_client_package",
-                resource_id=package.id,
-                client_ip=client_ip,
-                meta={"client_id": client_id},
-            )
+        await self.db.commit()
+        await self.db.refresh(package)
+        audit_log(
+            action=COACH_CLIENT_PACKAGE_CANCELLED,
+            user_db_id=coach_id,
+            resource_type="coach_client_package",
+            resource_id=package.id,
+            client_ip=client_ip,
+            meta={"client_id": client_id},
+        )
         return self._client_package_response(package)
 
     async def auto_consume_completed_workout(
@@ -435,6 +444,15 @@ class CoachBusinessService:
         self.db.add(task)
         await self.db.commit()
         await self.db.refresh(task)
+        if task.due_at is not None:
+            due_day = task.due_at.date()
+            await CoachNotificationService(self.db).enqueue(
+                event="coach.task.due",
+                dedupe_key=f"task-due:{task.id}:{due_day.isoformat()}",
+                payload={"title": task.title, "due_day": due_day.isoformat()},
+                recipient_user_id=coach_id,
+            )
+            await self.db.commit()
         audit_log(
             action=COACH_TASK_CREATED,
             user_db_id=coach_id,
