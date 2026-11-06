@@ -1,7 +1,16 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@shared/api/queryKeys'
 import { coachApi } from '../api/coachApi'
-import type { CoachAssignmentStatus, CoachProfileInput } from '../types/coach'
+import type {
+    CoachAssignmentStatus,
+    CoachClientPackageInput,
+    CoachPackageInput,
+    CoachPackagePatch,
+    CoachPaymentInput,
+    CoachProfileInput,
+    CoachTaskInput,
+    CoachTaskPatch,
+} from '../types/coach'
 
 export function useCoachProfile(enabled = true) {
     return useQuery({ queryKey: queryKeys.coach.profile, queryFn: coachApi.getProfile, enabled, retry: false })
@@ -209,4 +218,154 @@ export function useAcceptCoachInvitation() {
             }
         },
     }
+}
+
+// --- Sprint 10.4: packages, payments, tasks ---
+
+export function useCoachPackages(includeArchived = false) {
+    return useQuery({
+        queryKey: queryKeys.coach.packages.list(includeArchived),
+        queryFn: () => coachApi.listPackages(includeArchived),
+        retry: false,
+    })
+}
+
+export function useCreateCoachPackage() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (payload: CoachPackageInput) => coachApi.createPackage(payload),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.packages.all }),
+    })
+}
+
+export function useUpdateCoachPackage() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: ({ packageId, payload }: { packageId: number; payload: CoachPackagePatch }) =>
+            coachApi.updatePackage(packageId, payload),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.packages.all }),
+    })
+}
+
+export function useArchiveCoachPackage() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (packageId: number) => coachApi.archivePackage(packageId),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.packages.all }),
+    })
+}
+
+export function useCoachClientPackages(clientId: number) {
+    return useQuery({
+        queryKey: queryKeys.coach.clientPackages(clientId),
+        queryFn: () => coachApi.listClientPackages(clientId),
+        enabled: Number.isSafeInteger(clientId) && clientId > 0,
+        retry: false,
+    })
+}
+
+export function useCoachClientPackage(clientId: number, packageId: number) {
+    return useQuery({
+        queryKey: queryKeys.coach.clientPackage(clientId, packageId),
+        queryFn: () => coachApi.getClientPackage(clientId, packageId),
+        enabled: Number.isSafeInteger(clientId) && clientId > 0 && Number.isSafeInteger(packageId) && packageId > 0,
+        retry: false,
+    })
+}
+
+export function useAssignCoachClientPackage(clientId: number) {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (payload: CoachClientPackageInput) => coachApi.assignClientPackage(clientId, payload),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.clientPackages(clientId) }),
+    })
+}
+
+export function useConsumeCoachClientPackage(clientId: number) {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: ({ packageId, idempotencyKey }: { packageId: number; idempotencyKey: string }) =>
+            coachApi.consumeClientPackage(clientId, packageId, idempotencyKey),
+        onSuccess: async () => Promise.all([
+            qc.invalidateQueries({ queryKey: queryKeys.coach.clientPackages(clientId) }),
+            qc.invalidateQueries({ queryKey: queryKeys.coach.client(clientId) }),
+        ]),
+    })
+}
+
+export function useReverseCoachClientPackage(clientId: number) {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (packageId: number) => coachApi.reverseClientPackage(clientId, packageId),
+        onSuccess: async () => Promise.all([
+            qc.invalidateQueries({ queryKey: queryKeys.coach.clientPackages(clientId) }),
+            qc.invalidateQueries({ queryKey: queryKeys.coach.client(clientId) }),
+        ]),
+    })
+}
+
+export function useCoachClientPayments(clientId: number) {
+    return useQuery({
+        queryKey: queryKeys.coach.payments(clientId),
+        queryFn: () => coachApi.listClientPayments(clientId),
+        enabled: Number.isSafeInteger(clientId) && clientId > 0,
+        retry: false,
+    })
+}
+
+export function useRecordCoachClientPayment(clientId: number) {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (payload: CoachPaymentInput) => coachApi.recordClientPayment(clientId, payload),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.payments(clientId) }),
+    })
+}
+
+export function useReverseCoachClientPayment(clientId: number) {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (paymentId: number) => coachApi.reverseClientPayment(clientId, paymentId),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.payments(clientId) }),
+    })
+}
+
+export function useCoachTasks(filters: { client_id?: number; completed?: boolean; due_today?: boolean } = {}) {
+    return useQuery({
+        queryKey: queryKeys.coach.tasks(filters),
+        queryFn: () => coachApi.listTasks(filters),
+        retry: false,
+    })
+}
+
+export function useCreateCoachTask() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (payload: CoachTaskInput) => coachApi.createTask(payload),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.tasks({}) }),
+    })
+}
+
+export function useUpdateCoachTask() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: ({ taskId, payload }: { taskId: number; payload: CoachTaskPatch }) =>
+            coachApi.updateTask(taskId, payload),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: ['coach', 'tasks'] }),
+    })
+}
+
+export function useCompleteCoachTask() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (taskId: number) => coachApi.completeTask(taskId),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: ['coach', 'tasks'] }),
+    })
+}
+
+export function useDeleteCoachTask() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (taskId: number) => coachApi.deleteTask(taskId),
+        onSuccess: async () => qc.invalidateQueries({ queryKey: ['coach', 'tasks'] }),
+    })
 }
