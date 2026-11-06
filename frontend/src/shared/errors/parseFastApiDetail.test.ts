@@ -18,6 +18,11 @@ describe('parseFastApiDetail', () => {
 })
 
 describe('normalizeFromHttpResponse', () => {
+    it('preserves stable backend business codes and quota details', () => {
+        const error = normalizeFromHttpResponse(403, { error: { code: 'PROGRAM_LIMIT_REACHED', message: 'Limit', details: { limit: 2 } } })
+        expect(error.code).toBe('PROGRAM_LIMIT_REACHED')
+        expect(error.details).toEqual({ limit: 2 })
+    })
     it('unwraps API error envelope { error: { message } }', () => {
         const ce = normalizeFromHttpResponse(401, {
             error: { code: 'authentication_failed', message: 'Подпись недействительна.' },

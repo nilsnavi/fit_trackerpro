@@ -18,7 +18,7 @@ jest.mock('../hooks/useCoachQueries', () => ({
         isError: false,
     }),
     useCoachProfile: () => ({ data: { user_id: 10 }, isPending: false, isError: false }),
-    useCreateCoachProgram: () => ({ mutateAsync: jest.fn(), error: null, isPending: false }),
+    useCreateCoachProgram: () => ({ mutateAsync: jest.fn(), error: null, isPending: false, reset: jest.fn() }),
 }))
 
 jest.mock('@features/workouts/hooks/useWorkoutTemplatesQuery', () => ({

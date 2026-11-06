@@ -197,6 +197,15 @@ class CoachFeatureDisabled(DomainError):
     default_message = "Coach feature is disabled"
 
 
+class CoachEntitlementDenied(DomainError):
+    http_status = 403
+    default_message = "Действие недоступно на текущем тарифе"
+
+    def __init__(self, message: str, *, business_code: str, details: dict[str, Any] | None = None) -> None:
+        self.code = business_code
+        super().__init__(message, details=details)
+
+
 class UserNotFoundError(DomainError):
     code = "user_not_found"
     http_status = 404

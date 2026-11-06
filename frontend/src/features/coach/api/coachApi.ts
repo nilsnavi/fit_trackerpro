@@ -18,7 +18,22 @@ import type {
 
 const root = '/coach'
 
+export type CoachSubscription = {
+    plan: 'FREE' | 'TRAINER_PRO'; status: 'TRIAL' | 'ACTIVE' | 'GRACE' | 'CANCELLED' | 'EXPIRED'
+    trial_started_at: string | null; trial_ends_at: string | null; trial_days_remaining: number | null
+    grace_ends_at: string | null; grace_days_remaining: number | null; period_started_at: string | null; period_ends_at: string | null
+    activated_at: string | null; cancelled_at: string | null
+    cancel_at_period_end: boolean
+    active_clients: { used: number; limit: number | null; remaining: number | null }
+    active_programs: { used: number; limit: number | null; remaining: number | null }
+    features: { client_monitoring: boolean; program_assignments: boolean; advanced_monitoring_filters: boolean }
+    upgrade_required: boolean
+}
+export type CoachPlan = { plan: 'FREE' | 'TRAINER_PRO'; display_name: string; limits: { active_clients: number | null; active_programs: number | null }; available_features: CoachSubscription['features'] }
+
 export const coachApi = {
+    getSubscription: () => api.get<CoachSubscription>(`${root}/subscription`),
+    listPlans: () => api.get<CoachPlan[]>(`${root}/plans`),
     getProfile: () => api.get<CoachProfile>(`${root}/profile`),
     createProfile: (payload: CoachProfileInput) => api.post<CoachProfile>(`${root}/profile`, payload),
     updateProfile: (payload: Partial<CoachProfileInput>) => api.patch<CoachProfile>(`${root}/profile`, payload),
