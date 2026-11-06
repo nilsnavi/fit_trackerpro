@@ -24,6 +24,16 @@ from app.domain.exceptions import (
 )
 from app.domain.user import User
 from app.infrastructure.repositories.coach_repository import CoachInvitationRepository
+from app.settings import settings
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.asyncio,
+    pytest.mark.skipif(
+        not str(settings.DATABASE_URL).startswith("postgresql"),
+        reason="PostgreSQL-specific constraint and lock inspection tests",
+    ),
+]
 
 
 async def _users(session: AsyncSession, *telegram_ids: int) -> tuple[int, ...]:
