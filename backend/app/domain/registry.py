@@ -18,6 +18,7 @@ from app.domain.coach_program import (  # noqa: F401
     CoachProgramAssignment,
     CoachProgramDay,
 )
+from app.domain.coach_subscription import CoachSubscription  # noqa: F401
 from app.domain.daily_wellness import DailyWellness  # noqa: F401
 from app.domain.emergency_contact import EmergencyContact  # noqa: F401
 from app.domain.exercise import Exercise  # noqa: F401

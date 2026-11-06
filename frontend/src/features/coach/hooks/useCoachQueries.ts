@@ -7,6 +7,14 @@ export function useCoachProfile(enabled = true) {
     return useQuery({ queryKey: queryKeys.coach.profile, queryFn: coachApi.getProfile, enabled, retry: false })
 }
 
+export function useCoachSubscription() {
+    return useQuery({ queryKey: queryKeys.coachSubscription.current, queryFn: coachApi.getSubscription, retry: false, staleTime: 0 })
+}
+
+export function useCoachPlans() {
+    return useQuery({ queryKey: queryKeys.coachSubscription.plans, queryFn: coachApi.listPlans, retry: false })
+}
+
 export function useCreateCoachProfile() {
     const qc = useQueryClient()
     return useMutation({
@@ -81,7 +89,10 @@ export function useCreateCoachProgram() {
     const qc = useQueryClient()
     return useMutation({
         mutationFn: coachApi.createProgram,
-        onSuccess: async () => qc.invalidateQueries({ queryKey: queryKeys.coach.programs }),
+        onSuccess: async () => Promise.all([
+            qc.invalidateQueries({ queryKey: queryKeys.coach.programs }),
+            qc.invalidateQueries({ queryKey: queryKeys.coachSubscription.current }),
+        ]),
     })
 }
 
@@ -93,6 +104,7 @@ export function useCoachProgramAction(programId: number) {
         qc.invalidateQueries({ queryKey: queryKeys.coach.programAssignments(programId) }),
         qc.invalidateQueries({ queryKey: queryKeys.coach.assignments }),
         qc.invalidateQueries({ queryKey: queryKeys.coach.root }),
+        qc.invalidateQueries({ queryKey: queryKeys.coachSubscription.current }),
     ])
     const activate = useMutation({ mutationFn: () => coachApi.activateProgram(programId), onSuccess: invalidate })
     const archive = useMutation({ mutationFn: () => coachApi.archiveProgram(programId), onSuccess: invalidate })
@@ -119,6 +131,7 @@ export function useUpdateCoachClient(clientId: number) {
         onSuccess: async () => Promise.all([
             qc.invalidateQueries({ queryKey: queryKeys.coach.client(clientId) }),
             qc.invalidateQueries({ queryKey: queryKeys.coach.clients }),
+            qc.invalidateQueries({ queryKey: queryKeys.coachSubscription.current }),
         ]),
     })
 }
@@ -130,6 +143,7 @@ export function useRevokeCoachClient(clientId: number) {
         onSuccess: async () => Promise.all([
             qc.invalidateQueries({ queryKey: queryKeys.coach.client(clientId) }),
             qc.invalidateQueries({ queryKey: queryKeys.coach.clients }),
+            qc.invalidateQueries({ queryKey: queryKeys.coachSubscription.current }),
         ]),
     })
 }
