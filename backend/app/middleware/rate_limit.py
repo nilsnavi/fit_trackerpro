@@ -5,6 +5,7 @@ Rate limiting using Redis for distributed tracking
 import logging
 import os
 import time
+import uuid
 from functools import wraps
 from typing import Callable, Optional
 
@@ -157,7 +158,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             allowed = current_count < limit
             if allowed:
-                redis_client.zadd(key, {str(now): now})
+                # The sorted-set member must be unique per request: with a coarse
+                # clock several requests can share the same ``now`` and a
+                # timestamp-only member would overwrite the previous entry,
+                # letting bursts through the limit.
+                redis_client.zadd(key, {f"{now}:{uuid.uuid4().hex}": now})
                 redis_client.expire(key, window)
 
             remaining = max(0, limit - current_count - (1 if allowed else 0))
