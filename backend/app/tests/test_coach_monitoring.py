@@ -55,7 +55,8 @@ async def test_monitoring_access_rules_search_pagination_and_postgres_query_coun
     assert data["total"] == 31
     assert len(data["items"]) == 20
     assert len({item["client_id"] for item in data["items"]}) == 20
-    assert query_count <= 4, f"monitoring should use a bounded number of queries, got {query_count}"
+    # Sprint 10.4 adds one batched packages query on top of the original four.
+    assert query_count <= 5, f"monitoring should use a bounded number of queries, got {query_count}"
     assert all("glucose" not in str(item).lower() for item in data["items"])
 
     second_page = await client.get("/api/v1/coach/monitoring?limit=20&offset=20", headers=coach)

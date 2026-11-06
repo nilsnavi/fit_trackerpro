@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 
 from app.application.coach_monitoring_service import AttentionRuleEngine, MonitoringContext
@@ -6,13 +6,13 @@ from app.domain.coach_client import CoachClientStatus
 
 
 def _context(*, last_completed_at=None, relationship_status=CoachClientStatus.ACTIVE, assignment=None,
-             program=None, template_versions_match=None, active_workout=None, now=None):
+             program=None, template_versions_match=None, active_workout=None, now=None, packages=()):
     return MonitoringContext(
         relationship=SimpleNamespace(id=1, status=relationship_status, updated_at=datetime(2026, 1, 1, tzinfo=UTC)),
         client=SimpleNamespace(id=2, first_name="Client", username=None), assignment=assignment,
         program=program, template_versions_match=template_versions_match,
         last_completed_at=last_completed_at, active_workout=active_workout,
-        last_program_activity_at=None,
+        last_program_activity_at=None, packages=tuple(packages),
         now=now or datetime(2026, 1, 10, tzinfo=UTC), no_workout_days=7,
     )
 
@@ -59,3 +59,40 @@ def test_program_activity_rule_uses_assignment_window_without_weekday_claims():
     assert "дней" in program_signal.description
     context = MonitoringContext(**{**context.__dict__, "last_program_activity_at": datetime(2026, 1, 9, tzinfo=UTC)})
     assert "MISSED_PROGRAM_ACTIVITY" not in {signal.code for signal in AttentionRuleEngine().evaluate(context)}
+
+
+def _package(**overrides):
+    base = dict(id=5, name="Pack", status="ACTIVE", sessions_total=10, sessions_used=8, expires_at=None)
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+def test_package_low_signal_when_remaining_at_or_below_threshold():
+    context = _context(last_completed_at=datetime(2026, 1, 9, tzinfo=UTC), packages=[_package()])
+    signals = AttentionRuleEngine().evaluate(context)
+    package_signal = next(signal for signal in signals if signal.code == "PACKAGE_LOW")
+    assert package_signal.severity.value == "NOTICE"
+    assert package_signal.metadata == {"remaining": 2, "sessions_total": 10}
+
+
+def test_package_low_not_emitted_when_plenty_of_sessions_left():
+    context = _context(last_completed_at=datetime(2026, 1, 9, tzinfo=UTC), packages=[_package(sessions_used=1)])
+    assert "PACKAGE_LOW" not in {signal.code for signal in AttentionRuleEngine().evaluate(context)}
+
+
+def test_package_expired_signal_wins_over_low():
+    context = _context(
+        last_completed_at=datetime(2026, 1, 9, tzinfo=UTC),
+        packages=[_package(sessions_used=10, expires_at=date(2026, 1, 9))],
+    )
+    codes = {signal.code for signal in AttentionRuleEngine().evaluate(context)}
+    assert codes == {"PACKAGE_EXPIRED"}
+
+
+def test_cancelled_package_is_ignored():
+    context = _context(
+        last_completed_at=datetime(2026, 1, 9, tzinfo=UTC),
+        packages=[_package(status="CANCELLED", sessions_used=10, expires_at=date(2026, 1, 1))],
+    )
+    codes = {signal.code for signal in AttentionRuleEngine().evaluate(context)}
+    assert "PACKAGE_EXPIRED" not in codes and "PACKAGE_LOW" not in codes

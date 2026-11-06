@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import get_current_user
 from app.api.deps.coach import require_coach, require_coach_feature
+from app.application.coach_business_service import CoachBusinessService
 from app.application.coach_entitlement_service import CoachEntitlementService
 from app.application.coach_monitoring_service import CoachMonitoringService
 from app.application.coach_program_service import CoachProgramService
@@ -29,6 +30,21 @@ from app.schemas.coach import (
     CoachProfileCreate,
     CoachProfileResponse,
     CoachProfileUpdate,
+)
+from app.schemas.coach_business import (
+    CoachClientPackageCreate,
+    CoachClientPackageDetailResponse,
+    CoachClientPackageResponse,
+    CoachPackageConsumeRequest,
+    CoachPackageCreate,
+    CoachPackageResponse,
+    CoachPackageReverseRequest,
+    CoachPackageUpdate,
+    CoachPaymentCreate,
+    CoachPaymentResponse,
+    CoachTaskCreate,
+    CoachTaskResponse,
+    CoachTaskUpdate,
 )
 from app.schemas.coach_entitlements import CoachPlanResponse, CoachSubscriptionResponse
 from app.schemas.coach_monitoring import (
@@ -149,7 +165,6 @@ async def list_monitoring(
     db: AsyncSession = Depends(get_async_db),
 ):
     if severity is not None:
-        from app.application.coach_entitlement_service import CoachEntitlementService
         await CoachEntitlementService(db).require_feature(coach.id, "advanced_monitoring_filters")
     return await CoachMonitoringService(db).list_clients(
         coach.id, status=status_filter, severity=severity.value if severity else None,
@@ -249,6 +264,220 @@ async def list_program_assignments(program_id: int, coach: User = Depends(requir
 @router.get("/clients/{client_id}/programs", response_model=list[CoachProgramAssignmentResponse])
 async def list_client_programs(client_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)):
     return await CoachProgramService(db).list_client_programs_for_coach(coach.id, client_id)
+
+
+# --- Sprint 10.4: packages, payments, tasks ---
+
+
+@router.get("/packages", response_model=list[CoachPackageResponse])
+async def list_coach_packages(
+    include_archived: bool = Query(False),
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).list_packages(coach.id, include_archived=include_archived)
+
+
+@router.post("/packages", response_model=CoachPackageResponse, status_code=status.HTTP_201_CREATED)
+async def create_coach_package(
+    data: CoachPackageCreate,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).create_package(coach.id, data, get_client_ip(request))
+
+
+@router.patch("/packages/{package_id}", response_model=CoachPackageResponse)
+async def update_coach_package(
+    package_id: int,
+    data: CoachPackageUpdate,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).update_package(coach.id, package_id, data, get_client_ip(request))
+
+
+@router.delete("/packages/{package_id}", response_model=CoachPackageResponse)
+async def archive_coach_package(
+    package_id: int,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).archive_package(coach.id, package_id, get_client_ip(request))
+
+
+@router.get("/clients/{client_id}/packages", response_model=list[CoachClientPackageResponse])
+async def list_client_packages(
+    client_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)
+):
+    return await CoachBusinessService(db).list_client_packages(coach.id, client_id)
+
+
+@router.get("/clients/{client_id}/packages/{client_package_id}", response_model=CoachClientPackageDetailResponse)
+async def get_client_package(
+    client_id: int, client_package_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)
+):
+    return await CoachBusinessService(db).get_client_package(coach.id, client_id, client_package_id)
+
+
+@router.post(
+    "/clients/{client_id}/packages",
+    response_model=CoachClientPackageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def assign_client_package(
+    client_id: int,
+    data: CoachClientPackageCreate,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).assign_package(coach.id, client_id, data, get_client_ip(request))
+
+
+@router.post(
+    "/clients/{client_id}/packages/{client_package_id}/consume",
+    response_model=CoachClientPackageResponse,
+)
+async def consume_client_package_session(
+    client_id: int,
+    client_package_id: int,
+    data: CoachPackageConsumeRequest,
+    request: Request,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key", max_length=128),
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).consume_session(
+        coach.id, client_id, client_package_id, data, idempotency_key=idempotency_key, client_ip=get_client_ip(request)
+    )
+
+
+@router.post(
+    "/clients/{client_id}/packages/{client_package_id}/reverse",
+    response_model=CoachClientPackageResponse,
+)
+async def reverse_client_package_session(
+    client_id: int,
+    client_package_id: int,
+    request: Request,
+    data: CoachPackageReverseRequest | None = None,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).reverse_last_session(
+        coach.id, client_id, client_package_id, data, get_client_ip(request)
+    )
+
+
+@router.delete(
+    "/clients/{client_id}/packages/{client_package_id}",
+    response_model=CoachClientPackageResponse,
+)
+async def cancel_client_package(
+    client_id: int,
+    client_package_id: int,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).cancel_client_package(
+        coach.id, client_id, client_package_id, get_client_ip(request)
+    )
+
+
+@router.get("/clients/{client_id}/payments", response_model=list[CoachPaymentResponse])
+async def list_client_payments(
+    client_id: int, coach: User = Depends(require_coach), db: AsyncSession = Depends(get_async_db)
+):
+    return await CoachBusinessService(db).list_payments(coach.id, client_id)
+
+
+@router.post(
+    "/clients/{client_id}/payments",
+    response_model=CoachPaymentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def record_client_payment(
+    client_id: int,
+    data: CoachPaymentCreate,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).record_payment(coach.id, client_id, data, get_client_ip(request))
+
+
+@router.post(
+    "/clients/{client_id}/payments/{payment_id}/reverse",
+    response_model=CoachPaymentResponse,
+)
+async def reverse_client_payment(
+    client_id: int,
+    payment_id: int,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).reverse_payment(coach.id, client_id, payment_id, get_client_ip(request))
+
+
+@router.get("/tasks", response_model=list[CoachTaskResponse])
+async def list_coach_tasks(
+    client_id: int | None = Query(None),
+    completed: bool | None = Query(None),
+    due_today: bool = Query(False),
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).list_tasks(
+        coach.id, client_id=client_id, completed=completed, due_today=due_today
+    )
+
+
+@router.post("/tasks", response_model=CoachTaskResponse, status_code=status.HTTP_201_CREATED)
+async def create_coach_task(
+    data: CoachTaskCreate,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).create_task(coach.id, data, get_client_ip(request))
+
+
+@router.patch("/tasks/{task_id}", response_model=CoachTaskResponse)
+async def update_coach_task(
+    task_id: int,
+    data: CoachTaskUpdate,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).update_task(coach.id, task_id, data, get_client_ip(request))
+
+
+@router.post("/tasks/{task_id}/complete", response_model=CoachTaskResponse)
+async def complete_coach_task(
+    task_id: int,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await CoachBusinessService(db).complete_task(coach.id, task_id, get_client_ip(request))
+
+
+@router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_coach_task(
+    task_id: int,
+    request: Request,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    await CoachBusinessService(db).delete_task(coach.id, task_id, get_client_ip(request))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/assignments/{assignment_id}", response_model=CoachProgramAssignmentResponse)

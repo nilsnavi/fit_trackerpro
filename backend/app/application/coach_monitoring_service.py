@@ -6,6 +6,7 @@ from datetime import UTC, datetime, time
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.coach_business import CoachClientPackage
 from app.domain.coach_client import CoachClient, CoachClientStatus
 from app.domain.coach_program import (
     CoachProgram,
@@ -48,6 +49,7 @@ class MonitoringContext:
     last_program_activity_at: datetime | None
     now: datetime
     no_workout_days: int
+    packages: tuple[CoachClientPackage, ...] = ()
 
 
 class AttentionRuleEngine:
@@ -126,6 +128,27 @@ class AttentionRuleEngine:
                 title="Связь с клиентом приостановлена", description="Мониторинг активных тренировок приостановлен",
                 occurred_at=context.relationship.updated_at, source_type="coach_client", source_id=context.relationship.id,
             ))
+        for package in context.packages:
+            if package.status not in ("ACTIVE", "EXHAUSTED"):
+                continue
+            expires = package.expires_at
+            if expires is not None and expires < context.now.date():
+                signals.append(AttentionSignal(
+                    code="PACKAGE_EXPIRED", severity=AttentionSeverity.ATTENTION,
+                    title="Пакет истёк", description=f"Пакет «{package.name}» истёк {expires.isoformat()}",
+                    occurred_at=context.now, source_type="coach_client_package", source_id=package.id,
+                    metadata={"expires_at": expires.isoformat()},
+                ))
+                continue
+            remaining = package.sessions_total - package.sessions_used
+            if remaining <= 2:
+                signals.append(AttentionSignal(
+                    code="PACKAGE_LOW", severity=AttentionSeverity.NOTICE,
+                    title="Сессии на исходе",
+                    description=f"Пакет «{package.name}»: осталось {remaining} из {package.sessions_total}",
+                    occurred_at=context.now, source_type="coach_client_package", source_id=package.id,
+                    metadata={"remaining": remaining, "sessions_total": package.sessions_total},
+                ))
         return signals
 
 
@@ -208,8 +231,29 @@ class CoachMonitoringService:
                 relationship=relationship, client=client, assignment=assignment, program=program,
                 template_versions_match=None, last_completed_at=last_at, active_workout=active_workout,
                 last_program_activity_at=activity_at,
+                packages=(),
                 now=now, no_workout_days=max(1, int(getattr(settings, "COACH_MONITORING_NO_WORKOUT_DAYS", DEFAULT_NO_WORKOUT_DAYS))),
             ))
+        # Sprint 10.4: active client packages feed PACKAGE_LOW / PACKAGE_EXPIRED signals.
+        client_ids = [c.client.id for c in contexts]
+        if client_ids:
+            package_rows = (
+                select(CoachClientPackage)
+                .where(
+                    CoachClientPackage.coach_id == coach_id,
+                    CoachClientPackage.client_id.in_(client_ids),
+                    CoachClientPackage.status.in_(("ACTIVE", "EXHAUSTED")),
+                )
+                .order_by(CoachClientPackage.created_at, CoachClientPackage.id)
+            )
+            packages = (await self.db.scalars(package_rows)).all()
+            by_client_packages: dict[int, list[CoachClientPackage]] = {}
+            for package in packages:
+                by_client_packages.setdefault(package.client_id, []).append(package)
+            contexts = [
+                MonitoringContext(**{**context.__dict__, "packages": tuple(by_client_packages.get(context.client.id, ()))})
+                for context in contexts
+            ]
         # The template comparison is fetched for all active assignments in one query.
         assignment_ids = [c.assignment.id for c in contexts if c.assignment]
         if assignment_ids:

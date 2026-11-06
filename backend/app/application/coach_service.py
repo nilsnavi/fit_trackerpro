@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.coach_entitlement_service import CoachEntitlementService
+from app.application.coach_notification_service import CoachNotificationService
 from app.core.audit import (
     COACH_INVITATION_ACCEPT,
     COACH_INVITATION_CREATE,
@@ -139,6 +140,14 @@ class CoachInvitationService:
         token = secrets.token_urlsafe(32)
         invitation = CoachInvitation(coach_id=coach_id, client_hint=data.client_hint, token_hash=invitation_token_hash(token), expires_at=_now() + INVITATION_TTL)
         await self.invitations.create(invitation)
+        coach = await self.profiles.get_by_user_id(coach_id)
+        await CoachNotificationService(self.db).enqueue(
+            event="coach.invitation.created",
+            dedupe_key=f"invitation-created:{invitation.id}",
+            payload={"coach_name": coach.display_name if coach else None, "client_hint": data.client_hint},
+            recipient_user_id=coach_id,
+            recipient_telegram_id=None,
+        )
         await self.db.commit()
         await self.db.refresh(invitation)
         audit_log(action=COACH_INVITATION_CREATE, user_db_id=coach_id, resource_type="coach_invitation", resource_id=invitation.id, client_ip=client_ip)

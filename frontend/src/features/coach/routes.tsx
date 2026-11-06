@@ -15,6 +15,9 @@ const Programs = lazy(() => import('./pages/CoachProgramsPage').then((m) => ({ d
 const ProgramBuilder = lazy(() => import('./pages/CoachProgramBuilderPage').then((m) => ({ default: m.CoachProgramBuilderPage })))
 const ProgramDetail = lazy(() => import('./pages/CoachProgramDetailPage').then((m) => ({ default: m.CoachProgramDetailPage })))
 const Subscription = lazy(() => import('./pages/CoachSubscriptionPage').then((m) => ({ default: m.CoachSubscriptionPage })))
+const Packages = lazy(() => import('./pages/CoachPackagesPage').then((m) => ({ default: m.CoachPackagesPage })))
+const ClientPackages = lazy(() => import('./pages/CoachClientPackagesPage').then((m) => ({ default: m.CoachClientPackagesPage })))
+const Tasks = lazy(() => import('./pages/CoachTasksPage').then((m) => ({ default: m.CoachTasksPage })))
 
 export function CoachRouteTree() {
     return <Routes>
@@ -23,6 +26,9 @@ export function CoachRouteTree() {
         <Route path="onboarding" element={<RouteGuard screenTitle="Стать тренером" skeleton={<ProfilePageSkeleton />}><Onboarding /></RouteGuard>} />
         <Route path="clients" element={<RouteGuard screenTitle="Клиенты" skeleton={<ProfilePageSkeleton />}><Clients /></RouteGuard>} />
         <Route path="clients/:clientId" element={<RouteGuard screenTitle="Клиент" skeleton={<ProfilePageSkeleton />}><Client /></RouteGuard>} />
+        <Route path="clients/:clientId/packages" element={<RouteGuard screenTitle="Пакеты и оплата" skeleton={<ProfilePageSkeleton />}><ClientPackages /></RouteGuard>} />
+        <Route path="packages" element={<RouteGuard screenTitle="Пакеты" skeleton={<ProfilePageSkeleton />}><Packages /></RouteGuard>} />
+        <Route path="tasks" element={<RouteGuard screenTitle="Задачи" skeleton={<ProfilePageSkeleton />}><Tasks /></RouteGuard>} />
         <Route path="monitoring" element={<RouteGuard screenTitle="Мониторинг клиентов" skeleton={<ProfilePageSkeleton />}><Monitoring /></RouteGuard>} />
         <Route path="monitoring/:clientId" element={<RouteGuard screenTitle="Мониторинг клиента" skeleton={<ProfilePageSkeleton />}><MonitoringDetail /></RouteGuard>} />
         <Route path="programs" element={<RouteGuard screenTitle="Программы тренера" skeleton={<ProfilePageSkeleton />}><Programs /></RouteGuard>} />
