@@ -4,6 +4,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.coach_notification import CoachNotification, CoachNotificationStatus
@@ -140,7 +141,7 @@ class CoachNotificationService:
         self.db.add(notification)
         try:
             await self.db.flush()
-        except Exception:
+        except IntegrityError:
             # A concurrent writer won the dedupe race; the notification already exists.
             await self.db.rollback()
             return None

@@ -156,15 +156,22 @@ async def test_auto_consume_is_idempotent_by_workout(client: AsyncClient, db_ses
     assert profile.status_code == 200, profile.text
     coach_db_id = profile.json()["user_id"]
 
+    # workout_id is a FK to workout_logs — seed a real completed workout for the client.
+    from app.domain.workout_log import WorkoutLog
+
+    workout = WorkoutLog(user_id=client_id, date=date.today(), duration=40, status="completed")
+    db_session.add(workout)
+    await db_session.commit()
+
     from app.application.coach_business_service import CoachBusinessService
     service = CoachBusinessService(db_session)
-    first = await service.auto_consume_completed_workout(coach_id=coach_db_id, client_id=client_id, workout_id=999001)
+    first = await service.auto_consume_completed_workout(coach_id=coach_db_id, client_id=client_id, workout_id=workout.id)
     assert first is not None and first.sessions_used == 1
-    again = await service.auto_consume_completed_workout(coach_id=coach_db_id, client_id=client_id, workout_id=999001)
+    again = await service.auto_consume_completed_workout(coach_id=coach_db_id, client_id=client_id, workout_id=workout.id)
     assert again is not None and again.sessions_used == 1  # replay does not double-consume
     manual = await client.post(
         f"/api/v1/coach/clients/{client_id}/packages/{cp_id}/consume",
-        headers=coach_headers, json={"workout_id": 999001},
+        headers=coach_headers, json={"workout_id": workout.id},
     )
     assert manual.status_code == 409  # same workout cannot be consumed twice
 

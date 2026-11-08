@@ -84,13 +84,22 @@ async def test_outbox_enqueue_is_deduped_and_does_not_deliver_inline(db_session)
     assert rows[0].recipient_telegram_id == 700300500
 
 
+async def _make_user(db_session, telegram_id: int, name: str):
+    from app.domain.user import User
+
+    user = User(telegram_id=telegram_id, first_name=name)
+    db_session.add(user)
+    await db_session.commit()
+    return user
+
+
 async def test_delivery_sends_message_and_marks_sent(db_session):
+    recipient = await _make_user(db_session, 700300400, "Recipient A")
     await CoachNotificationService(db_session).enqueue(
         event="coach.package.low",
         dedupe_key="package-low:1:3",
         payload={"remaining": 2},
-        recipient_user_id=None,
-        recipient_telegram_id=700300400,
+        recipient_user_id=recipient.id,
     )
     await db_session.commit()
 
@@ -106,11 +115,12 @@ async def test_delivery_sends_message_and_marks_sent(db_session):
 
 
 async def test_delivery_retries_with_backoff_then_fails_after_limit(db_session, monkeypatch):
+    recipient = await _make_user(db_session, 700300401, "Recipient B")
     await CoachNotificationService(db_session).enqueue(
         event="coach.task.due",
         dedupe_key="task-due:1:2026-11-06",
         payload={"title": "Позвонить"},
-        recipient_telegram_id=700300401,
+        recipient_user_id=recipient.id,
     )
     await db_session.commit()
 
