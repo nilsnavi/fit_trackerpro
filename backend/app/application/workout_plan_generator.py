@@ -11,7 +11,6 @@ from app.domain.exercise import Exercise
 from app.schemas.workouts import WorkoutPlanGenerateRequest, WorkoutPlanSuggestion
 from app.settings.config import settings
 
-
 _OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
