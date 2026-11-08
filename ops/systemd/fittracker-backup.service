@@ -1,0 +1,11 @@
+[Unit]
+Description=FitTracker PostgreSQL backup and offsite verification
+Wants=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/fittracker/backup.env
+ExecStart=/usr/local/lib/fittracker/backup_database.sh
+UMask=0077
+Nice=10

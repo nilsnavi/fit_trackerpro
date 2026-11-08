@@ -7,6 +7,12 @@ export type AchievementListFilter =
     | 'general'
     | 'all'
 
+export const coachSubscriptionKeys = {
+    all: ['coach-subscription'] as const,
+    current: ['coach-subscription', 'current'] as const,
+    plans: ['coach-subscription', 'plans'] as const,
+}
+
 export const queryKeys = {
     profile: {
         me: ['profile', 'me'] as const,
@@ -29,7 +35,16 @@ export const queryKeys = {
         assignments: ['coach', 'assignments'] as const,
         programAssignments: (programId: number) => ['coach', 'programs', programId, 'assignments'] as const,
         clientPrograms: (clientId: number | 'self') => ['coach', 'client-programs', clientId] as const,
+        packages: {
+            all: ['coach', 'packages'] as const,
+            list: (includeArchived: boolean) => ['coach', 'packages', 'list', includeArchived] as const,
+        },
+        clientPackages: (clientId: number) => ['coach', 'client-packages', clientId] as const,
+        clientPackage: (clientId: number, packageId: number) => ['coach', 'client-packages', clientId, packageId] as const,
+        payments: (clientId: number) => ['coach', 'payments', clientId] as const,
+        tasks: (filters: Record<string, unknown>) => ['coach', 'tasks', filters] as const,
     },
+    coachSubscription: coachSubscriptionKeys,
     achievements: {
         list: (category: AchievementListFilter) => ['achievements', 'list', category] as const,
         user: ['achievements', 'user'] as const,

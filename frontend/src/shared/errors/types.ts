@@ -16,6 +16,8 @@ export interface ClientError {
     /** Primary human-readable message */
     message: string
     fieldErrors?: ClientFieldError[]
+    /** Backend machine-readable business error details, when provided. */
+    details?: unknown
     /** Request URL without query string when known */
     requestUrl?: string
 }

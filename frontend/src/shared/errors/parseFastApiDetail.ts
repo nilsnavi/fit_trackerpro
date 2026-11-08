@@ -22,6 +22,8 @@ function formatLoc(loc: unknown): string {
 export function parseFastApiDetail(detail: unknown): {
     message: string
     fieldErrors?: ClientFieldError[]
+    code?: string
+    details?: unknown
 } {
     if (typeof detail === 'string') {
         return { message: detail }
@@ -53,7 +55,11 @@ export function parseFastApiDetail(detail: unknown): {
         if (o.error && typeof o.error === 'object') {
             const err = o.error as Record<string, unknown>
             if (typeof err.message === 'string') {
-                return { message: err.message }
+                return {
+                    message: err.message,
+                    ...(typeof err.code === 'string' ? { code: err.code } : {}),
+                    ...(err.details !== undefined ? { details: err.details } : {}),
+                }
             }
         }
     }

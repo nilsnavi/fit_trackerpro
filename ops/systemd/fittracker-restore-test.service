@@ -1,0 +1,11 @@
+[Unit]
+Description=FitTracker disposable PostgreSQL restore drill
+Wants=docker.service
+After=docker.service network-online.target fittracker-backup.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/fittracker/backup.env
+ExecStart=/usr/local/lib/fittracker/backup_restore_test.sh
+UMask=0077
+Nice=10

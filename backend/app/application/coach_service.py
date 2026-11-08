@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
+from weakref import WeakKeyDictionary
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.coach_entitlement_service import CoachEntitlementService
+from app.application.coach_notification_service import CoachNotificationService
 from app.core.audit import (
     COACH_INVITATION_ACCEPT,
     COACH_INVITATION_CREATE,
@@ -50,6 +54,14 @@ from app.schemas.coach import (
     CoachProfileUpdate,
 )
 
+_SQLITE_ACCEPT_LOCKS: WeakKeyDictionary[asyncio.AbstractEventLoop, dict[int, asyncio.Lock]] = WeakKeyDictionary()
+
+
+def _sqlite_accept_lock(coach_id: int) -> asyncio.Lock:
+    loop = asyncio.get_running_loop()
+    coach_locks = _SQLITE_ACCEPT_LOCKS.setdefault(loop, {})
+    return coach_locks.setdefault(coach_id, asyncio.Lock())
+
 INVITATION_TTL = timedelta(days=7)
 
 
@@ -81,6 +93,7 @@ class CoachIdentityService:
             if not await self.roles.has_role(user_id, UserRoleName.COACH):
                 await self.roles.activate_coach(user_id)
             profile = await self.profiles.create(CoachProfile(user_id=user_id, **data.model_dump()))
+            await CoachEntitlementService(self.db).create_trial_for_new_profile(user_id)
             await self.db.commit()
             await self.db.refresh(profile)
         except IntegrityError as exc:
@@ -123,9 +136,18 @@ class CoachInvitationService:
         self.clients = CoachClientRepository(db)
 
     async def create(self, coach_id: int, data: CoachInvitationCreate, client_ip: str | None = None) -> CoachInvitationCreatedResponse:
+        await CoachEntitlementService(self.db).require_capacity(coach_id, "clients")
         token = secrets.token_urlsafe(32)
         invitation = CoachInvitation(coach_id=coach_id, client_hint=data.client_hint, token_hash=invitation_token_hash(token), expires_at=_now() + INVITATION_TTL)
         await self.invitations.create(invitation)
+        coach = await self.profiles.get_by_user_id(coach_id)
+        await CoachNotificationService(self.db).enqueue(
+            event="coach.invitation.created",
+            dedupe_key=f"invitation-created:{invitation.id}",
+            payload={"coach_name": coach.display_name if coach else None, "client_hint": data.client_hint},
+            recipient_user_id=coach_id,
+            recipient_telegram_id=None,
+        )
         await self.db.commit()
         await self.db.refresh(invitation)
         audit_log(action=COACH_INVITATION_CREATE, user_db_id=coach_id, resource_type="coach_invitation", resource_id=invitation.id, client_ip=client_ip)
@@ -180,6 +202,21 @@ class CoachInvitationService:
     async def accept(
         self, client_id: int, token: str, client_ip: str | None = None
     ) -> CoachClientResponse:
+        if self.db.get_bind().dialect.name == "sqlite":
+            invitation = await self.invitations.get_by_hash(invitation_token_hash(token))
+            if not invitation:
+                raise CoachInvitationNotFound()
+            coach_id = invitation.coach_id
+            # End the initial read transaction before waiting so a queued SQLite request
+            # starts a fresh transaction and sees the slot consumed by the prior accept.
+            await self.db.rollback()
+            async with _sqlite_accept_lock(coach_id):
+                return await self._accept_locked(client_id, token, client_ip)
+        return await self._accept_locked(client_id, token, client_ip)
+
+    async def _accept_locked(
+        self, client_id: int, token: str, client_ip: str | None
+    ) -> CoachClientResponse:
         try:
             invitation = await self.invitations.get_by_hash(invitation_token_hash(token), lock=True)
             if not invitation:
@@ -192,6 +229,7 @@ class CoachInvitationService:
             )
             if relationship:
                 raise CoachClientAlreadyExists()
+            await CoachEntitlementService(self.db).require_capacity(invitation.coach_id, "clients")
             relationship = await self.clients.create(
                 CoachClient(coach_id=invitation.coach_id, client_id=client_id)
             )

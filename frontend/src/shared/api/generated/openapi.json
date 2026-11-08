@@ -2245,6 +2245,363 @@
         "title": "CoachClientDetailResponse",
         "type": "object"
       },
+      "CoachClientPackageCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "auto_consume": {
+            "default": false,
+            "title": "Auto Consume",
+            "type": "boolean"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "package_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Id"
+          },
+          "price_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Amount"
+          },
+          "sessions_total": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessions Total"
+          },
+          "validity_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity Days"
+          }
+        },
+        "title": "CoachClientPackageCreate",
+        "type": "object"
+      },
+      "CoachClientPackageDetailResponse": {
+        "properties": {
+          "auto_consume": {
+            "title": "Auto Consume",
+            "type": "boolean"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "package_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Id"
+          },
+          "price_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Amount"
+          },
+          "purchased_at": {
+            "format": "date-time",
+            "title": "Purchased At",
+            "type": "string"
+          },
+          "relationship_id": {
+            "title": "Relationship Id",
+            "type": "integer"
+          },
+          "sessions_remaining": {
+            "title": "Sessions Remaining",
+            "type": "integer"
+          },
+          "sessions_total": {
+            "title": "Sessions Total",
+            "type": "integer"
+          },
+          "sessions_used": {
+            "title": "Sessions Used",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachClientPackageStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/CoachPackageUsageResponse"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "client_id",
+          "relationship_id",
+          "package_id",
+          "name",
+          "sessions_total",
+          "sessions_used",
+          "sessions_remaining",
+          "price_amount",
+          "currency",
+          "purchased_at",
+          "expires_at",
+          "auto_consume",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachClientPackageDetailResponse",
+        "type": "object"
+      },
+      "CoachClientPackageResponse": {
+        "properties": {
+          "auto_consume": {
+            "title": "Auto Consume",
+            "type": "boolean"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "package_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Id"
+          },
+          "price_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Amount"
+          },
+          "purchased_at": {
+            "format": "date-time",
+            "title": "Purchased At",
+            "type": "string"
+          },
+          "relationship_id": {
+            "title": "Relationship Id",
+            "type": "integer"
+          },
+          "sessions_remaining": {
+            "title": "Sessions Remaining",
+            "type": "integer"
+          },
+          "sessions_total": {
+            "title": "Sessions Total",
+            "type": "integer"
+          },
+          "sessions_used": {
+            "title": "Sessions Used",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachClientPackageStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "client_id",
+          "relationship_id",
+          "package_id",
+          "name",
+          "sessions_total",
+          "sessions_used",
+          "sessions_remaining",
+          "price_amount",
+          "currency",
+          "purchased_at",
+          "expires_at",
+          "auto_consume",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachClientPackageResponse",
+        "type": "object"
+      },
+      "CoachClientPackageStatus": {
+        "enum": [
+          "ACTIVE",
+          "EXHAUSTED",
+          "EXPIRED",
+          "CANCELLED"
+        ],
+        "title": "CoachClientPackageStatus",
+        "type": "string"
+      },
       "CoachClientPermissions": {
         "additionalProperties": false,
         "description": "Sprint 10.1 grants no granular data permissions.",
@@ -2342,6 +2699,29 @@
           }
         },
         "title": "CoachClientUpdate",
+        "type": "object"
+      },
+      "CoachFeatures": {
+        "properties": {
+          "advanced_monitoring_filters": {
+            "title": "Advanced Monitoring Filters",
+            "type": "boolean"
+          },
+          "client_monitoring": {
+            "title": "Client Monitoring",
+            "type": "boolean"
+          },
+          "program_assignments": {
+            "title": "Program Assignments",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "client_monitoring",
+          "program_assignments",
+          "advanced_monitoring_filters"
+        ],
+        "title": "CoachFeatures",
         "type": "object"
       },
       "CoachInvitationAccept": {
@@ -2593,6 +2973,635 @@
           "created_at"
         ],
         "title": "CoachInvitationResponse",
+        "type": "object"
+      },
+      "CoachPackageConsumeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "workout_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Id"
+          }
+        },
+        "title": "CoachPackageConsumeRequest",
+        "type": "object"
+      },
+      "CoachPackageCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "default": "RUB",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "price_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Amount"
+          },
+          "sessions_total": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sessions Total",
+            "type": "integer"
+          },
+          "validity_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity Days"
+          }
+        },
+        "required": [
+          "name",
+          "sessions_total"
+        ],
+        "title": "CoachPackageCreate",
+        "type": "object"
+      },
+      "CoachPackageResponse": {
+        "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Amount"
+          },
+          "sessions_total": {
+            "title": "Sessions Total",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachPackageStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "validity_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity Days"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "name",
+          "description",
+          "sessions_total",
+          "validity_days",
+          "price_amount",
+          "currency",
+          "status",
+          "archived_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachPackageResponse",
+        "type": "object"
+      },
+      "CoachPackageReverseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "CoachPackageReverseRequest",
+        "type": "object"
+      },
+      "CoachPackageStatus": {
+        "enum": [
+          "ACTIVE",
+          "ARCHIVED"
+        ],
+        "title": "CoachPackageStatus",
+        "type": "string"
+      },
+      "CoachPackageUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "price_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Amount"
+          },
+          "sessions_total": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessions Total"
+          },
+          "validity_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity Days"
+          }
+        },
+        "title": "CoachPackageUpdate",
+        "type": "object"
+      },
+      "CoachPackageUsageResponse": {
+        "properties": {
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "client_package_id": {
+            "title": "Client Package Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delta": {
+            "title": "Delta",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reversal_of_usage_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversal Of Usage Id"
+          },
+          "workout_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Id"
+          }
+        },
+        "required": [
+          "id",
+          "client_package_id",
+          "delta",
+          "reason",
+          "workout_id",
+          "actor_user_id",
+          "idempotency_key",
+          "reversal_of_usage_id",
+          "note",
+          "created_at"
+        ],
+        "title": "CoachPackageUsageResponse",
+        "type": "object"
+      },
+      "CoachPaymentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "client_package_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Package Id"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "currency": {
+            "default": "RUB",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "method": {
+            "default": "CASH",
+            "pattern": "^(CASH|CARD|TRANSFER|OTHER)$",
+            "title": "Method",
+            "type": "string"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "title": "CoachPaymentCreate",
+        "type": "object"
+      },
+      "CoachPaymentResponse": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "client_package_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Package Id"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "paid_at": {
+            "format": "date-time",
+            "title": "Paid At",
+            "type": "string"
+          },
+          "relationship_id": {
+            "title": "Relationship Id",
+            "type": "integer"
+          },
+          "reversed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversed At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoachPaymentStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "client_id",
+          "relationship_id",
+          "client_package_id",
+          "amount",
+          "currency",
+          "method",
+          "status",
+          "paid_at",
+          "comment",
+          "reversed_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachPaymentResponse",
+        "type": "object"
+      },
+      "CoachPaymentStatus": {
+        "enum": [
+          "RECORDED",
+          "REVERSED"
+        ],
+        "title": "CoachPaymentStatus",
+        "type": "string"
+      },
+      "CoachPlanResponse": {
+        "properties": {
+          "available_features": {
+            "$ref": "#/components/schemas/CoachFeatures"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "limits": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Limits",
+            "type": "object"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "display_name",
+          "limits",
+          "available_features"
+        ],
+        "title": "CoachPlanResponse",
         "type": "object"
       },
       "CoachProfileCreate": {
@@ -3437,6 +4446,430 @@
           "source_metadata"
         ],
         "title": "CoachProgramWorkoutStartResponse",
+        "type": "object"
+      },
+      "CoachQuota": {
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "used",
+          "limit",
+          "remaining"
+        ],
+        "title": "CoachQuota",
+        "type": "object"
+      },
+      "CoachSubscriptionResponse": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "active_clients": {
+            "$ref": "#/components/schemas/CoachQuota"
+          },
+          "active_programs": {
+            "$ref": "#/components/schemas/CoachQuota"
+          },
+          "cancel_at_period_end": {
+            "title": "Cancel At Period End",
+            "type": "boolean"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "features": {
+            "$ref": "#/components/schemas/CoachFeatures"
+          },
+          "grace_days_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Days Remaining"
+          },
+          "grace_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Ends At"
+          },
+          "period_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Ends At"
+          },
+          "period_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Started At"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_days_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Days Remaining"
+          },
+          "trial_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Ends At"
+          },
+          "trial_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Started At"
+          },
+          "upgrade_required": {
+            "title": "Upgrade Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plan",
+          "status",
+          "trial_started_at",
+          "trial_ends_at",
+          "trial_days_remaining",
+          "grace_ends_at",
+          "grace_days_remaining",
+          "period_started_at",
+          "period_ends_at",
+          "activated_at",
+          "cancelled_at",
+          "cancel_at_period_end",
+          "active_clients",
+          "active_programs",
+          "features",
+          "upgrade_required"
+        ],
+        "title": "CoachSubscriptionResponse",
+        "type": "object"
+      },
+      "CoachTaskCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/CoachTaskPriority",
+            "default": "NORMAL"
+          },
+          "title": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "CoachTaskCreate",
+        "type": "object"
+      },
+      "CoachTaskPriority": {
+        "enum": [
+          "LOW",
+          "NORMAL",
+          "HIGH"
+        ],
+        "title": "CoachTaskPriority",
+        "type": "string"
+      },
+      "CoachTaskResponse": {
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/CoachTaskPriority"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CoachTaskSource"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "client_id",
+          "title",
+          "description",
+          "priority",
+          "due_at",
+          "source",
+          "completed_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachTaskResponse",
+        "type": "object"
+      },
+      "CoachTaskSource": {
+        "enum": [
+          "MANUAL",
+          "SYSTEM"
+        ],
+        "title": "CoachTaskSource",
+        "type": "string"
+      },
+      "CoachTaskUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoachTaskPriority"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "CoachTaskUpdate",
         "type": "object"
       },
       "CompletedExercise-Input": {
@@ -13357,11 +14790,17 @@
             "name": "year",
             "required": false,
             "schema": {
-              "default": 2026,
-              "maximum": 2030,
-              "minimum": 2020,
-              "title": "Year",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 2030,
+                  "minimum": 2020,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
             }
           },
           {
@@ -13369,11 +14808,17 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 9,
-              "maximum": 12,
-              "minimum": 1,
-              "title": "Month",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
             }
           }
         ],
@@ -15303,6 +16748,540 @@
         ]
       }
     },
+    "/api/v1/coach/clients/{client_id}/packages": {
+      "get": {
+        "operationId": "list_client_packages_api_v1_coach_clients__client_id__packages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachClientPackageResponse"
+                  },
+                  "title": "Response List Client Packages Api V1 Coach Clients  Client Id  Packages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Client Packages",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "assign_client_package_api_v1_coach_clients__client_id__packages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachClientPackageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachClientPackageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assign Client Package",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/packages/{client_package_id}": {
+      "delete": {
+        "operationId": "cancel_client_package_api_v1_coach_clients__client_id__packages__client_package_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "client_package_id",
+            "required": true,
+            "schema": {
+              "title": "Client Package Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachClientPackageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Client Package",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "get": {
+        "operationId": "get_client_package_api_v1_coach_clients__client_id__packages__client_package_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "client_package_id",
+            "required": true,
+            "schema": {
+              "title": "Client Package Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachClientPackageDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Client Package",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/packages/{client_package_id}/consume": {
+      "post": {
+        "operationId": "consume_client_package_session_api_v1_coach_clients__client_id__packages__client_package_id__consume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "client_package_id",
+            "required": true,
+            "schema": {
+              "title": "Client Package Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachPackageConsumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachClientPackageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Consume Client Package Session",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/packages/{client_package_id}/reverse": {
+      "post": {
+        "operationId": "reverse_client_package_session_api_v1_coach_clients__client_id__packages__client_package_id__reverse_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "client_package_id",
+            "required": true,
+            "schema": {
+              "title": "Client Package Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CoachPackageReverseRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachClientPackageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reverse Client Package Session",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/payments": {
+      "get": {
+        "operationId": "list_client_payments_api_v1_coach_clients__client_id__payments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachPaymentResponse"
+                  },
+                  "title": "Response List Client Payments Api V1 Coach Clients  Client Id  Payments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Client Payments",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "record_client_payment_api_v1_coach_clients__client_id__payments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachPaymentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachPaymentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Client Payment",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/payments/{payment_id}/reverse": {
+      "post": {
+        "operationId": "reverse_client_payment_api_v1_coach_clients__client_id__payments__payment_id__reverse_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachPaymentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reverse Client Payment",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
     "/api/v1/coach/clients/{client_id}/programs": {
       "get": {
         "operationId": "list_client_programs_api_v1_coach_clients__client_id__programs_get",
@@ -15707,6 +17686,234 @@
           }
         ],
         "summary": "Get Monitoring Detail",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/packages": {
+      "get": {
+        "operationId": "list_coach_packages_api_v1_coach_packages_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachPackageResponse"
+                  },
+                  "title": "Response List Coach Packages Api V1 Coach Packages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Coach Packages",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "create_coach_package_api_v1_coach_packages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachPackageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachPackageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Coach Package",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/packages/{package_id}": {
+      "delete": {
+        "operationId": "archive_coach_package_api_v1_coach_packages__package_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "package_id",
+            "required": true,
+            "schema": {
+              "title": "Package Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachPackageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Coach Package",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "patch": {
+        "operationId": "update_coach_package_api_v1_coach_packages__package_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "package_id",
+            "required": true,
+            "schema": {
+              "title": "Package Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachPackageUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachPackageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Coach Package",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/plans": {
+      "get": {
+        "operationId": "list_coach_plans_api_v1_coach_plans_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachPlanResponse"
+                  },
+                  "title": "Response List Coach Plans Api V1 Coach Plans Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Coach Plans",
         "tags": [
           "Coach"
         ]
@@ -16365,6 +18572,302 @@
           }
         ],
         "summary": "Update Program Day",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/subscription": {
+      "get": {
+        "operationId": "get_coach_subscription_api_v1_coach_subscription_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachSubscriptionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Coach Subscription",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/tasks": {
+      "get": {
+        "operationId": "list_coach_tasks_api_v1_coach_tasks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "client_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "completed",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Completed"
+            }
+          },
+          {
+            "in": "query",
+            "name": "due_today",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Due Today",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachTaskResponse"
+                  },
+                  "title": "Response List Coach Tasks Api V1 Coach Tasks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Coach Tasks",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "create_coach_task_api_v1_coach_tasks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachTaskCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachTaskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Coach Task",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/tasks/{task_id}": {
+      "delete": {
+        "operationId": "delete_coach_task_api_v1_coach_tasks__task_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Coach Task",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "patch": {
+        "operationId": "update_coach_task_api_v1_coach_tasks__task_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachTaskUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachTaskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Coach Task",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/tasks/{task_id}/complete": {
+      "post": {
+        "operationId": "complete_coach_task_api_v1_coach_tasks__task_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachTaskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Complete Coach Task",
         "tags": [
           "Coach"
         ]
@@ -21596,11 +24099,17 @@
             "name": "year",
             "required": false,
             "schema": {
-              "default": 2026,
-              "maximum": 2030,
-              "minimum": 2020,
-              "title": "Year",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 2030,
+                  "minimum": 2020,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
             }
           },
           {
@@ -21608,11 +24117,17 @@
             "name": "month",
             "required": false,
             "schema": {
-              "default": 9,
-              "maximum": 12,
-              "minimum": 1,
-              "title": "Month",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
             }
           }
         ],

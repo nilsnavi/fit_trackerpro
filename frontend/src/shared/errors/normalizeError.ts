@@ -27,14 +27,15 @@ export function normalizeFromHttpResponse(
         detail = body
     }
 
-    const { message, fieldErrors } = parseFastApiDetail(detail)
-    const code = status === 422 ? ErrorCodes.VALIDATION_ERROR : httpStatusCode(status)
+    const { message, fieldErrors, code: serverCode, details } = parseFastApiDetail(detail)
+    const code = serverCode ?? (status === 422 ? ErrorCodes.VALIDATION_ERROR : httpStatusCode(status))
 
     return {
         status,
         code,
         message,
         fieldErrors,
+        details,
         requestUrl,
     }
 }

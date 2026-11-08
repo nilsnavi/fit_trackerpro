@@ -71,6 +71,31 @@ def test_memory_and_redis_identical_burst_sequence():
     assert seq_mem[limit + 1][0] is False
 
 
+def test_redis_burst_in_single_clock_tick_is_bounded(monkeypatch):
+    """Запросы в одном тике часов не должны обходить лимит.
+
+    Redis sorted set раньше использовал ``str(now)`` как member: при грубом
+    разрешении ``time.time()`` (например, Windows ~15.6 мс) burst-запросы
+    перезаписывали друг друга, и лимит не срабатывал.
+    """
+    limit, window = 5, 60
+    frozen = 20_000.0
+    monkeypatch.setattr("app.middleware.rate_limit.time.time", lambda: frozen)
+
+    mw = _make_middleware()
+    fake = fakeredis.FakeRedis(decode_responses=True)
+
+    results = [
+        mw._check_rate_limit("1.2.3.4", POLICY_DEFAULT, "/api/v1/burst", limit, window, fake)[0]
+        for _ in range(limit + 3)
+    ]
+
+    assert results[:limit] == [True] * limit
+    assert all(result is False for result in results[limit:])
+    # Каждый разрешённый запрос — отдельный member, а не перезапись одного.
+    assert fake.zcard(mw._get_key("1.2.3.4", POLICY_DEFAULT, "/api/v1/burst")) == limit
+
+
 def test_memory_and_redis_identical_after_window_reset(monkeypatch):
     """После истечения окна счётчик сбрасывается одинаково в обоих режимах."""
     limit, window = 3, 30

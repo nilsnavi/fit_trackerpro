@@ -207,6 +207,11 @@ class TestAnalyticsEmptyStateContracts:
         data = r.json()
         assert data.get("year") == now.year
         assert data.get("month") == now.month
+
+        default_response = await authenticated_client.get("/api/v1/analytics/calendar")
+        assert default_response.status_code == 200, default_response.text
+        assert default_response.json().get("year") == now.year
+        assert default_response.json().get("month") == now.month
         assert isinstance(data.get("days"), list)
         assert isinstance(data.get("summary"), dict)
         if data.get("days"):

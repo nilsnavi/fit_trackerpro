@@ -100,3 +100,17 @@ export type ClientMonitoring = {
 }
 export type ClientMonitoringPage = { items: ClientMonitoring[]; total: number; attention_count: number; ok_count: number }
 export type MonitoringFilters = { status?: 'all' | 'attention' | 'ok'; severity?: string; search?: string; limit?: number; offset?: number }
+
+// --- Sprint 10.4: packages, payments, tasks ---
+export type CoachPackage = components['schemas']['CoachPackageResponse']
+export type CoachPackageInput = components['schemas']['CoachPackageCreate']
+export type CoachPackagePatch = components['schemas']['CoachPackageUpdate']
+export type CoachClientPackage = components['schemas']['CoachClientPackageResponse']
+export type CoachClientPackageDetail = components['schemas']['CoachClientPackageDetailResponse']
+export type CoachClientPackageInput = components['schemas']['CoachClientPackageCreate']
+export type CoachPackageUsageEntry = components['schemas']['CoachPackageUsageResponse']
+export type CoachPayment = components['schemas']['CoachPaymentResponse']
+export type CoachPaymentInput = components['schemas']['CoachPaymentCreate']
+export type CoachTask = components['schemas']['CoachTaskResponse']
+export type CoachTaskInput = components['schemas']['CoachTaskCreate']
+export type CoachTaskPatch = components['schemas']['CoachTaskUpdate']

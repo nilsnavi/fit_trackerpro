@@ -371,7 +371,7 @@ class WorkoutsRepository(SQLAlchemyRepository):
         await self.commit()
 
     async def delete_template(self, template: WorkoutTemplate) -> None:
-        # Detach historical workouts from template before physical delete.
+        # Detach historical workouts and program days from template before physical delete.
         # This keeps history intact and avoids FK conflicts for already used templates.
         await self.db.execute(
             update(WorkoutLog)
@@ -382,6 +382,12 @@ class WorkoutsRepository(SQLAlchemyRepository):
                 )
             )
             .values(template_id=None)
+        )
+        from app.domain.coach_program import CoachProgramDay
+        await self.db.execute(
+            update(CoachProgramDay)
+            .where(CoachProgramDay.workout_template_id == template.id)
+            .values(workout_template_id=None)
         )
         await self.delete(template)
         await self.commit()

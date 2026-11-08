@@ -14,11 +14,37 @@ import type {
     ClientMonitoring,
     ClientMonitoringPage,
     MonitoringFilters,
+    CoachPackage,
+    CoachPackageInput,
+    CoachPackagePatch,
+    CoachClientPackage,
+    CoachClientPackageDetail,
+    CoachClientPackageInput,
+    CoachPayment,
+    CoachPaymentInput,
+    CoachTask,
+    CoachTaskInput,
+    CoachTaskPatch,
 } from '../types/coach'
 
 const root = '/coach'
 
+export type CoachSubscription = {
+    plan: 'FREE' | 'TRAINER_PRO'; status: 'TRIAL' | 'ACTIVE' | 'GRACE' | 'CANCELLED' | 'EXPIRED'
+    trial_started_at: string | null; trial_ends_at: string | null; trial_days_remaining: number | null
+    grace_ends_at: string | null; grace_days_remaining: number | null; period_started_at: string | null; period_ends_at: string | null
+    activated_at: string | null; cancelled_at: string | null
+    cancel_at_period_end: boolean
+    active_clients: { used: number; limit: number | null; remaining: number | null }
+    active_programs: { used: number; limit: number | null; remaining: number | null }
+    features: { client_monitoring: boolean; program_assignments: boolean; advanced_monitoring_filters: boolean }
+    upgrade_required: boolean
+}
+export type CoachPlan = { plan: 'FREE' | 'TRAINER_PRO'; display_name: string; limits: { active_clients: number | null; active_programs: number | null }; available_features: CoachSubscription['features'] }
+
 export const coachApi = {
+    getSubscription: () => api.get<CoachSubscription>(`${root}/subscription`),
+    listPlans: () => api.get<CoachPlan[]>(`${root}/plans`),
     getProfile: () => api.get<CoachProfile>(`${root}/profile`),
     createProfile: (payload: CoachProfileInput) => api.post<CoachProfile>(`${root}/profile`, payload),
     updateProfile: (payload: Partial<CoachProfileInput>) => api.patch<CoachProfile>(`${root}/profile`, payload),
@@ -34,7 +60,7 @@ export const coachApi = {
     getMonitoring: (filters: MonitoringFilters = {}) => {
         const params = new URLSearchParams()
         Object.entries(filters).forEach(([key, value]) => { if (value !== undefined && value !== '') params.set(key, String(value)) })
-        return api.get<ClientMonitoringPage>(`${root}/monitoring${params.size ? `?${params.toString()}` : ''}`)
+        return api.get<ClientMonitoringPage>(`${root}/monitoring${params.toString() ? `?${params.toString()}` : ''}`)
     },
     getMonitoringClient: (clientId: number) => api.get<ClientMonitoring>(`${root}/monitoring/${clientId}`),
     updateClient: (clientId: number, payload: { status: CoachClient['status'] }) =>
@@ -70,4 +96,43 @@ export const coachApi = {
         }>(`/client/coach-programs/${assignmentId}/days/${dayId}/start`, {}, {
             headers: { 'Idempotency-Key': idempotencyKey },
         }),
+
+    // --- Sprint 10.4: packages, payments, tasks ---
+    listPackages: (includeArchived = false) =>
+        api.get<CoachPackage[]>(`${root}/packages`, { include_archived: includeArchived }),
+    createPackage: (payload: CoachPackageInput) => api.post<CoachPackage>(`${root}/packages`, payload),
+    updatePackage: (packageId: number, payload: CoachPackagePatch) =>
+        api.patch<CoachPackage>(`${root}/packages/${packageId}`, payload),
+    archivePackage: (packageId: number) => api.delete<CoachPackage>(`${root}/packages/${packageId}`),
+    listClientPackages: (clientId: number) =>
+        api.get<CoachClientPackage[]>(`${root}/clients/${clientId}/packages`),
+    getClientPackage: (clientId: number, packageId: number) =>
+        api.get<CoachClientPackageDetail>(`${root}/clients/${clientId}/packages/${packageId}`),
+    assignClientPackage: (clientId: number, payload: CoachClientPackageInput) =>
+        api.post<CoachClientPackage>(`${root}/clients/${clientId}/packages`, payload),
+    consumeClientPackage: (clientId: number, packageId: number, idempotencyKey: string) =>
+        api.post<CoachClientPackage>(
+            `${root}/clients/${clientId}/packages/${packageId}/consume`,
+            {},
+            { headers: { 'Idempotency-Key': idempotencyKey } },
+        ),
+    reverseClientPackage: (clientId: number, packageId: number) =>
+        api.post<CoachClientPackage>(`${root}/clients/${clientId}/packages/${packageId}/reverse`, {}),
+    listClientPayments: (clientId: number) =>
+        api.get<CoachPayment[]>(`${root}/clients/${clientId}/payments`),
+    recordClientPayment: (clientId: number, payload: CoachPaymentInput) =>
+        api.post<CoachPayment>(`${root}/clients/${clientId}/payments`, payload),
+    reverseClientPayment: (clientId: number, paymentId: number) =>
+        api.post<CoachPayment>(`${root}/clients/${clientId}/payments/${paymentId}/reverse`, {}),
+    listTasks: (filters: { client_id?: number; completed?: boolean; due_today?: boolean } = {}) => {
+        const params = new URLSearchParams()
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && (typeof value !== 'string' || value !== '')) params.set(key, String(value))
+        })
+        return api.get<CoachTask[]>(`${root}/tasks${params.toString() ? `?${params.toString()}` : ''}`)
+    },
+    createTask: (payload: CoachTaskInput) => api.post<CoachTask>(`${root}/tasks`, payload),
+    updateTask: (taskId: number, payload: CoachTaskPatch) => api.patch<CoachTask>(`${root}/tasks/${taskId}`, payload),
+    completeTask: (taskId: number) => api.post<CoachTask>(`${root}/tasks/${taskId}/complete`, {}),
+    deleteTask: (taskId: number) => api.delete<void>(`${root}/tasks/${taskId}`),
 }

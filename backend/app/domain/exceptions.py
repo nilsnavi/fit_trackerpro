@@ -197,6 +197,15 @@ class CoachFeatureDisabled(DomainError):
     default_message = "Coach feature is disabled"
 
 
+class CoachEntitlementDenied(DomainError):
+    http_status = 403
+    default_message = "Действие недоступно на текущем тарифе"
+
+    def __init__(self, message: str, *, business_code: str, details: dict[str, Any] | None = None) -> None:
+        self.code = business_code
+        super().__init__(message, details=details)
+
+
 class UserNotFoundError(DomainError):
     code = "user_not_found"
     http_status = 404
@@ -239,3 +248,59 @@ class ProgressionValidationError(DomainError):
     code = "progression_validation"
     http_status = 400
     default_message = "Invalid progression request"
+
+
+class CoachPackageNotFound(DomainError):
+    """Package template or client package outside the current coach scope."""
+
+    code = "coach_package_not_found"
+    http_status = 404
+    default_message = "Coach package not found"
+
+
+class CoachPackageExhausted(DomainError):
+    """No remaining sessions to consume (0 <= used <= total invariant)."""
+
+    code = "coach_package_exhausted"
+    http_status = 409
+    default_message = "No sessions remaining in this package"
+
+
+class CoachPackageAlreadyConsumed(DomainError):
+    """Idempotent consume replay: the same key or workout was already used."""
+
+    code = "coach_package_already_consumed"
+    http_status = 409
+    default_message = "This consumption has already been applied"
+
+
+class CoachPackageNothingToReverse(DomainError):
+    """Reversal requested when there is no consumable entry to reverse."""
+
+    code = "coach_package_nothing_to_reverse"
+    http_status = 409
+    default_message = "No consumption available to reverse"
+
+
+class CoachPaymentNotFound(DomainError):
+    """Payment record outside the current coach scope."""
+
+    code = "coach_payment_not_found"
+    http_status = 404
+    default_message = "Coach payment not found"
+
+
+class CoachPaymentAlreadyReversed(DomainError):
+    """Payment reversal applied twice; original rows are immutable."""
+
+    code = "coach_payment_already_reversed"
+    http_status = 409
+    default_message = "Payment has already been reversed"
+
+
+class CoachTaskNotFound(DomainError):
+    """Task outside the current coach scope or removed."""
+
+    code = "coach_task_not_found"
+    http_status = 404
+    default_message = "Coach task not found"
