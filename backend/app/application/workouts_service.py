@@ -1599,6 +1599,11 @@ class WorkoutsService:
                 duration=workout.duration,
             )
 
+        # Sprint 10.4: an assigned workout may consume one paid session when the
+        # client package opted into auto-consume. Idempotent by workout id and
+        # deliberately non-blocking: business completion must not fail on it.
+        await self._maybe_auto_consume_coach_package(user_id=user_id, workout=workout)
+
         # SPEC-005 §40: detect PRs across the completed session (warm-up excluded).
         personal_records = collect_session_records(workout.exercises or [])
 
@@ -1991,6 +1996,38 @@ class WorkoutsService:
             if set_payload.get("weight") is not None or set_payload.get("duration") is not None:
                 return True
         return False
+
+    async def _maybe_auto_consume_coach_package(self, *, user_id: int, workout: WorkoutLog) -> None:
+        """Consume one session for coach-program workouts when the client package opted in.
+
+        Never raises: a package hiccup must not roll back or fail workout completion.
+        """
+        if workout.source_type != WorkoutSessionSourceType.COACH_PROGRAM.value:
+            return
+        if workout.source_id is None:
+            return
+        try:
+            from sqlalchemy import select
+
+            from app.application.coach_business_service import CoachBusinessService
+            from app.domain.coach_program import CoachProgramAssignment
+
+            db = self.repository.db
+            assignment = await db.scalar(
+                select(CoachProgramAssignment).where(CoachProgramAssignment.id == int(workout.source_id))
+            )
+            if assignment is None or assignment.client_id != user_id:
+                return
+            business = CoachBusinessService(db)
+            await business.auto_consume_completed_workout(
+                coach_id=assignment.coach_id,
+                client_id=assignment.client_id,
+                workout_id=workout.id,
+            )
+        except Exception:  # noqa: BLE001 — completion must stay green
+            logger.exception(
+                "coach package auto-consume failed for workout %s", workout.id,
+            )
 
     async def _build_progression_recommendations(
         self,

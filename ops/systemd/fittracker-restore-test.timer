@@ -1,0 +1,10 @@
+[Unit]
+Description=Run FitTracker restore drill weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 05:15:00 UTC
+Persistent=true
+Unit=fittracker-restore-test.service
+
+[Install]
+WantedBy=timers.target

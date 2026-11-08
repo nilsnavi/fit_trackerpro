@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.coach_entitlement_service import CoachEntitlementService
+from app.application.coach_notification_service import CoachNotificationService
 from app.application.workouts_service import WorkoutsService
 from app.core.audit import (
     CLIENT_ASSIGNED_WORKOUT_STARTED,
@@ -291,10 +292,24 @@ class CoachProgramService:
         )
         self.db.add(assignment)
         try:
-            await self.db.commit()
+            await self.db.flush()
         except IntegrityError as exc:
             await self.db.rollback()
             raise WorkoutConflictError("This client already has this program version") from exc
+        from app.infrastructure.repositories.coach_repository import CoachProfileRepository
+
+        coach = await CoachProfileRepository(self.db).get_by_user_id(coach_id)
+        await CoachNotificationService(self.db).enqueue(
+            event="coach.program.assigned",
+            dedupe_key=f"program-assigned:{assignment.id}",
+            payload={
+                "program_name": program.name,
+                "coach_name": coach.display_name if coach else None,
+                "coach_message": data.coach_message,
+            },
+            recipient_user_id=assignment.client_id,
+        )
+        await self.db.commit()
         await self.db.refresh(assignment)
         audit_log(action=COACH_ASSIGNMENT_CREATED, user_db_id=coach_id, resource_type="coach_program_assignment", resource_id=assignment.id, meta={"program_id": program.id, "assignment_id": assignment.id, "client_id": assignment.client_id, "program_version": assignment.program_version})
         return await self._serialize_assignment(assignment)
