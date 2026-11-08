@@ -180,3 +180,6 @@ blob-report/
 *.pid
 *.seed
 *.pid.lock
+
+# --- Local agent tooling (Kilo workspaces/worktrees) ---
+.kilo/
