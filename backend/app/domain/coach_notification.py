@@ -45,7 +45,13 @@ class CoachNotification(Base):
     event: Mapped[str] = mapped_column(String(64), nullable=False)
     dedupe_key: Mapped[str] = mapped_column(String(200), nullable=False)
     recipient_telegram_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.telegram_id", ondelete="SET NULL", use_alter=True), nullable=True,
+        ForeignKey(
+            "users.telegram_id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_coach_notifications_recipient_telegram",
+        ),
+        nullable=True,
     )
     recipient_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
