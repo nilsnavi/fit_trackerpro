@@ -1,4 +1,4 @@
-﻿# FitTracker Pro — Project Instructions
+# FitTracker Pro — Project Instructions
 
 ## Project identity
 
@@ -442,7 +442,6 @@ Workflow files являются executable configuration и требуют revie
 
 Frontend имеет применимые:
 - Jest;
-- Vitest;
 - architecture tests;
 - OpenAPI contract checks;
 - Playwright E2E;
