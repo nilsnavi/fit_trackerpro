@@ -9,7 +9,7 @@ from httpx import AsyncClient
 from sqlalchemy import select, text
 
 from app.application.coach_notification_service import CoachNotificationService
-from app.domain.coach_notification import CoachNotification, CoachNotificationStatus
+from app.domain.coach_notification import CoachNotification
 from app.infrastructure.telegram_sender import TelegramDeliveryError
 from app.settings import settings
 from app.tests.telegram_webapp import build_init_data
