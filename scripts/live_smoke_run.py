@@ -153,9 +153,10 @@ def main() -> None:
         fail("client package balance", f"expected 5, got {cp['sessions_remaining']}")
     ok("package assigned to client", f"cp_id={cp['id']}, remaining={cp['sessions_remaining']}")
 
+    consume_request_id = "-".join(["live", "consume", "1"])
     r = c.post(
         f"{BASE}/coach/clients/{client_id}/packages/{cp['id']}/consume",
-        headers={**coach, "Idempotency-Key": "live-consume-1"}, json={},
+        headers={**coach, "Idempotency-Key": consume_request_id}, json={},
     )
     if r.status_code != 200 or r.json()["sessions_used"] != 1:
         fail("consume", f"{r.status_code} {r.text[:200]}")
@@ -163,7 +164,7 @@ def main() -> None:
 
     r = c.post(
         f"{BASE}/coach/clients/{client_id}/packages/{cp['id']}/consume",
-        headers={**coach, "Idempotency-Key": "live-consume-1"}, json={},
+        headers={**coach, "Idempotency-Key": consume_request_id}, json={},
     )
     if r.status_code != 409:
         fail("consume idempotency", f"expected 409, got {r.status_code}")
