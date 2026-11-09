@@ -10,8 +10,9 @@ from typing import Any, Dict, Optional
 
 from app.settings import settings
 
-# Telegram WebApp initData must be re-validated periodically; stale data is rejected.
-INIT_DATA_MAX_AGE_SECONDS = 86400
+# Maximum accepted age (seconds) of a Telegram WebApp initData payload — the replay
+# window for login. Sourced from settings (default 300s / 5 min); keep it short.
+INIT_DATA_MAX_AGE_SECONDS = settings.TELEGRAM_INIT_DATA_MAX_AGE_SECONDS
 
 
 def parse_init_data(init_data: str) -> Dict[str, Any]:
@@ -123,7 +124,7 @@ def validate_init_data_with_timestamp(
     Args:
         init_data: Raw initData string from Telegram WebApp
         bot_token: Bot token from @BotFather
-        max_age_seconds: Maximum age of initData in seconds (default: 24 hours)
+        max_age_seconds: Maximum age of initData in seconds (default: INIT_DATA_MAX_AGE_SECONDS)
 
     Returns:
         Tuple of (is_valid, error_message)
@@ -149,7 +150,7 @@ def validate_init_data_with_timestamp(
         if age > max_age_seconds:
             return (
                 False,
-                "Данные Telegram устарели (более 24 часов). "
+                "Данные Telegram устарели. "
                 "Закройте Mini App и откройте её снова из чата с ботом.",
             )
 
