@@ -102,7 +102,6 @@ class AuthService:
         is_valid, user_data, error = validate_and_get_user(
             init_data=auth_request.init_data,
             bot_token=settings.TELEGRAM_BOT_TOKEN,
-            max_age_seconds=300,
         )
         if not is_valid:
             raise AuthenticationError(f"Authentication failed: {error}")
@@ -119,7 +118,6 @@ class AuthService:
         is_valid, user_data, error = validate_and_get_user(
             init_data=auth_request.init_data,
             bot_token=settings.TELEGRAM_BOT_TOKEN,
-            max_age_seconds=300,
         )
         if not is_valid:
             raise AuthenticationError(f"Authentication failed: {error}")
