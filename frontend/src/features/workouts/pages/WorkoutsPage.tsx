@@ -218,7 +218,7 @@ export function WorkoutsPage() {
 
     return (
         <div className="space-y-5 overflow-x-hidden bg-telegram-bg p-4 pb-36">
-            <section className="rounded-[22px] bg-[#161616] px-4 py-4">
+            <section className="rounded-[22px] bg-telegram-secondary-bg px-4 py-4">
                 <div className="mb-4 flex items-center justify-between gap-3">
                     <h2 className="text-base font-semibold text-telegram-text">На этой неделе</h2>
                     <button
@@ -229,7 +229,7 @@ export function WorkoutsPage() {
                         Подробнее
                     </button>
                 </div>
-                <div className="grid grid-cols-3 divide-x divide-white/10">
+                <div className="grid grid-cols-3 divide-x divide-border">
                     <div className="pr-3">
                         <div className="text-2xl font-bold leading-none text-telegram-text">{weeklySummary.count}</div>
                         <div className="mt-1 text-[13px] font-medium text-telegram-hint">тренировок</div>
@@ -239,8 +239,8 @@ export function WorkoutsPage() {
                         <div className="mt-1 text-[13px] font-medium text-telegram-hint">минут</div>
                     </div>
                     <div className="pl-3 text-right">
-                        <div className="text-2xl font-bold leading-none text-telegram-text">{weeklySummary.totalCalories}</div>
-                        <div className="mt-1 text-[13px] font-medium text-telegram-hint">ккал</div>
+                        <div className="text-2xl font-bold leading-none text-telegram-text">≈{weeklySummary.totalCalories}</div>
+                        <div className="mt-1 text-[13px] font-medium text-telegram-hint">ккал (оценка)</div>
                     </div>
                 </div>
             </section>
@@ -269,7 +269,7 @@ export function WorkoutsPage() {
                     <button
                         type="button"
                         onClick={handleAddWorkout}
-                        className="min-h-[116px] rounded-[22px] bg-[#161616] p-4 text-left transition-transform active:scale-[0.98]"
+                        className="min-h-[116px] rounded-[22px] bg-telegram-secondary-bg p-4 text-left transition-transform active:scale-[0.98]"
                         aria-label="Открыть конструктор"
                     >
                         <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15 text-primary">
@@ -311,7 +311,7 @@ export function WorkoutsPage() {
             <section className="space-y-3">
                 <h2 className="text-lg font-semibold text-telegram-text">Последняя тренировка</h2>
                 {lastCompletedWorkout ? (
-                    <div className="flex items-center gap-3 rounded-[22px] bg-[#1C1C1E] p-4">
+                    <div className="flex items-center gap-3 rounded-[22px] bg-telegram-secondary-bg p-4">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                             <RotateCcw className="h-5 w-5" />
                         </div>
@@ -341,7 +341,7 @@ export function WorkoutsPage() {
                         </button>
                     </div>
                 ) : (
-                    <div className="rounded-[22px] border border-dashed border-border bg-[#1C1C1E]/70 p-5">
+                    <div className="rounded-[22px] border border-dashed border-border bg-telegram-secondary-bg/70 p-5">
                         <div className="text-base font-semibold text-telegram-text">Вы ещё не тренировались</div>
                         <div className="mt-1 text-sm font-medium leading-snug text-telegram-hint">
                             Начните первую тренировку или создайте план в Конструкторе
@@ -364,15 +364,15 @@ export function WorkoutsPage() {
 
                 {templatesLoading && (
                     <div className="space-y-2">
-                        <div className="h-[76px] animate-pulse rounded-[22px] bg-[#1C1C1E]" />
-                        <div className="h-[76px] animate-pulse rounded-[22px] bg-[#1C1C1E]" />
+                        <div className="h-[76px] animate-pulse rounded-[22px] bg-telegram-secondary-bg" />
+                        <div className="h-[76px] animate-pulse rounded-[22px] bg-telegram-secondary-bg" />
                     </div>
                 )}
                 {!templatesLoading && templatesError && (
                     <p className="text-sm text-danger">{getErrorMessage(templatesError)}</p>
                 )}
                 {!templatesLoading && !templatesError && templates.length === 0 && (
-                    <div className="rounded-[22px] border border-dashed border-border bg-[#1C1C1E]/70">
+                    <div className="rounded-[22px] border border-dashed border-border bg-telegram-secondary-bg/70">
                         <SectionEmptyState
                             icon={LayoutTemplate}
                             compact
@@ -397,7 +397,7 @@ export function WorkoutsPage() {
                             return (
                                 <div
                                     key={template.id}
-                                    className="flex min-h-[76px] w-full items-center gap-3 rounded-[22px] bg-[#1C1C1E] p-3"
+                                    className="flex min-h-[76px] w-full items-center gap-3 rounded-[22px] bg-telegram-secondary-bg p-3"
                                 >
                                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                                         <LayoutTemplate className="h-5 w-5" />
@@ -461,7 +461,7 @@ export function WorkoutsPage() {
                     </button>
                 </div>
                 {recentWorkoutSessions.length === 0 ? (
-                    <div className="rounded-[22px] border border-dashed border-border bg-[#1C1C1E]/70">
+                    <div className="rounded-[22px] border border-dashed border-border bg-telegram-secondary-bg/70">
                         <SectionEmptyState
                             icon={CalendarDays}
                             compact
@@ -479,14 +479,14 @@ export function WorkoutsPage() {
                                     key={`recent-${workout.id}`}
                                     type="button"
                                     onClick={() => navigate(isCompleted ? `/workouts/${workout.id}` : `/workouts/active/${workout.id}`)}
-                                    className="flex min-h-[68px] w-full items-center gap-3 rounded-[20px] bg-[#1C1C1E] px-4 py-3 text-left transition-transform active:scale-[0.99]"
+                                    className="flex min-h-[68px] w-full items-center gap-3 rounded-[20px] bg-telegram-secondary-bg px-4 py-3 text-left transition-transform active:scale-[0.99]"
                                 >
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-base font-semibold text-telegram-text">{workout.title}</div>
                                         <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] font-medium text-telegram-hint">
                                             <span>{formatShortDate(workout.date)}</span>
                                             <span>{workout.duration} мин</span>
-                                            <span>{workout.calories} ккал</span>
+                                            <span>≈{workout.calories} ккал</span>
                                             {!isCompleted ? (
                                                 <span className="rounded-full bg-warning/15 px-2 py-0.5 text-warning">В процессе</span>
                                             ) : null}

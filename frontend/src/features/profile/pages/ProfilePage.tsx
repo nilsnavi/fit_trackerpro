@@ -50,6 +50,7 @@ import { DeleteAccountSection } from '@features/profile/components/DeleteAccount
 import { ProfilePageSkeleton } from '@shared/ui/page-skeletons';
 import { useCoachProfile } from '@features/coach/hooks/useCoachQueries'
 import { AppHttpError } from '@shared/errors'
+import { authApi } from '@features/profile/api/authApi'
 
 // ============================================
 // Constants
@@ -387,6 +388,14 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, action }) =>
 // ProfilePage (route: /profile)
 // ============================================
 
+type ProfileTab = 'main' | 'data' | 'settings'
+
+const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
+    { id: 'main', label: 'Основное' },
+    { id: 'data', label: 'Данные' },
+    { id: 'settings', label: 'Настройки' },
+]
+
 export const ProfilePage: React.FC = () => {
     const { user } = useTelegramWebApp();
     const { userStats } = useAchievements();
@@ -406,6 +415,7 @@ export const ProfilePage: React.FC = () => {
 
     const [, setShowAllAchievements] = useState(false);
     const [, setShowSettings] = useState(false);
+    const [tab, setTab] = useState<ProfileTab>('main');
 
 
 
@@ -430,6 +440,12 @@ export const ProfilePage: React.FC = () => {
     };
 
     const handleLogout = async () => {
+        // Record the logout server-side (AUTH_LOGOUT audit) — best-effort and
+        // time-bounded: a slow or failed call must never block signing out.
+        await Promise.race([
+            authApi.logout().catch(() => undefined),
+            new Promise((resolve) => setTimeout(resolve, 2000)),
+        ]);
         // Single source of truth for tokens: authStore (syncs to storage)
         try {
             const mod = await import('@/stores/authStore')
@@ -474,17 +490,36 @@ export const ProfilePage: React.FC = () => {
                         {user?.first_name} {user?.last_name}
                     </h1>
                     <p className="text-telegram-hint">@{user?.username || 'username'}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full font-medium">
-                            Pro Member
-                        </span>
-                        <span className="px-2 py-1 bg-success/10 text-success text-xs rounded-full font-medium">
-                            Active
-                        </span>
-                    </div>
                 </div>
             </div>
 
+            <div
+                className="flex gap-1 rounded-2xl bg-telegram-secondary-bg p-1"
+                role="tablist"
+                aria-label="Разделы профиля"
+            >
+                {PROFILE_TABS.map((option) => {
+                    const active = option.id === tab;
+                    return (
+                        <button
+                            key={option.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setTab(option.id)}
+                            className={cn(
+                                'min-h-9 flex-1 rounded-xl px-3 text-sm font-semibold transition-colors',
+                                active ? 'bg-primary text-white' : 'text-telegram-hint',
+                            )}
+                        >
+                            {option.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {tab === 'main' && (
+                <>
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-3">
                 <StatCard
@@ -570,7 +605,11 @@ export const ProfilePage: React.FC = () => {
                     )}
                 </div>
             </div>
+                </>
+            )}
 
+            {tab === 'data' && (
+                <>
             {/* Body Measurements */}
             <div className="bg-telegram-secondary-bg rounded-2xl p-4">
                 <SectionHeader
@@ -582,7 +621,11 @@ export const ProfilePage: React.FC = () => {
                     onSave={saveBodyMeasurement}
                 />
             </div>
+                </>
+            )}
 
+            {tab === 'main' && (
+                <>
             {/* Achievements Showcase */}
             {userStats && (
                 <div>
@@ -600,7 +643,11 @@ export const ProfilePage: React.FC = () => {
                     />
                 </div>
             )}
+                </>
+            )}
 
+            {tab === 'settings' && (
+                <>
             {/* Profile Settings */}
             <div className="bg-telegram-secondary-bg rounded-2xl p-4">
                 <SectionHeader
@@ -717,10 +764,18 @@ export const ProfilePage: React.FC = () => {
                     </div>
                 </div>
             </div>
+                </>
+            )}
 
+            {tab === 'data' && (
+                <>
             {/* Emergency contacts (safety feature) */}
             <EmergencyContactsSection />
+                </>
+            )}
 
+            {tab === 'settings' && (
+                <>
             {/* Coach entry point: visibility is based on a server response, never a local role flag. */}
             <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                 <h3 className="text-sm font-semibold text-telegram-text">FitTracker Coach</h3>
@@ -795,6 +850,8 @@ export const ProfilePage: React.FC = () => {
                     isExporting={isExporting}
                 />
             </div>
+                </>
+            )}
 
             {/* Version */}
             <div className="text-center text-xs text-telegram-hint">

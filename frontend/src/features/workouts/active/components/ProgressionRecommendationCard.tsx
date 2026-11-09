@@ -83,7 +83,7 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
 
     if (isLoading) {
         return (
-            <div className={cn('rounded-[16px] border border-white/[0.08] bg-black/20 px-3 py-2 text-sm font-bold text-telegram-hint', className)}>
+            <div className={cn('rounded-[16px] border border-border bg-telegram-bg/60 px-3 py-2 text-sm font-bold text-telegram-hint', className)}>
                 Расчёт рекомендации...
             </div>
         )
@@ -128,10 +128,10 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
             className={cn(
                 'rounded-[16px] border px-3 py-3',
                 direction === 'up'
-                    ? 'border-[#4ADE80]/25 bg-[#4ADE80]/10'
+                    ? 'border-success/25 bg-success/10'
                     : direction === 'down'
                         ? 'border-warning/30 bg-warning/10'
-                        : 'border-white/[0.08] bg-black/20',
+                        : 'border-border bg-telegram-bg/60',
                 className,
             )}
         >
@@ -140,10 +140,10 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                     className={cn(
                         'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl',
                         direction === 'up'
-                            ? 'bg-[#22C55E]/15 text-[#4ADE80]'
+                            ? 'bg-success/15 text-success'
                             : direction === 'down'
                                 ? 'bg-warning/15 text-warning'
-                                : 'bg-white/[0.06] text-telegram-hint',
+                                : 'bg-muted text-telegram-hint',
                     )}
                 >
                     <DirectionIcon className="h-5 w-5" />
@@ -157,7 +157,7 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                             <span
                                 className={cn(
                                     'text-xs font-black',
-                                    direction === 'up' ? 'text-[#4ADE80]' : 'text-warning',
+                                    direction === 'up' ? 'text-success' : 'text-warning',
                                 )}
                             >
                                 {difference > 0 ? `↑ +${formatValue(difference)}` : `↓ ${formatValue(difference)}`}
@@ -203,7 +203,7 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                     {lifecycle && LIFECYCLE_LABELS[lifecycle] ? (
                         <p
                             data-testid="progression-lifecycle"
-                            className="mt-2 text-xs font-black uppercase tracking-wide text-[#4ADE80]"
+                            className="mt-2 text-xs font-black uppercase tracking-wide text-success"
                         >
                             {LIFECYCLE_LABELS[lifecycle]}
                             {recommendation.actual_selected_value != null
@@ -217,7 +217,7 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                             <button
                                 type="button"
                                 onClick={() => onApply(recommendation.recommended_value as number)}
-                                className="min-h-9 rounded-xl border border-[#4ADE80]/40 bg-[#4ADE80]/10 px-3 text-xs font-black text-[#4ADE80] active:bg-[#4ADE80]/20"
+                                className="min-h-9 rounded-xl border border-success/40 bg-success/10 px-3 text-xs font-black text-success active:bg-success/20"
                             >
                                 Подставить {formatValue(recommendation.recommended_value)} {unit}
                             </button>
@@ -230,7 +230,7 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                                     data-testid="progression-accept"
                                     disabled={isDeciding}
                                     onClick={() => onAccept?.(recommendation)}
-                                    className="min-h-9 rounded-xl border border-[#4ADE80]/40 bg-[#4ADE80]/15 px-3 text-xs font-black text-[#4ADE80] disabled:opacity-50"
+                                    className="min-h-9 rounded-xl border border-success/40 bg-success/15 px-3 text-xs font-black text-success disabled:opacity-50"
                                 >
                                     {isDeciding ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Принять'}
                                 </button>
@@ -239,7 +239,7 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                                     data-testid="progression-reject"
                                     disabled={isDeciding}
                                     onClick={() => onReject?.(recommendation)}
-                                    className="min-h-9 rounded-xl border border-white/[0.12] bg-black/20 px-3 text-xs font-black text-telegram-hint disabled:opacity-50"
+                                    className="min-h-9 rounded-xl border border-border bg-telegram-bg/60 px-3 text-xs font-black text-telegram-hint disabled:opacity-50"
                                 >
                                     Отклонить
                                 </button>
@@ -250,7 +250,7 @@ export const ProgressionRecommendationCard = memo(function ProgressionRecommenda
                             type="button"
                             data-testid="progression-why"
                             onClick={() => setIsWhyOpen(true)}
-                            className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-white/[0.12] bg-black/20 px-3 text-xs font-black text-telegram-text"
+                            className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-border bg-telegram-bg/60 px-3 text-xs font-black text-telegram-text"
                         >
                             <HelpCircle className="h-3.5 w-3.5" />
                             Почему?

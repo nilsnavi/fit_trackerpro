@@ -34,8 +34,8 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
             className={cn(
                 'flex min-w-[110px] flex-col items-start gap-3 rounded-[14px] p-3 text-left transition-all active:scale-95',
                 isCustom
-                    ? 'border border-dashed border-[#2a2a2a] bg-transparent'
-                    : 'bg-[#1a1a1a]',
+                    ? 'border border-dashed border-border bg-transparent'
+                    : 'bg-telegram-secondary-bg',
             )}
         >
             <div
@@ -47,11 +47,11 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
                 <Icon className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white">
+                <p className="truncate text-sm font-medium text-telegram-text">
                     {template.name}
                 </p>
                 {!isCustom && (
-                    <p className="text-xs text-[#888888]">
+                    <p className="text-xs text-telegram-hint">
                         {template.exerciseCount} упр
                     </p>
                 )}

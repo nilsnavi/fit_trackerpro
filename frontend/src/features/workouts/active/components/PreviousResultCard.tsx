@@ -29,7 +29,7 @@ export const PreviousResultCard = memo(function PreviousResultCard({
         return (
             <div
                 data-testid="previous-result"
-                className={`rounded-[16px] border border-white/[0.08] bg-black/20 px-3 py-3 ${className ?? ''}`}
+                className={`rounded-[16px] border border-border bg-telegram-bg/60 px-3 py-3 ${className ?? ''}`}
             >
                 <p className="text-xs font-bold uppercase tracking-wide text-telegram-hint">
                     Предыдущая тренировка
@@ -49,7 +49,7 @@ export const PreviousResultCard = memo(function PreviousResultCard({
     return (
         <div
             data-testid="previous-result"
-            className={`rounded-[16px] border border-white/[0.08] bg-black/20 px-3 py-3 ${className ?? ''}`}
+            className={`rounded-[16px] border border-border bg-telegram-bg/60 px-3 py-3 ${className ?? ''}`}
         >
             <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-telegram-hint" />
@@ -61,7 +61,7 @@ export const PreviousResultCard = memo(function PreviousResultCard({
                 {previous.sets.map((set, index) => (
                     <span
                         key={`${set.set_number}-${index}`}
-                        className="rounded-xl bg-white/[0.06] px-2.5 py-1 text-sm font-black tabular-nums text-telegram-text"
+                        className="rounded-xl bg-muted px-2.5 py-1 text-sm font-black tabular-nums text-telegram-text"
                     >
                         {formatPreviousSetLine(set)}
                     </span>

@@ -35,9 +35,11 @@ export const authApi = {
     saveOnboarding(payload: SaveOnboardingRequest) {
         return api.post('/users/auth/onboarding', payload)
     },
-    refreshToken() {
-        return api.post('/users/auth/refresh')
-    },
+    /**
+     * Records a server-side logout event (`AUTH_LOGOUT` audit). Token refresh is
+     * handled inside the shared API client (`shared/api/client.ts`), so there is
+     * deliberately no separate refresh wrapper here.
+     */
     logout() {
         return api.post('/users/auth/logout')
     },

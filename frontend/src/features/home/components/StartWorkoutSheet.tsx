@@ -112,13 +112,13 @@ export function StartWorkoutSheet({
             title="Начать тренировку"
             description="Выберите источник сессии"
             size="md"
-            className="!rounded-t-[28px] bg-[#0b0e13] text-white"
-            headerClassName="border-white/[0.06]"
+            className="!rounded-t-[28px] bg-telegram-bg text-telegram-text"
+            headerClassName="border-border"
             bodyClassName="space-y-5 pb-[max(env(safe-area-inset-bottom),16px)]"
             closeOnOverlayClick={!isBusy}
         >
             {error ? (
-                <div className="flex items-start gap-2 rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-medium text-red-200 ring-1 ring-red-400/20">
+                <div className="flex items-start gap-2 rounded-2xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger ring-1 ring-danger/20">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{error}</span>
                 </div>
@@ -216,11 +216,11 @@ function TemplateStartSection({
     return (
         <section className="space-y-2">
             <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-semibold text-white/80">{title}</h3>
-                <span className="text-xs font-medium text-white/35">{templates.length}</span>
+                <h3 className="text-sm font-semibold text-telegram-text">{title}</h3>
+                <span className="text-xs font-medium text-telegram-hint">{templates.length}</span>
             </div>
             {templates.length === 0 ? (
-                <div className="rounded-2xl bg-white/[0.035] px-4 py-3 text-sm font-medium text-white/35 ring-1 ring-white/[0.05]">
+                <div className="rounded-2xl bg-telegram-secondary-bg px-4 py-3 text-sm font-medium text-telegram-hint ring-1 ring-border">
                     {emptyText}
                 </div>
             ) : (
@@ -273,18 +273,18 @@ function StartOptionButton({
             disabled={disabled}
             className={cn(
                 'flex min-h-[68px] w-full items-center gap-3 rounded-2xl px-4 text-left transition active:scale-[0.985]',
-                'bg-white/[0.055] ring-1 ring-white/[0.07]',
+                'bg-telegram-secondary-bg ring-1 ring-border',
                 'disabled:cursor-not-allowed disabled:opacity-45',
             )}
         >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-400/12 text-sky-300 ring-1 ring-sky-300/15">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20">
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
             </span>
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-semibold text-white">{title}</span>
-                <span className="mt-0.5 block truncate text-[13px] font-medium text-white/45">{description}</span>
+                <span className="block truncate text-[15px] font-semibold text-telegram-text">{title}</span>
+                <span className="mt-0.5 block truncate text-[13px] font-medium text-telegram-hint">{description}</span>
             </span>
-            {!loading ? <Dumbbell className="h-4 w-4 shrink-0 text-white/20" /> : null}
+            {!loading ? <Dumbbell className="h-4 w-4 shrink-0 text-telegram-hint" /> : null}
         </button>
     )
 }
