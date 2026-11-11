@@ -137,13 +137,13 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
                 aria-pressed={active}
                 {...props}
             >
-                {icon && <span className="flex-shrink-0">{icon}</span>}
+                {icon && <span className="shrink-0">{icon}</span>}
                 <span className="truncate">{label}</span>
 
                 {/* Индикатор активности (checkmark) */}
                 {active && (
                     <svg
-                        className="flex-shrink-0 ml-0.5"
+                        className="shrink-0 ml-0.5"
                         width="12"
                         height="12"
                         viewBox="0 0 12 12"

@@ -32,7 +32,7 @@ const variantStyles: Record<CardVariant, string> = {
         'hover:border-primary-300 dark:hover:border-primary-700'
     ),
     stats: cn(
-        'bg-gradient-to-br from-primary-500 to-primary-600',
+        'bg-linear-to-br from-primary-500 to-primary-600',
         'text-white shadow-primary'
     ),
     info: cn(

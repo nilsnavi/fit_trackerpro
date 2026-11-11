@@ -774,7 +774,7 @@ export const WellnessCompactWidget: React.FC<WellnessCompactWidgetProps> = ({ on
                 onClick?.();
             }}
             className={cn(
-                'flex-shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
+                'shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
                 'bg-telegram-secondary-bg border-l-4',
                 todayEntry ? 'border-telegram-button' : 'border-transparent',
                 className

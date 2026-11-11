@@ -49,7 +49,7 @@ export const HealthCheckGate: React.FC<HealthCheckGateProps> = ({
         }
         if (status === 'checking' && showLoadingWhileChecking) {
             return (
-                <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+                <div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 to-slate-800">
                     <div className="text-center">
                         <div className="mb-4 flex justify-center">
                             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full border-4 border-slate-700 border-t-blue-500 animate-spin" />

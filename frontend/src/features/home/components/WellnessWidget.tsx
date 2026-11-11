@@ -47,7 +47,7 @@ export function WellnessWidget({ data, onClick }: WellnessWidgetProps) {
                 type="button"
                 data-testid="wellness-widget"
                 onClick={onClick}
-                className="flex-shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
+                className="shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
             >
                 <div className="w-12 h-12 rounded-full bg-telegram-bg flex items-center justify-center">
                     <Smile className="w-6 h-6 text-telegram-hint" />
@@ -66,7 +66,7 @@ export function WellnessWidget({ data, onClick }: WellnessWidgetProps) {
             type="button"
             data-testid="wellness-widget"
             onClick={onClick}
-            className="flex-shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform border-l-4 border-purple-500"
+            className="shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform border-l-4 border-purple-500"
         >
             <div className="flex items-center justify-between">
                 <span className="text-xs text-telegram-hint">Самочувствие</span>

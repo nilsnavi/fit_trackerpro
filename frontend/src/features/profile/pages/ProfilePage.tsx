@@ -467,7 +467,7 @@ export const ProfilePage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center gap-4">
                 <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center text-white text-3xl font-bold">
+                    <div className="w-20 h-20 rounded-full bg-linear-to-br from-primary to-primary-600 flex items-center justify-center text-white text-3xl font-bold">
                         {user?.photo_url ? (
                             <img
                                 src={user.photo_url}

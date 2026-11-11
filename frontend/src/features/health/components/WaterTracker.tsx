@@ -1024,7 +1024,7 @@ export const WaterCompactWidget: React.FC<WaterCompactWidgetProps> = ({ onClick,
         <button
             onClick={onClick}
             className={cn(
-                'flex-shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
+                'shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
                 'bg-telegram-secondary-bg border-l-4',
                 isGoalReached ? 'border-green-500' : 'border-blue-500',
                 className

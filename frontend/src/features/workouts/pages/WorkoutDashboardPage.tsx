@@ -41,7 +41,7 @@ export function WorkoutDashboardPage() {
                     type="button"
                     onClick={quickStart}
                     disabled={isLoading}
-                    className="flex items-center gap-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 p-5 text-left transition-all hover:from-orange-600 hover:to-red-600 active:scale-[0.98] disabled:opacity-50"
+                    className="flex items-center gap-4 rounded-xl bg-linear-to-r from-orange-500 to-red-500 p-5 text-left transition-all hover:from-orange-600 hover:to-red-600 active:scale-[0.98] disabled:opacity-50"
                 >
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20">
                         <Zap className="h-7 w-7 text-white" />

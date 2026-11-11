@@ -29,7 +29,7 @@ const colorStyles: Record<ProgressColor, string> = {
     success: 'bg-success',
     warning: 'bg-warning',
     danger: 'bg-danger',
-    gradient: 'bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600',
+    gradient: 'bg-linear-to-r from-primary-400 via-primary-500 to-primary-600',
 };
 
 const sizeStyles = {
@@ -207,7 +207,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(
                     {showLabel && (
                         <span
                             className={cn(
-                                'font-medium text-telegram-text flex-shrink-0 tabular-nums',
+                                'font-medium text-telegram-text shrink-0 tabular-nums',
                                 labelSizeStyles[size]
                             )}
                         >

@@ -50,7 +50,7 @@ export function WorkoutCard({
             {/* Header with icon and type */}
             <div className="flex items-start justify-between gap-2">
                 <div className={cn(
-                    'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center',
+                    'w-12 h-12 rounded-xl bg-linear-to-br flex items-center justify-center',
                     template.color
                 )}>
                     <Icon className="w-6 h-6 text-white" />
