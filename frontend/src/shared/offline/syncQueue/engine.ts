@@ -204,7 +204,6 @@ export class SyncQueueEngine {
         this.notify()
         let completed = 0
         try {
-            // eslint-disable-next-line no-constant-condition
             while (true) {
                 const next = this.pickNext()
                 if (!next) break

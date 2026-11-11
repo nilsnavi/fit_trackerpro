@@ -17,7 +17,7 @@ export function ConnectivitySyncBar() {
 
     let icon: ReactNode
     let title: string
-    let subtitle: string | null = null
+    let subtitle: string | null
     let surfaceClass: string
 
     if (!online) {

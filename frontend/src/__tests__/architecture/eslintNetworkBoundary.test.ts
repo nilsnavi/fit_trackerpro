@@ -1,21 +1,38 @@
 import * as path from 'node:path'
 
 /**
- * Граница сетевого слоя в ESLint (`frontend/.eslintrc.cjs`) проверяется так же, как сам гвард
+ * Граница сетевого слоя в ESLint (`frontend/eslint.config.js`) проверяется так же, как сам гвард
  * `networkBoundary.test.ts`, но через настоящий конфиг: правило падает при написании импорта, а
  * этот тест — если правило ослабеют, выключат или оно перестанет применяться к файлу.
  *
  * Конфиг читается тем же модулем, что и `npm run lint`: синтетические исходники линтуются в тех
- * же областях (`files`/`excludedFiles`), поэтому проверка ловит и ослабление правил. Запрещённые
+ * же областях (`files`/`ignores`), поэтому проверка ловит и ослабление правил. Запрещённые
  * модули берутся из общей политики — новый пункт списка получает проверку сразу же.
  */
 const { ESLint } = require('eslint')
+const tsParser = require('@typescript-eslint/parser')
+const tsPlugin = require('@typescript-eslint/eslint-plugin')
 // Политика и конфиг читаются теми же модулями, что и `npm run lint`: список запрещённого живёт
 // в `architecture/networkBoundary.policy.cjs`, поэтому тест проверяет его, а не свою его копию.
 const policy = require('../../../architecture/networkBoundary.policy.cjs')
+const boundaryConfig = require('../../../architecture/eslintBoundaryConfig.cjs')
 
 const FRONTEND_ROOT = path.resolve(__dirname, '..', '..', '..')
-const eslint = new ESLint({ cwd: FRONTEND_ROOT, ignore: false })
+// ESLint-правила границы подаём через явный flat `overrideConfig` из CJS-модуля, а не через
+// ESM-файл `eslint.config.js`: Jest не умеет динамически импортировать ESM-конфиг ESLint без
+// `--experimental-vm-modules`. Области/правила — те же, что реально использует `npm run lint`.
+const eslint = new ESLint({
+    cwd: FRONTEND_ROOT,
+    overrideConfigFile: true,
+    overrideConfig: [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tsParser, ecmaVersion: 2020 },
+            plugins: { '@typescript-eslint': tsPlugin },
+        },
+        ...boundaryConfig.overrides,
+    ],
+})
 
 const IMPORT_RULE = '@typescript-eslint/no-restricted-imports'
 const NAMES_RULE = 'no-restricted-syntax'
@@ -134,7 +151,7 @@ describe('ESLint: сетевой слой принадлежит явным вл
     })
 
     it('области конфига целиком собраны из общей политики', () => {
-        const config = require('../../../.eslintrc.cjs')
+        const config = require('../../../architecture/eslintBoundaryConfig.cjs')
         const known = new Set([
             ...policy.COMPONENT_GLOBS,
             ...policy.TEST_GLOBS,
