@@ -75,7 +75,10 @@ def _assert_safe_test_database(url: URL) -> None:
         raise RuntimeError("Refusing to run tests with ENVIRONMENT=production")
 
     if _is_sqlite_url(url):
-        if str(url) not in {_SQLITE_TEST_URL, "sqlite+aiosqlite://"}:
+        # SQLAlchemy 2.1 percent-encodes ':memory:' when stringifying the URL
+        # (e.g. "sqlite+aiosqlite:///%3Amemory%3A"), so compare the parsed database
+        # name instead of the stringified URL.
+        if url.database not in (None, "", ":memory:"):
             raise RuntimeError("SQLite tests must use the in-memory test database")
         return
 
