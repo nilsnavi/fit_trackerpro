@@ -19,7 +19,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
   showDetails = true,
 }) => {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+    <div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 to-slate-800">
       <div className="text-center px-6 py-12 max-w-md mx-auto">
         {/* Logo / Icon */}
         <div className="mb-8 flex justify-center">

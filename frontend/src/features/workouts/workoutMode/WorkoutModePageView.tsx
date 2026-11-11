@@ -34,7 +34,7 @@ export function WorkoutModePageView({
 
     return (
         <div className="p-4 space-y-6">
-            <div className={`rounded-2xl bg-gradient-to-br ${config.themeClass} p-5 text-white`}>
+            <div className={`rounded-2xl bg-linear-to-br ${config.themeClass} p-5 text-white`}>
                 <div className="flex items-center gap-3">
                     <div className="rounded-xl bg-white/20 p-2">
                         <ModeIcon className="h-6 w-6" />

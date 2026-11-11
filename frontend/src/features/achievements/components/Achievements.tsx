@@ -234,7 +234,7 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
                     className={cn(
                         'w-12 h-12 rounded-xl flex items-center justify-center mb-2',
                         isUnlocked
-                            ? `bg-gradient-to-br ${rarityGradient} text-white`
+                            ? `bg-linear-to-br ${rarityGradient} text-white`
                             : 'bg-telegram-hint/20 text-telegram-hint'
                     )}
                 >
@@ -265,10 +265,10 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
             <div className="flex items-start gap-4">
                 <div
                     className={cn(
-                        'flex-shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center',
+                        'shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center',
                         'transition-all duration-300',
                         isUnlocked
-                            ? `bg-gradient-to-br ${rarityGradient} text-white shadow-lg`
+                            ? `bg-linear-to-br ${rarityGradient} text-white shadow-lg`
                             : 'bg-telegram-hint/10 text-telegram-hint'
                     )}
                 >
@@ -289,7 +289,7 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
                             {achievement.name}
                         </h3>
                         {isUnlocked && achievement.points >= 50 && (
-                            <span className="flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+                            <span className="shrink-0 px-2 py-0.5 text-xs font-medium rounded-full bg-linear-to-r from-yellow-400 to-orange-500 text-white">
                                 ★
                             </span>
                         )}
@@ -416,7 +416,7 @@ const AchievementUnlockModal: React.FC<AchievementUnlockModalProps> = ({
                 <div
                     className={cn(
                         'relative w-24 h-24 rounded-3xl flex items-center justify-center mb-4',
-                        'bg-gradient-to-br shadow-2xl',
+                        'bg-linear-to-br shadow-2xl',
                         rarityGradient,
                         'animate-achievement-pop'
                     )}
@@ -432,7 +432,7 @@ const AchievementUnlockModal: React.FC<AchievementUnlockModalProps> = ({
                 {/* Rarity Badge */}
                 <span className={cn(
                     'px-3 py-1 text-xs font-semibold rounded-full mb-3',
-                    'bg-gradient-to-r text-white',
+                    'bg-linear-to-r text-white',
                     rarityGradient
                 )}>
                     {rarityLabel}
@@ -513,7 +513,7 @@ export const ProfileShowcase: React.FC<ProfileShowcaseProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-linear-to-br from-primary to-primary-600 flex items-center justify-center">
                         <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                         </svg>
@@ -563,7 +563,7 @@ export const ProfileShowcase: React.FC<ProfileShowcaseProps> = ({
                                     key={ua.achievement_id}
                                     className={cn(
                                         'w-10 h-10 rounded-xl flex items-center justify-center',
-                                        'bg-gradient-to-br shadow-md',
+                                        'bg-linear-to-br shadow-md',
                                         rarityGradient
                                     )}
                                     title={ua.achievement.name}
@@ -732,7 +732,7 @@ export const Achievements: React.FC<AchievementsProps> = ({
         <div className="space-y-6">
             {/* Stats Header */}
             {userStats && (
-                <div className="bg-gradient-to-r from-primary/10 to-primary-600/10 rounded-2xl p-4">
+                <div className="bg-linear-to-r from-primary/10 to-primary-600/10 rounded-2xl p-4">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-telegram-hint mb-1">Всего очков</p>

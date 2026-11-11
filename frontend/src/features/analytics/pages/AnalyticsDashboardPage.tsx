@@ -221,7 +221,7 @@ export default function AnalyticsDashboardPage() {
             ) : null}
 
             {!isWorkoutStatsLoading && workoutStatsQuery.data && workoutStatsQuery.data.total_workouts === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border bg-gradient-to-br from-primary/10 via-telegram-secondary-bg/80 to-transparent p-6 text-center">
+                <div className="rounded-2xl border border-dashed border-border bg-linear-to-br from-primary/10 via-telegram-secondary-bg/80 to-transparent p-6 text-center">
                     <Sparkles className="mx-auto h-10 w-10 text-primary" aria-hidden />
                     <h2 className="mt-3 text-lg font-semibold text-telegram-text">Первый шаг — в зале</h2>
                     <p className="mt-2 text-sm text-telegram-hint">
@@ -235,7 +235,7 @@ export default function AnalyticsDashboardPage() {
 
             {hasStats && tab === 'overview' ? (
                 <>
-                    <section className="rounded-3xl bg-gradient-to-br from-primary/15 via-primary/10 to-transparent p-4">
+                    <section className="rounded-3xl bg-linear-to-br from-primary/15 via-primary/10 to-transparent p-4">
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Ваш ритм</p>

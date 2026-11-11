@@ -328,7 +328,7 @@ export default function ProgressOverviewPage() {
 
             {!isLoading && !noData ? (
                 <>
-                    <section className="rounded-3xl bg-gradient-to-br from-primary/15 via-primary/10 to-transparent p-4">
+                    <section className="rounded-3xl bg-linear-to-br from-primary/15 via-primary/10 to-transparent p-4">
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">{heroTitle}</p>

@@ -156,7 +156,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, searchTerm, onVie
         >
             <div className="flex items-start gap-3">
                 {/* Image placeholder */}
-                <div className="w-16 h-16 rounded-xl bg-telegram-secondary-bg flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-telegram-secondary-bg flex items-center justify-center shrink-0">
                     {exercise.gifUrl || exercise.imageUrl ? (
                         <img
                             src={exercise.gifUrl || exercise.imageUrl}
@@ -532,7 +532,7 @@ const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                     <ol className="space-y-2">
                         {exercise.instructions.map((instruction, index) => (
                             <li key={index} className="flex gap-3 text-sm">
-                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-medium">
+                                <span className="shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-medium">
                                     {index + 1}
                                 </span>
                                 <span className="text-telegram-text pt-0.5">{instruction}</span>
@@ -1122,7 +1122,7 @@ export const Catalog: React.FC = () => {
             </div>
 
             {/* Add Exercise Button */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-telegram-bg via-telegram-bg to-transparent">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-linear-to-t from-telegram-bg via-telegram-bg to-transparent">
                 <Button
                     fullWidth
                     size="lg"

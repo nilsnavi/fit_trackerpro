@@ -45,7 +45,7 @@ export function GlucoseWidget({ data, onClick }: GlucoseWidgetProps) {
                 type="button"
                 data-testid="glucose-widget"
                 onClick={onClick}
-                className="flex-shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
+                className="shrink-0 w-36 bg-telegram-secondary-bg rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
             >
                 <div className="w-12 h-12 rounded-full bg-telegram-bg flex items-center justify-center">
                     <Droplets className="w-6 h-6 text-telegram-hint" />
@@ -65,7 +65,7 @@ export function GlucoseWidget({ data, onClick }: GlucoseWidgetProps) {
             data-testid="glucose-widget"
             onClick={onClick}
             className={cn(
-                'flex-shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
+                'shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
                 'bg-telegram-secondary-bg border-l-4',
                 status.borderColor
             )}

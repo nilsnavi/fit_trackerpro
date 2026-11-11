@@ -253,7 +253,7 @@ export function WorkoutsPage() {
                 type="button"
                 onClick={() => setIsStartSheetOpen(true)}
                 disabled={isStartingWorkout || isRepeatingLast}
-                className="flex min-h-[58px] w-full items-center justify-center gap-2 rounded-[22px] bg-gradient-to-r from-primary to-blue-500 px-4 text-base font-bold text-white shadow-lg shadow-primary/20 transition-transform active:scale-[0.98] disabled:opacity-60"
+                className="flex min-h-[58px] w-full items-center justify-center gap-2 rounded-[22px] bg-linear-to-r from-primary to-blue-500 px-4 text-base font-bold text-white shadow-lg shadow-primary/20 transition-transform active:scale-[0.98] disabled:opacity-60"
                 aria-label="Начать тренировку"
                 data-testid="start-workout-main-btn"
             >
@@ -281,7 +281,7 @@ export function WorkoutsPage() {
                     <button
                         type="button"
                         onClick={() => handleOpenMode('functional')}
-                        className="min-h-[116px] rounded-[22px] bg-gradient-to-br from-amber-500 to-orange-600 p-4 text-left text-white transition-transform active:scale-[0.98]"
+                        className="min-h-[116px] rounded-[22px] bg-linear-to-br from-amber-500 to-orange-600 p-4 text-left text-white transition-transform active:scale-[0.98]"
                     >
                         <Activity className="mb-4 h-10 w-10" />
                         <div className="text-base font-semibold leading-tight">Функционал</div>
@@ -290,7 +290,7 @@ export function WorkoutsPage() {
                     <button
                         type="button"
                         onClick={() => handleOpenMode('strength')}
-                        className="min-h-[116px] rounded-[22px] bg-gradient-to-br from-blue-500 to-indigo-600 p-4 text-left text-white transition-transform active:scale-[0.98]"
+                        className="min-h-[116px] rounded-[22px] bg-linear-to-br from-blue-500 to-indigo-600 p-4 text-left text-white transition-transform active:scale-[0.98]"
                     >
                         <Dumbbell className="mb-4 h-10 w-10" />
                         <div className="text-base font-semibold leading-tight">Силовая</div>
@@ -299,7 +299,7 @@ export function WorkoutsPage() {
                     <button
                         type="button"
                         onClick={() => handleOpenMode('cardio')}
-                        className="min-h-[116px] rounded-[22px] bg-gradient-to-br from-red-500 to-orange-500 p-4 text-left text-white transition-transform active:scale-[0.98]"
+                        className="min-h-[116px] rounded-[22px] bg-linear-to-br from-red-500 to-orange-500 p-4 text-left text-white transition-transform active:scale-[0.98]"
                     >
                         <Flame className="mb-4 h-10 w-10" />
                         <div className="text-base font-semibold leading-tight">Кардио</div>

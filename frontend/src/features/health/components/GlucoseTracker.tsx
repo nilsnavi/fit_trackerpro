@@ -690,7 +690,7 @@ export const GlucoseCompactWidget: React.FC<GlucoseCompactWidgetProps> = ({ onCl
         <button
             onClick={onClick}
             className={cn(
-                'flex-shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
+                'shrink-0 w-36 rounded-2xl p-4 flex flex-col gap-2 active:scale-95 transition-transform',
                 'bg-telegram-secondary-bg border-l-4',
                 status ? getStatusBorderColor(status) : 'border-transparent',
                 className

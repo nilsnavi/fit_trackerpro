@@ -203,13 +203,13 @@ function SyncQueueItemRow({ item, onRetry }: SyncQueueItemRowProps) {
                         e.stopPropagation()
                         onRetry()
                     }}
-                    className="flex-shrink-0 px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors whitespace-nowrap"
+                    className="shrink-0 px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors whitespace-nowrap"
                 >
                     Повтор
                 </button>
             )}
             {item.status === 'processing' && (
-                <span className="flex-shrink-0 text-xs text-blue-600 font-medium whitespace-nowrap">
+                <span className="shrink-0 text-xs text-blue-600 font-medium whitespace-nowrap">
                     Обработка...
                 </span>
             )}
