@@ -32,15 +32,15 @@ export const authApi = {
     updateCurrentUser(payload: unknown): Promise<UserProfile> {
         return api.put<UserProfile>('/users/auth/me', payload)
     },
-    saveOnboarding(payload: SaveOnboardingRequest) {
-        return api.post('/users/auth/onboarding', payload)
+    saveOnboarding(payload: SaveOnboardingRequest): Promise<void> {
+        return api.post<void>('/users/auth/onboarding', payload)
     },
     /**
      * Records a server-side logout event (`AUTH_LOGOUT` audit). Token refresh is
      * handled inside the shared API client (`shared/api/client.ts`), so there is
      * deliberately no separate refresh wrapper here.
      */
-    logout() {
-        return api.post('/users/auth/logout')
+    logout(): Promise<void> {
+        return api.post<void>('/users/auth/logout')
     },
 }
