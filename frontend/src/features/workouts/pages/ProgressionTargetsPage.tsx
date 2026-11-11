@@ -117,7 +117,7 @@ function NumberField({
                 data-testid={testId}
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
-                className="mt-1 w-full rounded-[10px] border border-white/[0.08] bg-telegram-secondary-bg px-3 py-2 text-sm font-bold tabular-nums text-telegram-text outline-none focus:border-primary"
+                className="mt-1 w-full rounded-[10px] border border-border bg-telegram-secondary-bg px-3 py-2 text-sm font-bold tabular-nums text-telegram-text outline-none focus:border-primary"
             />
         </label>
     )
@@ -160,7 +160,7 @@ function TargetEditor({
                 event.preventDefault()
                 submit()
             }}
-            className="mt-3 space-y-3 rounded-[12px] border border-white/[0.08] bg-telegram-bg/60 p-3"
+            className="mt-3 space-y-3 rounded-[12px] border border-border bg-telegram-bg/60 p-3"
         >
             <div className="flex items-end gap-2">
                 <NumberField
@@ -180,7 +180,7 @@ function TargetEditor({
                                 policy: event.target.value as ProgressionPolicy,
                             }))
                         }
-                        className="mt-1 w-full rounded-[10px] border border-white/[0.08] bg-telegram-secondary-bg px-2 py-2 text-sm font-bold text-telegram-text outline-none focus:border-primary"
+                        className="mt-1 w-full rounded-[10px] border border-border bg-telegram-secondary-bg px-2 py-2 text-sm font-bold text-telegram-text outline-none focus:border-primary"
                     >
                         {POLICY_OPTIONS.map((policy) => (
                             <option key={policy} value={policy}>
@@ -236,7 +236,7 @@ function TargetEditor({
                     type="button"
                     data-testid="progression-target-editor-cancel"
                     onClick={onCancel}
-                    className="rounded-[10px] border border-white/[0.08] px-3 py-2 text-sm font-bold text-telegram-hint"
+                    className="rounded-[10px] border border-border px-3 py-2 text-sm font-bold text-telegram-hint"
                 >
                     Отмена
                 </button>
@@ -280,7 +280,7 @@ function TargetRow({
             data-testid="progression-target-row"
             data-recommendation-id={item.id ?? undefined}
             data-declined={declined}
-            className="rounded-[16px] border border-white/[0.08] bg-telegram-secondary-bg px-4 py-3"
+            className="rounded-[16px] border border-border bg-telegram-secondary-bg px-4 py-3"
         >
             <div className="flex items-start gap-3">
                 <button
@@ -295,12 +295,12 @@ function TargetRow({
                         'mt-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors disabled:opacity-40',
                         isSelected
                             ? 'border-primary bg-primary text-white'
-                            : 'border-white/20 text-transparent',
+                            : 'border-border text-transparent',
                     )}
                 >
                     <Check className="h-3.5 w-3.5" />
                 </button>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#38BDF8]/15 text-[#7DD3FC]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                     <Target className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -308,7 +308,7 @@ function TargetRow({
                         <span className="truncate text-base font-black text-telegram-text">
                             {name}
                         </span>
-                        <span className="text-sm font-black tabular-nums text-[#7DD3FC]">
+                        <span className="text-sm font-black tabular-nums text-primary">
                             {formatTargetValue(value, unit)}
                         </span>
                     </div>
@@ -333,7 +333,7 @@ function TargetRow({
                             data-testid="progression-target-state"
                             className={cn(
                                 'text-xs font-bold',
-                                declined ? 'text-warning' : 'text-[#7DD3FC]',
+                                declined ? 'text-warning' : 'text-primary',
                             )}
                         >
                             {declined
@@ -379,7 +379,7 @@ function TargetRow({
                             aria-label={`Изменить цель: ${name}`}
                             disabled={item.id == null}
                             onClick={onEdit}
-                            className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                            className="mt-2 flex items-center gap-1.5 text-xs font-bold text-primary disabled:opacity-50"
                         >
                             <Pencil className="h-3.5 w-3.5" />
                             Изменить значение и политику
@@ -426,7 +426,7 @@ function BulkToolbar({
     return (
         <div
             data-testid="progression-targets-bulk"
-            className="mb-3 space-y-3 rounded-[16px] border border-white/[0.08] bg-telegram-secondary-bg p-3"
+            className="mb-3 space-y-3 rounded-[16px] border border-border bg-telegram-secondary-bg p-3"
         >
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p
@@ -439,7 +439,7 @@ function BulkToolbar({
                     type="button"
                     data-testid="progression-targets-select-all"
                     onClick={onToggleAll}
-                    className="text-xs font-bold text-[#7DD3FC]"
+                    className="text-xs font-bold text-primary"
                 >
                     {allSelected ? 'Снять выделение' : 'Выбрать все'}
                 </button>
@@ -457,7 +457,7 @@ function BulkToolbar({
                                 policy: event.target.value as ProgressionPolicy | '',
                             })
                         }
-                        className="mt-1 w-full rounded-[10px] border border-white/[0.08] bg-telegram-bg px-2 py-2 text-sm font-bold text-telegram-text outline-none focus:border-primary"
+                        className="mt-1 w-full rounded-[10px] border border-border bg-telegram-bg px-2 py-2 text-sm font-bold text-telegram-text outline-none focus:border-primary"
                     >
                         <option value="">Не менять</option>
                         {POLICY_OPTIONS.map((policy) => (
@@ -505,7 +505,7 @@ function BulkToolbar({
                     data-testid="progression-bulk-disable"
                     disabled={selectedCount === 0 || isPending}
                     onClick={onDisableSelected}
-                    className="rounded-[10px] border border-white/[0.08] px-3 py-2 text-sm font-bold text-telegram-text disabled:opacity-50"
+                    className="rounded-[10px] border border-border px-3 py-2 text-sm font-bold text-telegram-text disabled:opacity-50"
                 >
                     Выключить подстановку у выбранных
                 </button>
@@ -575,7 +575,7 @@ function UndoSweepsPanel({
     return (
         <div
             data-testid="progression-undo-sweeps"
-            className="mb-3 rounded-[16px] border border-white/[0.08] bg-telegram-secondary-bg p-3"
+            className="mb-3 rounded-[16px] border border-border bg-telegram-secondary-bg p-3"
         >
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-telegram-hint">
@@ -587,7 +587,7 @@ function UndoSweepsPanel({
                         data-testid="progression-undo-sweeps-restore-all"
                         disabled={isPending}
                         onClick={onUndoAll}
-                        className="flex items-center gap-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                        className="flex items-center gap-1.5 text-xs font-bold text-primary disabled:opacity-50"
                     >
                         {undoing?.kind === 'chain' ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -624,7 +624,7 @@ function UndoSweepsPanel({
                             }
                             disabled={isPending}
                             onClick={() => onUndo(row)}
-                            className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-white/[0.08] px-2.5 py-1.5 text-xs font-bold text-[#7DD3FC] disabled:opacity-50"
+                            className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-border px-2.5 py-1.5 text-xs font-bold text-primary disabled:opacity-50"
                         >
                             {undoing?.kind === 'sweep' && undoing.sweepId === row.sweepId ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -664,7 +664,7 @@ function BulkOutcomeNotice({
     return (
         <div
             data-testid="progression-bulk-outcome"
-            className="mb-3 rounded-[16px] border border-white/[0.08] bg-telegram-secondary-bg p-3"
+            className="mb-3 rounded-[16px] border border-border bg-telegram-secondary-bg p-3"
         >
             <div className="flex items-start justify-between gap-2">
                 <p
@@ -677,7 +677,7 @@ function BulkOutcomeNotice({
                     type="button"
                     data-testid="progression-bulk-outcome-dismiss"
                     onClick={onDismiss}
-                    className="text-xs font-bold text-[#7DD3FC]"
+                    className="text-xs font-bold text-primary"
                 >
                     Понятно
                 </button>
@@ -913,7 +913,7 @@ export function ProgressionTargetsPage() {
                 <Link
                     to="/profile"
                     aria-label="Назад в профиль"
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/[0.08] bg-telegram-secondary-bg text-telegram-text"
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-telegram-secondary-bg text-telegram-text"
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </Link>
@@ -960,7 +960,7 @@ export function ProgressionTargetsPage() {
             ) : null}
 
             {!isLoading && !isError && items.length === 0 ? (
-                <div className="rounded-[16px] border border-white/[0.08] bg-telegram-secondary-bg px-4 py-6">
+                <div className="rounded-[16px] border border-border bg-telegram-secondary-bg px-4 py-6">
                     <p className="text-sm font-bold text-telegram-text">Пока нет принятых целей</p>
                     <p className="mt-1 text-xs font-semibold text-telegram-hint">
                         Цель появляется, когда вы принимаете рекомендацию прогрессии — в карточке

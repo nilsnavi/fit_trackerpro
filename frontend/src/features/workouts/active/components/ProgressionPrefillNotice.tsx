@@ -31,11 +31,11 @@ export const ProgressionPrefillNotice = memo(function ProgressionPrefillNotice({
             data-testid="progression-prefill-notice"
             data-unit={target.unit}
             className={cn(
-                'flex items-start gap-3 rounded-[16px] border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-3',
+                'flex items-start gap-3 rounded-[16px] border border-primary/25 bg-primary/10 px-3 py-3',
                 className,
             )}
         >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#38BDF8]/15 text-[#7DD3FC]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                 <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -53,7 +53,7 @@ export const ProgressionPrefillNotice = memo(function ProgressionPrefillNotice({
                         type="button"
                         data-testid="progression-prefill-revert"
                         onClick={onRevert}
-                        className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-xl border border-white/[0.12] bg-black/20 px-3 text-xs font-black text-telegram-text active:bg-white/[0.06]"
+                        className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-xl border border-border bg-telegram-bg/60 px-3 text-xs font-black text-telegram-text active:bg-muted"
                     >
                         <Undo2 className="h-3.5 w-3.5" />
                         {plannedLabel ? `Вернуть ${plannedLabel}` : 'Очистить'}

@@ -1213,9 +1213,13 @@ class AnalyticsService:
         muscle_imbalance_signals: MuscleImbalanceSignalsDetail | None = None
         if muscle_signals_enabled:
             try:
-                raw_signals = await self.repository.get_muscle_imbalance_signals(user_id)
-                if raw_signals:
-                    muscle_imbalance_signals = MuscleImbalanceSignalsDetail.model_validate(raw_signals)
+                # Isolate the optional signals query in a SAVEPOINT: if it fails (e.g. the
+                # view is unavailable), only the savepoint is rolled back, so the request's
+                # session — and its already-loaded objects like current_user — stay usable.
+                async with self.repository.db.begin_nested():
+                    raw_signals = await self.repository.get_muscle_imbalance_signals(user_id)
+                    if raw_signals:
+                        muscle_imbalance_signals = MuscleImbalanceSignalsDetail.model_validate(raw_signals)
             except SQLAlchemyError:
                 muscle_imbalance_signals = None
 
@@ -1251,7 +1255,9 @@ class AnalyticsService:
             return MuscleImbalanceSignalsResponse.model_validate(cached)
 
         try:
-            signals = await self.repository.get_muscle_imbalance_signals(user_id)
+            signals = None
+            async with self.repository.db.begin_nested():
+                signals = await self.repository.get_muscle_imbalance_signals(user_id)
         except SQLAlchemyError as exc:
             raise AnalyticsUnavailableError("Muscle imbalance signals are temporarily unavailable") from exc
 

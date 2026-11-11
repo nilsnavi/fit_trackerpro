@@ -153,6 +153,18 @@ class Settings(BaseSettings):
         Field(description="Public base URL of the Telegram Mini App (WebApp)."),
     ] = _DEV_TELEGRAM_WEBAPP_URL
 
+    TELEGRAM_INIT_DATA_MAX_AGE_SECONDS: Annotated[
+        int,
+        Field(
+            description=(
+                "Maximum accepted age (seconds) of Telegram WebApp initData — the replay "
+                "window for login. Keep it short: 300 (5 minutes) is the safe default. "
+                "Do not raise it to hours in production."
+            ),
+            ge=1,
+        ),
+    ] = 300
+
     TELEGRAM_BOT_ENABLED: Annotated[
         bool,
         Field(

@@ -74,24 +74,24 @@ export function EmergencyButton({ className }: EmergencyButtonProps) {
     return (
         <section
             className={cn(
-                'rounded-[12px] border border-[#3a1a1e] bg-black p-3 shadow-[0_12px_34px_rgba(0,0,0,0.4)]',
+                'rounded-2xl border border-danger/30 bg-telegram-secondary-bg p-4',
                 className,
             )}
         >
             <div className="flex items-start gap-3">
-                <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border border-[#3f2024] bg-[#1b0f11] text-[#ff453a]">
-                    <AlertTriangle className="h-6 w-6" />
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/10 text-danger">
+                    <AlertTriangle className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                    <h2 className="text-[17px] font-bold leading-5 text-white">Экстренная помощь</h2>
-                    <p className="mt-1 text-[12px] leading-4 text-[#8b8f98]">
+                    <h2 className="text-base font-semibold text-telegram-text">Экстренная помощь</h2>
+                    <p className="mt-1 text-xs leading-4 text-telegram-hint">
                         Уведомим близких в Telegram. Приложение не вызывает скорую — при угрозе
                         жизни звоните 112.
                     </p>
                 </div>
             </div>
 
-            <p className="mt-3 text-[12px] leading-4 text-[#6e747d]">
+            <p className="mt-3 text-xs leading-4 text-telegram-hint">
                 {contactsQuery.isError
                     ? 'Не удалось проверить список контактов.'
                     : contactsQuery.isLoading
@@ -107,7 +107,7 @@ export function EmergencyButton({ className }: EmergencyButtonProps) {
                 type="button"
                 data-testid="emergency-button"
                 onClick={openConfirm}
-                className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-[#ff3b30] text-[15px] font-semibold text-white active:scale-[0.98]"
+                className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-danger text-base font-semibold text-white active:scale-[0.98]"
             >
                 <AlertTriangle className="h-5 w-5" />
                 Мне плохо

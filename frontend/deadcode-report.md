@@ -1,67 +1,11 @@
 # Dead code reachability report
 
-Generated: 2026-11-08T09:49:06.023Z
-Total files: 566, reachable: 405, unreachable: 161 (prod: 57, test-infra: 104)
+Generated: 2026-09-30T18:35:08.093Z
+Total files: 493, reachable: 398, unreachable: 95 (prod: 0, test-infra: 95)
 
 ## Unreachable prod modules
 
-- `features/analytics/components/ExerciseMetrics.tsx`
-- `features/analytics/components/ExerciseProgressSkeleton.tsx`
-- `features/analytics/components/ExerciseSelector.tsx`
-- `features/analytics/components/ExerciseSetHistory.tsx`
-- `features/analytics/components/index.ts`
-- `features/analytics/components/OneRMCalculator.tsx`
-- `features/analytics/hooks/useOneRMExercises.ts`
-- `features/analytics/mappers/analyticsMappers.ts`
-- `features/analytics/pages/AnalyticsPage.tsx`
-- `features/auth/components/TelegramInitDataErrorBoundary.tsx`
-- `features/health/components/index.ts`
-- `features/home/types/homeWidgets.ts`
-- `features/workouts/active/components/GhostModeOverlay.tsx`
-- `features/workouts/active/components/GhostSetRow.tsx`
-- `features/workouts/active/components/index.smart.ts`
-- `features/workouts/active/components/OneTapSetButton.tsx`
-- `features/workouts/active/components/RpeInputControl.tsx`
-- `features/workouts/active/components/SessionNavigationPanel.tsx`
-- `features/workouts/active/components/SetCompletionFeedback.tsx`
-- `features/workouts/active/components/SmartRestTimer.tsx`
-- `features/workouts/active/components/WorkoutProgressBar.tsx`
-- `features/workouts/active/components/WorkoutSessionScreenHeader.tsx`
-- `features/workouts/active/containers/WorkoutActionsContainer.tsx`
-- `features/workouts/active/hooks/index.smart.ts`
-- `features/workouts/active/hooks/useGhostModeData.ts`
-- `features/workouts/active/hooks/useSmartRestCalculator.ts`
-- `features/workouts/active/hooks/useWorkoutStructureEditor.ts`
-- `features/workouts/active/hooks/useWorkoutTimer.ts`
-- `features/workouts/active/lib/calculateSmartRest.ts`
-- `features/workouts/active/modals/ExerciseStructureEditorModal.tsx`
-- `features/workouts/active-workout/index.ts`
-- `features/workouts/components/DeleteTemplateModal.tsx`
-- `features/workouts/components/RecentTemplatesSection.tsx`
-- `features/workouts/components/StartWorkoutSheet.tsx`
-- `features/workouts/components/TemplatePreviewModal.tsx`
-- `features/workouts/components/WeightRecommendation.tsx`
-- `features/workouts/components/WorkoutSummary.tsx`
-- `features/workouts/history/index.ts`
-- `features/workouts/hooks/useQuickStartWorkout.ts`
-- `features/workouts/hooks/useWorkoutHaptics.ts`
-- `features/workouts/pages/WorkoutDashboardPage.tsx`
-- `features/workouts/pages/WorkoutEditPage.tsx`
-- `features/workouts/pages/WorkoutProgressPage.tsx`
-- `features/workouts/stores/useWorkoutModeEditorStore.ts`
-- `features/workouts/templates/index.ts`
-- `features/workouts/workouts/index.ts`
-- `shared/api/domains/index.ts`
-- `shared/hooks/index.ts`
-- `shared/hooks/useTimer.ts`
-- `shared/offline/conflictResolution.ts`
-- `shared/ui/BottomSheetSelect.tsx`
-- `shared/ui/ThemeToggle.tsx`
-- `state/index.ts`
-- `state/queryHooks.ts`
-- `state/server.ts`
-- `stores/index.ts`
-- `stores/workoutSmartSettingsStore.ts`
+_None. All production modules are reachable from entry points._
 
 ## Unreachable test infrastructure (informational, not gated)
 
@@ -73,21 +17,15 @@ Total files: 566, reachable: 405, unreachable: 161 (prod: 57, test-infra: 104)
 - `features/analytics/components/exercise-progress/ExerciseMetrics.test.tsx`
 - `features/analytics/components/__tests__/LoadTables.test.tsx`
 - `features/analytics/components/__tests__/MuscleSignalsCard.test.tsx`
-- `features/analytics/components/__tests__/OneRMCalculator.test.tsx`
 - `features/analytics/hooks/__tests__/useLoadTables.test.tsx`
-- `features/analytics/hooks/__tests__/useOneRMExercises.test.ts`
-- `features/analytics/mappers/__tests__/analyticsMappers.test.ts`
 - `features/coach/api/coachApi.test.ts`
 - `features/coach/hooks/useCoachQueries.test.tsx`
-- `features/coach/pages/CoachBusinessPages.test.tsx`
 - `features/coach/pages/CoachPages.test.tsx`
-- `features/coach/pages/CoachProgramBuilderPage.test.tsx`
-- `features/coach/pages/CoachSubscriptionPage.test.tsx`
 - `features/emergency/components/__tests__/EmergencyButton.test.tsx`
 - `features/emergency/components/__tests__/EmergencyContactsSection.test.tsx`
 - `features/emergency/lib/__tests__/contactForm.test.ts`
 - `features/exercises/components/__tests__/ExerciseModerationSection.test.tsx`
-- `features/exercises/hooks/__tests__/useExerciseMutations.vitest.tsx`
+- `features/exercises/hooks/__tests__/useExerciseMutations.test.tsx`
 - `features/exercises/lib/mapApiExerciseToCatalog.test.ts`
 - `features/health/components/__tests__/BodyMeasurementsCard.test.tsx`
 - `features/health/lib/__tests__/bodyMeasurementSeries.test.ts`
@@ -120,9 +58,7 @@ Total files: 566, reachable: 405, unreachable: 161 (prod: 57, test-infra: 104)
 - `features/workouts/lib/__tests__/templateMappers.test.ts`
 - `features/workouts/lib/__tests__/workoutModeEditorMappers.test.ts`
 - `features/workouts/pages/__tests__/ProgressionTargetsPage.test.tsx`
-- `features/workouts/pages/__tests__/WorkoutModePage.smoke.test.tsx`
 - `features/workouts/pages/__tests__/WorkoutSummaryPage.accept.test.tsx`
-- `features/workouts/stores/__tests__/useWorkoutModeEditorStore.test.ts`
 - `features/workouts/workoutMode/hooks/__tests__/useWorkoutModeHandlers.test.tsx`
 - `features/workouts/__tests__/noPlaceholderTodos.test.ts`
 - `features/workouts/__tests__/workoutsRelativeRedirects.test.tsx`
@@ -137,13 +73,13 @@ Total files: 566, reachable: 405, unreachable: 161 (prod: 57, test-infra: 104)
 - `shared/errors/__tests__/normalizeError.test.ts`
 - `shared/hooks/__tests__/useBackendHealth.test.tsx`
 - `shared/hooks/__tests__/useSyncQueue.test.tsx`
+- `shared/lib/__tests__/chartTheme.test.ts`
 - `shared/lib/__tests__/saveBlobAsFile.test.ts`
 - `shared/lib/__tests__/telegramEnv.test.ts`
 - `shared/lib/__tests__/wipeLocalUserData.test.ts`
 - `shared/offline/syncQueue/__tests__/engine.offline.test.ts`
 - `shared/offline/syncQueue/__tests__/engine.test.ts`
 - `shared/offline/syncQueue/__tests__/executeWorkoutSyncOp.test.ts`
-- `shared/offline/__tests__/conflictResolution.test.ts`
 - `shared/offline/__tests__/offlineQueryPersist.idb.test.ts`
 - `shared/offline/__tests__/offlineQueue.test.ts`
 - `shared/offline/__tests__/workoutOfflineEnqueue.test.ts`
@@ -162,7 +98,6 @@ Total files: 566, reachable: 405, unreachable: 161 (prod: 57, test-infra: 104)
 - `__tests__/auth/routeGuard.test.tsx`
 - `__tests__/auth/TelegramAuthBootstrapGate.test.tsx`
 - `__tests__/components/Button.test.tsx`
-- `__tests__/hooks/useTimer.test.ts`
 - `__tests__/onboardingConsent.test.tsx`
 - `__tests__/shared/useWorkoutSessionDraftCloudSync.test.ts`
 - `__tests__/smoke/routing.smoke.test.tsx`

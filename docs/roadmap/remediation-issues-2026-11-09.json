@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-11-09",
+  "source_plan": "docs/roadmap/active-workout-theme-tokens-2026-11-09.md",
+  "context_report": "docs/roadmap/active-workout-theme-tokens-2026-11-09.md",
+  "note": "Labels are validated against labels that exist in the repository; unknown ones are dropped. Priority/estimate are duplicated in fields because the creating token has no label permissions.",
+  "issues": [
+    {
+      "id": "UI-1",
+      "priority": "P1",
+      "estimate": "M (3-5d)",
+      "depends_on": [],
+      "labels": [
+        "roadmap",
+        "P1",
+        "frontend",
+        "ux",
+        "estimate-M"
+      ],
+      "title": "P1 — Привести active-workout флоу к дизайн-токенам (light/dark)",
+      "body": "**Проблема.** В приложении две дизайн-системы. Home, аналитика, здоровье, профиль и коуч уже на токенах (`bg-telegram-bg`, `bg-telegram-secondary-bg`, `text-telegram-text`, `text-telegram-hint`, `bg-primary`, `border-border`) и следуют светлой/тёмной теме Telegram. Флоу активной тренировки и его пост-экраны используют собственную тёмную палитру с хардкод-hex (`bg-[#090D12]`, `text-[#F8FAFC]`, `text-[#8A94A6]`, `bg-[#101720]`, `bg-[#22C55E]`, `border-white/[0.08]`), поэтому в светлой теме переход в тренировку резко уводит всё в тёмное. Это завершающий шаг унификации 2026-11-09.\n\n**Затронутые файлы.** `features/workouts/active/components/ActiveWorkoutScreen.tsx` (ядро, ~1200 строк); `active/modals/AddExerciseModal.tsx` и остальные модалки; `active/components/*` (ProgressionRecommendationCard, ProgressionPrefillNotice, PreviousResultCard, ActiveExerciseList, ActiveExerciseNavigator, ActiveWorkoutSummarySection); `active/containers/*`; `pages/WorkoutSummaryPage.tsx`; `pages/ProgressionTargetsPage.tsx`; `workoutMode/*`.\n\n**Что сделать.**\n- Инвентаризация: `grep -rn \"#[0-9a-fA-F]\\\\{6\\\\}\"` + поиск `bg-black`, `bg-white/`, `text-white`, `border-white/`, `ring-white/`.\n- Замена по отображению: `#090D12`/`#0B1118`/`bg-black` → `bg-telegram-bg`; `#101720`/`#151C26`/`#0B1626` → `bg-telegram-secondary-bg`; `#F8FAFC`/`text-white` → `text-telegram-text`; `#8A94A6`/`#64748B` → `text-telegram-hint`; `#22C55E`/`#16A34A`/`#4ADE80` → `success`; `#2563EB`/`#1D4ED8`/`#60A5FA`/`#93C5FD`/`#38BDF8`/`#7DD3FC` → `primary`; `#FACC15`/`#FEF3C7` → `warning`; `#EF4444`/`#FCA5A5` → `danger`; `border-white/[0.08]` → `border-border`.\n- Сохранить структуру, крупную типографику и размеры тапов (≥44px); меняются только цвета/фоны/границы.\n- Сохранить все `data-testid` и логику (idempotency, offline-очередь, rest-timer).\n\n**Готово, когда.** В целевых файлах нет хардкод-hex и `bg-black`/`text-white`; экран активной тренировки, модалка добавления упражнения и сводка читаемы в светлой и тёмной темах; юнит-тесты зелёные.\n\n**Проверка.** `cd frontend && npm run typecheck && npm run lint && npm run test:ci`; grep по остаточному хардкоду (пусто по целевым файлам); ручная приёмка старт → подходы → отдых → завершение, добавление упражнения, сводка, цели прогрессии — в light и dark.\n\n**Риски.** `ActiveWorkoutScreen.tsx` большой и в критичном флоу — правки механические (цвет→токен), без рефакторинга структуры. Акценты `#22C55E`/`#FACC15` несут смысл — сохранить контраст при переходе на `success`/`warning`.\n\n**План:** `docs/roadmap/active-workout-theme-tokens-2026-11-09.md`.\n",
+      "github_issue": null
+    }
+  ]
+}
