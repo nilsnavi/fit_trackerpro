@@ -8,7 +8,7 @@
       "maxPerChunkBytes": 131072
     },
     "vendor": {
-      "maxTotalBytes": 235520,
+      "maxTotalBytes": 245760,
       "maxPerChunkBytes": 143360
     },
     "asyncRoute": {
@@ -53,7 +53,8 @@
     "dnd: @dnd-kit + sortable fragments; modal: lazy-loaded Active workout modals.",
     "asyncRoute excludes dnd/modal file name patterns so shared vendor chunks (e.g. sortable.esm) are not double-checked against page limits.",
     "entry raised 120 -> 124 KiB (2026-11-06): Coach dashboard additions (query keys, shell titles, shared coach types) grew the entry chunk to 122.85 KiB gzip; coach pages themselves stay async.",
-    "entry raised 124 -> 128 KiB (2026-11-11): frontend minor/patch dependency group grew the entry chunk to 124.40 KiB gzip; all other chunks remain within budget."
+    "entry raised 124 -> 128 KiB (2026-11-11): frontend minor/patch dependency group grew the entry chunk to 124.40 KiB gzip; all other chunks remain within budget.",
+    "vendor total raised 230 -> 240 KiB (2026-11-11): React 19 upgrade (react/react-dom 19 + react-dom/client kept in react-vendor) brought vendor total to 233.58 KiB gzip; per-chunk limits unchanged."
   ]
 }
 

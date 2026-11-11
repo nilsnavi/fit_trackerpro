@@ -201,7 +201,7 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     'telegram-sdk': ['@telegram-apps/sdk-react', '@telegram-apps/sdk'],
-                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+                    'react-vendor': ['react', 'react-dom', 'react-dom/client', 'scheduler', 'react-router-dom'],
                     'charts': ['recharts'],
                 },
             },
