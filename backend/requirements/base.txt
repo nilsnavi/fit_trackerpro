@@ -10,7 +10,7 @@ python-multipart==0.0.33
 gunicorn==26.2.0
 
 # Database
-sqlalchemy==2.1.8
+sqlalchemy[asyncio]==2.1.8
 alembic==1.20.1
 asyncpg==0.32.0
 psycopg[binary]==3.3.8
