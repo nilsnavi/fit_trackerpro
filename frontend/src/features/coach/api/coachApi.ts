@@ -60,7 +60,8 @@ export const coachApi = {
     getMonitoring: (filters: MonitoringFilters = {}) => {
         const params = new URLSearchParams()
         Object.entries(filters).forEach(([key, value]) => { if (value !== undefined && value !== '') params.set(key, String(value)) })
-        return api.get<ClientMonitoringPage>(`${root}/monitoring${params.size ? `?${params.toString()}` : ''}`)
+        const query = params.toString()
+        return api.get<ClientMonitoringPage>(`${root}/monitoring${query ? `?${query}` : ''}`)
     },
     getMonitoringClient: (clientId: number) => api.get<ClientMonitoring>(`${root}/monitoring/${clientId}`),
     updateClient: (clientId: number, payload: { status: CoachClient['status'] }) =>
@@ -129,7 +130,8 @@ export const coachApi = {
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== undefined && (typeof value !== 'string' || value !== '')) params.set(key, String(value))
         })
-        return api.get<CoachTask[]>(`${root}/tasks${params.size ? `?${params.toString()}` : ''}`)
+        const query = params.toString()
+        return api.get<CoachTask[]>(`${root}/tasks${query ? `?${query}` : ''}`)
     },
     createTask: (payload: CoachTaskInput) => api.post<CoachTask>(`${root}/tasks`, payload),
     updateTask: (taskId: number, payload: CoachTaskPatch) => api.patch<CoachTask>(`${root}/tasks/${taskId}`, payload),
