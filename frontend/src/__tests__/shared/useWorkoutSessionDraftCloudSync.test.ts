@@ -143,45 +143,76 @@ describe('useWorkoutSessionDraftCloudSync', () => {
         })
     })
 
-    it('removes the cloud key when there is no active session', async () => {
-        resetDraft({ workoutId: null, updatedAt: 0 })
-        cloud.getItem.mockResolvedValue(null)
+    it('removes the cloud key immediately on pagehide, before debounce elapses', async () => {
+        jest.useFakeTimers()
+        try {
+            resetDraft({ workoutId: null, updatedAt: 0 })
+            cloud.getItem.mockResolvedValue(null)
 
-        renderHook(() => useWorkoutSessionDraftCloudSync())
+            renderHook(() => useWorkoutSessionDraftCloudSync())
+            await act(async () => {
+                await Promise.resolve()
+                await Promise.resolve()
+            })
+            cloud.removeItem.mockClear()
 
-        act(() => {
-            store.setState({ title: 'changed' })
-        })
-        act(() => {
-            window.dispatchEvent(new Event('pagehide'))
-        })
+            act(() => {
+                store.setState({ title: 'changed' })
+            })
+            // Still inside the debounce window: nothing flushed yet.
+            expect(cloud.removeItem).not.toHaveBeenCalled()
 
-        await waitFor(() =>
-            expect(cloud.removeItem).toHaveBeenCalledWith(WORKOUT_SESSION_DRAFT_CLOUD_KEY),
-        )
+            act(() => {
+                window.dispatchEvent(new Event('pagehide'))
+            })
+            await act(async () => {
+                await Promise.resolve()
+                await Promise.resolve()
+            })
+
+            expect(cloud.removeItem).toHaveBeenCalledWith(WORKOUT_SESSION_DRAFT_CLOUD_KEY)
+        } finally {
+            jest.useRealTimers()
+        }
     })
 
-    it('flushes immediately on visibilitychange(hidden) without waiting for debounce', async () => {
-        const state = resetDraft({ updatedAt: 100 })
-        cloud.getItem.mockResolvedValue(
-            JSON.stringify({ workoutId: 1, title: 'Cloud', updatedAt: 200 }),
-        )
+    it('flushes immediately on visibilitychange(hidden), before debounce elapses', async () => {
+        jest.useFakeTimers()
+        try {
+            const state = resetDraft({ updatedAt: 100 })
+            cloud.getItem.mockResolvedValue(
+                JSON.stringify({ workoutId: 1, title: 'Cloud', updatedAt: 200 }),
+            )
 
-        renderHook(() => useWorkoutSessionDraftCloudSync())
-        await waitFor(() => expect(state.hydrateFromRemote).toHaveBeenCalled())
-
-        cloud.setItem.mockClear()
-        act(() => {
-            store.setState({ workoutId: 9, title: 'Live', updatedAt: 1000 })
-        })
-        act(() => {
-            Object.defineProperty(document, 'visibilityState', {
-                value: 'hidden',
-                configurable: true,
+            renderHook(() => useWorkoutSessionDraftCloudSync())
+            await act(async () => {
+                await Promise.resolve()
+                await Promise.resolve()
             })
-            document.dispatchEvent(new Event('visibilitychange'))
-        })
+            expect(state.hydrateFromRemote).toHaveBeenCalled()
+            cloud.setItem.mockClear()
 
-        await waitFor(() => expect(cloud.setItem).toHaveBeenCalled())
+            act(() => {
+                store.setState({ workoutId: 9, title: 'Live', updatedAt: 1000 })
+            })
+            // Debounce has not fired yet.
+            expect(cloud.setItem).not.toHaveBeenCalled()
+
+            act(() => {
+                Object.defineProperty(document, 'visibilityState', {
+                    value: 'hidden',
+                    configurable: true,
+                })
+                document.dispatchEvent(new Event('visibilitychange'))
+            })
+            await act(async () => {
+                await Promise.resolve()
+                await Promise.resolve()
+            })
+
+            expect(cloud.setItem).toHaveBeenCalledTimes(1)
+        } finally {
+            jest.useRealTimers()
+        }
     })
 })
