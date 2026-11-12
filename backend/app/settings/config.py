@@ -133,8 +133,11 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: Annotated[
         int,
         Field(
-            description="Recycle connections older than this many seconds (0 disables).",
-            ge=0,
+            description=(
+                "Recycle connections older than this many seconds. 0 or -1 disables "
+                "recycling (passed to SQLAlchemy as -1)."
+            ),
+            ge=-1,
         ),
     ] = 1800
     DB_POOL_PRE_PING: Annotated[

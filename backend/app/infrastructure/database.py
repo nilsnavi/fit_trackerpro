@@ -14,6 +14,15 @@ from app.domain.base import Base  # noqa: F401
 from app.settings import settings
 
 
+def _pool_recycle_seconds(value: int) -> int:
+    """SQLAlchemy disables connection recycling with ``-1``.
+
+    Our settings treat ``0`` (and ``-1``) as "off"; passing raw ``0`` would set
+    a zero connection lifetime and defeat pool reuse, so map it to ``-1``.
+    """
+    return value if value > 0 else -1
+
+
 def build_engine_kwargs(database_url: str) -> dict[str, Any]:
     """Engine options for ``create_async_engine``.
 
@@ -27,7 +36,7 @@ def build_engine_kwargs(database_url: str) -> dict[str, Any]:
             pool_size=settings.DB_POOL_SIZE,
             max_overflow=settings.DB_MAX_OVERFLOW,
             pool_timeout=settings.DB_POOL_TIMEOUT,
-            pool_recycle=settings.DB_POOL_RECYCLE,
+            pool_recycle=_pool_recycle_seconds(settings.DB_POOL_RECYCLE),
             pool_pre_ping=settings.DB_POOL_PRE_PING,
         )
     return kwargs

@@ -6,7 +6,7 @@ reject them).
 """
 import pytest
 
-from app.infrastructure.database import build_engine_kwargs
+from app.infrastructure.database import _pool_recycle_seconds, build_engine_kwargs
 from app.settings import Settings, settings
 
 
@@ -36,6 +36,14 @@ def test_sqlite_url_skips_pool_options():
     assert "max_overflow" not in kwargs
     assert "pool_pre_ping" not in kwargs
     assert kwargs == {"echo": False}
+
+
+@pytest.mark.unit
+def test_recycle_zero_and_negative_disable_recycling():
+    # SQLAlchemy disables recycling with -1; 0 would mean a zero lifetime.
+    assert _pool_recycle_seconds(0) == -1
+    assert _pool_recycle_seconds(-1) == -1
+    assert _pool_recycle_seconds(1800) == 1800
 
 
 @pytest.mark.unit
