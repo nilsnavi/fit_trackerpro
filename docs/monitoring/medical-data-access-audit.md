@@ -29,25 +29,30 @@
 Все события доступа конкретного пользователя за окно:
 
 ```logql
-{job="fittracker-backend"} | json | action="health.data_read" | user_db_id="123"
+{job="docker", audit_action="health.data_read"} | json | user_id="123"
 ```
 
 Кто читал глюкозу за период (подозрительная активность / чужой IP):
 
 ```logql
-{job="fittracker-backend"} | json
-  | action="health.data_read" | meta_resource="glucose"
-  | line_format "{{.timestamp}} uid={{.user_db_id}} ip={{.client_ip}}"
+{job="docker", audit_action="health.data_read", audit_resource="glucose"}
+  | json
+  | line_format "uid={{.user_id}} ip={{.client_ip}} tg={{.telegram_id}}"
 ```
 
 Всплеск доступа по IP (потенциальная утечка сессии):
 
 ```logql
-sum by (client_ip) (count_over_time({job="fittracker-backend"} | json | action="health.data_read" [15m]))
+sum by (client_ip) (
+  count_over_time({job="docker", audit_action="health.data_read"} | json | client_ip=~".+" [15m])
+)
 ```
 
-> Имена полей `json`-парсера зависят от `JsonFormatter`; при вложенном `meta`
-> используйте `meta_resource` (Loki flatten) или `| json meta` + `meta.resource`.
+> Фактические поля: `audit_action`, `audit_meta`, `user_id`, `telegram_id`,
+> `client_ip` (см. `JsonFormatter`). `audit_action` и `audit_resource`
+> (`audit_meta.resource`) выносятся в **Loki-метки** стадией `json`+`labels` в
+> `monitoring/promtail-config.yml`; остальные поля достаются через `| json`.
+> Для файловых логов (`/var/log/fittracker/*.log`) используйте `job="fittracker"`.
 
 ## Процедура
 

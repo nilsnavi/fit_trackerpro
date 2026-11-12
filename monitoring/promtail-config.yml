@@ -24,6 +24,18 @@ scrape_configs:
         labels:
           job: docker
           __path__: /var/lib/docker/containers/*/*.log
+    # Docker json-file driver wraps each line as {"log": "<app json>", ...}.
+    # Unwrap it, then expose low-cardinality audit fields as Loki labels so the
+    # medical-data-access investigation queries can filter on them.
+    pipeline_stages:
+      - docker: {}
+      - json:
+          expressions:
+            audit_action:
+            audit_resource: audit_meta.resource
+      - labels:
+          audit_action:
+          audit_resource:
 
   - job_name: fittracker
     static_configs:
