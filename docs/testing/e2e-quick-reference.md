@@ -204,16 +204,17 @@ npx playwright show-trace trace.zip
 ## 🔄 CI/CD Pipeline
 
 ```
-Push to branch
+Pull request / push
     ↓
-GitLab CI starts
+GitHub Actions (.github/workflows/test.yml)
     ↓
-e2e_frontend (all tests with @regression)
-e2e_frontend_workout_flows (@workout-flows only)
-e2e_frontend_regression (@regression only)
+E2E golden path (PR + main)              → npm run e2e:golden-path
+E2E MVP golden path (Playwright+compose) → e2e/mvp-golden-path.spec.ts
+E2E Workout Flows                        → @workout-flows
+E2E Full Regression / Playwright / mobile
     ↓
-Any failure? → Build FAILS (no allow_failure)
-All pass? → Build SUCCEEDS
+Any failure? → required check fails → merge blocked
+All pass? → merge allowed
     ↓
 Artifacts: playwright-report/ + test-results/
 ```

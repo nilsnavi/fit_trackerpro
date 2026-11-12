@@ -7,6 +7,7 @@
 - **Обзор проекта и быстрый старт**: `../README.md`, `../QUICKSTART.md`, `../LAUNCH_GUIDE.md`
 - **Telegram Mini App (auth, переменные, troubleshooting)**: `./product/telegram-setup.md`
 - **Offline/PWA (канон)**: `./offline-pwa.md`
+- **Известные ограничения (живой документ)**: `./KNOWN_LIMITATIONS.md`
 
 ## Architecture (Clean Architecture)
 

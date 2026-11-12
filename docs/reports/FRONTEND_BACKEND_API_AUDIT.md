@@ -1,7 +1,16 @@
 # Frontend-Backend API Audit Report
 
 **Date:** 2026-04-15
-**Status:** CRITICAL ISSUES FOUND
+**Status:** OUTDATED (historical snapshot)
+
+> **⚠️ OUTDATED.** This report predates the current backend. In particular, the
+> **water health-metrics API is implemented and covered by tests**
+> (`GET/POST /api/v1/health-metrics/water*`, see `backend/app/api/v1/health_metrics.py`
+> and `frontend/src/shared/api/domains/healthApi.ts`), so every "missing / 404"
+> claim below is historical only. Current contracts:
+> `docs/reports/frontend-audit-2026-09-24.md`,
+> `docs/reports/production-gap-analysis-2026-09-18.md`, and the generated
+> `frontend/src/shared/api/generated/openapi.json`.
 
 ---
 
