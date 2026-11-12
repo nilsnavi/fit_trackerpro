@@ -73,6 +73,25 @@ async def test_logout_without_body_revokes_all_sessions(client: AsyncClient):
 
 @pytest.mark.unit
 @pytest.mark.auth
+async def test_repeat_logout_with_token_does_not_revoke_other_sessions(client: AsyncClient):
+    access1, refresh1 = await _login(client, 930_000_006)
+    _access2, refresh2 = await _login(client, 930_000_006)  # second session, same user
+
+    # Logging out the first session twice must not escalate to logout-all.
+    for _ in range(2):
+        out = await client.post(
+            f"{_AUTH}/logout",
+            headers=_auth_header(access1),
+            json={"refresh_token": refresh1},
+        )
+        assert out.status_code == 200
+
+    kept = await client.post(f"{_AUTH}/refresh", json={"refresh_token": refresh2})
+    assert kept.status_code == 200, kept.text
+
+
+@pytest.mark.unit
+@pytest.mark.auth
 async def test_account_deletion_invalidates_refresh(client: AsyncClient):
     access, refresh = await _login(client, 930_000_004)
     deleted = await client.delete("/api/v1/users/me", headers=_auth_header(access))

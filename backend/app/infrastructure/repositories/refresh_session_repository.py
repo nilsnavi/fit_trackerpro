@@ -28,6 +28,30 @@ class RefreshSessionRepository(SQLAlchemyRepository):
             session.replaced_by_jti = replaced_by_jti
         await self.commit()
 
+    async def revoke_if_active(
+        self, jti: str, *, replaced_by_jti: str, now: datetime | None = None
+    ) -> bool:
+        """Atomically claim a session for rotation.
+
+        Returns ``True`` only when this caller revoked the still-active row; a
+        concurrent refresh that already rotated it gets ``False`` and must treat
+        the token as reused.
+        """
+        result = await self.db.execute(
+            update(RefreshSession)
+            .where(
+                RefreshSession.jti == jti,
+                RefreshSession.revoked_at.is_(None),
+            )
+            .values(
+                revoked_at=now or datetime.now(UTC),
+                replaced_by_jti=replaced_by_jti,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        await self.commit()
+        return (result.rowcount or 0) == 1
+
     async def revoke_family(
         self, user_id: int, family_id: str, *, now: datetime | None = None
     ) -> int:

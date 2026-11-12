@@ -336,13 +336,40 @@ class AuthService:
             await self.sessions.revoke(session)
             raise AuthenticationError("Invalid or expired refresh token")
 
-        # Rotation: issue a new token in the same family, revoke the used one.
-        new_token, new_jti = await self._issue_refresh_session(
-            user,
-            client_ip=client_ip,
+        # Rotation must be atomic: atomically claim the current row (revoke it)
+        # before issuing a successor, so two concurrent refreshes cannot both
+        # succeed and mint two valid tokens.
+        new_jti = uuid4().hex
+        claimed = await self.sessions.revoke_if_active(
+            jti, replaced_by_jti=new_jti, now=now
+        )
+        if not claimed:
+            await self.sessions.revoke_family(user.id, session.family_id)
+            audit_log(
+                action=AUTH_REFRESH,
+                user_db_id=user.id,
+                telegram_id=user.telegram_id,
+                client_ip=client_ip,
+                meta={"reused_refresh_token": True, "family_id": session.family_id},
+            )
+            raise AuthenticationError("Refresh token has been revoked")
+
+        new_token = create_refresh_token(
+            user.telegram_id,
+            user.token_generation,
+            jti=new_jti,
             family_id=session.family_id,
         )
-        await self.sessions.revoke(session, replaced_by_jti=new_jti)
+        await self.sessions.create(
+            RefreshSession(
+                user_id=user.id,
+                jti=new_jti,
+                token_hash=hashlib.sha256(new_token.encode("utf-8")).hexdigest(),
+                family_id=session.family_id,
+                expires_at=refresh_token_expires_at(),
+                ip=client_ip,
+            )
+        )
         await self.sessions.delete_expired(now=now)
 
         audit_log(
@@ -378,7 +405,7 @@ class AuthService:
                 ):
                     await self.sessions.revoke(session)
                     revoked = 1
-        if revoked == 0:
+        else:
             revoked = await self.sessions.revoke_all_for_user(current_user.id)
 
         audit_log(
