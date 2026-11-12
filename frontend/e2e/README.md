@@ -32,8 +32,9 @@ npm run e2e:mvp:headed
 
 ### CI Quality Gate
 
-The `e2e_mvp_golden_path` job in GitLab CI runs on every push and merge request.
-**This test MUST pass for any merge to main.**
+E2E runs in **GitHub Actions** (`.github/workflows/test.yml`), not GitLab. The
+`E2E MVP golden path (Playwright + compose)` and `E2E golden path (PR + main)`
+jobs run on every pull request; **golden path must pass before merge to `main`.**
 
 ## Test Structure
 
@@ -86,7 +87,7 @@ npx playwright test --grep @regression
 
 ## Running Tests in CI
 
-Tests run automatically on push/merge request via GitLab CI:
+Tests run automatically on pull requests and pushes via GitHub Actions (`.github/workflows/test.yml`):
 
 ```bash
 npm run e2e:ci                    # All E2E tests
@@ -94,12 +95,13 @@ npm run e2e:ci:workout-flows      # Workout-specific flows
 npm run e2e:ci:regression         # Regression suite
 ```
 
-CI jobs:
-- `e2e_frontend` - Full E2E suite (no retry)
-- `e2e_frontend_workout_flows` - Workout creation/editing
-- `e2e_frontend_regression` - Regression tests
+CI jobs (GitHub Actions):
+- `E2E golden path (PR + main)` — golden path (`npm run e2e:golden-path`)
+- `E2E MVP golden path (Playwright + compose)` — `e2e/mvp-golden-path.spec.ts`
+- `E2E Workout Flows` — workout creation/editing
+- `E2E Full Regression`, `E2E Playwright (default suite)`, `E2E mobile` — full suites
 
-**Build fails if any E2E test fails** (no `allow_failure` set).
+**A failing E2E job blocks merge** (required checks / failed status).
 
 ## Using Fixtures
 
@@ -352,17 +354,9 @@ Tests fail the build if:
 - Timeout (30s per test, 60s for critical path)
 - Browser crash or connection loss
 
-Test configuration:
-```yaml
-e2e_frontend:
-  stage: test
-  image: node:20-bookworm
-  script:
-    - npm ci
-    - npx playwright install --with-deps chromium
-    - npm run e2e:ci
-  # No allow_failure - build fails on test failure
-```
+Configuration lives in `.github/workflows/test.yml`: Node 20, `npm ci`,
+`npx playwright install --with-deps chromium`, then the relevant `npm run e2e:*`
+step. Failures block merge.
 
 ## Best Practices
 
@@ -392,13 +386,13 @@ e2e_frontend:
 
 ## Continuous Integration
 
-GitLab CI runs tests on:
-- Every push to `main` and branches
-- Every merge request
-- Scheduled daily at 2 AM
+GitHub Actions runs tests on:
+- Every pull request
+- Pushes to `main`
+- Scheduled runs (see `.github/workflows/`)
 
 Results available in:
-- Pipeline logs
+- GitHub Actions run logs
 - Artifact: `frontend/playwright-report/`
 - Artifact: `frontend/test-results/`
 

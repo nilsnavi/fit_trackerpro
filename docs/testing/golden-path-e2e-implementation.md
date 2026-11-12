@@ -1,5 +1,11 @@
 # E2E Golden Path Implementation Guide
 
+> **⚠️ CI section outdated (snapshot 2026-04-15).** The project uses **GitHub
+> Actions** (`.github/workflows/test.yml`); any GitLab references below are
+> historical. Real E2E jobs: `E2E golden path (PR + main)`,
+> `E2E MVP golden path (Playwright + compose)`, `E2E Workout Flows`,
+> `E2E Full Regression`, `E2E Playwright (default suite)`, `E2E mobile`.
+
 ## 📋 Overview
 
 Comprehensive E2E test infrastructure for FitTracker Pro has been implemented using Playwright. This covers the **golden path** (critical user flow) from app startup to completing a workout.
@@ -117,19 +123,20 @@ Enhanced configuration with:
 - **Tracing:** On-first-retry (for debugging)
 - **Artifacts:** Screenshots, videos on failure
 
-### 7. **CI Integration** (`.gitlab-ci.yml`)
+### 7. **CI Integration** (`.github/workflows/test.yml`)
 
-Three E2E jobs already in place (verified working):
+E2E jobs run in **GitHub Actions** (the project is not on GitLab):
 
 | Job | Command | Tags | Purpose |
 |-----|---------|------|---------|
-| `e2e_frontend` | `npm run e2e:ci` | All tests | Full E2E suite |
-| `e2e_frontend_workout_flows` | `npm run e2e:ci:workout-flows` | `@workout-flows` | Workout creation/editing |
-| `e2e_frontend_regression` | `npm run e2e:ci:regression` | `@regression` | Regression tests (incl. golden path) |
+| `E2E golden path (PR + main)` | `npm run e2e:golden-path` | `@golden-path` | Golden path (gating) |
+| `E2E MVP golden path (Playwright + compose)` | `npx playwright test e2e/mvp-golden-path.spec.ts` | — | MVP golden path |
+| `E2E Workout Flows` | `npm run e2e:ci:workout-flows` | `@workout-flows` | Workout creation/editing |
+| `E2E Full Regression` / `E2E Playwright (default suite)` / `E2E mobile` | `npm run e2e:ci…` | mixed | Full suites |
 
 **Behavior:**
-- ✅ **Build FAILS if any E2E test fails** (no `allow_failure` set)
-- ✅ Tests run on every push and merge request
+- ✅ A failing E2E job fails the required check and blocks merge
+- ✅ Runs on every pull request (and pushes to `main`)
 - ✅ Reports: HTML artifact + test results
 - ✅ Browser cache reused between runs
 
@@ -162,7 +169,7 @@ npm run e2e:headed
 
 Tests run automatically:
 ```bash
-# All E2E tests (from .gitlab-ci.yml)
+# All E2E tests (from .github/workflows/test.yml)
 npm run e2e:ci
 
 # Specific suite
@@ -304,7 +311,7 @@ if (method === 'POST' && path.includes('/start')) {
 
 **Solution:** Keep workers=2 in CI (sequential workout tests)
 ```yaml
-# .gitlab-ci.yml
+# .github/workflows/test.yml
 workers: 2  # Force sequential for workout tests
 ```
 
@@ -372,8 +379,8 @@ console.log(startRequest.template_id, startRequest.type)
 | Setup Playwright tests | ✅ | Config optimized, all helpers ready |
 | Add fixtures for auth | ✅ | Multiple fixtures for different auth scenarios |
 | Mock Telegram WebApp | ✅ | Full WebApp API stub + helpers |
-| Run tests in CI | ✅ | 3 jobs in .gitlab-ci.yml, no allow_failure |
-| Fail build if E2E fails | ✅ | No allow_failure set, build breaks on test failure |
+| Run tests in CI | ✅ | E2E jobs in .github/workflows/test.yml (required checks) |
+| Fail build if E2E fails | ✅ | Required checks block merge on failure |
 | Stable tests | ✅ | Uses .poll(), semantic selectors, proper waits |
 | Fast execution | ✅ | ~10-15s per test, ~60-90s full suite with retries |
 
@@ -381,7 +388,7 @@ console.log(startRequest.template_id, startRequest.type)
 
 1. **Run locally once:** `npm run e2e` to verify everything works
 2. **Commit changes:** Git add/commit all new files
-3. **Push to CI:** GitLab will run full E2E suite
+3. **Push to CI:** GitHub Actions will run the full E2E suite
 4. **Monitor reports:** Check `playwright-report/` artifact for any failures
 5. **Iterate:** Add more tests as features develop
 
