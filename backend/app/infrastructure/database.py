@@ -1,6 +1,10 @@
 """
 Async SQLAlchemy engine and session factory (persistence wiring).
 """
+from __future__ import annotations
+
+from typing import Any
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -9,7 +13,29 @@ import app.domain.registry  # noqa: F401 — attach all ORM models to Base.metad
 from app.domain.base import Base  # noqa: F401
 from app.settings import settings
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+
+def build_engine_kwargs(database_url: str) -> dict[str, Any]:
+    """Engine options for ``create_async_engine``.
+
+    Connection-pool sizing applies to PostgreSQL only. SQLite (dev/tests) uses
+    its own pool classes that reject ``pool_size``/``max_overflow``, so those
+    options are intentionally skipped there.
+    """
+    kwargs: dict[str, Any] = {"echo": False}
+    if database_url.startswith(("postgresql://", "postgresql+")):
+        kwargs.update(
+            pool_size=settings.DB_POOL_SIZE,
+            max_overflow=settings.DB_MAX_OVERFLOW,
+            pool_timeout=settings.DB_POOL_TIMEOUT,
+            pool_recycle=settings.DB_POOL_RECYCLE,
+            pool_pre_ping=settings.DB_POOL_PRE_PING,
+        )
+    return kwargs
+
+
+engine = create_async_engine(
+    settings.DATABASE_URL, **build_engine_kwargs(settings.DATABASE_URL)
+)
 
 AsyncSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
