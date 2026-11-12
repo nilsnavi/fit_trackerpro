@@ -386,6 +386,17 @@ class TokenPayload(BaseModel):
     )
 
 
+class LogoutRequest(BaseModel):
+    """Optional refresh token to revoke a single session; omit to revoke all."""
+
+    refresh_token: Optional[str] = Field(
+        default=None,
+        min_length=32,
+        max_length=16384,
+        description="Refresh token to revoke. Omit to revoke every session of the user.",
+    )
+
+
 class RefreshTokenRequest(BaseModel):
     """Request model for token refresh"""
     refresh_token: str = Field(

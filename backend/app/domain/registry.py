@@ -45,6 +45,7 @@ from app.domain.reference_data import (  # noqa: F401
     RefExerciseStatus,
     RefMuscleGroup,
 )
+from app.domain.refresh_session import RefreshSession  # noqa: F401
 from app.domain.template_exercise import TemplateExercise  # noqa: F401
 from app.domain.training_load_daily import TrainingLoadDaily  # noqa: F401
 from app.domain.user import User  # noqa: F401

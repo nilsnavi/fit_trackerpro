@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +18,19 @@ from app.core.audit import (
     audit_log,
 )
 from app.core.legal import HEALTH_DATA_CONSENT_VERSION
-from app.core.security import create_access_token, create_refresh_token, verify_token
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    refresh_token_expires_at,
+)
 from app.domain.exceptions import AuthenticationError, ConsentRequiredError
+from app.domain.refresh_session import RefreshSession
 from app.domain.user import User
 from app.infrastructure.repositories.auth_repository import AuthRepository
+from app.infrastructure.repositories.refresh_session_repository import (
+    RefreshSessionRepository,
+)
 from app.infrastructure.telegram_auth import validate_and_get_user
 from app.schemas.auth import (
     AuthResponse,
@@ -42,14 +53,47 @@ from app.settings import settings
 class AuthService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = AuthRepository(db)
+        self.sessions = RefreshSessionRepository(db)
 
     @staticmethod
     def get_profile(user: User) -> UserProfileResponse:
         return user_profile_from_db(user)
 
+    async def _issue_refresh_session(
+        self,
+        user: User,
+        *,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
+        family_id: str | None = None,
+    ) -> tuple[str, str]:
+        """Issue a rotating refresh token and persist its hashed session row."""
+        jti = uuid4().hex
+        family = family_id or uuid4().hex
+        token = create_refresh_token(
+            user.telegram_id,
+            user.token_generation,
+            jti=jti,
+            family_id=family,
+        )
+        await self.sessions.create(
+            RefreshSession(
+                user_id=user.id,
+                jti=jti,
+                token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
+                family_id=family,
+                expires_at=refresh_token_expires_at(),
+                user_agent=user_agent,
+                ip=client_ip,
+            )
+        )
+        return token, jti
+
     async def delete_account(self, user: User, client_ip: str | None = None) -> None:
         uid = user.id
         tg = user.telegram_id
+        # Revoke every refresh session (FK cascade also removes rows on delete).
+        await self.sessions.revoke_all_for_user(uid)
         await self.repository.delete_user(user)
         audit_log(
             action=AUTH_ACCOUNT_DELETE,
@@ -126,7 +170,7 @@ class AuthService:
 
         user, created = await self._get_or_create_user(user_data)
         access_token = create_access_token(user.telegram_id)
-        refresh_token = create_refresh_token(user.telegram_id, user.token_generation)
+        refresh_token, _ = await self._issue_refresh_session(user, client_ip=client_ip)
         onboarding_required = bool(created or not (user.profile or {}).get("onboarding_completed", False))
 
         audit_log(
@@ -241,20 +285,65 @@ class AuthService:
         refresh_request: RefreshTokenRequest,
         client_ip: str | None = None,
     ) -> RefreshTokenResponse:
-        verified = verify_token(
-            refresh_request.refresh_token,
-            token_type="refresh",
-            include_generation=True,
-        )
-        if not isinstance(verified, tuple):
+        payload = decode_refresh_token(refresh_request.refresh_token)
+        if not payload:
             raise AuthenticationError("Invalid or expired refresh token")
-        user_id, generation = verified
-        if generation is None:
+
+        try:
+            user_id = int(payload.get("sub"))
+        except (TypeError, ValueError):
+            raise AuthenticationError("Invalid or expired refresh token") from None
+
+        jti = payload.get("jti")
+        family_id = payload.get("family_id")
+        generation = payload.get("generation")
+        if not isinstance(jti, str) or not isinstance(family_id, str) or generation is None:
             raise AuthenticationError("Invalid or expired refresh token")
 
         user = await self.repository.get_user_by_telegram_id(telegram_id=user_id)
         if user is None or generation != str(user.token_generation):
             raise AuthenticationError("Invalid or expired refresh token")
+
+        session = await self.sessions.get_by_jti(jti)
+        if session is None:
+            raise AuthenticationError("Invalid or expired refresh token")
+
+        token_hash = hashlib.sha256(
+            refresh_request.refresh_token.encode("utf-8")
+        ).hexdigest()
+        if session.user_id != user.id or session.token_hash != token_hash:
+            # Tampered or already-rotated token: burn the whole family.
+            await self.sessions.revoke_family(user.id, session.family_id)
+            raise AuthenticationError("Invalid or expired refresh token")
+
+        now = datetime.now(timezone.utc)
+        if session.revoked_at is not None:
+            # Reuse of a burned token — likely token theft: revoke the family.
+            await self.sessions.revoke_family(user.id, session.family_id)
+            audit_log(
+                action=AUTH_REFRESH,
+                user_db_id=user.id,
+                telegram_id=user.telegram_id,
+                client_ip=client_ip,
+                meta={"reused_refresh_token": True, "family_id": session.family_id},
+            )
+            raise AuthenticationError("Refresh token has been revoked")
+
+        expires_at = session.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= now:
+            await self.sessions.revoke(session)
+            raise AuthenticationError("Invalid or expired refresh token")
+
+        # Rotation: issue a new token in the same family, revoke the used one.
+        new_token, new_jti = await self._issue_refresh_session(
+            user,
+            client_ip=client_ip,
+            family_id=session.family_id,
+        )
+        await self.sessions.revoke(session, replaced_by_jti=new_jti)
+        await self.sessions.delete_expired(now=now)
 
         audit_log(
             action=AUTH_REFRESH,
@@ -264,17 +353,39 @@ class AuthService:
         )
         return RefreshTokenResponse(
             access_token=create_access_token(user.telegram_id),
-            refresh_token=create_refresh_token(user.telegram_id, user.token_generation),
+            refresh_token=new_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
-    @staticmethod
-    def logout(current_user: User, client_ip: str | None = None) -> LogoutResponse:
+    async def logout(
+        self,
+        current_user: User,
+        client_ip: str | None = None,
+        refresh_token: str | None = None,
+    ) -> LogoutResponse:
+        """Revoke the supplied refresh session, or every session when omitted."""
+        revoked = 0
+        if refresh_token:
+            payload = decode_refresh_token(refresh_token)
+            jti = payload.get("jti") if payload else None
+            if isinstance(jti, str):
+                session = await self.sessions.get_by_jti(jti)
+                if (
+                    session is not None
+                    and session.user_id == current_user.id
+                    and session.revoked_at is None
+                ):
+                    await self.sessions.revoke(session)
+                    revoked = 1
+        if revoked == 0:
+            revoked = await self.sessions.revoke_all_for_user(current_user.id)
+
         audit_log(
             action=AUTH_LOGOUT,
             user_db_id=current_user.id,
             telegram_id=current_user.telegram_id,
             client_ip=client_ip,
+            meta={"revoked_sessions": revoked},
         )
         return LogoutResponse()
