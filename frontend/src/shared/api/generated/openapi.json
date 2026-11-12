@@ -7946,6 +7946,27 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "LogoutRequest": {
+        "description": "Optional refresh token to revoke a single session; omit to revoke all.",
+        "properties": {
+          "refresh_token": {
+            "anyOf": [
+              {
+                "maxLength": 16384,
+                "minLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Refresh token to revoke. Omit to revoke every session of the user.",
+            "title": "Refresh Token"
+          }
+        },
+        "title": "LogoutRequest",
+        "type": "object"
+      },
       "LogoutResponse": {
         "description": "Logout response",
         "properties": {
@@ -23534,6 +23555,23 @@
     "/api/v1/users/auth/logout": {
       "post": {
         "operationId": "logout_api_v1_users_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LogoutRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -23544,6 +23582,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

@@ -5994,6 +5994,17 @@ export type components = {
             timestamp: string;
         };
         /**
+         * LogoutRequest
+         * @description Optional refresh token to revoke a single session; omit to revoke all.
+         */
+        LogoutRequest: {
+            /**
+             * Refresh Token
+             * @description Refresh token to revoke. Omit to revoke every session of the user.
+             */
+            refresh_token?: string | null;
+        };
+        /**
          * LogoutResponse
          * @description Logout response
          */
@@ -13894,7 +13905,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -13903,6 +13918,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LogoutResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

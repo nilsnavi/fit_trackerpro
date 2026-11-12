@@ -35,9 +35,22 @@ def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None)
     )
 
 
-def create_refresh_token(user_id: int, generation: str | UUID | None = None) -> str:
+REFRESH_TOKEN_TTL = timedelta(days=7)
+
+
+def refresh_token_expires_at(now: datetime | None = None) -> datetime:
+    return (now or datetime.now(timezone.utc)) + REFRESH_TOKEN_TTL
+
+
+def create_refresh_token(
+    user_id: int,
+    generation: str | UUID | None = None,
+    *,
+    jti: str | None = None,
+    family_id: str | None = None,
+) -> str:
     now = datetime.now(timezone.utc)
-    expire = now + timedelta(days=7)
+    expire = refresh_token_expires_at(now)
 
     to_encode = {
         "sub": str(user_id),
@@ -47,6 +60,10 @@ def create_refresh_token(user_id: int, generation: str | UUID | None = None) -> 
     }
     if generation is not None:
         to_encode["generation"] = str(generation)
+    if jti is not None:
+        to_encode["jti"] = jti
+    if family_id is not None:
+        to_encode["family_id"] = family_id
 
     return jwt.encode(
         to_encode,
@@ -82,6 +99,21 @@ def verify_token(
 
     except (JWTError, ValueError, TypeError):
         return None
+
+
+def decode_refresh_token(token: str) -> dict | None:
+    """Return refresh-token claims (sub/jti/family_id/generation/exp) or ``None``."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+    except (JWTError, ValueError, TypeError):
+        return None
+    if payload.get("type") != "refresh":
+        return None
+    return payload
 
 
 class JWTBearer(HTTPBearer):

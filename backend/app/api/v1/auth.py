@@ -16,6 +16,7 @@ from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.auth import (
     AuthResponse,
+    LogoutRequest,
     LogoutResponse,
     OnboardingRequest,
     OnboardingResponse,
@@ -107,8 +108,17 @@ async def update_user_profile(
 
 
 @protected_auth_router.post("/logout", response_model=LogoutResponse)
-async def logout(request: Request, current_user: User = Depends(get_current_user)):
-    return AuthService.logout(current_user=current_user, client_ip=get_client_ip(request))
+async def logout(
+    request: Request,
+    payload: LogoutRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await AuthService(db).logout(
+        current_user=current_user,
+        client_ip=get_client_ip(request),
+        refresh_token=payload.refresh_token if payload else None,
+    )
 
 
 @protected_auth_router.post("/onboarding", response_model=OnboardingResponse)
