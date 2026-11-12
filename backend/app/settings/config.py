@@ -108,6 +108,44 @@ class Settings(BaseSettings):
             description="Optional DB password (used by docker-compose/env templates).",
         ),
     ] = None
+    # --- Connection pool (PostgreSQL only; ignored for SQLite dev/test) ---
+    DB_POOL_SIZE: Annotated[
+        int,
+        Field(
+            description="Persistent pooled connections. PostgreSQL only.",
+            ge=1,
+        ),
+    ] = 5
+    DB_MAX_OVERFLOW: Annotated[
+        int,
+        Field(
+            description="Extra connections allowed beyond DB_POOL_SIZE. PostgreSQL only.",
+            ge=0,
+        ),
+    ] = 10
+    DB_POOL_TIMEOUT: Annotated[
+        int,
+        Field(
+            description="Seconds to wait for a free pooled connection before erroring.",
+            ge=1,
+        ),
+    ] = 30
+    DB_POOL_RECYCLE: Annotated[
+        int,
+        Field(
+            description=(
+                "Recycle connections older than this many seconds. 0 or -1 disables "
+                "recycling (passed to SQLAlchemy as -1)."
+            ),
+            ge=-1,
+        ),
+    ] = 1800
+    DB_POOL_PRE_PING: Annotated[
+        bool,
+        Field(
+            description="Test connections before use (detects stale/dropped connections).",
+        ),
+    ] = True
     ALEMBIC_INI_PATH: Annotated[
         str | None,
         Field(
