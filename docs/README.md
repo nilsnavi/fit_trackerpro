@@ -28,6 +28,7 @@
 - **Environment variables / setup**: `./ENVIRONMENT_SETUP.md`, `./env-matrix.md`
 - **Rollback**: `./ROLLBACK_STRATEGY.md`, `./ROLLBACK_ONCALL_CHEATSHEET.md`
 - **Security (канон)**: `./security.md` (дополнительно: `./security/checklist.md`)
+- **Аудит доступа к медданным + алерты/расследование**: `./monitoring/medical-data-access-audit.md`
 
 ## Testing
 

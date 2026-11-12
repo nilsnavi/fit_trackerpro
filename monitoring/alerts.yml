@@ -45,3 +45,35 @@ groups:
           summary: "Readiness /api/v1/system/ready is not OK"
           description: >-
             Blackbox probe к {{ $labels.instance }}: не HTTP 200 (degraded БД/Redis/migrations или сервис недоступен).
+
+      - alert: HighAuthRejectionSpike
+        expr: |
+          (
+            sum(rate(http_requests_total{job="fittracker-backend",handler=~"/api/v1/users/auth/.*",status="4xx"}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="fittracker-backend",handler=~"/api/v1/users/auth/.*"}[5m])), 1e-9)
+          ) > 0.2
+          and
+          sum(rate(http_requests_total{job="fittracker-backend",handler=~"/api/v1/users/auth/.*"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike of 4xx (401/403) on auth endpoints"
+          description: >-
+            Более 20% запросов к /api/v1/users/auth/* завершаются 4xx за 5 минут.
+            Проверьте логи app.audit (auth.telegram_login / auth.refresh) и валидацию initData.
+
+      - alert: EmergencyDeliveryFailures
+        expr: increase(emergency_delivery_failures_total{job="fittracker-backend"}[10m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Emergency notifications are failing to deliver"
+          description: >-
+            Неудачные доставки экстренных уведомлений (reason={{ $labels.reason }}) за 10 минут.
+            Проверьте привязку контактов (telegram_chat_id) и доступность Telegram-бота.
+
+      # NOTE: alert по доле ошибок offline-очереди (workoutSyncTelemetry) требует
+      # серверного приёмника телеметрии (событие сейчас эмитится только на клиенте).
+      # Пока приёмника нет — индикатор доступен только через фронтовые логи/баг-репорты.

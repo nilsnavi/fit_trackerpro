@@ -11,6 +11,7 @@ from app.application.workout_contact_notifier import (
     workout_finished_message,
     workout_started_message,
 )
+from app.core.telemetry.emergency_metrics import record_emergency_delivery_failure
 from app.domain.emergency_contact import EmergencyContact
 from app.domain.exceptions import EmergencyNotFoundError, EmergencyValidationError
 from app.domain.user import User
@@ -241,6 +242,7 @@ class EmergencyService:
     ) -> NotificationResult:
         """Send one message and report exactly what happened."""
         if contact.telegram_chat_id is None:
+            record_emergency_delivery_failure("unlinked")
             return NotificationResult(
                 contact_id=contact.id,
                 contact_name=contact.contact_name,
@@ -257,6 +259,7 @@ class EmergencyService:
                 contact.telegram_chat_id,
                 exc,
             )
+            record_emergency_delivery_failure("delivery_error")
             return NotificationResult(
                 contact_id=contact.id,
                 contact_name=contact.contact_name,
@@ -266,6 +269,7 @@ class EmergencyService:
             )
         except Exception as exc:  # defensive: a sender bug must not fake success
             logger.exception("Unexpected error sending to contact %s", contact.id)
+            record_emergency_delivery_failure("delivery_error")
             return NotificationResult(
                 contact_id=contact.id,
                 contact_name=contact.contact_name,
