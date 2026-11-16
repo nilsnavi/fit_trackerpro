@@ -4,7 +4,7 @@
 # every /api/v1/* request); 8.x is built for the new routing and requires
 # starlette>=1.0, which fastapi 0.141.x accepts.
 prometheus-fastapi-instrumentator==8.1.0
-fastapi==0.162.2
+fastapi==0.162.5
 uvicorn[standard]==0.54.0
 python-multipart==0.0.33
 gunicorn==26.2.0
@@ -13,7 +13,7 @@ gunicorn==26.2.0
 sqlalchemy[asyncio]==2.1.8
 alembic==1.20.1
 asyncpg==0.32.0
-psycopg[binary]==3.3.8
+psycopg[binary]==3.3.9
 
 # Pydantic and Validation
 pydantic==2.14.3
@@ -41,4 +41,4 @@ slowapi==0.1.10
 
 # Logging and Monitoring
 structlog==26.1.0
-sentry-sdk==2.74.0
+sentry-sdk==2.75.0
