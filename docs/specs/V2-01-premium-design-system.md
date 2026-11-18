@@ -38,3 +38,10 @@
 - `public/fittracker-mark.svg`: брендовый векторный знак FitTracker. Публикуется как исходный SVG, не является доказательством установки PWA на устройства.
 - Иконки используют `currentColor` + `--ftp-accent`, без внешних CDN; декоративные SVG помечены `aria-hidden`. Ссылки и действия должны иметь видимые текстовые подписи.
 - PWA installability пока не подтверждена: для iOS/Android дополнительно потребуются PNG 192/512 и маска после проверки.
+
+### PWA-brand assets
+
+- PNG 192×192, 512×512, maskable 512×512, Apple Touch 180×180 are deterministically generated from brand source SVG via `scripts/generate_pwa_icons.py` with CairoSVG 2.7.1.
+- Manifest lists the assets with proper `sizes`, `type` and `purpose`; HTML sets `apple-touch-icon`.
+- CI regenerates all PNGs and verifies PNG headers, dimensions and minimum file size before Vite build.
+- Browser/device installation and safe-area appearance must be checked visually before acceptance; passing CI alone is not sufficient.

@@ -29,5 +29,22 @@ jobs:
         run: npm run lint
       - name: Smoke unit tests
         run: npm run test
+      - name: Generate brand PNG icons
+        run: |
+          python3 -m pip install --disable-pip-version-check 'cairosvg==2.7.1'
+          python3 scripts/generate_pwa_icons.py
+          npm run icons:verify
       - name: Build
         run: npm run build
+      - name: Verify published icons
+        run: |
+          test -s dist/icons/icon-192.png
+          test -s dist/icons/icon-512.png
+          test -s dist/icons/maskable-512.png
+          test -s dist/icons/apple-touch-icon.png
+      - name: Upload PWA preview build
+        uses: actions/upload-artifact@v4
+        with:
+          name: pwa-v2-preview
+          path: apps/pwa-v2/dist
+          retention-days: 7
