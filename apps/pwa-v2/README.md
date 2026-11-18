@@ -21,10 +21,9 @@ The original `frontend/`, FastAPI and database are untouched. Do not deploy V2-0
 
 ## Follow-up gates
 
-1. Commit a reproducible package-lock and switch CI to npm ci.
-2. Implement Vitest unit tests and Playwright responsive smoke tests.
-3. Add proper PWA icons and verify installation and offline shell.
-4. Implement V2-01 design system from approved reference, then V2-02 web/TG authentication + API client.
-5. Extract existing workout state machine only after integration and regression tests.
+1. Reproducible `package-lock.json` and CI `npm ci`: done. Two Vitest route smoke tests added.
+2. Add Playwright responsive E2E tests, proper PWA icons, and verify installability and offline shell.
+3. Implement V2-01 design system from approved reference, then V2-02 web/TG authentication + API client.
+4. Extract existing workout state machine only after integration and regression tests.
 
 No runtime imports from `frontend/src`.
