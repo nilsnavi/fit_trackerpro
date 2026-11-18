@@ -1,3 +1,6 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { EmailCodeForm } from '@features/auth/components/EmailCodeForm'
+import { queryKeys } from '@shared/api/queryKeys'
 /**
  * Profile Page - Экран профиля FitTracker Pro
  * 
@@ -398,6 +401,7 @@ const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
 
 export const ProfilePage: React.FC = () => {
     const { user } = useTelegramWebApp();
+    const queryClient = useQueryClient();
     const { userStats } = useAchievements();
     const {
         profile,
@@ -487,9 +491,9 @@ export const ProfilePage: React.FC = () => {
                 </div>
                 <div className="flex-1">
                     <h1 className="text-xl font-bold text-telegram-text">
-                        {user?.first_name} {user?.last_name}
+                        {user?.first_name || profile?.first_name || profile?.email || 'Профиль'} {user?.last_name}
                     </h1>
-                    <p className="text-telegram-hint">@{user?.username || 'username'}</p>
+                    {user?.username && <p className="text-telegram-hint">@{user.username}</p>}
                 </div>
             </div>
 
@@ -776,6 +780,23 @@ export const ProfilePage: React.FC = () => {
 
             {tab === 'settings' && (
                 <>
+            {profile && (
+                <section className="rounded-2xl bg-telegram-secondary-bg p-4">
+                    <h3 className="text-sm font-semibold text-telegram-text">Вход по email</h3>
+                    {profile.email ? (
+                        <p className="mt-2 break-all text-sm text-telegram-hint">{profile.email}</p>
+                    ) : (
+                        <>
+                            <p className="mt-2 text-sm text-telegram-hint">
+                                Подтвердите адрес, чтобы входить в этот аккаунт из браузера.
+                            </p>
+                            <EmailCodeForm
+                                onLinked={() => void queryClient.invalidateQueries({ queryKey: queryKeys.profile.me })}
+                            />
+                        </>
+                    )}
+                </section>
+            )}
             {/* Coach entry point: visibility is based on a server response, never a local role flag. */}
             <section className="rounded-2xl bg-telegram-secondary-bg p-4">
                 <h3 className="text-sm font-semibold text-telegram-text">FitTracker Coach</h3>

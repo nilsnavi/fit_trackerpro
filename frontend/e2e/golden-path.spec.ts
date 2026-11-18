@@ -512,38 +512,11 @@ test.describe('golden path: complete user workout flow @regression @golden-path'
         expect(state.completeRequests.length).toBeGreaterThan(0)
     })
 
-    test('handles telegram auth gracefully', async ({ page }) => {
-        // Verify fallback screen when Telegram context is missing. Depending on the
-        // environment the app degrades to the Telegram gate, the backend health
-        // (maintenance) gate, or the authenticated shell.
-        await page.goto('/')
+    test('protects the workout view while the browser user signs in', async ({ page }) => {
+        await mockWorkoutApi(page, buildWorkoutState())
+        await page.goto('/login?from=%2Fworkouts')
 
-        const fallbackMsg = page.getByRole('heading', { name: /Открой в Telegram|Откройте Mini App в Telegram/i })
-        const maintenanceMsg = page.getByRole('heading', { name: /Техническое обслуживание/i })
-        const navigation = page.getByRole('navigation', { name: 'Основная навигация' })
-
-        await expect
-            .poll(
-                async () =>
-                    (await fallbackMsg.count()) +
-                    (await maintenanceMsg.count()) +
-                    (await navigation.count()),
-                { timeout: 15_000 },
-            )
-            .toBeGreaterThan(0)
-
-        if ((await fallbackMsg.count()) > 0) {
-            // Telegram gate: it either links to the bot or just explains where to open the app.
-            await expect(fallbackMsg).toBeVisible()
-            await expect(
-                page.getByText(/Мини-приложение доступно через бота|Запустите мини-приложение из Telegram/),
-            ).toBeVisible()
-        } else if ((await maintenanceMsg.count()) > 0) {
-            // Backend unavailable: the health gate takes over instead
-            await expect(maintenanceMsg).toBeVisible()
-        } else {
-            // If not in fallback, should have navigation
-            await expect(navigation).toBeVisible()
-        }
+        await expect(page.getByRole('heading', { name: 'Войти в FitTracker Pro' })).toBeVisible()
+        await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
     })
 })

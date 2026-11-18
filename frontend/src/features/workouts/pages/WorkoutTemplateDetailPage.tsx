@@ -250,7 +250,7 @@ export function WorkoutTemplateDetailPage() {
                 )}
             </section>
 
-            <div className="fixed bottom-[max(16px,env(safe-area-inset-bottom))] left-0 right-0 px-4">
+            <div className="app-shell-dock app-shell-dock-above-navigation fixed bottom-[max(16px,env(safe-area-inset-bottom))] left-0 right-0 px-4">
                 <div className="grid grid-cols-2 gap-2">
                     <Button
                         variant="secondary"

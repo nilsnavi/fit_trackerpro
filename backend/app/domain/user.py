@@ -45,13 +45,14 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    telegram_id: Mapped[int] = mapped_column(
+    telegram_id: Mapped[int | None] = mapped_column(
         BigInteger,
         unique=True,
-        nullable=False,
+        nullable=True,
         index=True,
         comment="Telegram user ID"
     )
+    email: Mapped[str | None] = mapped_column(String(254), unique=True)
     token_generation: Mapped[str] = mapped_column(
         Uuid(as_uuid=False),
         nullable=False,

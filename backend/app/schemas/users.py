@@ -34,7 +34,7 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    telegram_id: int
+    telegram_id: int | None
     username: Optional[str]
     first_name: Optional[str]
     last_name: Optional[str]

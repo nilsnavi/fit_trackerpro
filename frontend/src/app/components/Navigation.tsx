@@ -1,5 +1,5 @@
-import { NavLink, useLocation } from 'react-router-dom'
-import { Home, User, LayoutGrid, Dumbbell, BarChart3 } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Activity, Home, User, LayoutGrid, Dumbbell, BarChart3 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { useTelegramWebApp } from '@shared/hooks/useTelegramWebApp'
 import { useWorkoutSessionDraftStore } from '@/state/local'
@@ -34,22 +34,27 @@ export function Navigation() {
     return (
         <nav
             className={cn(
-                'fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-telegram-bg transition-colors duration-200',
+                'app-shell-nav fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-telegram-bg transition-colors duration-200',
                 'safe-area-x safe-area-bottom',
                 tg.isTelegram && 'shadow-[0_-4px_24px_rgba(0,0,0,0.16)]',
             )}
             aria-label="Основная навигация"
         >
-            <div className="flex h-[var(--app-shell-nav-h)] items-center justify-around">
+            <div className="app-shell-nav-brand" aria-hidden="true">
+                <span><Activity size={22} strokeWidth={2.8} /></span>
+                FitTracker Pro
+            </div>
+            <div className="app-shell-nav-items flex h-[var(--app-shell-nav-h)] items-center justify-around">
                 {navItems.map(({ path, icon: Icon, label }) => {
                     const isActive = isNavRouteActive(path, pathname)
                     return (
-                        <NavLink
+                        <Link
                             key={path}
                             to={path}
+                            aria-current={isActive ? 'page' : undefined}
                             onClick={handleNavClick}
                             className={cn(
-                                'flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 touch-manipulation transition-colors',
+                                'app-shell-nav-link flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 touch-manipulation transition-colors',
                                 isActive
                                     ? 'text-primary'
                                     : 'text-telegram-hint hover:text-telegram-text active:text-telegram-text',
@@ -57,7 +62,7 @@ export function Navigation() {
                         >
                             <span
                                 className={cn(
-                                    'relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl px-2 transition-colors',
+                                    'app-shell-nav-icon relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl px-2 transition-colors',
                                     isActive ? 'bg-primary/15 text-primary' : 'text-telegram-hint',
                                 )}
                             >
@@ -69,8 +74,8 @@ export function Navigation() {
                                     />
                                 ) : null}
                             </span>
-                            <span className={cn('text-[11px] leading-none', isActive && 'font-semibold')}>{label}</span>
-                        </NavLink>
+                            <span className={cn('app-shell-nav-label text-[11px] leading-none', isActive && 'font-semibold')}>{label}</span>
+                        </Link>
                     )
                 })}
             </div>

@@ -6,7 +6,6 @@ import {
     OFFLINE_QUERY_CACHE_MAX_AGE_MS,
     shouldDehydrateOfflineQuery,
 } from '@shared/offline/offlineQueryPersist'
-import { SyncQueueRunner } from './SyncQueueRunner'
 import { SyncStatusToastBridge } from '@app/components/SyncStatusToastBridge'
 
 /** Корневой клиент TanStack Query; офлайн — last-known для каталога, истории и шаблонов (см. offlineQueryPersist). */
@@ -43,7 +42,6 @@ export function QueryProvider({ children }: PropsWithChildren) {
                 queryClient.resumePausedMutations().catch(() => {})
             }}
         >
-            <SyncQueueRunner />
             <SyncStatusToastBridge />
             {children}
         </PersistQueryClientProvider>

@@ -31,7 +31,7 @@ export function ActiveWorkoutBanner() {
     return (
         <div
             className={cn(
-                'fixed inset-x-3 bottom-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px)+0.5rem)] z-40',
+                'app-shell-workout-banner fixed inset-x-3 bottom-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px)+0.5rem)] z-40',
                 'rounded-2xl border border-primary/25 bg-primary text-primary-foreground shadow-primary',
                 'transition-colors duration-200',
             )}

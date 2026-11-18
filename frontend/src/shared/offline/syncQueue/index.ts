@@ -18,6 +18,10 @@ export function enqueueSyncMutation(input: EnqueueSyncMutationInput): EnqueueRes
     return getSyncQueueEngine().enqueue(input)
 }
 
+export function hasSavedSyncMutations(): boolean {
+    return getSyncQueueEngine().getSnapshot().length > 0
+}
+
 /** Попытаться сразу отправить очередь (например после enqueue при восстановлении сети). */
 export function requestSyncFlush(): void {
     void getSyncQueueEngine().flush()
