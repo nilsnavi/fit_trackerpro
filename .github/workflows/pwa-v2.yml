@@ -29,11 +29,8 @@ jobs:
         run: npm run lint
       - name: Smoke unit tests
         run: npm run test
-      - name: Generate brand PNG icons
-        run: |
-          python3 -m pip install --disable-pip-version-check 'cairosvg==2.7.1'
-          python3 scripts/generate_pwa_icons.py
-          npm run icons:verify
+      - name: Install icon renderer
+        run: python3 -m pip install --disable-pip-version-check 'cairosvg==2.7.1'
       - name: Build
         run: npm run build
       - name: Verify published icons
