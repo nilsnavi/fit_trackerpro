@@ -6,7 +6,7 @@ on:
     paths: ['apps/pwa-v2/**', '.github/workflows/pwa-v2.yml']
 
 permissions:
-  contents: read
+  contents: write # Required solely to commit the first lockfile to the dedicated feature branch
 
 jobs:
   validate:
@@ -19,8 +19,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: apps/pwa-v2/package-lock.json
+      - name: Bootstrap missing lockfile
+        if: hashFiles('apps/pwa-v2/package-lock.json') == ''
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Install reproducible dependencies
         run: npm ci --no-audit --no-fund
       - name: Typecheck
@@ -31,3 +32,17 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+      - name: Commit bootstrapped lockfile to feature branch
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/feature/v2-00-pwa-foundation'
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git add apps/pwa-v2/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already committed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(v2-00): lock dependency tree for npm ci"
+          git push origin HEAD:refs/heads/feature/v2-00-pwa-foundation
