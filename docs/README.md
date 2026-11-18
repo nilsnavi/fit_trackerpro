@@ -18,6 +18,8 @@
 - **Current vs target**:
   - current: `./current-architecture.md`
   - target: `./target-architecture.md`
+- **FitTracker Pro 2.0 (Premium Athlete + Coach, целевая архитектура)**: `./architecture/fittracker-v2-target.md`
+- **FTP-020 Architecture Audit SPEC**: `./specs/FTP-020-architecture-audit.md` (отчёт: `./reports/FTP-020-audit-report.md`, roadmap: `./roadmap/fittracker-v2-roadmap.md`)
 
 ## Deployment & Operations
 

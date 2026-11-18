@@ -4,6 +4,7 @@
 
 ## Index
 
+- **FTP-020 Architecture Audit (2026-11-18)**: `./FTP-020-audit-report.md` — аудит для Premium Athlete + Coach v2 (стратегия «новый frontend, существующий backend»)
 - **Production gap analysis (2026-09-18)**: `./production-gap-analysis-2026-09-18.md` — что осталось до продакшена (актуальный снимок)
 - **Architecture audit (2026-03-27)**: `./architecture-audit-2026-03-27.md`
 - **Project analysis report (2026-04-02)**: `./project-analysis-report-2026-04-02.md`
