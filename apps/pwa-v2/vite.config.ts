@@ -14,7 +14,12 @@ export default defineConfig({
         display: 'standalone',
         theme_color: '#0C1015',
         background_color: '#0C1015',
-        icons: []
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/fittracker-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
+        ]
       },
       workbox: {
         navigateFallback: '/index.html',

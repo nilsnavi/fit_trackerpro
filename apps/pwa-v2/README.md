@@ -27,3 +27,15 @@ The original `frontend/`, FastAPI and database are untouched. Do not deploy V2-0
 4. Extract existing workout state machine only after integration and regression tests.
 
 No runtime imports from `frontend/src`.
+
+## Premium PWA icon assets
+
+The source mark is `public/fittracker-mark.svg`. Raster assets under `public/icons/` are **generated from the same source**:
+
+```bash
+python3 -m pip install 'cairosvg==2.7.1'
+python3 scripts/generate_pwa_icons.py
+npm run icons:verify
+```
+
+This creates Android PNG 192×192, 512×512, maskable 512×512 with a full-bleed dark background and safe inset, plus Apple Touch 180×180. CI regenerates and verifies icons before building. The PNG files are generated assets, not hand-edited. Production deployment must execute generation as part of its build pipeline; V2 is not deployed yet. Browser installation on real iOS/Android still requires manual QA.

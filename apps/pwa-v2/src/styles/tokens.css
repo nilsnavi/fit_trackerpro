@@ -1,0 +1,22 @@
+:root {
+  color-scheme: dark;
+  --ftp-bg: #0f141a;
+  --ftp-surface: #171e26;
+  --ftp-elevated: #202a34;
+  --ftp-elevated-hover: #28343e;
+  --ftp-sidebar: #141b22;
+  --ftp-border: #303a44;
+  --ftp-ink: #edf2f4;
+  --ftp-muted: #9ba9b5;
+  --ftp-subtle: #748493;
+  --ftp-accent: #d5fc68;
+  --ftp-accent-soft: #2c3d29;
+  --ftp-accent-ink: #18220e;
+  --ftp-info: #91c8ff;
+  --ftp-warning: #ffc38b;
+  --ftp-danger: #ff9c9c;
+  --ftp-radius: 18px;
+  --ftp-radius-sm: 12px;
+  --ftp-shadow: 0 20px 80px rgba(0, 0, 0, 0.24);
+  font-family: Manrope, Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
