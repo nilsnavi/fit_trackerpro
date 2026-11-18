@@ -6,3 +6,15 @@
 @media(max-width:760px){.ftp-sidebar{display:none}.ftp-topbar{height:64px;padding:0 16px}.ftp-breadcrumbs{font-size:11px}.ftp-build-label{display:none}.ftp-mode-switch a{min-height:40px;padding:8px 11px}.ftp-content{padding:25px 15px calc(95px + env(safe-area-inset-bottom))}.ftp-heading{align-items:flex-start}.ftp-heading h1{font-size:33px}.ftp-heading>span{display:none}.ftp-hero{min-height:280px;padding:24px}.ftp-hero__copy{max-width:100%}.ftp-hero__art{opacity:.13;right:-40px}.ftp-overview-grid{grid-template-columns:1fr 1fr}.ftp-content-grid{grid-template-columns:1fr}.ftp-feature-card{min-height:160px}.ftp-coach-intro{padding:20px;align-items:flex-start;flex-wrap:wrap}.ftp-coach-intro .ftp-pill{display:none}.ftp-mobile-nav{position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px 5px max(8px,env(safe-area-inset-bottom));background:var(--ftp-sidebar);border-top:1px solid var(--ftp-border);display:flex;justify-content:space-around;gap:2px}.ftp-mobile-nav__link{display:flex;min-width:0;flex:1;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;min-height:46px;font-size:10px;color:var(--ftp-muted)}.ftp-mobile-nav__link.is-active{color:var(--ftp-accent)}}
 @media(max-width:450px){.ftp-overview-grid{grid-template-columns:1fr}.ftp-heading h1{letter-spacing:-.8px}.ftp-mode-switch a{font-size:10px}.ftp-coach-intro{gap:12px}.ftp-hero__note{line-height:1.7;align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:0.01ms!important;animation-duration:0.01ms!important}}
+
+/* Signature icon system — proprietary dual-tone 32px vector grid */
+.ftp-signature-icon{flex-shrink:0;display:inline-block;vertical-align:middle;overflow:visible}
+.ftp-signature-icon__accent{stroke:var(--ftp-accent)}
+.ftp-brand__mark{background:linear-gradient(140deg,#d5fc68 0%,#a5d84a 100%);box-shadow:0 3px 16px #c3f65b22}
+.ftp-brand__mark .ftp-signature-icon{color:var(--ftp-accent-ink)}
+.ftp-brand__mark .ftp-signature-icon__accent{stroke:var(--ftp-accent-ink)}
+.ftp-nav-link .ftp-signature-icon__accent,.ftp-mobile-nav__link .ftp-signature-icon__accent{opacity:.65;transition:opacity .15s ease}
+.ftp-nav-link.is-active .ftp-signature-icon__accent,.ftp-mobile-nav__link.is-active .ftp-signature-icon__accent{opacity:1}
+.ftp-feature-icon{width:46px;height:46px;border:1px solid #4b654038;border-radius:14px;background:linear-gradient(145deg,#30452c,#243625);box-shadow:inset 0 1px 0 #d5fc681b,0 8px 20px #00000020}
+.ftp-empty__icon{border:1px solid var(--ftp-border);background:linear-gradient(145deg,var(--ftp-elevated),var(--ftp-sidebar))}
+.ftp-coach-intro__icon{border:1px solid #50694b;background:linear-gradient(145deg,#364e30,#243525)}

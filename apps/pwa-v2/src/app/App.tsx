@@ -1,20 +1,20 @@
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { Activity, BarChart3, CalendarDays, ChevronRight, Dumbbell, LayoutDashboard, ShieldCheck, Target, UsersRound } from 'lucide-react'
+import { SignatureIcon, type SignatureIconName } from '../shared/ui/SignatureIcon'
 import { AthleteOverview } from '../domains/athlete/AthleteOverview'
 import { CoachOverview } from '../domains/coach/CoachOverview'
 import { Card, EmptyState } from '../shared/ui/PremiumUI'
 
 const athleteNav = [
-  {to:'/athlete',name:'Обзор',icon:LayoutDashboard},
-  {to:'/athlete/workouts',name:'Тренировки',icon:Dumbbell},
-  {to:'/athlete/programs',name:'Программы',icon:Target},
-  {to:'/athlete/progress',name:'Прогресс',icon:BarChart3}
+  {to:'/athlete',name:'Обзор',icon:'overview' as SignatureIconName},
+  {to:'/athlete/workouts',name:'Тренировки',icon:'workout' as SignatureIconName},
+  {to:'/athlete/programs',name:'Программы',icon:'program' as SignatureIconName},
+  {to:'/athlete/progress',name:'Прогресс',icon:'progress' as SignatureIconName}
 ]
 const coachNav = [
-  {to:'/coach',name:'Обзор',icon:LayoutDashboard},
-  {to:'/coach/clients',name:'Клиенты',icon:UsersRound},
-  {to:'/coach/programs',name:'Программы',icon:Dumbbell},
-  {to:'/coach/schedule',name:'Расписание',icon:CalendarDays}
+  {to:'/coach',name:'Обзор',icon:'overview' as SignatureIconName},
+  {to:'/coach/clients',name:'Клиенты',icon:'clients' as SignatureIconName},
+  {to:'/coach/programs',name:'Программы',icon:'workout' as SignatureIconName},
+  {to:'/coach/schedule',name:'Расписание',icon:'schedule' as SignatureIconName}
 ]
 function ComingSoon({ area, title, detail }: { area:string; title:string; detail:string }) {
   return <div className="ftp-page"><div className="ftp-heading"><div><p className="ftp-eyebrow">{area}</p><h1>{title}</h1><p>{detail}</p></div></div>
@@ -23,11 +23,11 @@ function ComingSoon({ area, title, detail }: { area:string; title:string; detail
 function SideNavigation({coach}:{coach:boolean}) {
   const nav=coach?coachNav:athleteNav
   return <>
-    <div className="ftp-brand"><span className="ftp-brand__mark"><Activity size={24}/></span><div><strong>FITTRACKER<span>PRO</span></strong><small>PERFORMANCE PLATFORM</small></div></div>
-    <div className="ftp-workspace"><span className="ftp-workspace__icon">{coach?<UsersRound size={18}/>:<Dumbbell size={18}/>}</span><div><small>WORKSPACE</small><strong>{coach?'Coach Studio':'Athlete Space'}</strong></div></div>
+    <div className="ftp-brand"><span className="ftp-brand__mark"><SignatureIcon name="brand" size={26}/></span><div><strong>FITTRACKER<span>PRO</span></strong><small>PERFORMANCE PLATFORM</small></div></div>
+    <div className="ftp-workspace"><span className="ftp-workspace__icon">{coach?<SignatureIcon name="clients" size={20}/>:<SignatureIcon name="workout" size={20}/>}</span><div><small>WORKSPACE</small><strong>{coach?'Coach Studio':'Athlete Space'}</strong></div></div>
     <p className="ftp-nav-caption">РАБОЧЕЕ ПРОСТРАНСТВО</p>
-    <nav className="ftp-side-links" aria-label={coach?'Разделы тренера':'Разделы спортсмена'}>{nav.map(({to,name,icon:Icon})=><NavLink key={to} to={to} end className={({isActive})=>'ftp-nav-link'+(isActive?' is-active':'')}><Icon size={19}/><span>{name}</span></NavLink>)}</nav>
-    <div className="ftp-sidebar-foot"><ShieldCheck size={16}/> Новый интерфейс без демоданных. Серверные права не обойдены.</div>
+    <nav className="ftp-side-links" aria-label={coach?'Разделы тренера':'Разделы спортсмена'}>{nav.map(({to,name,icon:Icon})=><NavLink key={to} to={to} end className={({isActive})=>'ftp-nav-link'+(isActive?' is-active':'')}><SignatureIcon name={Icon} size={21}/><span>{name}</span></NavLink>)}</nav>
+    <div className="ftp-sidebar-foot"><SignatureIcon name="shield" size={18}/> Новый интерфейс без демоданных. Серверные права не обойдены.</div>
   </>
 }
 export function App(){
@@ -37,10 +37,10 @@ export function App(){
   return <div className="ftp-shell">
     <aside className="ftp-sidebar"><SideNavigation coach={coach}/></aside>
     <div className="ftp-main">
-      <header className="ftp-topbar"><div className="ftp-breadcrumbs"><span>FitTracker Pro</span><ChevronRight size={15}/><strong>{coach?'Coach':'Athlete'}</strong></div>
+      <header className="ftp-topbar"><div className="ftp-breadcrumbs"><span>FitTracker Pro</span><SignatureIcon name="chevron" size={15}/><strong>{coach?'Coach':'Athlete'}</strong></div>
         <div className="ftp-top-actions"><span className="ftp-build-label">PREMIUM UI · V2-01</span><nav className="ftp-mode-switch" aria-label="Режим интерфейса">
-          <NavLink to="/athlete" className={!coach?'is-selected':''}><Dumbbell size={15}/> <span>Athlete</span></NavLink>
-          <NavLink to="/coach" className={coach?'is-selected':''}><UsersRound size={15}/> <span>Coach</span></NavLink>
+          <NavLink to="/athlete" className={!coach?'is-selected':''}><SignatureIcon name="workout" size={17}/> <span>Athlete</span></NavLink>
+          <NavLink to="/coach" className={coach?'is-selected':''}><SignatureIcon name="clients" size={17}/> <span>Coach</span></NavLink>
         </nav></div>
       </header>
       <main className="ftp-content"><Routes>
@@ -56,6 +56,6 @@ export function App(){
         <Route path="*" element={<ComingSoon area="FITTRACKER PRO" title="Страница не найдена" detail="Выберите доступный раздел в навигации."/>}/>
       </Routes></main>
     </div>
-    <nav className="ftp-mobile-nav" aria-label="Мобильная навигация">{nav.map(({to,name,icon:Icon})=><NavLink key={to} to={to} end className={({isActive})=>'ftp-mobile-nav__link'+(isActive?' is-active':'')}><Icon size={21}/><span>{name}</span></NavLink>)}</nav>
+    <nav className="ftp-mobile-nav" aria-label="Мобильная навигация">{nav.map(({to,name,icon:Icon})=><NavLink key={to} to={to} end className={({isActive})=>'ftp-mobile-nav__link'+(isActive?' is-active':'')}><SignatureIcon name={Icon} size={22}/><span>{name}</span></NavLink>)}</nav>
   </div>
 }
