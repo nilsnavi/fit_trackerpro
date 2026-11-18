@@ -1,6 +1,7 @@
 export interface UserProfile {
     id: number
-    telegram_id: number
+    telegram_id: number | null
+    email?: string | null
     username?: string
     first_name?: string
     last_name?: string

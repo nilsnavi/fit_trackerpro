@@ -59,6 +59,19 @@ class AuthService:
     def get_profile(user: User) -> UserProfileResponse:
         return user_profile_from_db(user)
 
+    @staticmethod
+    def token_subject(user: User) -> int:
+        return user.telegram_id if user.telegram_id is not None else -user.id
+
+    async def issue_email_session(self, user: User, client_ip: str | None) -> RefreshTokenResponse:
+        refresh_token, _ = await self._issue_refresh_session(user, client_ip=client_ip)
+        return RefreshTokenResponse(
+            access_token=create_access_token(self.token_subject(user)),
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
+
     async def _issue_refresh_session(
         self,
         user: User,
@@ -71,7 +84,7 @@ class AuthService:
         jti = uuid4().hex
         family = family_id or uuid4().hex
         token = create_refresh_token(
-            user.telegram_id,
+            self.token_subject(user),
             user.token_generation,
             jti=jti,
             family_id=family,
@@ -169,7 +182,7 @@ class AuthService:
             raise AuthenticationError(f"Authentication failed: {error}")
 
         user, created = await self._get_or_create_user(user_data)
-        access_token = create_access_token(user.telegram_id)
+        access_token = create_access_token(self.token_subject(user))
         refresh_token, _ = await self._issue_refresh_session(user, client_ip=client_ip)
         onboarding_required = bool(created or not (user.profile or {}).get("onboarding_completed", False))
 
@@ -300,7 +313,7 @@ class AuthService:
         if not isinstance(jti, str) or not isinstance(family_id, str) or generation is None:
             raise AuthenticationError("Invalid or expired refresh token")
 
-        user = await self.repository.get_user_by_telegram_id(telegram_id=user_id)
+        user = await self.repository.get_user_by_token_subject(user_id)
         if user is None or generation != str(user.token_generation):
             raise AuthenticationError("Invalid or expired refresh token")
 
@@ -355,7 +368,7 @@ class AuthService:
             raise AuthenticationError("Refresh token has been revoked")
 
         new_token = create_refresh_token(
-            user.telegram_id,
+            self.token_subject(user),
             user.token_generation,
             jti=new_jti,
             family_id=session.family_id,
@@ -379,7 +392,7 @@ class AuthService:
             client_ip=client_ip,
         )
         return RefreshTokenResponse(
-            access_token=create_access_token(user.telegram_id),
+            access_token=create_access_token(self.token_subject(user)),
             refresh_token=new_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,

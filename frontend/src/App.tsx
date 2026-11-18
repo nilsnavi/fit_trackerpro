@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react'
 import { BrowserRouter } from 'react-router-dom'
 import { PwaUpdatePrompt } from './app/components/PwaUpdatePrompt'
+import { SyncQueueRunner } from './app/providers/SyncQueueRunner'
 import { QueryProvider } from './app/providers/QueryProvider'
 import { ThemeProvider } from './app/providers/ThemeProvider'
 import { TelegramProvider } from './app/providers/TelegramProvider'
@@ -42,6 +43,7 @@ export default function App() {
                             <BrowserRouter>
                                 <PwaUpdatePrompt />
                                 <TelegramAuthBootstrapGate>
+                                    <SyncQueueRunner />
                                     <AppRoutes />
                                     <IncompleteWorkoutGate />
                                 </TelegramAuthBootstrapGate>

@@ -51,6 +51,12 @@ class Settings(BaseSettings):
         env_ignore_empty=True,
     )
 
+    AUTH_SMTP_HOST: str = ""
+    AUTH_SMTP_PORT: int = Field(default=587, ge=1, le=65535)
+    AUTH_SMTP_FROM: str = ""
+    AUTH_SMTP_USERNAME: str = ""
+    AUTH_SMTP_PASSWORD: str = Field(default="", repr=False)
+
     # --- Optional: application metadata & runtime mode ---
     APP_NAME: Annotated[str, Field(description="Human-readable API name.")] = "FitTracker Pro"
     APP_VERSION: Annotated[str, Field(description="Semantic version exposed in /version.")] = (

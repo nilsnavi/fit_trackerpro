@@ -6,10 +6,30 @@ test('premium web shell adapts its navigation and uses the existing routes', asy
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.addInitScript(() => {
         localStorage.setItem('fittracker-theme', 'light')
-        localStorage.setItem('auth_token', 'e2e-token')
     })
     await mockWorkoutApi(page, buildWorkoutState())
-    await page.goto('/exercises')
+    const email = 'athlete@example.com'
+    const challengeId = 'a'.repeat(32)
+    const cors = { 'access-control-allow-origin': '*' }
+    await page.route('**/users/auth/email/request', async (route) => {
+        if (route.request().method() !== 'POST') return route.fallback()
+        expect(route.request().postDataJSON()).toEqual({ email })
+        await route.fulfill({ json: { challenge_id: challengeId }, headers: cors })
+    })
+    await page.route('**/users/auth/email/verify', async (route) => {
+        if (route.request().method() !== 'POST') return route.fallback()
+        expect(route.request().postDataJSON()).toEqual({ challenge_id: challengeId, code: '482619' })
+        await route.fulfill({
+            json: { access_token: 'e2e-token', refresh_token: 'e2e-refresh-token' },
+            headers: cors,
+        })
+    })
+    await page.goto('/login?from=%2Fexercises')
+    await page.getByRole('textbox', { name: 'Email' }).fill(email)
+    await page.getByRole('button', { name: 'Получить код' }).click()
+    await page.getByRole('textbox', { name: 'Одноразовый код' }).fill('482619')
+    await page.getByRole('button', { name: 'Войти', exact: true }).click()
+    await expect(page).toHaveURL(/\/exercises$/)
 
     const shell = page.locator('[data-app-shell]')
     const nav = page.getByRole('navigation', { name: 'Основная навигация' })

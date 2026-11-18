@@ -76,7 +76,7 @@ async def get_current_user(
     Raises:
         HTTPException: If user not found
     """
-    user = await AuthRepository(db).get_user_by_telegram_id(telegram_id=user_id)
+    user = await AuthRepository(db).get_user_by_token_subject(user_id)
 
     if user is None:
         raise HTTPException(

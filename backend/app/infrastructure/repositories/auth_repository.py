@@ -12,6 +12,14 @@ from app.infrastructure.repositories.base import SQLAlchemyRepository
 
 
 class AuthRepository(SQLAlchemyRepository):
+    async def get_user_by_token_subject(self, subject: int) -> User | None:
+        # Legacy Telegram IDs are strictly positive. Email-only users use -users.id.
+        if subject < 0:
+            return await self.db.scalar(
+                select(User).where(User.id == -subject, User.telegram_id.is_(None))
+            )
+        return await self.get_user_by_telegram_id(subject)
+
     async def get_user_by_telegram_id(self, telegram_id: int):
         result = await self.db.execute(select(User).where(User.telegram_id == telegram_id))
         return result.scalar_one_or_none()
