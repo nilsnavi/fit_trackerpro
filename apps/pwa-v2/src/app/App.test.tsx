@@ -11,7 +11,7 @@ describe('PWA v2 premium navigation', () => {
     const html = render('/athlete')
     expect(html).toContain('Становись')
     expect(html).toContain('Данные ещё не подключены')
-    expect(html).toContain('Ваше')
+    expect(html).toContain('ВАШЕ ТРЕНИРОВОЧНОЕ ПРОСТРАНСТВО')
     expect(html).not.toContain('Анна Смирнова')
   })
   it('renders Coach without inventing clients or schedule', () => {
