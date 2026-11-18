@@ -1122,7 +1122,7 @@ export const Catalog: React.FC = () => {
             </div>
 
             {/* Add Exercise Button */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-linear-to-t from-telegram-bg via-telegram-bg to-transparent">
+            <div className="app-shell-dock app-shell-dock-above-navigation fixed bottom-0 left-0 right-0 p-4 bg-linear-to-t from-telegram-bg via-telegram-bg to-transparent">
                 <Button
                     fullWidth
                     size="lg"

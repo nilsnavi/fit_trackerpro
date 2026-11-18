@@ -5961,6 +5961,53 @@
         "title": "DataExportStatus",
         "type": "string"
       },
+      "EmailChallengeResponse": {
+        "properties": {
+          "challenge_id": {
+            "title": "Challenge Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge_id"
+        ],
+        "title": "EmailChallengeResponse",
+        "type": "object"
+      },
+      "EmailCodeRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "EmailCodeRequest",
+        "type": "object"
+      },
+      "EmailCodeVerify": {
+        "properties": {
+          "challenge_id": {
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "code": {
+            "pattern": "^[0-9]{6}$",
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "code"
+        ],
+        "title": "EmailCodeVerify",
+        "type": "object"
+      },
       "EmergencyContactCreate": {
         "description": "Request model for creating emergency contact",
         "properties": {
@@ -11741,6 +11788,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "first_name": {
             "anyOf": [
               {
@@ -11769,8 +11827,15 @@
             "$ref": "#/components/schemas/UserSettingsData"
           },
           "telegram_id": {
-            "title": "Telegram Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Id"
           },
           "updated_at": {
             "format": "date-time",
@@ -23549,6 +23614,173 @@
         "summary": "Service version and build metadata",
         "tags": [
           "System"
+        ]
+      }
+    },
+    "/api/v1/users/auth/email/link/request": {
+      "post": {
+        "operationId": "request_email_link_api_v1_users_auth_email_link_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Email Link",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/auth/email/link/verify": {
+      "post": {
+        "operationId": "verify_email_link_api_v1_users_auth_email_link_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCodeVerify"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Verify Email Link",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/auth/email/request": {
+      "post": {
+        "operationId": "request_email_login_api_v1_users_auth_email_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Email Login",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/auth/email/verify": {
+      "post": {
+        "operationId": "verify_email_login_api_v1_users_auth_email_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCodeVerify"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Email Login",
+        "tags": [
+          "Authentication"
         ]
       }
     },

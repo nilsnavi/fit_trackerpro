@@ -23,6 +23,15 @@ export interface SaveOnboardingRequest {
 }
 
 export const authApi = {
+    requestEmailCode(email: string, link: boolean): Promise<{ challenge_id: string }> {
+        return api.post(`/users/auth/email/${link ? 'link/' : ''}request`, { email })
+    },
+    verifyEmailLogin(challengeId: string, code: string): Promise<{ access_token: string; refresh_token: string }> {
+        return api.post('/users/auth/email/verify', { challenge_id: challengeId, code })
+    },
+    verifyEmailLink(challengeId: string, code: string): Promise<void> {
+        return api.post('/users/auth/email/link/verify', { challenge_id: challengeId, code })
+    },
     telegramLogin(initData: string): Promise<TelegramAuthResponse> {
         return api.post<TelegramAuthResponse>('/users/auth/telegram', { init_data: initData })
     },

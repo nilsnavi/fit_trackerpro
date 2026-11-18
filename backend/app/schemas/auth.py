@@ -344,7 +344,8 @@ class UserProfileResponse(BaseModel):
     """User profile response (API contract; not an ORM model)."""
 
     id: int
-    telegram_id: int
+    telegram_id: int | None
+    email: str | None = None
     username: Optional[str]
     first_name: Optional[str]
     profile: UserProfileData = Field(default_factory=UserProfileData)
@@ -365,6 +366,7 @@ def user_profile_from_db(user) -> UserProfileResponse:
     return UserProfileResponse(
         id=user.id,
         telegram_id=user.telegram_id,
+        email=user.email,
         username=user.username,
         first_name=user.first_name,
         profile=UserProfileData.model_validate(user.profile or {}),

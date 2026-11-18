@@ -16,6 +16,8 @@ import { Button } from '@shared/ui/Button'
 import { Card } from '@shared/ui/Card'
 import { useAuthStore } from '@/stores/authStore'
 
+import { usePrepareAccountLocalData } from '../hooks/usePrepareAccountLocalData'
+import { EmailCodeForm } from './EmailCodeForm'
 import { NewUserWelcomeScreen } from './NewUserWelcomeScreen'
 
 type BootstrapStatus =
@@ -28,6 +30,7 @@ type BootstrapStatus =
     | 'dev_local'
 
 export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
+    const prepareAccountLocalData = usePrepareAccountLocalData()
     const location = useLocation()
     const navigate = useNavigate()
     const { isTelegram, initData, hapticFeedback, user } = useTelegramContext()
@@ -51,7 +54,7 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
             setUsedFallback(result.via === 'fetch')
             setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken })
             setNeedsOnboarding(result.onboardingRequired)
-            setStatus('ready')
+            setStatus('loading')
             hapticFeedback({ type: 'notification', notificationType: 'success' })
         },
         [hapticFeedback, setTokens],
@@ -64,6 +67,7 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
         if (isAuthenticated) {
             try {
                 const profile = await fetchCurrentUserProfile()
+                await prepareAccountLocalData(profile.id, isTelegram)
                 const onboardingCompleted = profile.profile?.onboarding_completed === true
                 setNeedsOnboarding(!onboardingCompleted)
                 setStatus('ready')
@@ -111,7 +115,7 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
             setStatus('error')
             hapticFeedback({ type: 'notification', notificationType: 'error' })
         }
-    }, [applyAuthResult, clearAuth, hapticFeedback, initData, isAuthenticated, isTelegram])
+    }, [applyAuthResult, clearAuth, hapticFeedback, initData, isAuthenticated, isTelegram, prepareAccountLocalData])
 
     useEffect(() => {
         void runBootstrap()
@@ -154,12 +158,29 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
         [applyAuthResult],
     )
 
+    if (!isTelegram && !isAuthenticated && (!import.meta.env.DEV || location.pathname === '/login')) {
+        return (
+            <main className="flex min-h-dvh items-center justify-center p-4">
+                <Card className="w-full max-w-md">
+                    <h1 className="text-xl font-semibold text-telegram-text">Войти в FitTracker Pro</h1>
+                    <p className="mt-2 text-sm text-telegram-hint">Укажите email, чтобы получить одноразовый код.</p>
+                    {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
+                    <EmailCodeForm />
+                </Card>
+            </main>
+        )
+    }
+
     if (status === 'loading') {
         return (
             <div className="flex min-h-dvh items-center justify-center p-4">
                 <Card variant="info" className="w-full max-w-md">
-                    <h1 className="text-lg font-semibold text-telegram-text">Подключение к Telegram</h1>
-                    <p className="mt-2 text-sm text-telegram-hint">Проверяем initData и готовим сессию.</p>
+                    <h1 className="text-lg font-semibold text-telegram-text">
+                        {isTelegram ? 'Подключение к Telegram' : 'Выполняем вход'}
+                    </h1>
+                    <p className="mt-2 text-sm text-telegram-hint">
+                        {isTelegram ? 'Проверяем данные Telegram и готовим сессию.' : 'Проверяем сессию и загружаем профиль.'}
+                    </p>
                 </Card>
             </div>
         )
@@ -297,7 +318,9 @@ export function TelegramAuthBootstrapGate({ children }: PropsWithChildren) {
     }
 
     if (status === 'ready' && !needsOnboarding && location.pathname === '/login') {
-        return <Navigate to="/" replace />
+        const from = new URLSearchParams(location.search).get('from')
+        const returnPath = from?.startsWith('/') && !from.startsWith('//') && !from.includes('\\') ? from : '/'
+        return <Navigate to={returnPath} replace />
     }
 
     return (

@@ -657,3 +657,190 @@
         @apply px-6 max-w-lg mx-auto;
     }
 }
+@font-face {
+    font-family: Manrope;
+    font-style: normal;
+    font-weight: 400 800;
+    font-display: swap;
+    src: url('./fonts/manrope-cyrillic.woff2') format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+    font-family: Manrope;
+    font-style: normal;
+    font-weight: 400 800;
+    font-display: swap;
+    src: url('./fonts/manrope-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+        U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+        U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Premium uses the existing dark preference in the browser and installed PWA. */
+:root.dark:has([data-app-shell][data-telegram='false']) {
+    color-scheme: dark;
+    --background: 216 29.41% 6.67%;
+    --foreground: 210 23% 95%;
+    --card: 215 26% 9%;
+    --popover: 214 25% 13%;
+    --primary: 76 96% 70%;
+    --primary-foreground: 146 14% 10%;
+    --secondary: 214 25% 13%;
+    --muted: var(--secondary);
+    --muted-foreground: 208 12% 66%;
+    --accent: 102 19% 17%;
+    --accent-foreground: 79 91% 83%;
+    --border: 212 17% 20%;
+    --input: 212 16% 27%;
+    --ring: var(--primary);
+    --radius: 1rem;
+    --app-shell-sidebar-width: 15.5rem;
+    --app-shell-header-inner-h: 3.75rem;
+    --tg-theme-bg-color: hsl(var(--background));
+    --tg-theme-secondary-bg-color: hsl(var(--card));
+    --tg-theme-text-color: hsl(var(--foreground));
+    --tg-theme-hint-color: hsl(var(--muted-foreground));
+    --tg-theme-link-color: hsl(var(--primary));
+    --tg-theme-accent-text-color: hsl(var(--primary));
+    --tg-theme-button-color: hsl(var(--primary));
+    --tg-theme-button-text-color: hsl(var(--primary-foreground));
+    --tg-theme-header-bg-color: hsl(var(--card));
+
+    body {
+        font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .app-shell-header,
+    .app-shell-nav {
+        background-color: hsl(var(--card));
+    }
+
+    .app-shell :is(a, button, input, select, textarea):focus-visible {
+        outline: 2px solid hsl(var(--ring));
+        outline-offset: 2px;
+    }
+
+    /* Legacy controls with a literal white label still use the accent's paired text color. */
+    .bg-primary.text-white {
+        color: hsl(var(--primary-foreground));
+    }
+
+    @media (hover: hover) {
+        .bg-primary.hover\:bg-primary-600:hover {
+            background-color: color-mix(in srgb, hsl(var(--primary)) 88%, hsl(var(--primary-foreground)));
+        }
+    }
+
+    .app-shell-dock-above-navigation {
+        bottom: calc(var(--app-shell-nav-h) + env(safe-area-inset-bottom, 0px) + var(--active-workout-banner-h));
+    }
+
+    .app-shell-nav-link:focus-visible {
+        outline-offset: -3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .app-shell,
+        .app-shell-nav,
+        .app-shell-nav-link,
+        .app-shell-nav-icon,
+        .app-shell-workout-banner {
+            transition: none;
+        }
+    }
+}
+
+.app-shell-nav-brand {
+    display: none;
+}
+
+@media (min-width: 921px) {
+    :root.dark:has([data-app-shell][data-telegram='false'] .app-shell-nav) {
+        --app-shell-nav-h: 0px;
+        --app-shell-header-inner-h: 4.9375rem;
+
+        .app-shell {
+            margin-inline-start: var(--app-shell-sidebar-width);
+        }
+
+        .app-shell-header > div {
+            padding-inline: clamp(1.5rem, 3vw, 2.8125rem);
+        }
+
+        .app-shell-nav {
+            inset-inline-end: auto;
+            inset-block-start: 0;
+            width: var(--app-shell-sidebar-width);
+            overflow-y: auto;
+            padding: 1.6875rem 1.0625rem;
+            border-top-width: 0;
+            border-inline-end: 1px solid hsl(var(--border));
+        }
+
+        .app-shell-nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6875rem;
+            margin: 0 0.3125rem 1.6875rem;
+            font-size: 1.0625rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .app-shell-nav-brand > span {
+            display: grid;
+            width: 2.4375rem;
+            height: 2.4375rem;
+            place-items: center;
+            border-radius: 0.6875rem;
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }
+
+        .app-shell-nav-items {
+            height: auto;
+            flex-direction: column;
+            gap: 0.3125rem;
+        }
+
+        .app-shell-nav-link {
+            min-height: 2.75rem;
+            flex-direction: row;
+            justify-content: flex-start;
+            gap: 0.75rem;
+            padding-inline: 0.75rem;
+            border-radius: 0.6875rem;
+        }
+
+        .app-shell-nav-link:hover {
+            background-color: hsl(var(--secondary));
+        }
+
+        .app-shell-nav-link[aria-current='page'] {
+            background-color: hsl(var(--accent));
+            color: hsl(var(--accent-foreground));
+        }
+
+        .app-shell-nav-icon {
+            min-width: 1.25rem;
+            min-height: 1.25rem;
+            padding: 0;
+            background: transparent;
+            color: inherit;
+        }
+
+        .app-shell-nav-label {
+            font-size: 0.8125rem;
+            font-weight: 700;
+        }
+
+        .app-shell-dock {
+            inset-inline-start: var(--app-shell-sidebar-width);
+        }
+
+        .app-shell-workout-banner {
+            inset-inline-start: calc(var(--app-shell-sidebar-width) + 0.75rem);
+        }
+    }
+}

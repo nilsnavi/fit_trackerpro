@@ -25,7 +25,9 @@ function isPublicAuthRequest(config: RetryableRequestConfig | undefined): boolea
         requestUrl.includes('/users/auth/telegram') ||
         requestUrl.includes('/users/auth/lookup') ||
         requestUrl.includes('/users/auth/register') ||
-        requestUrl.includes('/users/auth/refresh')
+        requestUrl.includes('/users/auth/refresh') ||
+        requestUrl === '/users/auth/email/request' ||
+        requestUrl === '/users/auth/email/verify'
     )
 }
 

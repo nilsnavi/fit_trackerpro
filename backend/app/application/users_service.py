@@ -25,7 +25,7 @@ class UsersService:
     def _to_user_response(user: User) -> UserResponse:
         return UserResponse(
             id=int(user.id),
-            telegram_id=int(user.telegram_id),
+            telegram_id=user.telegram_id,
             username=user.username,
             first_name=user.first_name,
             last_name=None,
@@ -78,7 +78,7 @@ class UsersService:
             "exported_at": datetime.now(timezone.utc).isoformat(),
             "user": {
                 "id": int(user.id),
-                "telegram_id": int(user.telegram_id),
+                "telegram_id": user.telegram_id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "profile": user.profile or {},

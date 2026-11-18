@@ -1,20 +1,21 @@
 import { expect, test } from '@playwright/test'
 import { setupTelegramWebApp } from './helpers/telegram-mock'
+import { buildWorkoutState, mockWorkoutApi } from './helpers/workout-api-mock'
 
 test.describe('telegram auth bootstrap and onboarding @regression', () => {
-    test('shows fallback screen when Telegram context is missing', async ({ page }) => {
+    test('offers email sign-in when Telegram context is missing', async ({ page }) => {
         // index.html loads telegram-web-app.js from telegram.org; serve it empty so the
         // missing-context state is the same in every target instead of depending on
         // whether that host is reachable.
         await page.route('**/telegram-web-app.js', (route) =>
             route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }),
         )
-        await page.goto('/')
+        await mockWorkoutApi(page, buildWorkoutState())
+        await page.goto('/login')
 
-        await expect(page.getByRole('heading', { name: 'Открой в Telegram' })).toBeVisible()
-        await expect(
-            page.getByText(/Мини-приложение доступно через бота|Запустите мини-приложение из Telegram/),
-        ).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'Войти в FitTracker Pro' })).toBeVisible()
+        await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Получить код' })).toBeVisible()
     })
 
     test('completes onboarding for authenticated first login', async ({ page }) => {
