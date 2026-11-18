@@ -4,6 +4,10 @@ on:
     paths: ['apps/pwa-v2/**', '.github/workflows/pwa-v2.yml']
   pull_request:
     paths: ['apps/pwa-v2/**', '.github/workflows/pwa-v2.yml']
+
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -15,11 +19,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies (bootstrap; lockfile pending)
-        run: npm install --no-audit --no-fund
+          cache: npm
+          cache-dependency-path: apps/pwa-v2/package-lock.json
+      - name: Install reproducible dependencies
+        run: npm ci --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
         run: npm run lint
+      - name: Smoke unit tests
+        run: npm run test
       - name: Build
         run: npm run build
