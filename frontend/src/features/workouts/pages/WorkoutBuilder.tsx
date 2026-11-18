@@ -1377,7 +1377,7 @@ export const WorkoutBuilder: React.FC = () => {
             </Modal>
 
             {/* Sticky Save Footer */}
-            <div className="fixed left-0 right-0 z-20 bg-telegram-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 space-y-2 bottom-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px))]">
+            <div className="app-shell-dock fixed left-0 right-0 z-20 bg-telegram-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 space-y-2 bottom-[calc(var(--app-shell-nav-h)+env(safe-area-inset-bottom,0px))]">
                 {validationErrors.general && (
                     <p className="flex items-center gap-2 text-sm text-danger" role="alert">
                         <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />

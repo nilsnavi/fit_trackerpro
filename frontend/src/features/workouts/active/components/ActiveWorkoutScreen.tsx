@@ -1090,7 +1090,7 @@ function WorkoutBottomBar({
     onFinishWorkout: () => void
 }) {
     return (
-        <div className="fixed bottom-[var(--app-shell-nav-h)] left-0 right-0 z-20 border-t border-border bg-telegram-bg/95 px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur">
+        <div className="app-shell-dock fixed bottom-[var(--app-shell-nav-h)] left-0 right-0 z-20 border-t border-border bg-telegram-bg/95 px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur">
             <div className="mx-auto grid max-w-screen-sm grid-cols-[1fr_1fr] gap-2">
                 <Button type="button" variant="secondary" className="min-h-[54px] rounded-2xl border-border bg-telegram-secondary-bg text-telegram-text" onClick={onAddExercise}>
                     <Plus className="mr-1 h-5 w-5" />

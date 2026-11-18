@@ -58,7 +58,7 @@ export function StickyBottomBar({
             <div
                 className={cn(
                     /* z-40: keep below the bottom nav (z-50) */
-                    'fixed inset-x-0 bottom-0 z-40',
+                    'app-shell-dock fixed inset-x-0 bottom-0 z-40',
                     'border-t border-border bg-telegram-bg/90 backdrop-blur-sm',
                     'px-4 py-3',
                     aboveNav
@@ -87,7 +87,7 @@ export function StickyBottomBar({
     return (
         <div
             className={cn(
-                'fixed inset-x-0 bottom-0 z-40',
+                'app-shell-dock fixed inset-x-0 bottom-0 z-40',
                 'border-t border-border bg-telegram-bg/90 backdrop-blur-sm',
                 aboveNavClass,
             )}
