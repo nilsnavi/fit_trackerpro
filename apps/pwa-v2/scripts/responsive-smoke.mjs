@@ -37,6 +37,8 @@ try {
     }
     // UI mode navigation must work, while no server role elevation is claimed.
     await page.locator('nav[aria-label="Режим интерфейса"] a[href="/athlete"]').click()
+    await page.waitForURL('**/athlete')
+    await page.getByRole('heading', { level: 1, name: /Становись/ }).waitFor()
     assert.match(await page.locator('h1').innerText(), /Становись/)
     assert.deepEqual(errors, [], 'runtime errors at ' + width)
     console.log('PASS responsive ' + width + 'px; athlete/coach/switch; no horizontal overflow')
