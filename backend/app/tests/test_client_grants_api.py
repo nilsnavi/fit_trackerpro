@@ -1,9 +1,9 @@
 """Client consent API: account ownership, opt-in and durable audit."""
 from __future__ import annotations
 
-from sqlalchemy import select, text
-from httpx import AsyncClient
 import pytest
+from httpx import AsyncClient
+from sqlalchemy import select, text
 
 from app.domain.coach_client_grant import CoachClientGrant
 from app.domain.coach_grant_audit import CoachGrantAudit
