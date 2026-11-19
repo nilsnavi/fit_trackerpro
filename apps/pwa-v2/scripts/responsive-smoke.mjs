@@ -34,6 +34,8 @@ try {
       const access = 'a'.repeat(24)
       const refresh = 'r'.repeat(48)
       let requestedCode = false
+      const seenRequests = []
+      page.on('request', request => { if (request.url().includes('/api/v1/users/auth')) seenRequests.push(request.method() + ' ' + request.url()) })
       await page.route('**/api/v1/users/auth/**', async route => {
         const url = new URL(route.request().url())
         let response
@@ -52,7 +54,12 @@ try {
       })
       await page.getByLabel('Электронная почта').fill('qa@example.test')
       await page.getByRole('button', { name: 'Получить код' }).click()
-      await page.getByLabel('Код подтверждения').waitFor({ timeout: 10000 })
+      try {
+        await page.getByLabel('Код подтверждения').waitFor({ timeout: 7000 })
+      } catch (error) {
+        console.error('OTP DEBUG', JSON.stringify({ requestedCode, seenRequests, alerts: await page.getByRole('alert').allTextContents(), page: (await page.locator('main').innerText()).slice(0, 700), location: page.url(), browserErrors: errors }))
+        throw error
+      }
       assert.equal(requestedCode, true, 'email/request was not intercepted by browser test')
       await page.getByLabel('Код подтверждения').fill('123456')
       await page.getByRole('button', { name: 'Подтвердить и войти' }).click()
