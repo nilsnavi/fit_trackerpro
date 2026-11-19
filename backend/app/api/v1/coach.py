@@ -9,12 +9,12 @@ from app.application.coach_business_service import CoachBusinessService
 from app.application.coach_entitlement_service import CoachEntitlementService
 from app.application.coach_monitoring_service import CoachMonitoringService
 from app.application.coach_program_service import CoachProgramService
-from app.application.coach_training_read_service import CoachTrainingReadService
 from app.application.coach_service import (
     CoachIdentityService,
     CoachInvitationService,
     CoachRelationshipService,
 )
+from app.application.coach_training_read_service import CoachTrainingReadService
 from app.core.audit import audit_log, get_client_ip
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
@@ -53,7 +53,6 @@ from app.schemas.coach_monitoring import (
     ClientMonitoringPage,
     ClientMonitoringSummary,
 )
-from app.schemas.coach_training_reads import CoachTrainingSummary, CoachWorkoutHistory
 from app.schemas.coach_programs import (
     CoachProgramAssignmentCreate,
     CoachProgramAssignmentResponse,
@@ -66,6 +65,7 @@ from app.schemas.coach_programs import (
     CoachProgramUpdate,
     CoachProgramWorkoutStartResponse,
 )
+from app.schemas.coach_training_reads import CoachTrainingSummary, CoachWorkoutHistory
 
 router = APIRouter(dependencies=[Depends(require_coach_feature)])
 client_program_router = APIRouter(dependencies=[Depends(require_coach_feature)])
