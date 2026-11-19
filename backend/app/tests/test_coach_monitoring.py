@@ -201,3 +201,43 @@ async def test_monitoring_denied_until_client_grants_and_after_revoke(client: As
     assert revoked.status_code == 204
     assert (await client.get("/api/v1/coach/monitoring", headers=coach)).json()["total"] == 0
     assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 404
+
+
+@pytest.mark.integration
+async def test_monitoring_requires_exact_unexpired_training_scope(client: AsyncClient, db_session):
+    """Workout history consent does not authorize monitoring; expiry is enforced in SQL."""
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach = await _auth(client, 976101, "Coach")
+    athlete = await _auth(client, 976102, "Athlete")
+    profile = await client.post("/api/v1/coach/profile", headers=coach, json={"display_name": "Coach"})
+    assert profile.status_code == 201, profile.text
+    invitation = await client.post("/api/v1/coach/invitations", headers=coach, json={})
+    assert invitation.status_code == 201, invitation.text
+    joined = await client.post("/api/v1/coach/invitations/accept", headers=athlete, json={
+        "token": invitation.json()["token"],
+    })
+    assert joined.status_code == 200, joined.text
+    client_id = joined.json()["client_id"]
+    base_grant = {"coach_id": profile.json()["user_id"], "consent_version": "v2-03c-1"}
+    history_only = await client.post("/api/v1/client/coach-grants", headers=athlete, json={
+        **base_grant, "scope": "workout_history.read",
+    })
+    assert history_only.status_code == 201, history_only.text
+    listing = await client.get("/api/v1/coach/monitoring", headers=coach)
+    assert listing.status_code == 200 and listing.json()["total"] == 0
+    assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 404
+
+    granted = await client.post("/api/v1/client/coach-grants", headers=athlete, json={
+        **base_grant, "scope": "training_summary.read",
+    })
+    assert granted.status_code == 201, granted.text
+    assert (await client.get("/api/v1/coach/monitoring", headers=coach)).json()["total"] == 1
+    await db_session.execute(text(
+        "UPDATE coach_client_grants SET granted_at = now() - INTERVAL '2 days', "
+        "expires_at = now() - INTERVAL '1 day' WHERE id = :id"
+    ), {"id": granted.json()["id"]})
+    await db_session.commit()
+    expired = await client.get("/api/v1/coach/monitoring", headers=coach)
+    assert expired.status_code == 200 and expired.json()["total"] == 0
+    assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 404
