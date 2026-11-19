@@ -30,6 +30,40 @@ try {
       assert.equal(await page.locator('aside.ftp-sidebar').count(), 0, 'private navigation must stay hidden')
       await page.screenshot({ path: resolve(outputDir, role + '-login-' + width + '.png'), fullPage: true })
     }
+    if (width === 390 || width === 1280) {
+      const access = 'a'.repeat(24)
+      const refresh = 'r'.repeat(48)
+      await page.route('**/api/v1/users/auth/**', async route => {
+        const url = new URL(route.request().url())
+        let response
+        if (url.pathname.endsWith('/email/request')) response = { challenge_id: 'c'.repeat(32) }
+        else if (url.pathname.endsWith('/email/verify')) response = {
+          access_token: access, refresh_token: refresh, token_type: 'bearer', expires_in: 900,
+        }
+        else if (url.pathname.endsWith('/me')) response = {
+          id: 9, telegram_id: null, email: 'qa@example.test', username: null,
+          first_name: 'QA', is_admin: false, profile: {}, settings: {},
+          created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+        }
+        else if (url.pathname.endsWith('/logout')) response = { message: 'Successfully logged out' }
+        else return route.fulfill({ status: 404, body: '{}' })
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) })
+      })
+      await page.getByLabel('Электронная почта').fill('qa@example.test')
+      await page.getByRole('button', { name: 'Получить код' }).click()
+      await page.getByLabel('Код подтверждения').waitFor()
+      await page.getByLabel('Код подтверждения').fill('123456')
+      await page.getByRole('button', { name: 'Подтвердить и войти' }).click()
+      await page.waitForURL('**/athlete')
+      await page.getByRole('heading', { level: 1, name: /Становись/ }).waitFor()
+      await page.screenshot({ path: resolve(outputDir, 'athlete-auth-' + width + '.png'), fullPage: true })
+      await page.goto('http://127.0.0.1:4174/coach', { waitUntil: 'networkidle' })
+      await page.getByText('Доступ тренера пока недоступен').waitFor()
+      await page.goto('http://127.0.0.1:4174/athlete', { waitUntil: 'networkidle' })
+      await page.getByRole('button', { name: 'Выйти' }).click()
+      await page.waitForURL('**/login?from=*')
+      console.log('PASS mocked email OTP /me, Coach fail-closed and logout at ' + width + 'px')
+    }
     assert.deepEqual(errors, [], 'runtime errors at ' + width)
     console.log('PASS auth guard + responsive login ' + width + 'px')
     await page.close()
