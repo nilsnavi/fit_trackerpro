@@ -14,7 +14,7 @@ from app.application.coach_service import (
     CoachInvitationService,
     CoachRelationshipService,
 )
-from app.core.audit import get_client_ip
+from app.core.audit import audit_log, get_client_ip
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
 from app.schemas.coach import (
@@ -164,12 +164,20 @@ async def list_monitoring(
     coach: User = Depends(require_coach),
     db: AsyncSession = Depends(get_async_db),
 ):
+    entitlements = CoachEntitlementService(db)
+    await entitlements.require_feature(coach.id, "client_monitoring")
     if severity is not None:
-        await CoachEntitlementService(db).require_feature(coach.id, "advanced_monitoring_filters")
-    return await CoachMonitoringService(db).list_clients(
+        await entitlements.require_feature(coach.id, "advanced_monitoring_filters")
+    result = await CoachMonitoringService(db).list_clients(
         coach.id, status=status_filter, severity=severity.value if severity else None,
         search=search, limit=limit, offset=offset,
     )
+    audit_log(
+        action="coach.monitoring.list_read", user_db_id=coach.id,
+        resource_type="coach_monitoring",
+        meta={"visible_count": len(result.items), "offset": offset},
+    )
+    return result
 
 
 @router.get("/monitoring/{client_id}", response_model=ClientMonitoringSummary)
@@ -178,7 +186,14 @@ async def get_monitoring_detail(
     coach: User = Depends(require_coach),
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await CoachMonitoringService(db).get_client(coach.id, client_id)
+    await CoachEntitlementService(db).require_feature(coach.id, "client_monitoring")
+    result = await CoachMonitoringService(db).get_client(coach.id, client_id)
+    audit_log(
+        action="coach.monitoring.detail_read", user_db_id=coach.id,
+        resource_type="coach_client", resource_id=client_id,
+        meta={"scope": "training_summary.read"},
+    )
+    return result
 
 
 @router.get("/clients/{client_id}", response_model=CoachClientDetailResponse)
