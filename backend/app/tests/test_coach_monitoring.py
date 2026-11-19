@@ -91,9 +91,11 @@ async def test_monitoring_access_rules_search_pagination_and_postgres_query_coun
     paused = await client.patch(f"/api/v1/coach/clients/{client_ids[1]}", headers=coach, json={"status": "PAUSED"})
     assert paused.status_code == 200
     listing = await client.get("/api/v1/coach/monitoring?status=attention", headers=coach)
-    assert listing.json()["attention_count"] == 30
-    assert listing.json()["ok_count"] == 0
-    assert listing.json()["total"] == 30
+    # Of 31 clients, one is PAUSED (not visible) and one has recent activity.
+    # Filtering by attention yields 29; the unfiltered counts include one OK client.
+    assert listing.json()["attention_count"] == 29
+    assert listing.json()["ok_count"] == 1
+    assert listing.json()["total"] == 29
     assert all(entry["client_id"] != client_ids[1] for entry in listing.json()["items"])
     paused_detail = await client.get(f"/api/v1/coach/monitoring/{client_ids[1]}", headers=coach)
     assert paused_detail.status_code == 404
