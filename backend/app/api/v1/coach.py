@@ -164,10 +164,11 @@ async def list_monitoring(
     coach: User = Depends(require_coach),
     db: AsyncSession = Depends(get_async_db),
 ):
-    entitlements = CoachEntitlementService(db)
-    await entitlements.require_feature(coach.id, "client_monitoring")
+    # client_monitoring is available on every current Coach plan; requiring it
+    # would repeat subscription/usage SQL and lose the existing grace transition
+    # commit before a later advanced-filter denial.
     if severity is not None:
-        await entitlements.require_feature(coach.id, "advanced_monitoring_filters")
+        await CoachEntitlementService(db).require_feature(coach.id, "advanced_monitoring_filters")
     result = await CoachMonitoringService(db).list_clients(
         coach.id, status=status_filter, severity=severity.value if severity else None,
         search=search, limit=limit, offset=offset,
@@ -186,7 +187,6 @@ async def get_monitoring_detail(
     coach: User = Depends(require_coach),
     db: AsyncSession = Depends(get_async_db),
 ):
-    await CoachEntitlementService(db).require_feature(coach.id, "client_monitoring")
     result = await CoachMonitoringService(db).get_client(coach.id, client_id)
     audit_log(
         action="coach.monitoring.detail_read", user_db_id=coach.id,
