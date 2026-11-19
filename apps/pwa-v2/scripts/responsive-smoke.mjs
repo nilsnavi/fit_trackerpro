@@ -13,7 +13,7 @@ await mkdir(outputDir, { recursive: true })
 
 try {
   for (const width of [375, 390, 768, 1280]) {
-    const page = await browser.newPage({ viewport: { width, height: 860 }, deviceScaleFactor: 1 })
+    const page = await browser.newPage({ viewport: { width, height: 860 }, deviceScaleFactor: 1, serviceWorkers: 'block' })
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     for (const role of ['athlete', 'coach']) {
@@ -33,10 +33,11 @@ try {
     if (width === 390 || width === 1280) {
       const access = 'a'.repeat(24)
       const refresh = 'r'.repeat(48)
+      let requestedCode = false
       await page.route('**/api/v1/users/auth/**', async route => {
         const url = new URL(route.request().url())
         let response
-        if (url.pathname.endsWith('/email/request')) response = { challenge_id: 'c'.repeat(32) }
+        if (url.pathname.endsWith('/email/request')) { requestedCode = true; response = { challenge_id: 'c'.repeat(32) } }
         else if (url.pathname.endsWith('/email/verify')) response = {
           access_token: access, refresh_token: refresh, token_type: 'bearer', expires_in: 900,
         }
@@ -51,7 +52,8 @@ try {
       })
       await page.getByLabel('Электронная почта').fill('qa@example.test')
       await page.getByRole('button', { name: 'Получить код' }).click()
-      await page.getByLabel('Код подтверждения').waitFor()
+      await page.getByLabel('Код подтверждения').waitFor({ timeout: 10000 })
+      assert.equal(requestedCode, true, 'email/request was not intercepted by browser test')
       await page.getByLabel('Код подтверждения').fill('123456')
       await page.getByRole('button', { name: 'Подтвердить и войти' }).click()
       await page.waitForURL('**/athlete')
