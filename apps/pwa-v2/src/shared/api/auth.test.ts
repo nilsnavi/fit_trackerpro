@@ -10,6 +10,17 @@ const stub = (value: unknown, status = 200): typeof fetch =>
   async () => new Response(JSON.stringify(value), { status })
 
 describe('V2-02A validated FastAPI auth adapter', () => {
+  it('calls the provided browser transport without binding it to the AuthApiClient instance', async () => {
+    function browserLikeFetch(this: unknown, input: RequestInfo | URL, options?: RequestInit): Promise<Response> {
+      if (this instanceof AuthApiClient) throw new TypeError('Illegal invocation')
+      expect(String(input)).toBe('/api/v1/users/auth/email/request')
+      expect(options?.method).toBe('POST')
+      return Promise.resolve(new Response(JSON.stringify({ challenge_id: 'a'.repeat(32) }), { status: 200 }))
+    }
+    const api = new AuthApiClient(browserLikeFetch as typeof fetch)
+    await expect(api.requestEmailCode('qa@example.com')).resolves.toEqual({ challenge_id: 'a'.repeat(32) })
+  })
+
   it('normalizes email OTP and rejects malformed challenge responses', async () => {
     let url = ''
     let body: unknown

@@ -6,22 +6,18 @@ import { App } from './App'
 function render(path: string) {
   return renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
 }
-describe('PWA v2 premium navigation', () => {
-  it('renders Athlete premium page with honest missing-data state', () => {
-    const html = render('/athlete')
-    expect(html).toContain('Становись')
-    expect(html).toContain('Данные ещё не подключены')
-    expect(html).toContain('ВАШЕ ТРЕНИРОВОЧНОЕ ПРОСТРАНСТВО')
-    expect(html).not.toContain('Анна Смирнова')
+describe('V2-02B public and protected routes', () => {
+  it('renders a real email code form without fake authentication', () => {
+    expect(render('/login')).toContain('С возвращением.')
+    expect(render('/login')).toContain('Получить код')
   })
-  it('renders Coach without inventing clients or schedule', () => {
-    const html = render('/coach')
-    expect(html).toContain('Тренируй')
-    expect(html).toContain('Расписание недоступно')
-    expect(html).toContain('серверный RBAC')
-    expect(html).not.toContain('Марк Волков')
+  it('SSR does not leak Athlete screen to anonymous clients', () => {
+    expect(render('/athlete')).not.toContain('Становись')
   })
-  it('shows explicit limitation on unfinished workout route', () => {
-    expect(render('/athlete/workouts')).toContain('Тренировочный движок будет подключён')
+  it('SSR does not leak Coach screen to anonymous clients', () => {
+    expect(render('/coach')).not.toContain('Тренируй')
+  })
+  it('does not expose protected workouts to anonymous clients', () => {
+    expect(render('/athlete/workouts')).not.toContain('Тренировочный движок')
   })
 })
