@@ -52,6 +52,22 @@ try {
         else return route.fulfill({ status: 404, body: '{}' })
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) })
       })
+      let athleteStatsCalls = 0
+      let athleteHistoryCalls = 0
+      await page.route('**/api/v1/users/me/stats', async route => {
+        athleteStatsCalls++
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ active_days: 3, total_workouts: 7, current_streak: 2,
+            longest_streak: 4, total_duration: 310 }) })
+      })
+      await page.route('**/api/v1/workouts/history?*', async route => {
+        athleteHistoryCalls++
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ items: [{
+            id: 77, date: '2026-11-18', status: 'COMPLETED', duration: 42,
+            tags: ['strength'], glucose_before: 9.8, private_health_field: 'SECRET-NEVER-RENDER',
+          }], total: 1, page: 1, page_size: 5 }) })
+      })
       await page.getByLabel('Электронная почта').fill('qa@example.test')
       await page.getByRole('button', { name: 'Получить код' }).click()
       try {
@@ -65,6 +81,14 @@ try {
       await page.getByRole('button', { name: 'Подтвердить и войти' }).click()
       await page.waitForURL('**/athlete')
       await page.getByRole('heading', { level: 1, name: /Становись/ }).waitFor()
+      await page.getByText('Активность за 30 дней').waitFor()
+      await page.getByText('Тренировок', { exact: true }).first().waitFor()
+      await page.getByText('2026-11-18').waitFor()
+      assert.equal(await page.getByText('SECRET-NEVER-RENDER').count(), 0, 'health details must not reach Athlete overview')
+      assert.ok(athleteStatsCalls > 0, 'Athlete stats must be requested from server')
+      assert.ok(athleteHistoryCalls > 0, 'Athlete workout history must be requested from server')
+      console.log('PASS Athlete live-data contracts and no health leakage at ' + width + 'px')
+
       await page.screenshot({ path: resolve(outputDir, 'athlete-auth-' + width + '.png'), fullPage: true })
       let clientCalls = 0
       await page.route('**/api/v1/coach/**', async route => {
