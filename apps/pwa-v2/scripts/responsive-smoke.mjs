@@ -137,7 +137,7 @@ try {
         assert.equal(await page.getByText('Клиент №102 · активная связь').count(), 0)
         assert.equal(await page.getByText('Клиент №103 · активная связь').count(), 0)
         assert.equal(await page.getByText('must never render').count(), 0)
-        assert.equal(clientCalls, 1, 'Coach client metadata fetched only after role verification')
+        assert.equal(clientCalls, 2, 'Coach overview and client list each fetch server-scoped metadata after role verification')
         console.log('PASS Coach role + active-only client relationships at 390px')
       }
       await page.evaluate(() => { history.pushState(null, '', '/athlete'); dispatchEvent(new PopStateEvent('popstate')) })
