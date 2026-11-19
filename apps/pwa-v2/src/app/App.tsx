@@ -68,12 +68,14 @@ function Workspace(){
 export function App() {
   const { pathname, search } = useLocation()
   const phase = useSessionStore(state => state.phase)
+  const identity = useSessionStore(state => state.profile?.id)
+  const token = useSessionStore(state => state.accessToken)
   if (pathname === '/login') return phase === 'authenticated' ? <Navigate to="/athlete" replace/> : <LoginPage/>
   if (phase === 'anonymous') {
     const from = pathname + search
     return <Navigate to={`/login?from=${encodeURIComponent(from)}`} replace/>
   }
   if (phase === 'checking') return <main className="ftp-auth-layout" role="status">Проверяем сессию…</main>
-  if (pathname.startsWith('/coach')) return <CoachAccessGate><Workspace/></CoachAccessGate>
+  if (pathname.startsWith('/coach')) return <CoachAccessGate key={identity + ':' + token}><Workspace/></CoachAccessGate>
   return <Workspace/>
 }

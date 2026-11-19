@@ -67,7 +67,7 @@ try {
       await page.getByRole('heading', { level: 1, name: /Становись/ }).waitFor()
       await page.screenshot({ path: resolve(outputDir, 'athlete-auth-' + width + '.png'), fullPage: true })
       await page.evaluate(() => { history.pushState(null, '', '/coach'); dispatchEvent(new PopStateEvent('popstate')) })
-      await page.getByText('Доступ тренера пока недоступен').waitFor()
+      await page.getByText('Доступ тренера не подтверждён').waitFor()
       await page.evaluate(() => { history.pushState(null, '', '/athlete'); dispatchEvent(new PopStateEvent('popstate')) })
       await page.getByRole('button', { name: 'Выйти' }).click()
       await page.waitForURL('**/login?from=*')
