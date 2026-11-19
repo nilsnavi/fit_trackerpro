@@ -20,11 +20,19 @@ async def _auth(client: AsyncClient, telegram_id: int, name: str) -> dict[str, s
 
 
 async def _relationship(client: AsyncClient, coach_headers: dict[str, str], client_headers: dict[str, str]) -> int:
-    await client.post("/api/v1/coach/profile", headers=coach_headers, json={"display_name": "Coach"})
+    profile = await client.post("/api/v1/coach/profile", headers=coach_headers, json={"display_name": "Coach"})
+    assert profile.status_code in (200, 201, 409), profile.text
+    if profile.status_code == 409:
+        profile = await client.get("/api/v1/coach/profile", headers=coach_headers)
+    coach_id = profile.json()["user_id"]
     invitation = await client.post("/api/v1/coach/invitations", headers=coach_headers, json={})
     accepted = await client.post("/api/v1/coach/invitations/accept", headers=client_headers,
         json={"token": invitation.json()["token"]})
     assert accepted.status_code == 200, accepted.text
+    granted = await client.post("/api/v1/client/coach-grants", headers=client_headers, json={
+        "coach_id": coach_id, "scope": "training_summary.read", "consent_version": "v2-03c-1",
+    })
+    assert granted.status_code == 201, granted.text
     return accepted.json()["client_id"]
 
 
@@ -84,12 +92,11 @@ async def test_monitoring_access_rules_search_pagination_and_postgres_query_coun
     assert paused.status_code == 200
     listing = await client.get("/api/v1/coach/monitoring?status=attention", headers=coach)
     assert listing.json()["attention_count"] == 30
-    assert listing.json()["ok_count"] == 1
-    paused_item = next(entry for entry in listing.json()["items"] if entry["client_id"] == client_ids[1])
-    assert "RELATIONSHIP_PAUSED" in {signal["code"] for signal in paused_item["signals"]}
+    assert listing.json()["ok_count"] == 0
+    assert listing.json()["total"] == 30
+    assert all(entry["client_id"] != client_ids[1] for entry in listing.json()["items"])
     paused_detail = await client.get(f"/api/v1/coach/monitoring/{client_ids[1]}", headers=coach)
-    assert paused_detail.status_code == 200
-    assert paused_detail.json()["relationship_status"] == "PAUSED"
+    assert paused_detail.status_code == 404
 
 
 @pytest.mark.integration
@@ -124,8 +131,7 @@ async def test_monitoring_does_not_carry_assignment_across_archived_relationship
     paused = await client.patch(f"/api/v1/coach/clients/{client_id}", headers=coach, json={"status": "PAUSED"})
     assert paused.status_code == 200, paused.text
     paused_detail = await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)
-    assert paused_detail.status_code == 200
-    assert paused_detail.json()["relationship_status"] == "PAUSED"
+    assert paused_detail.status_code == 404
     blocked_coach_update = await client.patch(
         f"/api/v1/coach/assignments/{assignment.json()['id']}", headers=coach, json={"status": "PAUSED"}
     )
@@ -150,8 +156,46 @@ async def test_monitoring_does_not_carry_assignment_across_archived_relationship
     )).scalar_one()
     assert relationship_b_id != relationship_a_id
 
+    # Archived relationship grants must never silently transfer to a new link.
+    no_implicit_consent = await client.get("/api/v1/coach/monitoring", headers=coach)
+    assert no_implicit_consent.status_code == 200
+    assert no_implicit_consent.json()["total"] == 0
+    renewed = await client.post("/api/v1/client/coach-grants", headers=client_headers, json={
+        "coach_id": (await client.get("/api/v1/coach/profile", headers=coach)).json()["user_id"],
+        "scope": "training_summary.read", "consent_version": "v2-03c-1",
+    })
+    assert renewed.status_code == 201, renewed.text
     listing = await client.get("/api/v1/coach/monitoring", headers=coach)
     assert listing.status_code == 200, listing.text
     item = next(value for value in listing.json()["items"] if value["client_id"] == client_id)
     assert item["relationship_status"] == "ACTIVE"
     assert item["active_assignment"] is None
+
+
+@pytest.mark.integration
+async def test_monitoring_denied_until_client_grants_and_after_revoke(client: AsyncClient, db_session):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach = await _auth(client, 976001, "Coach")
+    athlete = await _auth(client, 976002, "Athlete")
+    profile = await client.post("/api/v1/coach/profile", headers=coach, json={"display_name": "Coach"})
+    assert profile.status_code == 201
+    invitation = await client.post("/api/v1/coach/invitations", headers=coach, json={})
+    joined = await client.post("/api/v1/coach/invitations/accept", headers=athlete, json={
+        "token": invitation.json()["token"],
+    })
+    assert joined.status_code == 200
+    client_id = joined.json()["client_id"]
+    assert (await client.get("/api/v1/coach/monitoring", headers=coach)).json()["total"] == 0
+    assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 404
+    approved = await client.post("/api/v1/client/coach-grants", headers=athlete, json={
+        "coach_id": profile.json()["user_id"],
+        "scope": "training_summary.read", "consent_version": "v2-03c-1",
+    })
+    assert approved.status_code == 201, approved.text
+    assert (await client.get("/api/v1/coach/monitoring", headers=coach)).json()["total"] == 1
+    assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 200
+    revoked = await client.delete(f"/api/v1/client/coach-grants/{approved.json()['id']}", headers=athlete)
+    assert revoked.status_code == 204
+    assert (await client.get("/api/v1/coach/monitoring", headers=coach)).json()["total"] == 0
+    assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 404

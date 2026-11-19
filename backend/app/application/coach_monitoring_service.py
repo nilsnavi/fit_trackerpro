@@ -3,11 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, time
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.coach_business import CoachClientPackage
 from app.domain.coach_client import CoachClient, CoachClientStatus
+from app.domain.coach_client_grant import (
+    COACH_GRANT_CONSENT_VERSION,
+    TRAINING_SUMMARY_READ,
+    CoachClientGrant,
+    CoachGrantStatus,
+)
 from app.domain.coach_program import (
     CoachProgram,
     CoachProgramAssignment,
@@ -215,8 +221,29 @@ class CoachMonitoringService:
             .outerjoin(CoachProgramAssignment, CoachProgramAssignment.id == latest_assignment.c.assignment_id)
             .outerjoin(CoachProgram, CoachProgram.id == CoachProgramAssignment.program_id)
             .outerjoin(program_activity, program_activity.c.assignment_id == CoachProgramAssignment.id)
-            .where(CoachClient.coach_id == coach_id,
-                   CoachClient.status.in_((CoachClientStatus.ACTIVE, CoachClientStatus.PAUSED)))
+            .where(
+                CoachClient.coach_id == coach_id,
+                CoachClient.status == CoachClientStatus.ACTIVE,
+                CoachClient.ended_at.is_(None),
+                CoachClient.archived_at.is_(None),
+                # Correlated SQL EXISTS makes the authorization part of the same
+                # database statement that reads the monitoring source rows.
+                exists(
+                    select(CoachClientGrant.id).where(
+                        CoachClientGrant.relationship_id == CoachClient.id,
+                        CoachClientGrant.coach_id == coach_id,
+                        CoachClientGrant.client_id == CoachClient.client_id,
+                        CoachClientGrant.scope == TRAINING_SUMMARY_READ,
+                        CoachClientGrant.status == CoachGrantStatus.ACTIVE,
+                        CoachClientGrant.consent_version == COACH_GRANT_CONSENT_VERSION,
+                        CoachClientGrant.revoked_at.is_(None),
+                        or_(
+                            CoachClientGrant.expires_at.is_(None),
+                            CoachClientGrant.expires_at > func.now(),
+                        ),
+                    )
+                ),
+            )
             .order_by(CoachClient.client_id, CoachClient.id.desc())
         )
         rows = (await self.db.execute(statement)).all()
