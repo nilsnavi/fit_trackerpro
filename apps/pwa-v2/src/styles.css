@@ -18,3 +18,23 @@
 .ftp-feature-icon{width:46px;height:46px;border:1px solid #4b654038;border-radius:14px;background:linear-gradient(145deg,#30452c,#243625);box-shadow:inset 0 1px 0 #d5fc681b,0 8px 20px #00000020}
 .ftp-empty__icon{border:1px solid var(--ftp-border);background:linear-gradient(145deg,var(--ftp-elevated),var(--ftp-sidebar))}
 .ftp-coach-intro__icon{border:1px solid #50694b;background:linear-gradient(145deg,#364e30,#243525)}
+
+/* V2-02B premium OTP / authorization layout */
+.ftp-auth-layout{min-height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;padding:34px 16px;background:radial-gradient(ellipse 65% 35% at 50% 10%,#354a2a66,transparent 75%),var(--ftp-bg)}
+.ftp-auth-brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.08em;font-size:19px}
+.ftp-auth-brand strong span{color:var(--ftp-accent)}
+.ftp-auth-card{width:100%;max-width:480px;padding:clamp(22px,5vw,42px);box-shadow:var(--ftp-shadow)}
+.ftp-auth-card h1{font-size:clamp(29px,6vw,39px);letter-spacing:-1.2px;margin:15px 0}
+.ftp-auth-card>p{color:var(--ftp-muted);line-height:1.7;font-size:13px}
+.ftp-auth-form{display:flex;flex-direction:column;gap:13px;margin-top:27px}
+.ftp-auth-form label{font-size:12px;font-weight:750}
+.ftp-auth-form input{width:100%;height:52px;border:1px solid var(--ftp-border);border-radius:12px;background:var(--ftp-elevated);color:var(--ftp-ink);font:inherit;font-size:15px;padding:0 17px}
+.ftp-auth-form input:focus-visible{outline:2px solid var(--ftp-accent);outline-offset:2px}
+.ftp-auth-form .ftp-button{width:100%;margin-top:5px}
+.ftp-auth-card .ftp-auth-caption{font-size:11px;color:var(--ftp-subtle);line-height:1.8;margin:22px 0 0}
+.ftp-auth-error{color:var(--ftp-danger);line-height:1.5;margin:0}
+.ftp-locked-page{max-width:650px;margin:10vh auto;padding:18px}
+.ftp-locked-page p{color:var(--ftp-muted);line-height:1.7}
+.ftp-locked-link{display:inline-block;color:var(--ftp-accent);margin-top:12px;text-decoration:underline;text-underline-offset:4px}
+.ftp-coach-locked{display:flex;align-items:center;gap:7px;color:var(--ftp-subtle);font-size:11px;padding:8px 10px;opacity:.75}
+@media(max-width:450px){.ftp-auth-layout{justify-content:flex-start;padding-top:14vh}.ftp-auth-card{padding:24px 20px}.ftp-auth-brand{font-size:17px}}

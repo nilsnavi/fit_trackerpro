@@ -51,3 +51,13 @@
 - Profile basic shape verified before use. These validation rules are transport guards, not RBAC.
 - HTTP errors 400/401/403/422/429/500, malformed JSON and offline errors covered; raw request/token data never logged.
 - Backend contract is the source of truth; implementation still does not persist sessions or grant Coach rights.
+
+## V2-02B — Email OTP + Session Gate
+
+- `/login`: email challenge / one-time code in premium responsive UI, using real V2-02A adapter (no mock identity).
+- `SessionManager`: memory-only tokens, generation ID guards against stale async success, AbortController for in-flight auth requests, single-flight refresh, server logout attempt with immediate local revocation.
+- `/athlete/*`: no private screen without session confirmed by `GET /users/auth/me`; after browser reload login is required by design.
+- `/coach/*`: **fail-closed** — even signed-in users see unavailable screen, until server entitlements/roles and consent are wired in V2-02C.
+- QueryClient cache cleared on logout/session switch. No localStorage/sessionStorage token persistence.
+- Browser smoke checks anonymous redirect to /login and responsive layout. Signed-in flows need follow-up mocked / live integration E2E.
+- Server SMTP settings required for real email OTP; no production switch.

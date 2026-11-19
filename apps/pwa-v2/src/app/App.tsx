@@ -1,4 +1,8 @@
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { LoginPage } from '../domains/auth/LoginPage'
+import { sessionManager } from '../shared/auth/sessionRuntime'
+import { useSessionStore } from '../shared/auth/session'
+import { Button } from '../shared/ui/PremiumUI'
 import { SignatureIcon, type SignatureIconName } from '../shared/ui/SignatureIcon'
 import { AthleteOverview } from '../domains/athlete/AthleteOverview'
 import { CoachOverview } from '../domains/coach/CoachOverview'
@@ -30,7 +34,7 @@ function SideNavigation({coach}:{coach:boolean}) {
     <div className="ftp-sidebar-foot"><SignatureIcon name="shield" size={18}/> Новый интерфейс без демоданных. Серверные права не обойдены.</div>
   </>
 }
-export function App(){
+function Workspace(){
   const {pathname}=useLocation()
   const coach=pathname.startsWith('/coach')
   const nav=coach?coachNav:athleteNav
@@ -38,9 +42,9 @@ export function App(){
     <aside className="ftp-sidebar"><SideNavigation coach={coach}/></aside>
     <div className="ftp-main">
       <header className="ftp-topbar"><div className="ftp-breadcrumbs"><span>FitTracker Pro</span><SignatureIcon name="chevron" size={15}/><strong>{coach?'Coach':'Athlete'}</strong></div>
-        <div className="ftp-top-actions"><span className="ftp-build-label">PREMIUM UI · V2-01</span><nav className="ftp-mode-switch" aria-label="Режим интерфейса">
+        <div className="ftp-top-actions"><span className="ftp-build-label">PREMIUM UI · V2-02B</span><Button tone="ghost" onClick={() => { void sessionManager.logout() }}>Выйти</Button><nav className="ftp-mode-switch" aria-label="Режим интерфейса">
           <NavLink to="/athlete" className={!coach?'is-selected':''}><SignatureIcon name="workout" size={17}/> <span>Athlete</span></NavLink>
-          <NavLink to="/coach" className={coach?'is-selected':''}><SignatureIcon name="clients" size={17}/> <span>Coach</span></NavLink>
+          <span className="ftp-coach-locked" aria-label="Режим Coach пока недоступен"><SignatureIcon name="clients" size={17}/> Coach · скоро</span>
         </nav></div>
       </header>
       <main className="ftp-content"><Routes>
@@ -58,4 +62,26 @@ export function App(){
     </div>
     <nav className="ftp-mobile-nav" aria-label="Мобильная навигация">{nav.map(({to,name,icon:Icon})=><NavLink key={to} to={to} end className={({isActive})=>'ftp-mobile-nav__link'+(isActive?' is-active':'')}><SignatureIcon name={Icon} size={22}/><span>{name}</span></NavLink>)}</nav>
   </div>
+}
+
+function CoachUnavailable() {
+  return <main className="ftp-locked-page">
+    <Card eyebrow="COACH / ЗАЩИЩЁННЫЙ РАЗДЕЛ" title="Доступ тренера пока недоступен">
+      <p>Роли, подписки и разрешения клиентов проверяет сервер. Мы откроем Coach после интеграции этих проверок в V2-02C.</p>
+      <NavLink to="/athlete" className="ftp-locked-link">Вернуться в Athlete</NavLink>
+    </Card>
+  </main>
+}
+
+export function App() {
+  const { pathname, search } = useLocation()
+  const phase = useSessionStore(state => state.phase)
+  if (pathname === '/login') return phase === 'authenticated' ? <Navigate to="/athlete" replace/> : <LoginPage/>
+  if (phase === 'anonymous') {
+    const from = pathname + search
+    return <Navigate to={`/login?from=${encodeURIComponent(from)}`} replace/>
+  }
+  if (phase === 'checking') return <main className="ftp-auth-layout" role="status">Проверяем сессию…</main>
+  if (pathname.startsWith('/coach')) return <CoachUnavailable/>
+  return <Workspace/>
 }
