@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -124,6 +125,10 @@ class ClientGrantService:
         return GrantView.model_validate(record)
 
     async def revoke(self, client_id: int, grant_id: str) -> None:
+        try:
+            grant_id = str(UUID(grant_id))
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=404, detail="Grant not found") from None
         # Lock the relationship first, consistent with the grant operation.
         relation = await self.db.scalar(
             select(CoachClient).join(
