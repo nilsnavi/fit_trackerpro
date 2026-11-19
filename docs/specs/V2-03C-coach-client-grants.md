@@ -1,6 +1,6 @@
 # SPEC V2-03C — Разрешения Coach–Client (server authority)
 
-Статус: **design / NOT IMPLEMENTED**. Этот документ не выдаёт никаких прав и не меняет поведение API. Применять миграции и включать health monitoring можно только после реализации, тестов и отдельного согласования.
+Статус на **19.11.2026**: **частично реализовано**. V2-03C.1 объединён с `main` через [PR #278](https://github.com/nilsnavi/fit_trackerpro/pull/278); V2-03C.2 реализуется в открытом Draft [PR #279](https://github.com/nilsnavi/fit_trackerpro/pull/279) и **не объединён**. V2-03C.3 и C.4 не реализованы. Эта спецификация не выдаёт никаких прав сама по себе и не разрешает включать health monitoring.
 
 ## 1. Цель
 
@@ -8,7 +8,7 @@
 
 ## 2. Scope и запреты
 
-- v1 scopes: `training_summary.read` (агрегированная тренировочная статистика), `workout_history.read` (история тренировок без медицинских полей), `health_metrics.read` (особая категория; **выключено до отдельной правовой/безопасностной проверки**).
+- Разрешённые в C.1 scopes: `training_summary.read` (агрегированная тренировочная статистика) и `workout_history.read` (история тренировок без медицинских полей). `health_metrics.read` **не входит в allowlist и запрещён ограничением БД**; для него понадобится отдельная спецификация, правовая и security-проверка.
 - Никаких wildcard, `all`, массовых grants, выдачи прав тренером или неявного consent при принятии приглашения.
 - Не использовать устаревший `GET /api/v1/users/coach-access`: текущий контракт возвращает 501.
 - Старый `coach_clients.permissions = {}` не трактовать как новое согласие, не делать автоматическую миграцию в разрешения.
@@ -16,7 +16,7 @@
 
 ## 3. Модель БД (новая таблица)
 
-`coach_client_grants`:
+`coach_client_grants` — **реализовано в PR #278 / C.1**:
 - `id` PK UUID; `coach_id` FK users CASCADE; `client_id` FK users CASCADE; `relationship_id` FK coach_clients CASCADE
 - `scope` VARCHAR(48) CHECK allowlisted
 - `status` ENUM/string: `ACTIVE`, `REVOKED`, `EXPIRED`
@@ -26,18 +26,19 @@
 - `UNIQUE(relationship_id, scope)`: reinstate through explicit client action with audit trail; never silently resurrect revoked grants
 - `CHECK(coach_id <> client_id)`, `CHECK(revoked_at IS NOT NULL IFF status = REVOKED)`
 - indexes: `(coach_id, client_id, status)`, `(client_id, status)`
-- audit events in immutable audit trail with action / actor ID / coach / client / scope / version / timestamp (no health values, no bearer tokens)
+- Таблица журнала `coach_grant_audit` и транзакционные записи `GRANTED`/`REVOKED` реализуются в **Draft PR #279 / C.2**. Иммутабельность на уровне БД (запрет UPDATE/DELETE) пока **не подтверждена** и остаётся отдельным security-gate; журнал не должен содержать значения здоровья или bearer-токены.
 
-Migration AFTER `s11_2_email_auth` (verify Alembic head before coding). Online-safe, no defaults that grant access. Downgrade policy must reject destructive downgrade if grants exist.
+В `main` миграция `s11_3_coach_client_grants` следует за `s11_2_email_auth`: она добавляет пустую таблицу без автоматически выданных разрешений; downgrade отказывается удалять непустые grants. В PR #279 предлагается следующая миграция `s11_4_coach_grant_audit`. Перед выпуском требуются проверки миграций на PostgreSQL и процедуры сохранности аудита.
 
-## 4. API /api/v1 (proposed, not shipped)
+## 4. API /api/v1 (статус по этапам)
 
-### Client-owned
-- `GET /client/coach-grants`: only grants of authenticated athlete, safe profile labels
-- `POST /client/coach-grants`: `{coach_id, scope, consent_version, expires_at?}`; only for ACTIVE relationship. Idempotent when already ACTIVE with identical data; explicit opt-in required.
-- `DELETE /client/coach-grants/{grant_id}`: immediate revocation, idempotent, log actor. Never allow grant update by COACH.
+### Client-owned — код в Draft PR #279 (ещё не в `main`)
+- `GET /client/coach-grants`: собственные гранты аутентифицированного спортсмена; отображаемое имя тренера не входит в текущую DTO `GrantView` и остаётся задачей UI/API.
+- `POST /client/coach-grants`: `{coach_id, scope, consent_version, expires_at?}`; только при ACTIVE-связи, с явным согласием клиента. Повтор идентичного активного гранта идемпотентен; изменение гранта требует отдельного отзыва и повторной явной выдачи.
+- `DELETE /client/coach-grants/{grant_id}`: отзыв только владельцем, повторный отзыв идемпотентен, запись аудита `REVOKED` в той же транзакции.
+- В Draft #279 повторная выдача REVOKED-гранта предусмотрена через отдельный POST клиента и новый `GRANTED` audit event. До merge нужны окончательные CI, PostgreSQL integration и проверки гонок.
 
-### Coach-owned
+### Coach-owned — запланировано в C.3, **не реализовано**
 - `GET /coach/clients/{client_id}/training-summary`: requires COACH role, feature, ACTIVE relationship, ACTIVE `training_summary.read` grant, nonexpired consent, scoped DB lookup, audit. Response is explicitly allowlisted.
 - `GET /coach/clients/{client_id}/workout-history`: same for `workout_history.read`; exclude glucose, wearable vitals, notes containing health data, profile fields and any unapproved metrics.
 - Health reading endpoints remain **403 / disabled** until explicit controls, minimization and audit go through security review.
@@ -46,7 +47,7 @@ Return 401 unauthenticated; 403 if no role/no valid grant; 404 for no visible re
 
 ## 5. Авторизация и TOCTOU
 
-Server dependency `require_active_grant(coach_id_from_auth, client_id_from_path, scope)` verifies in a single DB transaction:
+В C.1 реализован **read-only** `CoachGrantRepository.is_allowed()`, который проверяет флаг Coach, роль, активный профиль, точную ACTIVE-связь, scope, версию, отсутствие отзыва и истечение срока без кеша положительного решения. Полноценный dependency `require_active_grant(...)` для конечных Coach-owned endpoints пока **не реализован**. В C.3 он должен обеспечивать следующую проверку непосредственно при чтении данных:
 1. Feature flag and role `COACH`, active Coach profile.
 2. Coach-client relation matches both IDs and is `ACTIVE` (not PAUSED, REVOKED, ARCHIVED).
 3. Grant for exact same `relationship_id + scope`, status ACTIVE, version accepted and not expired, revoked_at null.
@@ -70,9 +71,9 @@ Client sees coach name, granular scopes, purpose, version, expiry, exact actions
 
 ## 8. Breakdown
 
-- **V2-03C.1** DB model + Alembic migration + repository read checks + tests.
-- **V2-03C.2** Client grant/revoke REST + audit and strict DTO + integration tests.
-- **V2-03C.3** Coach allowlisted training reads + fail-closed authorization + cross-account tests.
-- **V2-03C.4** PWA consent management UI + e2e + staging rollout checklist.
+- **V2-03C.1 — MERGED**: БД, ORM-модель, `s11_3_coach_client_grants`, read-only fail-closed repository и тесты. [PR #278](https://github.com/nilsnavi/fit_trackerpro/pull/278).
+- **V2-03C.2 — DRAFT / QA**: клиентские GET/POST/DELETE, строгие DTO, транзакционный аудит `coach_grant_audit`, миграция `s11_4_coach_grant_audit`, интеграционные тесты. Код находится в [PR #279](https://github.com/nilsnavi/fit_trackerpro/pull/279), ещё не в `main`. Финальная проверка CI обязательна; DB-enforced immutable audit не заявлен как готовый.
+- **V2-03C.3 — TODO**: Coach allowlisted reads, проверка гранта и entitlement непосредственно на серверном пути чтения, защита от read/revoke race, аудит чтений, проверки двух тренеров/клиентов. Отдельно аудитировать существующие Coach monitoring routes перед выпуском.
+- **V2-03C.4 — TODO**: кабинет управления согласиями PWA, явные подтверждения, revocation E2E, staging rollout checklist.
 
 **Acceptance:** all granular access is denied before the user explicitly grants it and denied immediately after revoke, consistently across UI and API.
