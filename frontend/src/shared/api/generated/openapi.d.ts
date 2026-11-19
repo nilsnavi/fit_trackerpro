@@ -500,6 +500,41 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/coach-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Grants */
+        get: operations["list_my_grants_api_v1_client_coach_grants_get"];
+        put?: never;
+        /** Create My Grant */
+        post: operations["create_my_grant_api_v1_client_coach_grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/coach-grants/{grant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke My Grant */
+        delete: operations["revoke_my_grant_api_v1_client_coach_grants__grant_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/coach-programs": {
         parameters: {
             query?: never;
@@ -6001,6 +6036,45 @@ export type components = {
             /** Readings Count 7D */
             readings_count_7d: number;
         };
+        /** GrantCreate */
+        GrantCreate: {
+            /** Coach Id */
+            coach_id: number;
+            /**
+             * Consent Version
+             * @constant
+             */
+            consent_version: "v2-03c-1";
+            /** Expires At */
+            expires_at?: string | null;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "training_summary.read" | "workout_history.read";
+        };
+        /** GrantView */
+        GrantView: {
+            /** Coach Id */
+            coach_id: number;
+            /** Consent Version */
+            consent_version: string;
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Granted At
+             * Format: date-time
+             */
+            granted_at: string;
+            /** Id */
+            id: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Scope */
+            scope: string;
+            /** Status */
+            status: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -9720,6 +9794,88 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AnalyticsDashboardResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_grants_api_v1_client_coach_grants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantView"][];
+                };
+            };
+        };
+    };
+    create_my_grant_api_v1_client_coach_grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_my_grant_api_v1_client_coach_grants__grant_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
