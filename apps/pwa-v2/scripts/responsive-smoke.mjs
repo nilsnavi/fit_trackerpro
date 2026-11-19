@@ -99,7 +99,11 @@ try {
           id: 10, user_id: 9, is_active: true, display_name: 'QA Coach',
         }
         else if (pathname.endsWith('/subscription')) result = {
-          plan: 'FREE', status: 'ACTIVE', upgrade_required: false,
+          plan: 'TRAINER_PRO', status: 'TRIAL', upgrade_required: false,
+          trial_days_remaining: 6, grace_days_remaining: null,
+          active_clients: { used: 3, limit: 20, remaining: 17 },
+          active_programs: { used: 4, limit: 50, remaining: 46 },
+          features: { client_monitoring: true, program_assignments: true, advanced_monitoring_filters: false },
         }
         else if (pathname.endsWith('/clients')) {
           clientCalls++
@@ -119,13 +123,21 @@ try {
         console.log('PASS Coach server 403 denied before clients query at 1280px')
       } else {
         await page.getByRole('heading', { level: 1, name: /Тренируй/ }).waitFor()
+        await page.getByText('QA Coach').waitFor()
+        await page.getByText('Дней пробного периода: 6').waitFor()
+        await page.getByText('Лимит программ').waitFor()
+        await page.getByText('Клиент №101').waitFor()
+        assert.equal(await page.getByText('Клиент №102').count(), 0, 'revoked client must not appear')
+        assert.equal(await page.getByText('must never render').count(), 0, 'private data must not appear')
+        console.log('PASS Coach dashboard server-derived profile subscription quotas and clients ' + width + 'px')
+
         await page.getByRole('link', { name: 'Клиенты' }).first().click()
         await page.getByRole('heading', { name: 'Мои клиенты' }).waitFor()
         await page.getByText('Клиент №101 · активная связь').waitFor()
         assert.equal(await page.getByText('Клиент №102 · активная связь').count(), 0)
         assert.equal(await page.getByText('Клиент №103 · активная связь').count(), 0)
         assert.equal(await page.getByText('must never render').count(), 0)
-        assert.equal(clientCalls, 1, 'Coach client metadata fetched only after role verification')
+        assert.equal(clientCalls, 2, 'Coach overview and client list each fetch server-scoped metadata after role verification')
         console.log('PASS Coach role + active-only client relationships at 390px')
       }
       await page.evaluate(() => { history.pushState(null, '', '/athlete'); dispatchEvent(new PopStateEvent('popstate')) })
