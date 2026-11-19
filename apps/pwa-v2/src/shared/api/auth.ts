@@ -141,7 +141,7 @@ function parseProfile(value: unknown): AuthProfile {
 
 export class AuthApiClient {
   constructor(
-    private readonly transport: typeof fetch = fetch,
+    private readonly transport: typeof fetch = (...args) => fetch(...args),
     private readonly prefix = '/api/v1/users/auth',
   ) {}
 
