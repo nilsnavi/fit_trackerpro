@@ -15,7 +15,11 @@ from app.domain.coach_client_grant import (
 )
 from app.domain.coach_profile import CoachProfile
 from app.domain.workout_log import WorkoutLog
-from app.schemas.coach_training_reads import CoachTrainingSummary, CoachWorkoutHistory, CoachWorkoutHistoryItem
+from app.schemas.coach_training_reads import (
+    CoachTrainingSummary,
+    CoachWorkoutHistory,
+    CoachWorkoutHistoryItem,
+)
 
 
 class CoachTrainingReadService:
