@@ -1,9 +1,9 @@
 """Minimal Coach-owned training reads with per-request grant and relationship locks."""
 from __future__ import annotations
 
+from fastapi import HTTPException
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
 
 from app.domain.coach_client import CoachClient, CoachClientStatus
 from app.domain.coach_client_grant import (
