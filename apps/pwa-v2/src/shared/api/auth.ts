@@ -148,7 +148,7 @@ export class AuthApiClient {
   private async request<T>(path: string, init: RequestInit, parse: (value: unknown) => T): Promise<T> {
     let response: Response
     try {
-      response = await this.transport(this.prefix + path, {
+      response = await this.transport.call(globalThis, this.prefix + path, {
         credentials: 'same-origin', cache: 'no-store', ...init,
         headers: { 'Content-Type': 'application/json', ...init.headers },
       })
@@ -211,7 +211,7 @@ export class AuthApiClient {
     }, parseTokens)
   }
   async logout(accessToken: string, refreshToken: string | null): Promise<void> {
-    const response = await this.transport(this.prefix + '/logout', {
+    const response = await this.transport.call(globalThis, this.prefix + '/logout', {
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ refresh_token: refreshToken }),
