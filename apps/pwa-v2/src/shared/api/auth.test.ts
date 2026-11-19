@@ -11,9 +11,7 @@ const stub = (value: unknown, status = 200): typeof fetch =>
 
 describe('V2-02A validated FastAPI auth adapter', () => {
   it('calls the provided browser transport without binding it to the AuthApiClient instance', async () => {
-    let calledWith: unknown
     function browserLikeFetch(this: unknown, input: RequestInfo | URL, options?: RequestInit): Promise<Response> {
-      calledWith = this
       if (this instanceof AuthApiClient) throw new TypeError('Illegal invocation')
       expect(String(input)).toBe('/api/v1/users/auth/email/request')
       expect(options?.method).toBe('POST')
@@ -21,7 +19,6 @@ describe('V2-02A validated FastAPI auth adapter', () => {
     }
     const api = new AuthApiClient(browserLikeFetch as typeof fetch)
     await expect(api.requestEmailCode('qa@example.com')).resolves.toEqual({ challenge_id: 'a'.repeat(32) })
-    expect(calledWith).not.toBe(api)
   })
 
   it('normalizes email OTP and rejects malformed challenge responses', async () => {
