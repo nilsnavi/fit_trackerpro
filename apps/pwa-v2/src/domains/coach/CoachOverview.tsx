@@ -9,7 +9,7 @@ export function CoachOverview() {
   const token = useSessionStore(state => state.accessToken)
   const currentUserId = useSessionStore(state => state.profile?.id)
   const dashboard = useQuery({
-    queryKey: ['coach', currentUserId, token, 'dashboard'],
+    queryKey: ['coach', currentUserId, 'dashboard'],
     enabled: !!token && !!currentUserId,
     queryFn: ({ signal }) => fetchCoachDashboard(token!, currentUserId!, undefined, signal),
     retry: false,
