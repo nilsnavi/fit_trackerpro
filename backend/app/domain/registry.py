@@ -19,6 +19,7 @@ from app.domain.coach_business import (  # noqa: F401
 )
 from app.domain.coach_client import CoachClient  # noqa: F401
 from app.domain.coach_client_grant import CoachClientGrant  # noqa: F401
+from app.domain.coach_grant_audit import CoachGrantAudit  # noqa: F401
 from app.domain.coach_invitation import CoachInvitation  # noqa: F401
 from app.domain.coach_notification import CoachNotification  # noqa: F401
 from app.domain.coach_profile import CoachProfile  # noqa: F401
