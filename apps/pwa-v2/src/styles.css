@@ -40,3 +40,13 @@
 @media(max-width:450px){.ftp-auth-layout{justify-content:flex-start;padding-top:14vh}.ftp-auth-card{padding:24px 20px}.ftp-auth-brand{font-size:17px}}
 
 .ftp-telegram-login{width:100%;margin-top:15px;border-color:var(--ftp-accent);color:var(--ftp-accent)}
+
+/* V2-03: verified personal data, no mock values */
+.ftp-real-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding-top:10px}
+.ftp-real-stats>div{display:flex;flex-direction:column;gap:8px;background:var(--ftp-elevated);border:1px solid var(--ftp-border);padding:17px;border-radius:13px;min-width:0}
+.ftp-real-stats strong{font-size:clamp(25px,4vw,35px);line-height:1.1;color:var(--ftp-ink);font-variant-numeric:tabular-nums}
+.ftp-real-stats span{color:var(--ftp-muted);font-size:12px}
+.ftp-real-history{list-style:none;padding:0;margin:0}
+.ftp-real-history li{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--ftp-border);padding:13px 0;font-size:13px}
+.ftp-real-history li span{color:var(--ftp-muted)}
+@media(max-width:375px){.ftp-real-stats{grid-template-columns:1fr}}
