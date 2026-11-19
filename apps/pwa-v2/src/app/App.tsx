@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { LoginPage } from '../domains/auth/LoginPage'
+import { CoachAccessGate, CoachClientLinks } from '../shared/auth/CoachAccessGate'
 import { sessionManager } from '../shared/auth/sessionRuntime'
 import { useSessionStore } from '../shared/auth/session'
 import { Button } from '../shared/ui/PremiumUI'
@@ -44,7 +45,7 @@ function Workspace(){
       <header className="ftp-topbar"><div className="ftp-breadcrumbs"><span>FitTracker Pro</span><SignatureIcon name="chevron" size={15}/><strong>{coach?'Coach':'Athlete'}</strong></div>
         <div className="ftp-top-actions"><span className="ftp-build-label">PREMIUM UI · V2-02B</span><Button tone="ghost" onClick={() => { void sessionManager.logout() }}>Выйти</Button><nav className="ftp-mode-switch" aria-label="Режим интерфейса">
           <NavLink to="/athlete" className={!coach?'is-selected':''}><SignatureIcon name="workout" size={17}/> <span>Athlete</span></NavLink>
-          <span className="ftp-coach-locked" aria-label="Режим Coach пока недоступен"><SignatureIcon name="clients" size={17}/> Coach · скоро</span>
+          <NavLink to="/coach" className={coach ? "is-selected" : ""}><SignatureIcon name="clients" size={17}/> <span>Coach</span></NavLink>
         </nav></div>
       </header>
       <main className="ftp-content"><Routes>
@@ -54,7 +55,7 @@ function Workspace(){
         <Route path="/athlete/workouts" element={<ComingSoon area="ATHLETE / WORKOUTS" title="Тренировки" detail="Тренировочный движок будет подключён на этапе V2-04."/>}/>
         <Route path="/athlete/programs" element={<ComingSoon area="ATHLETE / PROGRAMS" title="Программы" detail="Реальные шаблоны и назначения тренера — после подключения API."/>}/>
         <Route path="/athlete/progress" element={<ComingSoon area="ATHLETE / PROGRESS" title="Прогресс" detail="Ваши результаты и аналитика без вымышленных показателей."/>}/>
-        <Route path="/coach/clients" element={<ComingSoon area="COACH / CLIENTS" title="Клиенты" detail="Доступ только к разрешённым клиентам после серверной авторизации."/>}/>
+        <Route path="/coach/clients" element={<CoachClientLinks/>}/>
         <Route path="/coach/programs" element={<ComingSoon area="COACH / PROGRAMS" title="Программы" detail="Конструктор подключится к существующему Coach API."/>}/>
         <Route path="/coach/schedule" element={<ComingSoon area="COACH / SCHEDULE" title="Расписание" detail="Ожидает отдельный backend-контракт расписания."/>}/>
         <Route path="*" element={<ComingSoon area="FITTRACKER PRO" title="Страница не найдена" detail="Выберите доступный раздел в навигации."/>}/>
@@ -62,15 +63,6 @@ function Workspace(){
     </div>
     <nav className="ftp-mobile-nav" aria-label="Мобильная навигация">{nav.map(({to,name,icon:Icon})=><NavLink key={to} to={to} end className={({isActive})=>'ftp-mobile-nav__link'+(isActive?' is-active':'')}><SignatureIcon name={Icon} size={22}/><span>{name}</span></NavLink>)}</nav>
   </div>
-}
-
-function CoachUnavailable() {
-  return <main className="ftp-locked-page">
-    <Card eyebrow="COACH / ЗАЩИЩЁННЫЙ РАЗДЕЛ" title="Доступ тренера пока недоступен">
-      <p>Роли, подписки и разрешения клиентов проверяет сервер. Мы откроем Coach после интеграции этих проверок в V2-02C.</p>
-      <NavLink to="/athlete" className="ftp-locked-link">Вернуться в Athlete</NavLink>
-    </Card>
-  </main>
 }
 
 export function App() {
@@ -82,6 +74,6 @@ export function App() {
     return <Navigate to={`/login?from=${encodeURIComponent(from)}`} replace/>
   }
   if (phase === 'checking') return <main className="ftp-auth-layout" role="status">Проверяем сессию…</main>
-  if (pathname.startsWith('/coach')) return <CoachUnavailable/>
+  if (pathname.startsWith('/coach')) return <CoachAccessGate><Workspace/></CoachAccessGate>
   return <Workspace/>
 }
