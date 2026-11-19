@@ -9,6 +9,7 @@ from app.application.coach_business_service import CoachBusinessService
 from app.application.coach_entitlement_service import CoachEntitlementService
 from app.application.coach_monitoring_service import CoachMonitoringService
 from app.application.coach_program_service import CoachProgramService
+from app.application.coach_training_read_service import CoachTrainingReadService
 from app.application.coach_service import (
     CoachIdentityService,
     CoachInvitationService,
@@ -52,6 +53,7 @@ from app.schemas.coach_monitoring import (
     ClientMonitoringPage,
     ClientMonitoringSummary,
 )
+from app.schemas.coach_training_reads import CoachTrainingSummary, CoachWorkoutHistory
 from app.schemas.coach_programs import (
     CoachProgramAssignmentCreate,
     CoachProgramAssignmentResponse,
@@ -192,6 +194,40 @@ async def get_monitoring_detail(
         action="coach.monitoring.detail_read", user_db_id=coach.id,
         resource_type="coach_client", resource_id=client_id,
         meta={"scope": "training_summary.read"},
+    )
+    return result
+
+
+@router.get("/clients/{client_id}/training-summary", response_model=CoachTrainingSummary)
+async def coach_training_summary(
+    client_id: int,
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    result = await CoachTrainingReadService(db).summary(coach_id=coach.id, client_id=client_id)
+    audit_log(
+        action="coach.training_summary.read", user_db_id=coach.id,
+        resource_type="coach_client", resource_id=client_id,
+        meta={"scope": "training_summary.read"},
+    )
+    return result
+
+
+@router.get("/clients/{client_id}/workout-history", response_model=CoachWorkoutHistory)
+async def coach_workout_history(
+    client_id: int,
+    limit: int = Query(30, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    coach: User = Depends(require_coach),
+    db: AsyncSession = Depends(get_async_db),
+):
+    result = await CoachTrainingReadService(db).history(
+        coach_id=coach.id, client_id=client_id, limit=limit, offset=offset,
+    )
+    audit_log(
+        action="coach.workout_history.read", user_db_id=coach.id,
+        resource_type="coach_client", resource_id=client_id,
+        meta={"scope": "workout_history.read", "returned": len(result.items)},
     )
     return result
 
