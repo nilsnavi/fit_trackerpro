@@ -197,17 +197,16 @@ export class AuthApiClient {
     }, parseTelegram)
   }
 
-  getCurrentProfile(accessToken: string): Promise<AuthProfile> {
+  getCurrentProfile(accessToken: string, signal?: AbortSignal): Promise<AuthProfile> {
     if (!accessToken) return Promise.reject(new Error('Необходим вход.'))
     return this.request('/me', {
-      method: 'GET', headers: { Authorization: `Bearer ${accessToken}` },
+      method: 'GET', signal, headers: { Authorization: `Bearer ${accessToken}` },
     }, parseProfile)
   }
 
-  refresh(refreshToken: string): Promise<AuthTokens> {
+  refresh(refreshToken: string, signal?: AbortSignal): Promise<AuthTokens> {
     if (!refreshToken) return Promise.reject(new Error('Сессия не найдена.'))
     return this.request('/refresh', {
-      method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }),
+      method: 'POST', signal, body: JSON.stringify({ refresh_token: refreshToken }),
     }, parseTokens)
-  }
-}
+  }\n  async logout(accessToken: string, refreshToken: string | null): Promise<void> {\n    const response = await this.transport(this.prefix + '/logout', {\n      method: 'POST', credentials: 'same-origin', cache: 'no-store',\n      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },\n      body: JSON.stringify({ refresh_token: refreshToken }),\n    })\n    if (!response.ok) throw new AuthHttpError(response.status, 'Не удалось отозвать серверную сессию.')\n  }\n}\n
