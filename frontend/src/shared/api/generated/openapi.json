@@ -7856,6 +7856,113 @@
         "title": "GlucoseStats",
         "type": "object"
       },
+      "GrantCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "coach_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "consent_version": {
+            "const": "v2-03c-1",
+            "title": "Consent Version",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "scope": {
+            "enum": [
+              "training_summary.read",
+              "workout_history.read"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coach_id",
+          "scope",
+          "consent_version"
+        ],
+        "title": "GrantCreate",
+        "type": "object"
+      },
+      "GrantView": {
+        "properties": {
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "consent_version": {
+            "title": "Consent Version",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "granted_at": {
+            "format": "date-time",
+            "title": "Granted At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "coach_id",
+          "scope",
+          "status",
+          "consent_version",
+          "granted_at",
+          "expires_at",
+          "revoked_at"
+        ],
+        "title": "GrantView",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -16444,6 +16551,120 @@
         "summary": "Get Analytics Workouts",
         "tags": [
           "Analytics"
+        ]
+      }
+    },
+    "/api/v1/client/coach-grants": {
+      "get": {
+        "operationId": "list_my_grants_api_v1_client_coach_grants_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GrantView"
+                  },
+                  "title": "Response List My Grants Api V1 Client Coach Grants Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Grants",
+        "tags": [
+          "Coach"
+        ]
+      },
+      "post": {
+        "operationId": "create_my_grant_api_v1_client_coach_grants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create My Grant",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/client/coach-grants/{grant_id}": {
+      "delete": {
+        "operationId": "revoke_my_grant_api_v1_client_coach_grants__grant_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke My Grant",
+        "tags": [
+          "Coach"
         ]
       }
     },
