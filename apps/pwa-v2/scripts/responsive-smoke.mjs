@@ -66,8 +66,44 @@ try {
       await page.waitForURL('**/athlete')
       await page.getByRole('heading', { level: 1, name: /Становись/ }).waitFor()
       await page.screenshot({ path: resolve(outputDir, 'athlete-auth-' + width + '.png'), fullPage: true })
+      let clientCalls = 0
+      await page.route('**/api/v1/coach/**', async route => {
+        const pathname = new URL(route.request().url()).pathname
+        if (width === 1280) return route.fulfill({ status: 403, contentType: 'application/json', body: '{}' })
+        let result
+        if (pathname.endsWith('/profile')) result = {
+          id: 10, user_id: 9, is_active: true, display_name: 'QA Coach',
+        }
+        else if (pathname.endsWith('/subscription')) result = {
+          plan: 'FREE', status: 'ACTIVE', upgrade_required: false,
+        }
+        else if (pathname.endsWith('/clients')) {
+          clientCalls++
+          result = [
+            { client_id: 101, status: 'ACTIVE', permissions: {}, secret_health: 'must never render' },
+            { client_id: 102, status: 'REVOKED', permissions: {} },
+            { client_id: 103, status: 'PAUSED', permissions: {} },
+          ]
+        }
+        else return route.fulfill({ status: 404, body: '{}' })
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result) })
+      })
       await page.evaluate(() => { history.pushState(null, '', '/coach'); dispatchEvent(new PopStateEvent('popstate')) })
-      await page.getByText('Доступ тренера пока недоступен').waitFor()
+      if (width === 1280) {
+        await page.getByText('Доступ тренера не подтверждён').waitFor()
+        assert.equal(clientCalls, 0, 'denied user must not fetch clients')
+        console.log('PASS Coach server 403 denied before clients query at 1280px')
+      } else {
+        await page.getByRole('heading', { level: 1, name: /Тренируй/ }).waitFor()
+        await page.getByRole('link', { name: 'Клиенты' }).first().click()
+        await page.getByRole('heading', { name: 'Мои клиенты' }).waitFor()
+        await page.getByText('Клиент №101 · активная связь').waitFor()
+        assert.equal(await page.getByText('Клиент №102 · активная связь').count(), 0)
+        assert.equal(await page.getByText('Клиент №103 · активная связь').count(), 0)
+        assert.equal(await page.getByText('must never render').count(), 0)
+        assert.equal(clientCalls, 1, 'Coach client metadata fetched only after role verification')
+        console.log('PASS Coach role + active-only client relationships at 390px')
+      }
       await page.evaluate(() => { history.pushState(null, '', '/athlete'); dispatchEvent(new PopStateEvent('popstate')) })
       await page.getByRole('button', { name: 'Выйти' }).click()
       await page.waitForURL('**/login?from=*')

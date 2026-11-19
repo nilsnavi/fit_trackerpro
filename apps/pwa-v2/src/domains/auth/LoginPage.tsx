@@ -4,6 +4,7 @@ import { AuthApiClient, AuthHttpError } from '../../shared/api/auth'
 import { sessionManager } from '../../shared/auth/sessionRuntime'
 import { Button, Card } from '../../shared/ui/PremiumUI'
 import { SignatureIcon } from '../../shared/ui/SignatureIcon'
+import { authenticateTelegram, readTelegramInitData } from '../../shared/auth/telegram'
 
 const api = new AuthApiClient()
 function safeReturnPath(value: string | null) {
@@ -20,6 +21,17 @@ export function LoginPage() {
   const [challenge, setChallenge] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const telegramData = readTelegramInitData(typeof window === 'undefined' ? undefined : window as unknown as { Telegram?: { WebApp?: { initData?: string } } })
+  async function connectTelegram() {
+    if (!telegramData || busy) return
+    setBusy(true); setError('')
+    try {
+      await authenticateTelegram(telegramData, sessionManager, api)
+      navigate(safeReturnPath(params.get('from')), { replace: true })
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Ошибка входа через Telegram.')
+    } finally { setBusy(false) }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -63,7 +75,8 @@ export function LoginPage() {
         <Button disabled={busy} type="submit">{busy ? 'Проверяем…' : challenge ? 'Подтвердить и войти' : 'Получить код'}</Button>
         {challenge && <Button tone="ghost" type="button" disabled={busy} onClick={() => { setChallenge(''); setCode(''); setError('') }}>Изменить почту / запросить новый код</Button>}
       </form>
-      <p className="ftp-auth-caption">Вход по email доступен при настроенной SMTP-отправке на сервере. Telegram-вход подключим отдельно.</p>
+      {telegramData && <Button tone="secondary" disabled={busy} onClick={() => { void connectTelegram() }} className="ftp-telegram-login">Войти через Telegram</Button>}
+      <p className="ftp-auth-caption">Telegram-вход доступен только внутри настоящего Telegram Mini App. Сервер проверяет подпись и срок действия данных. Email требует настроенного SMTP.</p>
     </Card>
   </main>
 }

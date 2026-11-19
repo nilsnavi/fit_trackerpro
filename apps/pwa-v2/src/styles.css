@@ -38,3 +38,5 @@
 .ftp-locked-link{display:inline-block;color:var(--ftp-accent);margin-top:12px;text-decoration:underline;text-underline-offset:4px}
 .ftp-coach-locked{display:flex;align-items:center;gap:7px;color:var(--ftp-subtle);font-size:11px;padding:8px 10px;opacity:.75}
 @media(max-width:450px){.ftp-auth-layout{justify-content:flex-start;padding-top:14vh}.ftp-auth-card{padding:24px 20px}.ftp-auth-brand{font-size:17px}}
+
+.ftp-telegram-login{width:100%;margin-top:15px;border-color:var(--ftp-accent);color:var(--ftp-accent)}
