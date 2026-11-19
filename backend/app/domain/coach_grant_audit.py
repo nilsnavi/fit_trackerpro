@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Uuid
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -27,4 +27,5 @@ class CoachGrantAudit(Base):
 
     __table_args__ = (
         CheckConstraint("action IN ('GRANTED', 'REVOKED')", name="ck_coach_grant_audit_action"),
+        Index("ix_coach_grant_audit_client_time", "client_id", "occurred_at"),
     )
