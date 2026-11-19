@@ -235,7 +235,7 @@ async def test_monitoring_requires_exact_unexpired_training_scope(client: AsyncC
     assert (await client.get("/api/v1/coach/monitoring", headers=coach)).json()["total"] == 1
     await db_session.execute(text(
         "UPDATE coach_client_grants SET granted_at = now() - INTERVAL '2 days', "
-        "expires_at = now() - INTERVAL '1 day' WHERE id = :id"
+        "expires_at = now() - INTERVAL '1 day' WHERE CAST(id AS TEXT) = :id"
     ), {"id": granted.json()["id"]})
     await db_session.commit()
     expired = await client.get("/api/v1/coach/monitoring", headers=coach)
