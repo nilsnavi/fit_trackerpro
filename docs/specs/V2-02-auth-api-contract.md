@@ -43,3 +43,11 @@
 - **C:** Telegram runtime adapter/initData verification, user identity linking flow, server-role Coach access, no health data without explicit consent; security review + negative E2E.
 
 Производственный релиз блокируется до завершения обоих PR и полного QA.
+
+## V2-02A QA hardening (2026-11-19)
+
+- HTTP success payloads checked at runtime. Email/refresh require nonempty access token (>= 10), refresh token (>= 32), bearer type, expires_in in server range.
+- Telegram payload validates required response flags and optional token fields. `getTelegramAccessToken` rejects success without a usable access token.
+- Profile basic shape verified before use. These validation rules are transport guards, not RBAC.
+- HTTP errors 400/401/403/422/429/500, malformed JSON and offline errors covered; raw request/token data never logged.
+- Backend contract is the source of truth; implementation still does not persist sessions or grant Coach rights.
