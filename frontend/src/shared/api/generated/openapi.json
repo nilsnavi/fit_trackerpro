@@ -4864,6 +4864,120 @@
         "title": "CoachTaskUpdate",
         "type": "object"
       },
+      "CoachTrainingSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "completed_workouts": {
+            "title": "Completed Workouts",
+            "type": "integer"
+          },
+          "last_completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Completed At"
+          },
+          "total_duration_minutes": {
+            "title": "Total Duration Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "client_id",
+          "completed_workouts",
+          "last_completed_at",
+          "total_duration_minutes"
+        ],
+        "title": "CoachTrainingSummary",
+        "type": "object"
+      },
+      "CoachWorkoutHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "title": "Client Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CoachWorkoutHistoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "client_id",
+          "total",
+          "items"
+        ],
+        "title": "CoachWorkoutHistory",
+        "type": "object"
+      },
+      "CoachWorkoutHistoryItem": {
+        "additionalProperties": false,
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "duration_minutes",
+          "status",
+          "completed_at"
+        ],
+        "title": "CoachWorkoutHistoryItem",
+        "type": "object"
+      },
       "CompletedExercise-Input": {
         "description": "Completed exercise data",
         "properties": {
@@ -17619,6 +17733,123 @@
           }
         ],
         "summary": "List Client Programs",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/training-summary": {
+      "get": {
+        "operationId": "coach_training_summary_api_v1_coach_clients__client_id__training_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachTrainingSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Coach Training Summary",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/coach/clients/{client_id}/workout-history": {
+      "get": {
+        "operationId": "coach_workout_history_api_v1_coach_clients__client_id__workout_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachWorkoutHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Coach Workout History",
         "tags": [
           "Coach"
         ]
