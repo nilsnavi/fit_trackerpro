@@ -32,3 +32,13 @@ class GrantView(BaseModel):
 
 
 GRANT_CONSENT_VERSION = COACH_GRANT_CONSENT_VERSION
+
+
+
+class AvailableCoach(BaseModel):
+    """The athlete's ACTIVE coach link only; excludes other clients and profile secrets."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    coach_id: int
+    display_name: str
