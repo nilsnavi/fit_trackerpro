@@ -905,6 +905,26 @@
         "title": "AuthResponse",
         "type": "object"
       },
+      "AvailableCoach": {
+        "additionalProperties": false,
+        "description": "The athlete's ACTIVE coach link only; excludes other clients and profile secrets.",
+        "properties": {
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coach_id",
+          "display_name"
+        ],
+        "title": "AvailableCoach",
+        "type": "object"
+      },
       "BodyMeasurementCreate": {
         "description": "Request model for creating body circumference measurement.",
         "properties": {
@@ -16623,6 +16643,36 @@
           }
         ],
         "summary": "Create My Grant",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/client/coach-grants/available-coaches": {
+      "get": {
+        "operationId": "available_coaches_for_client_api_v1_client_coach_grants_available_coaches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AvailableCoach"
+                  },
+                  "title": "Response Available Coaches For Client Api V1 Client Coach Grants Available Coaches Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Available Coaches For Client",
         "tags": [
           "Coach"
         ]
