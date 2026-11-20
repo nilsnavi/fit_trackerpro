@@ -552,6 +552,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/coach-grants/{grant_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Grant History */
+        get: operations["get_my_grant_history_api_v1_client_coach_grants__grant_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/coach-programs": {
         parameters: {
             query?: never;
@@ -6063,6 +6080,35 @@ export type components = {
             /** Readings Count 7D */
             readings_count_7d: number;
         };
+        /**
+         * GrantAuditEvent
+         * @description Owner-visible consent event with no health values or tokens.
+         */
+        GrantAuditEvent: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "GRANTED" | "REVOKED";
+            /** Coach Id */
+            coach_id: number;
+            /** Consent Version */
+            consent_version: string;
+            /** Grant Id */
+            grant_id: string;
+            /** Id */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "training_summary.read" | "workout_history.read";
+        };
         /** GrantCreate */
         GrantCreate: {
             /** Coach Id */
@@ -6079,6 +6125,13 @@ export type components = {
              * @enum {string}
              */
             scope: "training_summary.read" | "workout_history.read";
+        };
+        /** GrantHistory */
+        GrantHistory: {
+            /** Events */
+            events: components["schemas"]["GrantAuditEvent"][];
+            /** Grant Id */
+            grant_id: string;
         };
         /** GrantView */
         GrantView: {
@@ -9923,6 +9976,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_grant_history_api_v1_client_coach_grants__grant_id__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantHistory"];
+                };
             };
             /** @description Validation Error */
             422: {
