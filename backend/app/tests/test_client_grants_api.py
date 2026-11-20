@@ -144,3 +144,51 @@ async def test_available_coaches_are_active_scoped_and_safe(client: AsyncClient,
         },
     )
     assert rejected.status_code == 404
+
+
+@pytest.mark.integration
+async def test_owner_only_consent_history_and_regrant(client: AsyncClient, db_session):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach = await _headers(client, 979201)
+    athlete = await _headers(client, 979202)
+    stranger = await _headers(client, 979203)
+    profile = await client.post("/api/v1/coach/profile", headers=coach, json={"display_name": "Timeline"})
+    assert profile.status_code == 201, profile.text
+    invitation = await client.post("/api/v1/coach/invitations", headers=coach, json={})
+    assert invitation.status_code == 201
+    joined = await client.post("/api/v1/coach/invitations/accept", headers=athlete, json={
+        "token": invitation.json()["token"],
+    })
+    assert joined.status_code == 200
+    base = "/api/v1/client/coach-grants"
+    payload = {
+        "coach_id": profile.json()["user_id"],
+        "scope": "training_summary.read",
+        "consent_version": "v2-03c-1",
+    }
+    created = await client.post(base, headers=athlete, json=payload)
+    assert created.status_code == 201, created.text
+    grant_id = created.json()["id"]
+    url = f"{base}/{grant_id}/history"
+    assert (await client.get(url)).status_code == 401
+    assert (await client.get(url, headers=stranger)).status_code == 404
+    assert (await client.get(url, headers=coach)).status_code == 404
+    assert (await client.get(f"{base}/bad-id/history", headers=athlete)).status_code == 404
+    assert (await client.delete(f"{base}/{grant_id}", headers=athlete)).status_code == 204
+    again = await client.post(base, headers=athlete, json=payload)
+    assert again.status_code == 201, again.text
+    assert again.json()["id"] == grant_id
+    response = await client.get(url, headers=athlete)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["grant_id"] == grant_id
+    assert sorted(event["action"] for event in body["events"]) == ["GRANTED", "GRANTED", "REVOKED"]
+    assert all(event["grant_id"] == grant_id for event in body["events"])
+    assert all(event["coach_id"] == profile.json()["user_id"] for event in body["events"])
+    assert all(event["scope"] == "training_summary.read" for event in body["events"])
+    assert all(set(event) == {
+        "id", "grant_id", "coach_id", "scope", "action", "consent_version", "occurred_at"
+    } for event in body["events"])
+    assert "telegram_id" not in response.text
+    assert "glucose" not in response.text
