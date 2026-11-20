@@ -4,6 +4,7 @@ import { useSessionStore } from '../../shared/auth/session'
 import { ClientGrantApi, type ClientGrant, type GrantScope } from '../../shared/api/clientGrants'
 import { Button, Card, EmptyState, StatusPill } from '../../shared/ui/PremiumUI'
 import { SignatureIcon } from '../../shared/ui/SignatureIcon'
+import { GrantTimeline } from './GrantTimeline'
 
 const api = new ClientGrantApi()
 const names: Record<GrantScope, string> = {
@@ -21,6 +22,7 @@ export function AthleteConsents() {
   const token = useSessionStore(s => s.accessToken)
   const cache = useQueryClient()
   const [confirm, setConfirm] = useState<string | null>(null)
+  const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
   const [restore, setRestore] = useState<string | null>(null)
   const [coachId, setCoachId] = useState<number | null>(null)
   const [selectedScopes, setSelectedScopes] = useState<GrantScope[]>([])
@@ -157,6 +159,16 @@ export function AthleteConsents() {
             <span>Выдано: {new Date(grant.granted_at).toLocaleDateString('ru-RU')}</span>
           </div>
           <p>Доступ только к категории «{names[grant.scope]}». Данные о здоровье не включены.</p>
+          <div className="ftp-consent-history">
+            <p>Выдано: {new Date(grant.granted_at).toLocaleString('ru-RU')}</p>
+            <p>Срок: {grant.expires_at ? new Date(grant.expires_at).toLocaleString('ru-RU') : 'Без ограничения'}</p>
+            {grant.revoked_at && <p>Отозвано: {new Date(grant.revoked_at).toLocaleString('ru-RU')}</p>}
+            <button type="button" className="ftp-history-retry" aria-expanded={expandedHistory === grant.id}
+              onClick={() => setExpandedHistory(expandedHistory === grant.id ? null : grant.id)}>
+              {expandedHistory === grant.id ? 'Скрыть историю' : 'История изменений'}
+            </button>
+            {expandedHistory === grant.id && <GrantTimeline grantId={grant.id}/>}
+          </div>
           {(active || (grant.status === 'ACTIVE' && state === 'EXPIRED'))
             ? confirm === grant.id ? <div className="ftp-consent-confirm">
               <p>Отозвать доступ к этой категории?</p>

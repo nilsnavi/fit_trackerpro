@@ -3,6 +3,16 @@ import { AuthContractError, AuthHttpError } from './auth'
 export const GRANT_VERSION = 'v2-03c-1' as const
 export type GrantScope = 'training_summary.read' | 'workout_history.read'
 export interface AvailableCoach { coach_id: number; display_name: string }
+export interface GrantAuditEvent {
+  id: string
+  grant_id: string
+  coach_id: number
+  scope: GrantScope
+  action: 'GRANTED' | 'REVOKED'
+  consent_version: string
+  occurred_at: string
+}
+export interface GrantHistory { grant_id: string; events: GrantAuditEvent[] }
 export interface ClientGrant {
   id: string
   coach_id: number
@@ -39,6 +49,27 @@ function parseAvailableCoach(v: unknown): AvailableCoach {
   }
   return { coach_id: v.coach_id, display_name: v.display_name }
 }
+function parseHistory(v: unknown): GrantHistory {
+  if (!object(v) || typeof v.grant_id !== 'string' || !Array.isArray(v.events)) {
+    throw new AuthContractError()
+  }
+  const events = v.events.map((item: unknown): GrantAuditEvent => {
+    if (!object(item) || typeof item.id !== 'string' || typeof item.grant_id !== 'string' ||
+      item.grant_id !== v.grant_id || !Number.isSafeInteger(item.coach_id) ||
+      !scopes.includes(String(item.scope)) ||
+      !['GRANTED', 'REVOKED'].includes(String(item.action)) ||
+      typeof item.consent_version !== 'string' ||
+      typeof item.occurred_at !== 'string' || !Number.isFinite(Date.parse(item.occurred_at))) {
+      throw new AuthContractError()
+    }
+    return {
+      id: item.id, grant_id: item.grant_id, coach_id: item.coach_id as number,
+      scope: item.scope as GrantScope, action: item.action as GrantAuditEvent['action'],
+      consent_version: item.consent_version, occurred_at: item.occurred_at,
+    }
+  })
+  return { grant_id: v.grant_id, events }
+}
 export class ClientGrantApi {
   constructor(private readonly transport: typeof fetch = (...args) => fetch(...args)) {}
   private async request(token: string, path: string, init: RequestInit): Promise<unknown> {
@@ -56,6 +87,15 @@ export class ClientGrantApi {
     if (!response.ok) throw new AuthHttpError(response.status, 'Операция недоступна. Повторите попытку.')
     if (response.status === 204) return null
     try { return await response.json() } catch { throw new AuthContractError() }
+  }
+  async history(token: string, grantId: string, signal?: AbortSignal): Promise<GrantHistory> {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(grantId)) {
+      throw new AuthContractError()
+    }
+    const data = await this.request(token, '/' + encodeURIComponent(grantId) + '/history', { method: 'GET', signal })
+    const parsed = parseHistory(data)
+    if (parsed.grant_id !== grantId) throw new AuthContractError()
+    return parsed
   }
   async availableCoaches(token: string, signal?: AbortSignal): Promise<AvailableCoach[]> {
     const data = await this.request(token, '/available-coaches', { method: 'GET', signal })

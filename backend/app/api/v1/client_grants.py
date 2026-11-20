@@ -8,7 +8,7 @@ from app.api.deps.auth import get_current_user
 from app.application.client_grant_service import ClientGrantService
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
-from app.schemas.coach_grants import AvailableCoach, GrantCreate, GrantView
+from app.schemas.coach_grants import AvailableCoach, GrantCreate, GrantHistory, GrantView
 
 router = APIRouter()
 
@@ -36,6 +36,15 @@ async def create_my_grant(
     db: AsyncSession = Depends(get_async_db),
 ):
     return await ClientGrantService(db).grant(current_user.id, payload)
+
+
+@router.get("/{grant_id}/history", response_model=GrantHistory)
+async def get_my_grant_history(
+    grant_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await ClientGrantService(db).history(current_user.id, grant_id)
 
 
 @router.delete("/{grant_id}", status_code=status.HTTP_204_NO_CONTENT)
