@@ -94,3 +94,53 @@ async def test_grant_rejects_missing_relationship_and_invalid_identifiers(client
     assert result.status_code == 404
     res = await client.delete(uri + "/not-a-uuid", headers=person)
     assert res.status_code in (404, 422)
+
+
+@pytest.mark.integration
+async def test_available_coaches_are_active_scoped_and_safe(client: AsyncClient, db_session):
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach = await _headers(client, 979101)
+    athlete = await _headers(client, 979102)
+    stranger = await _headers(client, 979103)
+
+    profile = await client.post(
+        "/api/v1/coach/profile", headers=coach, json={"display_name": "Trainer Alex"},
+    )
+    assert profile.status_code == 201, profile.text
+    invite = await client.post("/api/v1/coach/invitations", headers=coach, json={})
+    assert invite.status_code == 201, invite.text
+    accepted = await client.post(
+        "/api/v1/coach/invitations/accept", headers=athlete,
+        json={"token": invite.json()["token"]},
+    )
+    assert accepted.status_code == 200, accepted.text
+
+    url = "/api/v1/client/coach-grants/available-coaches"
+    assert (await client.get(url)).status_code == 401
+    assert (await client.get(url, headers=stranger)).json() == []
+    response = await client.get(url, headers=athlete)
+    assert response.status_code == 200, response.text
+    assert response.json() == [
+        {"coach_id": profile.json()["user_id"], "display_name": "Trainer Alex"}
+    ]
+    assert "telegram_id" not in response.text
+    assert "email" not in response.text
+
+    paused = await client.patch(
+        f"/api/v1/coach/clients/{accepted.json()['client_id']}",
+        headers=coach, json={"status": "PAUSED"},
+    )
+    assert paused.status_code == 200, paused.text
+    response = await client.get(url, headers=athlete)
+    assert response.status_code == 200 and response.json() == []
+
+    rejected = await client.post(
+        "/api/v1/client/coach-grants", headers=athlete,
+        json={
+            "coach_id": profile.json()["user_id"],
+            "scope": "training_summary.read",
+            "consent_version": "v2-03c-1",
+        },
+    )
+    assert rejected.status_code == 404

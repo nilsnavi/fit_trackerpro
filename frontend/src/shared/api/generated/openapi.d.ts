@@ -518,6 +518,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/coach-grants/available-coaches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Available Coaches For Client */
+        get: operations["available_coaches_for_client_api_v1_client_coach_grants_available_coaches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/coach-grants/{grant_id}": {
         parameters: {
             query?: never;
@@ -3523,6 +3540,16 @@ export type components = {
              */
             token_type: string;
             user?: components["schemas"]["TelegramUserData"] | null;
+        };
+        /**
+         * AvailableCoach
+         * @description The athlete's ACTIVE coach link only; excludes other clients and profile secrets.
+         */
+        AvailableCoach: {
+            /** Coach Id */
+            coach_id: number;
+            /** Display Name */
+            display_name: string;
         };
         /**
          * BodyMeasurementCreate
@@ -9855,6 +9882,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    available_coaches_for_client_api_v1_client_coach_grants_available_coaches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailableCoach"][];
                 };
             };
         };

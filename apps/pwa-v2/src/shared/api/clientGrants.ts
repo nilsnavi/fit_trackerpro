@@ -2,6 +2,7 @@ import { AuthContractError, AuthHttpError } from './auth'
 
 export const GRANT_VERSION = 'v2-03c-1' as const
 export type GrantScope = 'training_summary.read' | 'workout_history.read'
+export interface AvailableCoach { coach_id: number; display_name: string }
 export interface ClientGrant {
   id: string
   coach_id: number
@@ -31,6 +32,13 @@ function parseGrant(v: unknown): ClientGrant {
     granted_at: v.granted_at, expires_at: v.expires_at, revoked_at: v.revoked_at,
   }
 }
+function parseAvailableCoach(v: unknown): AvailableCoach {
+  if (!object(v) || typeof v.coach_id !== 'number' || !Number.isSafeInteger(v.coach_id) ||
+    v.coach_id <= 0 || typeof v.display_name !== 'string' || !v.display_name.trim()) {
+    throw new AuthContractError()
+  }
+  return { coach_id: v.coach_id, display_name: v.display_name }
+}
 export class ClientGrantApi {
   constructor(private readonly transport: typeof fetch = (...args) => fetch(...args)) {}
   private async request(token: string, path: string, init: RequestInit): Promise<unknown> {
@@ -48,6 +56,11 @@ export class ClientGrantApi {
     if (!response.ok) throw new AuthHttpError(response.status, 'Операция недоступна. Повторите попытку.')
     if (response.status === 204) return null
     try { return await response.json() } catch { throw new AuthContractError() }
+  }
+  async availableCoaches(token: string, signal?: AbortSignal): Promise<AvailableCoach[]> {
+    const data = await this.request(token, '/available-coaches', { method: 'GET', signal })
+    if (!Array.isArray(data)) throw new AuthContractError()
+    return data.map(parseAvailableCoach)
   }
   async list(token: string, signal?: AbortSignal): Promise<ClientGrant[]> {
     const data = await this.request(token, '', { method: 'GET', signal })
