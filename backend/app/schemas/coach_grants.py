@@ -41,3 +41,24 @@ class AvailableCoach(BaseModel):
 
     coach_id: int
     display_name: str
+
+
+class GrantAuditEvent(BaseModel):
+    """Owner-visible consent event with no health values or tokens."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    id: str
+    grant_id: str
+    coach_id: int
+    scope: Literal["training_summary.read", "workout_history.read"]
+    action: Literal["GRANTED", "REVOKED"]
+    consent_version: str
+    occurred_at: datetime
+
+
+class GrantHistory(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    grant_id: str
+    events: list[GrantAuditEvent]

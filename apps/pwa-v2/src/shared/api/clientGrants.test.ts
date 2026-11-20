@@ -58,4 +58,27 @@ describe('V2-03C.4A client grant contract',()=>{
     const api=new ClientGrantApi(async()=>new Response(JSON.stringify([{coach_id:19,display_name:' '}])) )
     await expect(api.availableCoaches('token')).rejects.toBeInstanceOf(AuthContractError)
   })
+  it('reads owner consent audit and projects away private fields',async()=>{
+    const api = new ClientGrantApi(async(url, init)=>{
+      expect(url).toBe('/api/v1/client/coach-grants/'+id+'/history')
+      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer token')
+      return new Response(JSON.stringify({grant_id:id,events:[{
+        id,grant_id:id,coach_id:19,scope:'training_summary.read',action:'REVOKED',
+        consent_version:'v2-03c-1',occurred_at:'2026-11-20T10:00:00Z',
+        glucose:11,secret:'PRIVATE',
+      }]}))
+    })
+    const timeline = await api.history('token',id)
+    expect(timeline.events).toHaveLength(1)
+    expect(timeline.events[0].action).toBe('REVOKED')
+    expect(JSON.stringify(timeline)).not.toContain('glucose')
+    expect(JSON.stringify(timeline)).not.toContain('PRIVATE')
+  })
+  it('rejects wrong owner id or broken timeline event',async()=>{
+    const api=new ClientGrantApi(async()=>new Response(JSON.stringify({
+      grant_id:id,events:[{action:'GRANTED'}],
+    })))
+    await expect(api.history('token',id)).rejects.toBeInstanceOf(AuthContractError)
+    await expect(api.history('token','bad-id')).rejects.toBeInstanceOf(AuthContractError)
+  })
 })

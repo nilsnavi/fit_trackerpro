@@ -7876,6 +7876,60 @@
         "title": "GlucoseStats",
         "type": "object"
       },
+      "GrantAuditEvent": {
+        "additionalProperties": false,
+        "description": "Owner-visible consent event with no health values or tokens.",
+        "properties": {
+          "action": {
+            "enum": [
+              "GRANTED",
+              "REVOKED"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "coach_id": {
+            "title": "Coach Id",
+            "type": "integer"
+          },
+          "consent_version": {
+            "title": "Consent Version",
+            "type": "string"
+          },
+          "grant_id": {
+            "title": "Grant Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "training_summary.read",
+              "workout_history.read"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "grant_id",
+          "coach_id",
+          "scope",
+          "action",
+          "consent_version",
+          "occurred_at"
+        ],
+        "title": "GrantAuditEvent",
+        "type": "object"
+      },
       "GrantCreate": {
         "additionalProperties": false,
         "properties": {
@@ -7916,6 +7970,28 @@
           "consent_version"
         ],
         "title": "GrantCreate",
+        "type": "object"
+      },
+      "GrantHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/GrantAuditEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "grant_id": {
+            "title": "Grant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grant_id",
+          "events"
+        ],
+        "title": "GrantHistory",
         "type": "object"
       },
       "GrantView": {
@@ -16713,6 +16789,53 @@
           }
         ],
         "summary": "Revoke My Grant",
+        "tags": [
+          "Coach"
+        ]
+      }
+    },
+    "/api/v1/client/coach-grants/{grant_id}/history": {
+      "get": {
+        "operationId": "get_my_grant_history_api_v1_client_coach_grants__grant_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get My Grant History",
         "tags": [
           "Coach"
         ]
