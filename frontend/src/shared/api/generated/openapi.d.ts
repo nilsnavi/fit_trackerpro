@@ -761,6 +761,40 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/training-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Training Summary */
+        get: operations["coach_training_summary_api_v1_coach_clients__client_id__training_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/clients/{client_id}/workout-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Workout History */
+        get: operations["coach_workout_history_api_v1_coach_clients__client_id__workout_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/invitations": {
         parameters: {
             query?: never;
@@ -4873,6 +4907,42 @@ export type components = {
             priority?: components["schemas"]["CoachTaskPriority"] | null;
             /** Title */
             title?: string | null;
+        };
+        /** CoachTrainingSummary */
+        CoachTrainingSummary: {
+            /** Client Id */
+            client_id: number;
+            /** Completed Workouts */
+            completed_workouts: number;
+            /** Last Completed At */
+            last_completed_at: string | null;
+            /** Total Duration Minutes */
+            total_duration_minutes: number;
+        };
+        /** CoachWorkoutHistory */
+        CoachWorkoutHistory: {
+            /** Client Id */
+            client_id: number;
+            /** Items */
+            items: components["schemas"]["CoachWorkoutHistoryItem"][];
+            /** Total */
+            total: number;
+        };
+        /** CoachWorkoutHistoryItem */
+        CoachWorkoutHistoryItem: {
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Duration Minutes */
+            duration_minutes: number | null;
+            /** Id */
+            id: number;
+            /** Status */
+            status: string;
         };
         /**
          * CompletedExercise
@@ -10443,6 +10513,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoachProgramAssignmentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_training_summary_api_v1_coach_clients__client_id__training_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachTrainingSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_workout_history_api_v1_coach_clients__client_id__workout_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachWorkoutHistory"];
                 };
             };
             /** @description Validation Error */
