@@ -20,7 +20,7 @@ from app.domain.coach_grant_audit import CoachGrantAudit
 from app.domain.coach_profile import CoachProfile
 from app.domain.user_role import UserRole, UserRoleName
 from app.infrastructure.feature_flags import is_feature_enabled
-from app.schemas.coach_grants import GrantCreate, GrantView
+from app.schemas.coach_grants import AvailableCoach, GrantCreate, GrantView
 
 
 def _utc(value: datetime) -> datetime:
@@ -32,6 +32,32 @@ def _utc(value: datetime) -> datetime:
 class ClientGrantService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+
+    async def available_coaches(self, client_id: int) -> list[AvailableCoach]:
+        """Return only active CoachClient links owned by the authenticated athlete."""
+        if not await is_feature_enabled(self.db, "coach"):
+            return []
+        rows = (await self.db.execute(
+            select(CoachClient.coach_id, CoachProfile.display_name)
+            .join(CoachProfile, CoachProfile.user_id == CoachClient.coach_id)
+            .join(
+                UserRole,
+                (UserRole.user_id == CoachClient.coach_id)
+                & (UserRole.role == UserRoleName.COACH),
+            )
+            .where(
+                CoachClient.client_id == client_id,
+                CoachClient.status == CoachClientStatus.ACTIVE,
+                CoachClient.ended_at.is_(None),
+                CoachClient.archived_at.is_(None),
+                CoachProfile.is_active.is_(True),
+            )
+            .order_by(CoachProfile.display_name, CoachClient.coach_id)
+        )).all()
+        return [
+            AvailableCoach(coach_id=coach_id, display_name=display_name)
+            for coach_id, display_name in rows
+        ]
 
     async def list_owned(self, client_id: int) -> list[GrantView]:
         result = await self.db.scalars(
