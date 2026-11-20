@@ -83,3 +83,13 @@
 .ftp-scope-option span{flex:1;min-width:0}
 .ftp-coach-option:focus-visible,.ftp-scope-option:focus-within{outline:2px solid var(--ftp-accent);outline-offset:3px}
 @media(max-width:420px){.ftp-coach-option{padding:12px}.ftp-scope-option{padding:12px}.ftp-consent-grid .ftp-card{padding:18px}}
+
+/* V2-03C.4C consent history */
+.ftp-consent-history{padding-top:10px;border-top:1px solid var(--ftp-border)}
+.ftp-consent-history p{font-size:12px;margin:4px 0 8px}
+.ftp-history-retry{appearance:none;border:0;background:transparent;color:var(--ftp-accent);padding:8px 0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ftp-consent-timeline{list-style:none;margin:12px 0 0;padding:0 0 0 16px;border-left:2px solid var(--ftp-border)}
+.ftp-consent-timeline li{display:grid;gap:4px;padding:0 0 16px 14px;position:relative}
+.ftp-consent-timeline li::before{content:'';position:absolute;top:4px;left:-22px;width:9px;height:9px;border:2px solid var(--ftp-accent);border-radius:50%;background:var(--ftp-surface)}
+.ftp-consent-timeline strong{font-size:12px}
+.ftp-consent-timeline time,.ftp-consent-timeline span{font-size:11px;color:var(--ftp-muted)}
