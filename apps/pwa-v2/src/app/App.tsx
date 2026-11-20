@@ -6,6 +6,7 @@ import { useSessionStore } from '../shared/auth/session'
 import { Button } from '../shared/ui/PremiumUI'
 import { SignatureIcon, type SignatureIconName } from '../shared/ui/SignatureIcon'
 import { AthleteOverview } from '../domains/athlete/AthleteOverview'
+import { AthleteConsents } from '../domains/athlete/AthleteConsents'
 import { CoachOverview } from '../domains/coach/CoachOverview'
 import { Card, EmptyState } from '../shared/ui/PremiumUI'
 
@@ -13,7 +14,8 @@ const athleteNav = [
   {to:'/athlete',name:'Обзор',icon:'overview' as SignatureIconName},
   {to:'/athlete/workouts',name:'Тренировки',icon:'workout' as SignatureIconName},
   {to:'/athlete/programs',name:'Программы',icon:'program' as SignatureIconName},
-  {to:'/athlete/progress',name:'Прогресс',icon:'progress' as SignatureIconName}
+  {to:'/athlete/progress',name:'Прогресс',icon:'progress' as SignatureIconName},
+  {to:'/athlete/consents',name:'Приватность',icon:'shield' as SignatureIconName}
 ]
 const coachNav = [
   {to:'/coach',name:'Обзор',icon:'overview' as SignatureIconName},
@@ -55,6 +57,7 @@ function Workspace(){
         <Route path="/athlete/workouts" element={<ComingSoon area="ATHLETE / WORKOUTS" title="Тренировки" detail="Тренировочный движок будет подключён на этапе V2-04."/>}/>
         <Route path="/athlete/programs" element={<ComingSoon area="ATHLETE / PROGRAMS" title="Программы" detail="Реальные шаблоны и назначения тренера — после подключения API."/>}/>
         <Route path="/athlete/progress" element={<ComingSoon area="ATHLETE / PROGRESS" title="Прогресс" detail="Ваши результаты и аналитика без вымышленных показателей."/>}/>
+        <Route path="/athlete/consents" element={<AthleteConsents/>}/>
         <Route path="/coach/clients" element={<CoachClientLinks/>}/>
         <Route path="/coach/programs" element={<ComingSoon area="COACH / PROGRAMS" title="Программы" detail="Конструктор подключится к существующему Coach API."/>}/>
         <Route path="/coach/schedule" element={<ComingSoon area="COACH / SCHEDULE" title="Расписание" detail="Ожидает отдельный backend-контракт расписания."/>}/>
