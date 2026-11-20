@@ -44,4 +44,20 @@ describe('V2-03C.4A client grant contract',()=>{
     await expect(api.list('')).rejects.toMatchObject({status:401})
     await expect(api.revoke('token','INVALID')).rejects.toBeInstanceOf(AuthContractError)
   })
+
+  it('lists only active linked coaches using a minimal safe DTO',async()=>{
+    const api=new ClientGrantApi(async(url,init)=>{
+      expect(url).toBe('/api/v1/client/coach-grants/available-coaches')
+      expect(init?.method).toBe('GET')
+      return new Response(JSON.stringify([{coach_id:19,display_name:'Coach Alex',email:'private@example.test'}]))
+    })
+    const result=await api.availableCoaches('token')
+    expect(result).toEqual([{coach_id:19,display_name:'Coach Alex'}])
+    expect(JSON.stringify(result)).not.toContain('private')
+  })
+  it('rejects unsafe coach selector responses',async()=>{
+    const api=new ClientGrantApi(async()=>new Response(JSON.stringify([{coach_id:19,display_name:' '}])) )
+    await expect(api.availableCoaches('token')).rejects.toBeInstanceOf(AuthContractError)
+  })
+
 })

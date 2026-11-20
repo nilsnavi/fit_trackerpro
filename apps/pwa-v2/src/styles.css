@@ -66,3 +66,19 @@
 .ftp-consent-confirm{padding:14px;border:1px solid var(--ftp-border);border-radius:13px;background:var(--ftp-elevated)}
 .ftp-consent-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 @media(max-width:760px){.ftp-consent-grid{grid-template-columns:1fr}.ftp-consents{padding-bottom:30px}}
+
+/* V2-03C.4B: athlete-owned coach and scope selection */
+.ftp-coach-picker{display:grid;gap:10px;margin:18px 0}
+.ftp-coach-option{display:flex;align-items:center;gap:13px;width:100%;padding:14px 16px;border:1px solid var(--ftp-border);border-radius:14px;background:var(--ftp-elevated);color:var(--ftp-ink);text-align:left;cursor:pointer;transition:border-color .15s ease,background .15s ease}
+.ftp-coach-option.is-selected{border-color:var(--ftp-accent);background:color-mix(in srgb,var(--ftp-accent) 8%,var(--ftp-elevated))}
+.ftp-coach-avatar{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#344b2f,#243525);color:var(--ftp-accent)}
+.ftp-coach-option>span:nth-child(2){display:grid;gap:4px;flex:1}
+.ftp-coach-option small,.ftp-scope-option small{display:block;color:var(--ftp-muted);font-size:12px;margin-top:4px}
+.ftp-coach-check{display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--ftp-border);border-radius:50%;color:var(--ftp-accent)}
+.ftp-coach-option.is-selected .ftp-coach-check{background:var(--ftp-accent);color:var(--ftp-accent-ink);border-color:var(--ftp-accent)}
+.ftp-scope-picker{display:grid;gap:10px;margin:22px 0}
+.ftp-scope-option{display:flex;align-items:flex-start;gap:12px;padding:14px;border:1px solid var(--ftp-border);border-radius:12px;cursor:pointer}
+.ftp-scope-option input{width:18px;height:18px;accent-color:var(--ftp-accent);margin-top:2px}
+.ftp-scope-option input:disabled{opacity:.65}
+.ftp-scope-option span{flex:1}
+.ftp-coach-option:focus-visible,.ftp-scope-option:focus-within{outline:2px solid var(--ftp-accent);outline-offset:3px}

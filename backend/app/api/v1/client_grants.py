@@ -8,9 +8,17 @@ from app.api.deps.auth import get_current_user
 from app.application.client_grant_service import ClientGrantService
 from app.domain.user import User
 from app.infrastructure.database import get_async_db
-from app.schemas.coach_grants import GrantCreate, GrantView
+from app.schemas.coach_grants import AvailableCoach, GrantCreate, GrantView
 
 router = APIRouter()
+
+
+@router.get("/available-coaches", response_model=list[AvailableCoach])
+async def available_coaches_for_client(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    return await ClientGrantService(db).available_coaches(current_user.id)
 
 
 @router.get("", response_model=list[GrantView])
