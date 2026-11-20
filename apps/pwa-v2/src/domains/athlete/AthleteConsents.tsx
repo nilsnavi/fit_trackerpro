@@ -46,7 +46,7 @@ export function AthleteConsents(){
   })
   const busy=revoke.isPending||regrant.isPending||grant.isPending
   const toggleScope=(scope:GrantScope)=>setSelectedScopes(current=>current.includes(scope)?current.filter(x=>x!==scope):[...current,scope])
-  const available=coaches.data?.filter(c=>!query.data?.some(g=>g.coach_id===c.coach_id&&g.scope&&status(g)==='ACTIVE'))??[]
+  const available=coaches.data?.filter(c=>scopes.some(scope=>!query.data?.some(g=>g.coach_id===c.coach_id&&g.scope===scope&&status(g)==='ACTIVE')))??[]
   return <div className="ftp-page ftp-consents">
     <div className="ftp-heading"><div><p className="ftp-eyebrow">ATHLETE / ПРИВАТНОСТЬ</p>
       <h1>Мои <em>разрешения.</em></h1><p>Вы сами управляете тем, какую информацию о тренировках может видеть ваш тренер.</p></div>
@@ -64,7 +64,7 @@ export function AthleteConsents(){
       <div className="ftp-coach-picker">{available.map(coach=><button key={coach.coach_id} type="button" className={'ftp-coach-option'+(coachId===coach.coach_id?' is-selected':'')} onClick={()=>setCoachId(coach.coach_id)} aria-pressed={coachId===coach.coach_id}>
         <span className="ftp-coach-avatar"><SignatureIcon name="clients" size={20}/></span><span><strong>{coach.display_name}</strong><small>Подключённый тренер</small></span><span className="ftp-coach-check">{coachId===coach.coach_id?'✓':''}</span>
       </button>)}</div>
-      <div className="ftp-scope-picker"><p className="ftp-eyebrow">РАЗРЕШИТЬ ДОСТУП К</p>{scopes.map(scope=><label key={scope} className="ftp-scope-option"><input type="checkbox" checked={selectedScopes.includes(scope)} onChange={()=>toggleScope(scope)}/><span><strong>{names[scope]}</strong><small>{scope==='training_summary.read'?'Сводные показатели завершённых тренировок':'Список завершённых тренировок и их подходов'}</small></span></label>)}</div>
+      <div className="ftp-scope-picker"><p className="ftp-eyebrow">РАЗРЕШИТЬ ДОСТУП К</p>{scopes.map(scope=>{const exists=!!query.data?.some(g=>g.coach_id===coachId&&g.scope===scope&&status(g)==='ACTIVE');return <label key={scope} className="ftp-scope-option"><input type="checkbox" disabled={exists} checked={exists||selectedScopes.includes(scope)} onChange={()=>toggleScope(scope)}/><span><strong>{names[scope]}</strong><small>{exists?'Уже разрешено':scope==='training_summary.read'?'Сводные показатели завершённых тренировок':'Список завершённых тренировок и их подходов'}</small></span></label>})}</div>
       <Button disabled={!coachId||selectedScopes.length===0||busy} onClick={()=>grant.mutate()}>Подтвердить выбранные разрешения</Button>
       <p className="ftp-security-note">Согласия выдаются бессрочно до отзыва. Их можно отозвать в любой момент.</p>
     </Card> : <Card><EmptyState title="Нет тренеров для подключения" description="Здесь появятся только тренеры, с которыми у вас уже есть активная подтверждённая связь. Попросите тренера отправить приглашение."/></Card>}
