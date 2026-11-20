@@ -20,7 +20,12 @@ from app.domain.coach_grant_audit import CoachGrantAudit
 from app.domain.coach_profile import CoachProfile
 from app.domain.user_role import UserRole, UserRoleName
 from app.infrastructure.feature_flags import is_feature_enabled
-from app.schemas.coach_grants import AvailableCoach, GrantCreate, GrantView
+from app.schemas.coach_grants import (
+    AvailableCoach,
+    GrantCreate,
+    GrantHistory,
+    GrantView,
+)
 
 
 def _utc(value: datetime) -> datetime:
@@ -58,6 +63,28 @@ class ClientGrantService:
             AvailableCoach(coach_id=coach_id, display_name=display_name)
             for coach_id, display_name in rows
         ]
+
+    async def history(self, client_id: int, grant_id: str) -> GrantHistory:
+        """Read consent events for this grant's owner only."""
+        try:
+            grant_id = str(UUID(grant_id))
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=404, detail="Grant not found") from None
+        owned = await self.db.scalar(
+            select(CoachClientGrant.id).where(
+                CoachClientGrant.id == grant_id,
+                CoachClientGrant.client_id == client_id,
+            )
+        )
+        if owned is None:
+            raise HTTPException(status_code=404, detail="Grant not found")
+        events = list((await self.db.scalars(
+            select(CoachGrantAudit).where(
+                CoachGrantAudit.grant_id == grant_id,
+                CoachGrantAudit.client_id == client_id,
+            ).order_by(CoachGrantAudit.occurred_at.desc(), CoachGrantAudit.id.desc())
+        )).all())
+        return GrantHistory(grant_id=grant_id, events=events)
 
     async def list_owned(self, client_id: int) -> list[GrantView]:
         result = await self.db.scalars(
