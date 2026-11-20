@@ -56,11 +56,11 @@ export function AthleteConsents(){
           <div className="ftp-consent-meta"><StatusPill variant={active?'lime':'neutral'}>{active?'Разрешено':state==='REVOKED'?'Отозвано':'Истекло'}</StatusPill>
           <span>Выдано: {new Date(g.granted_at).toLocaleDateString('ru-RU')}</span></div>
           <p>Доступ только к категории «{names[g.scope]}». Данные о здоровье не включены.</p>
-          {active ? confirm===g.id ? <div className="ftp-consent-confirm">
+          {(active || (g.status==='ACTIVE' && state==='EXPIRED')) ? confirm===g.id ? <div className="ftp-consent-confirm">
               <p>Отозвать доступ тренера №{g.coach_id} к этой категории?</p>
               <div className="ftp-consent-actions"><Button disabled={busy} onClick={()=>revoke.mutate(g.id)}>Подтвердить отзыв</Button>
                 <Button tone="ghost" disabled={busy} onClick={()=>setConfirm(null)}>Отмена</Button></div>
-            </div> : <Button tone="secondary" disabled={busy} onClick={()=>{setNotice('');setConfirm(g.id);setRestore(null)}}>Отозвать разрешение</Button>
+            </div> : <Button tone="secondary" disabled={busy} onClick={()=>{setNotice('');setConfirm(g.id);setRestore(null)}}>{active?'Отозвать разрешение':'Закрыть истёкшее согласие'}</Button>
           : restore===g.id ? <div className="ftp-consent-confirm">
               <p>Повторно разрешить тренеру №{g.coach_id} доступ к «{names[g.scope]}» без ограничения срока?</p>
               <div className="ftp-consent-actions"><Button disabled={busy} onClick={()=>regrant.mutate(g)}>Разрешить снова</Button>
