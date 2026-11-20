@@ -242,3 +242,37 @@ async def test_monitoring_requires_exact_unexpired_training_scope(client: AsyncC
     assert expired.status_code == 200 and expired.json()["total"] == 0
     assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 404
 
+
+
+@pytest.mark.integration
+async def test_monitoring_audit_only_after_authorized_reads(client: AsyncClient, db_session, caplog):
+    import logging
+
+    await db_session.execute(text("INSERT INTO feature_flags (key, enabled) VALUES ('coach', true)"))
+    await db_session.commit()
+    coach = await _auth(client, 976201, "Coach")
+    athlete = await _auth(client, 976202, "Athlete")
+    profile = await client.post("/api/v1/coach/profile", headers=coach, json={"display_name": "Coach"})
+    assert profile.status_code == 201, profile.text
+    invitation = await client.post("/api/v1/coach/invitations", headers=coach, json={})
+    accepted = await client.post("/api/v1/coach/invitations/accept", headers=athlete, json={
+        "token": invitation.json()["token"],
+    })
+    assert accepted.status_code == 200, accepted.text
+    client_id = accepted.json()["client_id"]
+    with caplog.at_level(logging.INFO, logger="app.audit"):
+        denied = await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)
+        assert denied.status_code == 404
+        assert not any("coach.monitoring.detail_read" in msg for msg in caplog.messages)
+        approved = await client.post("/api/v1/client/coach-grants", headers=athlete, json={
+            "coach_id": profile.json()["user_id"],
+            "scope": "training_summary.read", "consent_version": "v2-03c-1",
+        })
+        assert approved.status_code == 201, approved.text
+        detail = await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)
+        assert detail.status_code == 200
+        assert any("coach.monitoring.detail_read" in msg for msg in caplog.messages)
+        count = sum("coach.monitoring.detail_read" in msg for msg in caplog.messages)
+        await client.delete(f"/api/v1/client/coach-grants/{approved.json()['id']}", headers=athlete)
+        assert (await client.get(f"/api/v1/coach/monitoring/{client_id}", headers=coach)).status_code == 404
+        assert sum("coach.monitoring.detail_read" in msg for msg in caplog.messages) == count
