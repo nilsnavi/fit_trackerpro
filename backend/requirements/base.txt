@@ -4,21 +4,21 @@
 # every /api/v1/* request); 8.x is built for the new routing and requires
 # starlette>=1.0, which fastapi 0.141.x accepts.
 prometheus-fastapi-instrumentator==8.1.0
-fastapi==0.162.5
+fastapi==0.165.0
 uvicorn[standard]==0.54.0
-python-multipart==0.0.33
+python-multipart==0.0.34
 gunicorn==26.2.0
 
 # Database
-sqlalchemy[asyncio]==2.1.8
+sqlalchemy[asyncio]==2.1.9
 alembic==1.20.1
 asyncpg==0.32.0
 psycopg[binary]==3.3.9
 
 # Pydantic and Validation
-pydantic==2.14.3
-pydantic-settings==2.16.2
-email-validator==2.3.0
+pydantic==2.14.4
+pydantic-settings==2.16.3
+email-validator==2.4.0
 
 # Authentication and Security
 # PyJWT instead of python-jose: python-jose 3.5.0 (the latest) pins `ecdsa`, which
