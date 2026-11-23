@@ -9,4 +9,4 @@ pytest-mock==3.17.0
 psycopg2-binary==2.9.13
 aiosqlite==0.22.1
 fakeredis==2.40.0
-ruff==0.17.5
+ruff==0.17.6
