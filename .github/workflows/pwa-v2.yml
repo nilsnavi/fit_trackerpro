@@ -64,7 +64,7 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium
       - name: Download V2 production build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: pwa-v2-preview
           path: apps/pwa-v2/dist
